@@ -1,0 +1,8 @@
+{
+  "name": "چین پارت | بازار تخصصی قطعات یدکی خودروهای چینی",
+  "description": "فروشگاه آنلاین و تخصصی قطعات یدکی و مصرفی خودروهای چینی (KMC, MVM, Chery, JAC, Fownix, Lamari, Changan) با سیستم انتخاب خودرو، فیتمنت دقیق قطعات و رهگیری هوشمند.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

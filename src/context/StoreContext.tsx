@@ -1287,7 +1287,9 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       const message =
         code === 'PHONE_ALREADY_REGISTERED'
           ? 'این شماره همراه قبلاً ثبت شده است.'
-          : code === 'PASSWORD_TOO_SHORT'
+          : code === 'ACCOUNT_ACTIVATION_REQUIRED'
+            ? 'این شماره قبلاً در CRM ثبت شده و برای فعال‌سازی حساب نیاز به تأیید هویت/OTP دارد.'
+            : code === 'PASSWORD_TOO_SHORT'
             ? 'رمز عبور باید حداقل ۸ کاراکتر باشد.'
             : 'ثبت‌نام انجام نشد. اطلاعات را بررسی کنید.';
       return { success: false, error: message };

@@ -1,4 +1,5 @@
 import React, { useState, useRef } from 'react';
+import { uploadImage, MediaUploadError } from '../../api/media';
 import { 
   Upload, 
   Image as ImageIcon, 
@@ -67,33 +68,43 @@ export const ImageUploadInput: React.FC<ImageUploadInputProps> = ({
   const [mode, setMode] = useState<'upload' | 'url' | 'presets'>('upload');
   const [isDragging, setIsDragging] = useState(false);
   const [fileName, setFileName] = useState<string>('');
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const presets = AUTOMOTIVE_PRESETS[presetCategory] || AUTOMOTIVE_PRESETS.parts;
 
-  // Process chosen file
-  const handleFileProcess = (file: File) => {
-    if (!file.type.startsWith('image/')) {
-      alert('لطفاً یک فایل تصویری معتبر انتخاب کنید.');
+  // Upload the original image to the application server; never persist Base64 in product data.
+  const handleFileProcess = async (file: File) => {
+    if (!['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(file.type)) {
+      setUploadError('فرمت تصویر مجاز نیست. از JPG، PNG، WEBP یا GIF استفاده کنید.');
       return;
     }
 
     setFileName(file.name);
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const result = e.target?.result as string;
-      if (result) {
-        onChange(result);
-      }
-    };
-    reader.readAsDataURL(file);
+    setUploadError('');
+    setIsUploading(true);
+    try {
+      const result = await uploadImage(file, presetCategory);
+      onChange(result.url);
+    } catch (error) {
+      console.error('Image upload failed:', error);
+      const message =
+        error instanceof MediaUploadError && error.code === 'IMAGE_FORMAT_NOT_ALLOWED'
+          ? 'فرمت واقعی فایل تصویر مجاز نیست.'
+          : error instanceof MediaUploadError && error.status === 413
+            ? 'حجم تصویر بیشتر از حد مجاز سرور است.'
+            : 'آپلود تصویر روی سرور انجام نشد.';
+      setUploadError(message);
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      handleFileProcess(file);
-    }
+    if (file) void handleFileProcess(file);
+    e.target.value = '';
   };
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -110,7 +121,7 @@ export const ImageUploadInput: React.FC<ImageUploadInputProps> = ({
     setIsDragging(false);
     const file = e.dataTransfer.files?.[0];
     if (file) {
-      handleFileProcess(file);
+      void handleFileProcess(file);
     }
   };
 
@@ -176,7 +187,8 @@ export const ImageUploadInput: React.FC<ImageUploadInputProps> = ({
           <input
             ref={fileInputRef}
             type="file"
-            accept="image/*"
+            accept=".jpg,.jpeg,.png,.webp,.gif,image/jpeg,image/png,image/webp,image/gif"
+            disabled={isUploading}
             onChange={handleFileChange}
             className="hidden"
           />
@@ -185,15 +197,20 @@ export const ImageUploadInput: React.FC<ImageUploadInputProps> = ({
           </div>
           <div>
             <span className="text-xs font-bold text-neutral-800 block">
-              برای آپلود عکس کلیک کنید یا عکس را بکشید و رها کنید
+              {isUploading ? 'در حال آپلود روی سرور...' : 'برای آپلود عکس کلیک کنید یا عکس را بکشید و رها کنید'}
             </span>
             <span className="text-[10px] text-neutral-400 mt-0.5 block">
-              فرمت‌های مجاز: PNG, JPG, WEBP, SVG (پشتیبانی از کیفیت بالا)
+              فرمت‌های مجاز: JPG, PNG, WEBP, GIF — فایل روی هاست ذخیره می‌شود
             </span>
           </div>
-          {fileName && (
+          {fileName && !isUploading && (
             <span className="text-[10px] text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded-md">
-              ✓ فایل انتخاب شده: {fileName}
+              ✓ فایل آپلود شده: {fileName}
+            </span>
+          )}
+          {uploadError && (
+            <span className="text-[10px] text-red-600 font-bold bg-red-50 px-2 py-1 rounded-md">
+              {uploadError}
             </span>
           )}
         </div>

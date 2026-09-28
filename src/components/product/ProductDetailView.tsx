@@ -53,7 +53,7 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
     showToast
   } = useStore();
 
-  const product = products.find(p => p.id === productId);
+  const product = products.find(p => p.id === productId || p.slug === productId);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [activeTab, setActiveTab] = useState<'specs' | 'fitment' | 'symptoms' | 'install' | 'fake'>('specs');

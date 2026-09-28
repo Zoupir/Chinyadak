@@ -1776,35 +1776,13 @@ export const INITIAL_SETTINGS = {
       links: [
         { id: 'flink-5', title: 'آموزش فنی و عیب‌یابی خودرو', url: 'blog' },
         { id: 'flink-6', title: 'مدیریت گاراژ خودروهای من', url: 'account:garage' },
-        { id: 'flink-7', title: 'ورود به پنل مدیریت انبار', url: 'admin' },
-        { id: 'flink-8', title: 'ثبت‌نام خریداران و مکانیک‌ها', url: 'account' }
+        { id: 'flink-7', title: 'ثبت‌نام خریداران و مکانیک‌ها', url: 'account' }
       ]
     }
   ],
-  footerShowBadges: true,
-  footerBadges: [
-    {
-      id: 'badge-enamad',
-      title: 'نماد اعتماد الکترونیکی (اینماد)',
-      imageUrl: 'https://trustseal.enamad.ir/logo.aspx?id=123456',
-      linkUrl: 'https://enamad.ir',
-      htmlCode: '<div class="p-2 bg-neutral-800/80 rounded-xl text-center border border-neutral-700/60 hover:border-red-500/50 transition-colors"><div class="w-14 h-14 mx-auto flex items-center justify-center bg-white rounded-lg p-1 mb-1.5 shadow-sm"><img src="https://cdn-icons-png.flaticon.com/512/1162/1162499.png" alt="اینماد" class="w-10 h-10 object-contain" /></div><span class="text-[10px] text-neutral-300 font-bold block">اینماد ۲ ستاره</span><span class="text-[9px] text-neutral-500 block">مرکز توسعه تجارت</span></div>'
-    },
-    {
-      id: 'badge-samandehi',
-      title: 'نشان ملی ثبت رسانه‌های دیجیتال (ساماندهی)',
-      imageUrl: 'https://logo.samandehi.ir/logo.aspx?id=123456',
-      linkUrl: 'https://samandehi.ir',
-      htmlCode: '<div class="p-2 bg-neutral-800/80 rounded-xl text-center border border-neutral-700/60 hover:border-red-500/50 transition-colors"><div class="w-14 h-14 mx-auto flex items-center justify-center bg-white rounded-lg p-1 mb-1.5 shadow-sm"><img src="https://cdn-icons-png.flaticon.com/512/924/924915.png" alt="ساماندهی" class="w-10 h-10 object-contain" /></div><span class="text-[10px] text-neutral-300 font-bold block">ستاد ساماندهی</span><span class="text-[9px] text-neutral-500 block">وزارت ارشاد</span></div>'
-    },
-    {
-      id: 'badge-shaparak',
-      title: 'درگاه پرداخت امن شاپرک و عضو شتاب',
-      imageUrl: 'https://cdn-icons-png.flaticon.com/512/893/893081.png',
-      linkUrl: '#',
-      htmlCode: '<div class="p-2 bg-neutral-800/80 rounded-xl text-center border border-neutral-700/60 hover:border-red-500/50 transition-colors"><div class="w-14 h-14 mx-auto flex items-center justify-center bg-white rounded-lg p-1 mb-1.5 shadow-sm"><img src="https://cdn-icons-png.flaticon.com/512/893/893081.png" alt="شاپرک" class="w-10 h-10 object-contain" /></div><span class="text-[10px] text-emerald-400 font-bold block">پرداخت امن شاپرک</span><span class="text-[9px] text-neutral-500 block">پروتکل SSL ۲۵۶ بیتی</span></div>'
-    }
-  ],
+  // Trust/certification badges stay disabled until real verification codes are configured.
+  footerShowBadges: false,
+  footerBadges: [],
   footerCustomHtml: '',
   footerCopyrightText: 'تمامی حقوق مادی و معنوی برای فروشگاه اینترنتی چین‌پارت محفوظ است. طراحی تخصصی مخصوص صنعت خودروهای چینی.',
   loyaltySettings: {
@@ -1858,7 +1836,6 @@ export const INITIAL_ADMIN_USERS: AdminUser[] = [
   {
     id: 'admin-super',
     username: 'admin',
-    password: '123456',
     fullName: 'مهندس رضایی (مدیر ارشد سیستم)',
     role: 'super_admin',
     roleTitle: 'مدیر کل ارشد (Super Admin)',
@@ -1881,7 +1858,6 @@ export const INITIAL_ADMIN_USERS: AdminUser[] = [
   {
     id: 'admin-content',
     username: 'content',
-    password: 'password123',
     fullName: 'خانم علیزاده (سرپرست تولید محتوا)',
     role: 'content_manager',
     roleTitle: 'مدیر محتوا و بلاگ',
@@ -1904,7 +1880,6 @@ export const INITIAL_ADMIN_USERS: AdminUser[] = [
   {
     id: 'admin-orders',
     username: 'orders',
-    password: 'password123',
     fullName: 'آقای کاظمی (مدیر سفارشات و مالی)',
     role: 'order_manager',
     roleTitle: 'مدیر فروش و فاکتورها',
@@ -1927,7 +1902,6 @@ export const INITIAL_ADMIN_USERS: AdminUser[] = [
   {
     id: 'admin-inventory',
     username: 'inventory',
-    password: 'password123',
     fullName: 'آقای حسینی (انباردار مرکزی)',
     role: 'inventory_manager',
     roleTitle: 'مدیر کاتالوگ و انبار',
@@ -1954,9 +1928,9 @@ export const INITIAL_PAYMENT_GATEWAYS = [
     id: 'gateway-saman',
     name: 'درگاه پرداخت الکترونیک سامان (SEP)',
     provider: 'saman' as const,
-    isActive: true,
-    merchantId: '10984210',
-    terminalId: 'SEP-77291',
+    isActive: false,
+    merchantId: '',
+    terminalId: '',
     isSandbox: false,
     description: 'درگاه پیش‌فرض و پایدار بانکی با بالاترین نرخ تراکنش موفق عضو شتاب'
   },
@@ -1964,9 +1938,9 @@ export const INITIAL_PAYMENT_GATEWAYS = [
     id: 'gateway-mellat',
     name: 'به‌پرداخت بانک ملت (BPM)',
     provider: 'mellat' as const,
-    isActive: true,
-    merchantId: '84920194',
-    terminalId: 'BPM-48102',
+    isActive: false,
+    merchantId: '',
+    terminalId: '',
     isSandbox: false,
     description: 'درگاه معتبر شبکه شاپرک با تسویه حساب آنی روزانه'
   },
@@ -1975,7 +1949,7 @@ export const INITIAL_PAYMENT_GATEWAYS = [
     name: 'زرین‌پال پرداخت واسط هوشمند (ZarinPal)',
     provider: 'zarinpal' as const,
     isActive: false,
-    merchantId: 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx',
+    merchantId: '',
     isSandbox: true,
     description: 'درگاه پرداخت سریع با قابلیت مسیردهی هوشمند بین چند سوئیچ بانکی'
   },
@@ -1984,7 +1958,7 @@ export const INITIAL_PAYMENT_GATEWAYS = [
     name: 'پرداخت در محل (Cash On Delivery)',
     provider: 'cod' as const,
     isActive: true,
-    merchantId: 'COD-TEH',
+    merchantId: '',
     isSandbox: false,
     description: 'پرداخت وجه پس از تحویل و رویت قطعه با کارت‌خوان سیار (ویژه سفارش‌های تهران)'
   }
@@ -1992,16 +1966,16 @@ export const INITIAL_PAYMENT_GATEWAYS = [
 
 export const INITIAL_API_CONFIG = {
   smsProvider: 'kavenegar' as const,
-  smsApiKey: '6874415843467A427845324D6E6A7A387063463365773D3D',
+  smsApiKey: '',
   smsSenderNumber: '10008585',
   smsNotifyOnOrder: true,
   smsNotifyOnStock: true,
   smsTrackingPattern: 'chinpart-tracking',
   accountingSoftware: 'sepidar' as const,
-  accountingApiKey: 'SEPIDAR-API-LIVE-84920194',
+  accountingApiKey: '',
   accountingAutoSyncStock: true,
   webhookUrl: 'https://api.chinpart.ir/webhooks/orders',
-  webhookSecret: 'whsec_9482910481029481029481'
+  webhookSecret: ''
 };
 
 export const INITIAL_PAGES: SitePage[] = [

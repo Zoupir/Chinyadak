@@ -41,25 +41,32 @@ export const CustomerAuthModal: React.FC<CustomerAuthModalProps> = ({
   const [regType, setRegType] = useState<CustomerType>('retail');
   const [regVehicleModelId, setRegVehicleModelId] = useState('');
   const [regError, setRegError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   if (!isOpen) return null;
 
-  const handleLoginSubmit = (e: React.FormEvent) => {
+  const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoginError('');
-    if (!loginPhone.trim()) {
-      setLoginError('شماره همراه را وارد نمایید.');
+    if (!loginPhone.trim() || !loginPassword) {
+      setLoginError('شماره همراه و رمز عبور را وارد نمایید.');
       return;
     }
-    const res = customerLogin(loginPhone, loginPassword);
-    if (res.success) {
-      onClose();
-    } else {
-      setLoginError(res.error || 'خطا در ورود');
+
+    setIsSubmitting(true);
+    try {
+      const res = await customerLogin(loginPhone, loginPassword);
+      if (res.success) {
+        onClose();
+      } else {
+        setLoginError(res.error || 'خطا در ورود');
+      }
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
-  const handleRegisterSubmit = (e: React.FormEvent) => {
+  const handleRegisterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setRegError('');
     if (!regFirstName.trim() || !regLastName.trim() || !regPhone.trim()) {
@@ -70,35 +77,44 @@ export const CustomerAuthModal: React.FC<CustomerAuthModalProps> = ({
       setRegError('شماره موبایل وارد شده معتبر نمی‌باشد.');
       return;
     }
+    if (regPassword.length < 8) {
+      setRegError('رمز عبور باید حداقل ۸ کاراکتر باشد.');
+      return;
+    }
 
     const selectedModel = models.find(m => m.id === regVehicleModelId);
     const vehicleName = selectedModel ? `${selectedModel.nameFa} (${selectedModel.nameEn})` : '';
 
-    const res = customerRegister({
-      firstName: regFirstName,
-      lastName: regLastName,
-      phone: regPhone,
-      password: regPassword,
-      type: regType,
-      vehicle: vehicleName
-    });
+    setIsSubmitting(true);
+    try {
+      const res = await customerRegister({
+        firstName: regFirstName,
+        lastName: regLastName,
+        phone: regPhone,
+        password: regPassword,
+        type: regType,
+        vehicle: vehicleName
+      });
 
-    if (res.success) {
-      if (selectedModel) {
-        addToGarage({
-          brandId: selectedModel.brandId,
-          brandName: selectedModel.brandId.toUpperCase(),
-          modelId: selectedModel.id,
-          modelName: selectedModel.nameFa,
-          year: selectedModel.yearTo || 1402,
-          engine: selectedModel.engineSummary,
-          transmission: selectedModel.transmissionSummary,
-          customLabel: 'خودروی من'
-        });
+      if (res.success) {
+        if (selectedModel) {
+          addToGarage({
+            brandId: selectedModel.brandId,
+            brandName: selectedModel.brandId.toUpperCase(),
+            modelId: selectedModel.id,
+            modelName: selectedModel.nameFa,
+            year: selectedModel.yearTo || 1402,
+            engine: selectedModel.engineSummary,
+            transmission: selectedModel.transmissionSummary,
+            customLabel: 'خودروی من'
+          });
+        }
+        onClose();
+      } else {
+        setRegError(res.error || 'خطا در ثبت‌نام');
       }
-      onClose();
-    } else {
-      setRegError(res.error || 'خطا در ثبت‌نام');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -177,7 +193,7 @@ export const CustomerAuthModal: React.FC<CustomerAuthModalProps> = ({
               </div>
 
               <div>
-                <label className="block text-neutral-700 font-bold mb-1">رمز عبور (اختیاری):</label>
+                <label className="block text-neutral-700 font-bold mb-1">رمز عبور:</label>
                 <div className="relative">
                   <Lock className="w-4 h-4 text-neutral-400 absolute right-3 top-3" />
                   <input
@@ -186,27 +202,17 @@ export const CustomerAuthModal: React.FC<CustomerAuthModalProps> = ({
                     onChange={e => setLoginPassword(e.target.value)}
                     placeholder="••••••"
                     className="w-full pr-9 pl-3 py-2.5 border border-neutral-300 rounded-xl focus:border-red-600 focus:outline-hidden font-mono text-left"
+                    required
                   />
                 </div>
               </div>
 
-              {/* Fast test login button */}
-              <button
-                type="button"
-                onClick={() => {
-                  setLoginPhone('09121112233');
-                  setLoginPassword('123456');
-                }}
-                className="w-full py-1.5 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 rounded-lg font-bold text-[11px] transition-colors"
-              >
-                تکمیل سریع با کاربر تستی (کامبیز پیروز - مالک KMC J7)
-              </button>
-
               <button
                 type="submit"
-                className="w-full py-3 bg-red-600 hover:bg-red-700 text-white font-black text-xs rounded-xl shadow-md transition-all flex items-center justify-center gap-2"
+                disabled={isSubmitting}
+                className="w-full py-3 bg-red-600 hover:bg-red-700 disabled:opacity-60 text-white font-black text-xs rounded-xl shadow-md transition-all flex items-center justify-center gap-2"
               >
-                <span>ورود به حساب کاربری</span>
+                <span>{isSubmitting ? 'در حال بررسی...' : 'ورود به حساب کاربری'}</span>
                 <ArrowLeft className="w-4 h-4" />
               </button>
 
@@ -334,18 +340,21 @@ export const CustomerAuthModal: React.FC<CustomerAuthModalProps> = ({
                     type="password"
                     value={regPassword}
                     onChange={e => setRegPassword(e.target.value)}
-                    placeholder="حداقل ۶ رقم"
+                    placeholder="حداقل ۸ کاراکتر"
                     className="w-full pr-9 pl-3 py-2.5 border border-neutral-300 rounded-xl focus:border-red-600 focus:outline-hidden font-mono text-left"
+                    minLength={8}
+                    required
                   />
                 </div>
               </div>
 
               <button
                 type="submit"
-                className="w-full py-3 bg-red-600 hover:bg-red-700 text-white font-black text-xs rounded-xl shadow-md transition-all flex items-center justify-center gap-2"
+                disabled={isSubmitting}
+                className="w-full py-3 bg-red-600 hover:bg-red-700 disabled:opacity-60 text-white font-black text-xs rounded-xl shadow-md transition-all flex items-center justify-center gap-2"
               >
                 <CheckCircle2 className="w-4 h-4" />
-                <span>تکمیل ثبت‌نام و ورود به گاراژ</span>
+                <span>{isSubmitting ? 'در حال ثبت‌نام...' : 'تکمیل ثبت‌نام و ورود به گاراژ'}</span>
               </button>
 
               <div className="text-center pt-1 text-[11px] text-neutral-500">

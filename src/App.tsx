@@ -23,7 +23,7 @@ import { InvoicePageView } from './components/orders/InvoicePageView';
 import { CustomerAuthModal } from './components/auth/CustomerAuthModal';
 import { AiSearchAdvisorModal } from './components/search/AiSearchAdvisorModal';
 import { CheckCircle2, AlertCircle, Info, X } from 'lucide-react';
-import { buildRouteHash, parseRouteHash, getPageShareMeta } from './utils/navigation';
+import { buildRoutePath, parseRoutePath, parseLegacyHash, getPageShareMeta } from './utils/navigation';
 
 interface RouteState {
   view: string;
@@ -33,10 +33,9 @@ interface RouteState {
 const AppContent: React.FC = () => {
   const { toast, products, categories, models, brands, articles, settings } = useStore();
   const [route, setRoute] = useState<RouteState>(() => {
-    if (typeof window !== 'undefined' && window.location.hash) {
-      return parseRouteHash(window.location.hash);
-    }
-    return { view: 'home' };
+    if (typeof window === 'undefined') return { view: 'home' };
+    const legacy = parseLegacyHash(window.location.hash);
+    return legacy || parseRoutePath(window.location.pathname);
   });
   const [isVehicleModalOpen, setIsVehicleModalOpen] = useState(false);
   const [isCartDrawerOpen, setIsCartDrawerOpen] = useState(false);
@@ -49,35 +48,79 @@ const AppContent: React.FC = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [route]);
 
-  // Sync document title with current page / section
+  // Keep browser metadata in sync after History API navigation.
   useEffect(() => {
     const meta = getPageShareMeta(route.view, route.param, { products, categories, models, brands, articles });
     const siteName = settings.siteTitle?.split('|')[0]?.trim() || 'چین‌پارت';
-    document.title = `${meta.title} | ${siteName}`;
-  }, [route, products, categories, models, brands, articles, settings]);
+    const title = `${meta.title} | ${siteName}`;
+    const description = meta.subtitle.slice(0, 170);
+    const canonical = `${window.location.origin}${buildRoutePath(route.view, route.param)}`;
+    const isPrivate = ['admin', 'account', 'checkout', 'tracking', 'invoice'].includes(route.view);
 
-  // Listen for browser hash navigation (back/forward, direct links, bookmarking)
-  useEffect(() => {
-    const handleHashChange = () => {
-      const parsed = parseRouteHash(window.location.hash);
-      setRoute(parsed);
+    document.title = title;
+
+    const setMeta = (selector: string, attribute: 'name' | 'property', key: string, content: string) => {
+      let element = document.head.querySelector<HTMLMetaElement>(selector);
+      if (!element) {
+        element = document.createElement('meta');
+        element.setAttribute(attribute, key);
+        document.head.appendChild(element);
+      }
+      element.content = content;
     };
 
-    // If initial hash was present on mount, make sure it matches canonical route
-    if (window.location.hash) {
-      handleHashChange();
+    setMeta('meta[name="description"]', 'name', 'description', description);
+    setMeta('meta[name="robots"]', 'name', 'robots', isPrivate ? 'noindex,nofollow' : 'index,follow,max-image-preview:large');
+    setMeta('meta[property="og:title"]', 'property', 'og:title', title);
+    setMeta('meta[property="og:description"]', 'property', 'og:description', description);
+    setMeta('meta[property="og:url"]', 'property', 'og:url', canonical);
+
+    let canonicalLink = document.head.querySelector<HTMLLinkElement>('link[rel="canonical"]');
+    if (!canonicalLink) {
+      canonicalLink = document.createElement('link');
+      canonicalLink.rel = 'canonical';
+      document.head.appendChild(canonicalLink);
+    }
+    canonicalLink.href = canonical;
+  }, [route, products, categories, models, brands, articles, settings]);
+
+  // Normal History API routing, with one-time migration for old hash URLs.
+  useEffect(() => {
+    const legacy = parseLegacyHash(window.location.hash);
+    if (legacy) {
+      const migratedPath = buildRoutePath(legacy.view, legacy.param);
+      window.history.replaceState({}, '', `${migratedPath}${window.location.search}`);
+      setRoute(legacy);
     }
 
-    window.addEventListener('hashchange', handleHashChange);
-    return () => window.removeEventListener('hashchange', handleHashChange);
+    const handlePopState = () => {
+      setRoute(parseRoutePath(window.location.pathname));
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
   const handleNavigate = (view: string, param?: string) => {
-    const targetHash = buildRouteHash(view, param);
-    if (window.location.hash !== targetHash) {
-      window.location.hash = targetHash;
+    let canonicalParam = param;
+    if (view === 'product' && param) {
+      const product = products.find(item => item.id === param || item.slug === param);
+      canonicalParam = product?.slug || param;
+    } else if (view === 'article' && param) {
+      const article = articles.find(item => item.id === param || item.slug === param);
+      canonicalParam = article?.slug || param;
+    } else if ((view === 'car-model' || view === 'model') && param) {
+      const model = models.find(item => item.id === param || item.slug === param);
+      canonicalParam = model?.slug || param;
+    } else if ((view === 'car-brand' || view === 'brand') && param) {
+      const brand = brands.find(item => item.id === param || item.slug === param);
+      canonicalParam = brand?.slug || param;
     }
-    setRoute({ view, param });
+
+    const targetPath = buildRoutePath(view, canonicalParam);
+    if (`${window.location.pathname}${window.location.search}` !== targetPath) {
+      window.history.pushState({}, '', targetPath);
+    }
+    setRoute({ view, param: canonicalParam });
   };
 
   const handleOpenAuthModal = (mode: 'login' | 'register' = 'login') => {
@@ -111,7 +154,6 @@ const AppContent: React.FC = () => {
         )}
         <AdminView 
           onExitToStore={() => {
-            window.location.hash = '';
             handleNavigate('home');
           }} 
           onNavigate={handleNavigate}

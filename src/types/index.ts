@@ -205,6 +205,9 @@ export interface Order {
   shippingFee: number;
   total: number;
   trackingPostCode?: string;
+  paymentStatus?: string;
+  paymentReference?: string;
+  paidAt?: string;
 }
 
 export interface ArticleCategory {

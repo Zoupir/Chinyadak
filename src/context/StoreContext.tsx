@@ -32,16 +32,12 @@ import {
   ARTICLES as INITIAL_ARTICLES,
   INITIAL_ARTICLE_CATEGORIES,
   INITIAL_GARAGE, 
-  INITIAL_ORDERS,
-  INITIAL_CUSTOMERS,
-  INITIAL_LOYALTY_TRANSACTIONS,
   INITIAL_SETTINGS,
   INITIAL_PAYMENT_GATEWAYS,
-  INITIAL_API_CONFIG,
   INITIAL_SLIDERS,
-  INITIAL_ADMIN_USERS,
   INITIAL_PAGES
 } from '../data/mockData';
+import { apiRequest, ApiError } from '../api/client';
 
 interface SearchQueryLog {
   query: string;
@@ -49,6 +45,20 @@ interface SearchQueryLog {
   lastDate: string;
   resultsCount: number;
 }
+
+const EMPTY_API_INTEGRATIONS: ApiIntegrationsConfig = {
+  smsProvider: 'kavenegar',
+  smsApiKey: '',
+  smsSenderNumber: '',
+  smsNotifyOnOrder: true,
+  smsNotifyOnStock: true,
+  smsTrackingPattern: '',
+  accountingSoftware: 'none',
+  accountingApiKey: '',
+  accountingAutoSyncStock: false,
+  webhookUrl: '',
+  webhookSecret: ''
+};
 
 interface StoreContextType {
   // Catalog
@@ -118,11 +128,11 @@ interface StoreContextType {
   
   // Orders & Checkout
   orders: Order[];
-  createOrder: (orderData: Omit<Order, 'id' | 'orderNumber' | 'date'> & { loyaltyPointsToRedeem?: number }) => Order;
+  createOrder: (orderData: Omit<Order, 'id' | 'orderNumber' | 'date'> & { loyaltyPointsToRedeem?: number }) => Promise<Order>;
   updateOrderStatus: (orderId: string, status: OrderStatus, trackingCode?: string) => void;
   deleteOrder: (orderId: string) => void;
   getOrderById: (orderId: string) => Order | undefined;
-  getOrderByTracking: (orderNumber: string, phone: string) => Order | undefined;
+  getOrderByTracking: (orderNumber: string, phone: string) => Promise<Order | undefined>;
   
   // Customers (CRM)
   customers: CustomerUser[];
@@ -158,9 +168,9 @@ interface StoreContextType {
 
   // Customer Session (CRM / Auth)
   currentCustomer: CustomerUser | null;
-  customerLogin: (phone: string, pass: string) => { success: boolean; error?: string };
-  customerRegister: (data: { firstName: string; lastName: string; phone: string; password: string; type: CustomerUser['type']; vehicle?: string }) => { success: boolean; error?: string };
-  customerLogout: () => void;
+  customerLogin: (phone: string, pass: string) => Promise<{ success: boolean; error?: string }>;
+  customerRegister: (data: { firstName: string; lastName: string; phone: string; password: string; type: CustomerUser['type']; vehicle?: string }) => Promise<{ success: boolean; error?: string }>;
+  customerLogout: () => Promise<void>;
 
   // Admin Sandbox Payment Simulator
   simulateAdminPayment: (
@@ -201,9 +211,9 @@ interface StoreContextType {
 
   // Admin Auth
   adminAuth: AdminAuthState;
-  adminLogin: (user: string, pass: string) => { success: boolean; error?: string };
-  adminChangePassword: (oldPass: string, newPass: string) => { success: boolean; error?: string };
-  adminLogout: () => void;
+  adminLogin: (user: string, pass: string) => Promise<{ success: boolean; error?: string }>;
+  adminChangePassword: (oldPass: string, newPass: string) => Promise<{ success: boolean; error?: string }>;
+  adminLogout: () => Promise<void>;
 
   // Loyalty Points & Rewards Club
   loyaltyTransactions: LoyaltyTransaction[];
@@ -242,106 +252,50 @@ const StoreContext = createContext<StoreContextType | undefined>(undefined);
 
 export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   // Products
-  const [products, setProducts] = useState<Product[]>(() => {
-    const saved = localStorage.getItem('chinpart_products');
-    return saved ? JSON.parse(saved) : INITIAL_PRODUCTS;
-  });
+  const [products, setProducts] = useState<Product[]>([]);
 
-  const [brands, setBrands] = useState<CarBrand[]>(() => {
-    const saved = localStorage.getItem('chinpart_brands');
-    return saved ? JSON.parse(saved) : INITIAL_BRANDS;
-  });
+  const [brands, setBrands] = useState<CarBrand[]>([]);
+  const [models, setModels] = useState<VehicleModel[]>([]);
 
-  const [models, setModels] = useState<VehicleModel[]>(() => {
-    const saved = localStorage.getItem('chinpart_models');
-    return saved ? JSON.parse(saved) : INITIAL_MODELS;
-  });
+  const [categories, setCategories] = useState<Category[]>([]);
 
-  const [categories, setCategories] = useState<Category[]>(() => {
-    const saved = localStorage.getItem('chinpart_categories');
-    return saved ? JSON.parse(saved) : INITIAL_CATEGORIES;
-  });
+  const [articles, setArticles] = useState<Article[]>([]);
 
-  const [articles, setArticles] = useState<Article[]>(() => {
-    const saved = localStorage.getItem('chinpart_articles');
-    return saved ? JSON.parse(saved) : INITIAL_ARTICLES;
-  });
-
-  const [articleCategories, setArticleCategories] = useState<ArticleCategory[]>(() => {
-    const saved = localStorage.getItem('chinpart_article_categories');
-    return saved ? JSON.parse(saved) : INITIAL_ARTICLE_CATEGORIES;
-  });
+  const [articleCategories, setArticleCategories] = useState<ArticleCategory[]>([]);
 
   // Customers
-  const [customers, setCustomers] = useState<CustomerUser[]>(() => {
-    const saved = localStorage.getItem('chinpart_customers');
-    return saved ? JSON.parse(saved) : INITIAL_CUSTOMERS;
-  });
+  const [customers, setCustomers] = useState<CustomerUser[]>([]);
 
-  const [currentCustomer, setCurrentCustomer] = useState<CustomerUser | null>(() => {
-    const saved = localStorage.getItem('chinpart_current_customer');
-    return saved ? JSON.parse(saved) : null;
-  });
+  const [currentCustomer, setCurrentCustomer] = useState<CustomerUser | null>(null);
 
   // Loyalty Transactions
-  const [loyaltyTransactions, setLoyaltyTransactions] = useState<LoyaltyTransaction[]>(() => {
-    const saved = localStorage.getItem('chinpart_loyalty_transactions');
-    return saved ? JSON.parse(saved) : INITIAL_LOYALTY_TRANSACTIONS;
-  });
+  const [loyaltyTransactions, setLoyaltyTransactions] = useState<LoyaltyTransaction[]>([]);
 
   // Settings
-  const [settings, setSettings] = useState<SiteSettings>(() => {
-    const saved = localStorage.getItem('chinpart_settings');
-    return saved ? JSON.parse(saved) : INITIAL_SETTINGS;
-  });
+  const [settings, setSettings] = useState<SiteSettings>(INITIAL_SETTINGS);
 
   // Payment Gateways
-  const [paymentGateways, setPaymentGateways] = useState<PaymentGatewayConfig[]>(() => {
-    const saved = localStorage.getItem('chinpart_gateways');
-    return saved ? JSON.parse(saved) : INITIAL_PAYMENT_GATEWAYS;
-  });
+  const [paymentGateways, setPaymentGateways] = useState<PaymentGatewayConfig[]>([]);
 
-  // API Integrations
-  const [apiIntegrations, setApiIntegrations] = useState<ApiIntegrationsConfig>(() => {
-    const saved = localStorage.getItem('chinpart_apis');
-    return saved ? JSON.parse(saved) : INITIAL_API_CONFIG;
-  });
+  // Secrets are loaded only after authorized admin login; the browser default is always blank.
+  const [apiIntegrations, setApiIntegrations] = useState<ApiIntegrationsConfig>(EMPTY_API_INTEGRATIONS);
 
-  // Admin Credentials & Auth
-  const [adminPassword, setAdminPassword] = useState<string>(() => {
-    return localStorage.getItem('chinpart_admin_pass') || '123456';
-  });
-
+  // Admin authentication is server-side. No password is stored in the browser.
   // Sliders Management
-  const [sliders, setSliders] = useState<SliderItem[]>(() => {
-    const saved = localStorage.getItem('chinpart_sliders');
-    return saved ? JSON.parse(saved) : INITIAL_SLIDERS;
-  });
+  const [sliders, setSliders] = useState<SliderItem[]>([]);
 
   // Multi-Admin Users & Roles System
-  const [adminUsers, setAdminUsers] = useState<AdminUser[]>(() => {
-    const saved = localStorage.getItem('chinpart_admin_users');
-    return saved ? JSON.parse(saved) : INITIAL_ADMIN_USERS;
-  });
+  const [adminUsers, setAdminUsers] = useState<AdminUser[]>([]);
 
   // Pages & Section Builder Management
-  const [pages, setPages] = useState<SitePage[]>(() => {
-    const saved = localStorage.getItem('chinpart_pages');
-    return saved ? JSON.parse(saved) : INITIAL_PAGES;
-  });
+  const [pages, setPages] = useState<SitePage[]>([]);
 
   const [isLiveEditActive, setIsLiveEditActive] = useState<boolean>(false);
 
-  const [adminAuth, setAdminAuth] = useState<AdminAuthState>(() => {
-    const saved = localStorage.getItem('chinpart_admin_auth');
-    if (saved) {
-      return JSON.parse(saved);
-    }
-    return {
-      isAuthenticated: false,
-      username: '',
-      isMustChangePassword: false
-    };
+  const [adminAuth, setAdminAuth] = useState<AdminAuthState>({
+    isAuthenticated: false,
+    username: '',
+    isMustChangePassword: false
   });
 
   // Selected Vehicle for active fitment filtering
@@ -372,48 +326,12 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [compareList, setCompareList] = useState<Product[]>([]);
 
   // Orders
-  const [orders, setOrders] = useState<Order[]>(() => {
-    const saved = localStorage.getItem('chinpart_orders');
-    return saved ? JSON.parse(saved) : INITIAL_ORDERS;
-  });
+  const [orders, setOrders] = useState<Order[]>([]);
 
-  // Part Requests
-  const [partRequests, setPartRequests] = useState<PartRequest[]>(() => {
-    const saved = localStorage.getItem('chinpart_part_requests');
-    return saved ? JSON.parse(saved) : [
-      {
-        id: 'req-1',
-        carBrand: 'کی‌ام‌سی (KMC)',
-        carModel: 'KMC J7',
-        year: '1402',
-        partName: 'قاب آینه بغل سمت راننده فیبر کربن فابریک',
-        oemNumber: '8202100U7001',
-        phoneNumber: '09121112233',
-        fullName: 'کامبیز پیروز',
-        notes: 'نمونه اصلی مشکی براق یا کربنی',
-        createdAt: '۱۴۰۳/۰۶/۲۲',
-        status: 'پاسخ داده شد'
-      }
-    ];
-  });
-
-  // Stock Alerts
-  const [stockAlerts, setStockAlerts] = useState<{ productId: string; phone: string; date: string }[]>(() => {
-    const saved = localStorage.getItem('chinpart_stock_alerts');
-    return saved ? JSON.parse(saved) : [];
-  });
-
-  // Search Logs
-  const [searchLogs, setSearchLogs] = useState<SearchQueryLog[]>(() => {
-    const saved = localStorage.getItem('chinpart_search_logs');
-    return saved ? JSON.parse(saved) : [
-      { query: 'واتر پمپ J7', count: 48, lastDate: 'امروز', resultsCount: 2 },
-      { query: 'لنت ترمز تیگو ۷', count: 35, lastDate: 'امروز', resultsCount: 4 },
-      { query: 'توربو شارژر لاماری', count: 29, lastDate: 'دیروز', resultsCount: 1 },
-      { query: 'روغن موتور 5W-30', count: 21, lastDate: 'دیروز', resultsCount: 3 },
-      { query: 'کمک فنر فیدلیتی', count: 18, lastDate: '۲ روز پیش', resultsCount: 1 }
-    ];
-  });
+  // Server-backed engagement data
+  const [partRequests, setPartRequests] = useState<PartRequest[]>([]);
+  const [stockAlerts, setStockAlerts] = useState<{ productId: string; phone: string; date: string }[]>([]);
+  const [searchLogs, setSearchLogs] = useState<SearchQueryLog[]>([]);
 
   // Toast
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'info' | 'error' } | null>(null);
@@ -425,54 +343,166 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }, 3800);
   };
 
+  const loadAdminData = async (admin: AdminUser, cancelled = false) => {
+    const canOrders = admin.role === 'super_admin' || admin.permissions?.canManageOrders;
+    const canAdmins = admin.role === 'super_admin' || admin.permissions?.canManageAdmins;
+    const canSettings = admin.role === 'super_admin' || admin.permissions?.canManageSettings;
+
+    const requests: Promise<void>[] = [];
+
+    if (canOrders) {
+      requests.push(
+        apiRequest<{ orders: Order[] }>('/api/orders')
+          .then(result => { if (!cancelled) setOrders(result.orders); })
+          .catch(error => console.error('Admin orders load failed:', error))
+      );
+      requests.push(
+        apiRequest<{ customers: CustomerUser[] }>('/api/admin-data/customers')
+          .then(result => { if (!cancelled) setCustomers(result.customers); })
+          .catch(error => console.error('CRM customers load failed:', error)),
+        apiRequest<{ transactions: LoyaltyTransaction[] }>('/api/admin-data/loyalty')
+          .then(result => { if (!cancelled) setLoyaltyTransactions(result.transactions); })
+          .catch(error => console.error('Loyalty data load failed:', error)),
+        apiRequest<{
+          partRequests: PartRequest[];
+          stockAlerts: { productId: string; phone: string; date: string }[];
+          searchLogs: SearchQueryLog[];
+        }>('/api/engagement/admin')
+          .then(result => {
+            if (cancelled) return;
+            setPartRequests(result.partRequests);
+            setStockAlerts(result.stockAlerts);
+            setSearchLogs(result.searchLogs);
+          })
+          .catch(error => console.error('Engagement admin data load failed:', error))
+      );
+    }
+
+    if (canAdmins) {
+      requests.push(
+        apiRequest<{ admins: AdminUser[] }>('/api/admin-data/admins')
+          .then(result => { if (!cancelled) setAdminUsers(result.admins); })
+          .catch(error => console.error('Admin users load failed:', error))
+      );
+    }
+
+    if (canSettings) {
+      requests.push(
+        apiRequest<{ integrations: ApiIntegrationsConfig }>('/api/integrations')
+          .then(result => { if (!cancelled) setApiIntegrations(result.integrations); })
+          .catch(error => console.error('Integration settings load failed:', error))
+      );
+    }
+
+    await Promise.allSettled(requests);
+  };
+
+  const loadCustomerPrivateData = async (cancelled = false) => {
+    await Promise.allSettled([
+      apiRequest<{ orders: Order[] }>('/api/orders/mine')
+        .then(result => { if (!cancelled) setOrders(result.orders); }),
+      apiRequest<{ transactions: LoyaltyTransaction[] }>('/api/auth/customer/loyalty')
+        .then(result => { if (!cancelled) setLoyaltyTransactions(result.transactions); }),
+      apiRequest<{ requests: PartRequest[] }>('/api/engagement/part-requests/mine')
+        .then(result => { if (!cancelled) setPartRequests(result.requests); })
+    ]);
+  };
+
+  useEffect(() => {
+    let cancelled = false;
+
+    Promise.all([
+      apiRequest<{ products: Product[] }>('/api/catalog/products'),
+      apiRequest<{ categories: Category[] }>('/api/catalog/categories'),
+      apiRequest<{ brands: CarBrand[]; models: VehicleModel[] }>('/api/vehicles'),
+      apiRequest<{
+        articles: Article[];
+        articleCategories: ArticleCategory[];
+        sliders: SliderItem[];
+        pages: SitePage[];
+        settings: SiteSettings | null;
+        paymentGateways: PaymentGatewayConfig[];
+      }>('/api/cms/bundle')
+    ])
+      .then(([productData, categoryData, vehicleData, cmsData]) => {
+        if (cancelled) return;
+        setProducts(productData.products);
+        setCategories(categoryData.categories);
+        setBrands(vehicleData.brands);
+        setModels(vehicleData.models);
+        setArticles(cmsData.articles);
+        setArticleCategories(cmsData.articleCategories);
+        setSliders(cmsData.sliders);
+        setPages(cmsData.pages);
+        if (cmsData.settings) setSettings(cmsData.settings);
+        setPaymentGateways(cmsData.paymentGateways);
+      })
+      .catch(error => {
+        console.error('Public store data load failed:', error);
+        if (import.meta.env.DEV) {
+          setProducts(INITIAL_PRODUCTS);
+          setCategories(INITIAL_CATEGORIES);
+          setBrands(INITIAL_BRANDS);
+          setModels(INITIAL_MODELS);
+          setArticles(INITIAL_ARTICLES);
+          setArticleCategories(INITIAL_ARTICLE_CATEGORIES);
+          setSliders(INITIAL_SLIDERS);
+          setPages(INITIAL_PAGES);
+          setSettings(INITIAL_SETTINGS);
+          setPaymentGateways(INITIAL_PAYMENT_GATEWAYS);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Restore the HttpOnly server session without exposing credentials to JavaScript.
+  useEffect(() => {
+    let cancelled = false;
+
+    apiRequest<{ role: 'customer' | 'admin'; customer?: CustomerUser; admin?: AdminUser }>('/api/auth/me')
+      .then(data => {
+        if (cancelled) return;
+        if (data.role === 'customer' && data.customer) {
+          setCurrentCustomer(data.customer);
+          setCustomers(prev => {
+            const exists = prev.some(item => item.id === data.customer!.id);
+            return exists ? prev.map(item => item.id === data.customer!.id ? data.customer! : item) : [data.customer!, ...prev];
+          });
+          void loadCustomerPrivateData(cancelled);
+        } else if (data.role === 'admin' && data.admin) {
+          setAdminAuth({
+            isAuthenticated: true,
+            username: data.admin.username,
+            currentUser: data.admin,
+            isMustChangePassword: false
+          });
+          void loadAdminData(data.admin, cancelled);
+        }
+      })
+      .catch(error => {
+        if (!(error instanceof ApiError) || error.status !== 401) {
+          console.error('Session restore failed:', error);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   // Sync state to local storage
-  useEffect(() => {
-    localStorage.setItem('chinpart_products', JSON.stringify(products));
-  }, [products]);
 
-  useEffect(() => {
-    localStorage.setItem('chinpart_brands', JSON.stringify(brands));
-  }, [brands]);
 
-  useEffect(() => {
-    localStorage.setItem('chinpart_models', JSON.stringify(models));
-  }, [models]);
 
-  useEffect(() => {
-    localStorage.setItem('chinpart_categories', JSON.stringify(categories));
-  }, [categories]);
 
-  useEffect(() => {
-    localStorage.setItem('chinpart_customers', JSON.stringify(customers));
-  }, [customers]);
 
-  useEffect(() => {
-    localStorage.setItem('chinpart_current_customer', JSON.stringify(currentCustomer));
-  }, [currentCustomer]);
 
-  useEffect(() => {
-    localStorage.setItem('chinpart_loyalty_transactions', JSON.stringify(loyaltyTransactions));
-  }, [loyaltyTransactions]);
 
-  useEffect(() => {
-    localStorage.setItem('chinpart_settings', JSON.stringify(settings));
-  }, [settings]);
 
-  useEffect(() => {
-    localStorage.setItem('chinpart_gateways', JSON.stringify(paymentGateways));
-  }, [paymentGateways]);
 
-  useEffect(() => {
-    localStorage.setItem('chinpart_apis', JSON.stringify(apiIntegrations));
-  }, [apiIntegrations]);
-
-  useEffect(() => {
-    localStorage.setItem('chinpart_admin_pass', adminPassword);
-  }, [adminPassword]);
-
-  useEffect(() => {
-    localStorage.setItem('chinpart_admin_auth', JSON.stringify(adminAuth));
-  }, [adminAuth]);
 
   useEffect(() => {
     localStorage.setItem('chinpart_selected_car', JSON.stringify(selectedVehicle));
@@ -490,41 +520,13 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     localStorage.setItem('chinpart_wishlist', JSON.stringify(wishlist));
   }, [wishlist]);
 
-  useEffect(() => {
-    localStorage.setItem('chinpart_orders', JSON.stringify(orders));
-  }, [orders]);
 
-  useEffect(() => {
-    localStorage.setItem('chinpart_part_requests', JSON.stringify(partRequests));
-  }, [partRequests]);
 
-  useEffect(() => {
-    localStorage.setItem('chinpart_stock_alerts', JSON.stringify(stockAlerts));
-  }, [stockAlerts]);
 
-  useEffect(() => {
-    localStorage.setItem('chinpart_articles', JSON.stringify(articles));
-  }, [articles]);
 
-  useEffect(() => {
-    localStorage.setItem('chinpart_article_categories', JSON.stringify(articleCategories));
-  }, [articleCategories]);
 
-  useEffect(() => {
-    localStorage.setItem('chinpart_current_customer', JSON.stringify(currentCustomer));
-  }, [currentCustomer]);
 
-  useEffect(() => {
-    localStorage.setItem('chinpart_search_logs', JSON.stringify(searchLogs));
-  }, [searchLogs]);
 
-  useEffect(() => {
-    localStorage.setItem('chinpart_sliders', JSON.stringify(sliders));
-  }, [sliders]);
-
-  useEffect(() => {
-    localStorage.setItem('chinpart_admin_users', JSON.stringify(adminUsers));
-  }, [adminUsers]);
 
   // Dynamic Theme Styling Application (Colors, Glow, Typography, Border Radius, Font Scale)
   useEffect(() => {
@@ -673,144 +675,230 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   // Article Categories Handlers
   const addArticleCategory = (cat: ArticleCategory) => {
-    setArticleCategories(prev => [...prev, cat]);
-    showToast(`دسته‌بندی "${cat.name}" ایجاد شد.`);
+    void apiRequest<{ category: ArticleCategory }>('/api/cms/article-categories', {
+      method: 'POST',
+      body: JSON.stringify(cat)
+    }).then(({ category }) => {
+      setArticleCategories(prev => [...prev, category]);
+      showToast(`دسته‌بندی "${category.name}" ایجاد شد.`);
+    }).catch(error => {
+      console.error(error);
+      showToast('ثبت دسته‌بندی مقاله انجام نشد.', 'error');
+    });
   };
 
   const updateArticleCategory = (cat: ArticleCategory) => {
-    setArticleCategories(prev => prev.map(c => c.id === cat.id ? cat : c));
-    showToast('دسته‌بندی مقاله به‌روزرسانی شد.');
+    void apiRequest<{ category: ArticleCategory }>(`/api/cms/article-categories/${encodeURIComponent(cat.id)}`, {
+      method: 'PUT',
+      body: JSON.stringify(cat)
+    }).then(({ category }) => {
+      setArticleCategories(prev => prev.map(item => item.id === category.id ? category : item));
+      showToast('دسته‌بندی مقاله به‌روزرسانی شد.');
+    }).catch(error => {
+      console.error(error);
+      showToast('ویرایش دسته‌بندی مقاله انجام نشد.', 'error');
+    });
   };
 
   const deleteArticleCategory = (id: string) => {
-    setArticleCategories(prev => prev.filter(c => c.id !== id));
-    showToast('دسته‌بندی مقاله حذف شد.', 'info');
+    void apiRequest<{ ok: boolean }>(`/api/cms/article-categories/${encodeURIComponent(id)}`, {
+      method: 'DELETE'
+    }).then(() => {
+      setArticleCategories(prev => prev.filter(item => item.id !== id));
+      showToast('دسته‌بندی مقاله حذف شد.', 'info');
+    }).catch(error => {
+      console.error(error);
+      showToast('حذف دسته‌بندی مقاله انجام نشد.', 'error');
+    });
   };
 
   // Sliders Management
+  // Sliders Management
   const addSlider = (slide: SliderItem) => {
-    setSliders(prev => [...prev, slide]);
-    showToast(`اسلاید "${slide.title}" با موفقیت ذخیره شد.`);
+    void apiRequest<{ slider: SliderItem }>('/api/cms/sliders', {
+      method: 'POST',
+      body: JSON.stringify(slide)
+    }).then(({ slider }) => {
+      setSliders(prev => [...prev, slider]);
+      showToast(`اسلاید "${slider.title}" با موفقیت ذخیره شد.`);
+    }).catch(error => {
+      console.error(error);
+      showToast('ثبت اسلاید انجام نشد.', 'error');
+    });
   };
 
   const updateSlider = (slide: SliderItem) => {
-    setSliders(prev => prev.map(s => s.id === slide.id ? slide : s));
-    showToast('اسلاید به‌روزرسانی شد.');
+    void apiRequest<{ slider: SliderItem }>(`/api/cms/sliders/${encodeURIComponent(slide.id)}`, {
+      method: 'PUT',
+      body: JSON.stringify(slide)
+    }).then(({ slider }) => {
+      setSliders(prev => prev.map(item => item.id === slider.id ? slider : item));
+      showToast('اسلاید به‌روزرسانی شد.');
+    }).catch(error => {
+      console.error(error);
+      showToast('ویرایش اسلاید انجام نشد.', 'error');
+    });
   };
 
   const deleteSlider = (id: string) => {
-    setSliders(prev => prev.filter(s => s.id !== id));
-    showToast('اسلاید حذف شد.', 'info');
+    void apiRequest<{ ok: boolean }>(`/api/cms/sliders/${encodeURIComponent(id)}`, {
+      method: 'DELETE'
+    }).then(() => {
+      setSliders(prev => prev.filter(item => item.id !== id));
+      showToast('اسلاید حذف شد.', 'info');
+    }).catch(error => {
+      console.error(error);
+      showToast('حذف اسلاید انجام نشد.', 'error');
+    });
   };
 
   const reorderSliders = (newSliders: SliderItem[]) => {
-    setSliders(newSliders);
-    showToast('ترتیب نمایش اسلایدها تغییر یافت.');
+    void apiRequest<{ sliders: SliderItem[] }>('/api/cms/sliders/reorder', {
+      method: 'PATCH',
+      body: JSON.stringify({ sliders: newSliders })
+    }).then(({ sliders: saved }) => {
+      setSliders(saved);
+      showToast('ترتیب نمایش اسلایدها تغییر یافت.');
+    }).catch(error => {
+      console.error(error);
+      showToast('ذخیره ترتیب اسلایدها انجام نشد.', 'error');
+    });
   };
 
   // Multi-Admin Management
+  // Multi-Admin Management
   const addAdminUser = (user: AdminUser) => {
-    setAdminUsers(prev => [...prev, user]);
-    showToast(`مدیر جدید "${user.fullName}" با نقش ${user.roleTitle} اضافه شد.`);
+    void apiRequest<{ admin: AdminUser }>('/api/admin-data/admins', {
+      method: 'POST',
+      body: JSON.stringify(user)
+    }).then(({ admin }) => {
+      setAdminUsers(prev => [...prev, admin]);
+      showToast(`مدیر جدید "${admin.fullName}" با نقش ${admin.roleTitle} اضافه شد.`);
+    }).catch(error => {
+      console.error(error);
+      const message = error instanceof ApiError && error.code === 'ADMIN_USERNAME_EXISTS'
+        ? 'این نام کاربری قبلاً استفاده شده است.'
+        : 'ثبت مدیر جدید انجام نشد.';
+      showToast(message, 'error');
+    });
   };
 
   const updateAdminUser = (user: AdminUser) => {
-    setAdminUsers(prev => prev.map(u => u.id === user.id ? user : u));
-    showToast(`اطلاعات و سطوح دسترسی مدیر "${user.fullName}" به‌روزرسانی شد.`);
+    void apiRequest<{ admin: AdminUser }>(`/api/admin-data/admins/${encodeURIComponent(user.id)}`, {
+      method: 'PUT',
+      body: JSON.stringify(user)
+    }).then(({ admin }) => {
+      setAdminUsers(prev => prev.map(item => item.id === admin.id ? admin : item));
+      if (adminAuth.currentUser?.id === admin.id) {
+        setAdminAuth(prev => ({ ...prev, currentUser: admin, username: admin.username }));
+      }
+      showToast(`اطلاعات و سطوح دسترسی مدیر "${admin.fullName}" به‌روزرسانی شد.`);
+    }).catch(error => {
+      console.error(error);
+      showToast('ویرایش مدیر انجام نشد.', 'error');
+    });
   };
 
   const deleteAdminUser = (id: string) => {
-    const target = adminUsers.find(u => u.id === id);
+    const target = adminUsers.find(user => user.id === id);
     if (target?.role === 'super_admin') {
       showToast('امکان حذف مدیر ارشد کل سیستم وجود ندارد.', 'error');
       return;
     }
-    setAdminUsers(prev => prev.filter(u => u.id !== id));
-    showToast('مدیر حذف شد.', 'info');
+    void apiRequest<{ ok: boolean }>(`/api/admin-data/admins/${encodeURIComponent(id)}`, {
+      method: 'DELETE'
+    }).then(() => {
+      setAdminUsers(prev => prev.filter(user => user.id !== id));
+      showToast('مدیر حذف شد.', 'info');
+    }).catch(error => {
+      console.error(error);
+      showToast('حذف مدیر انجام نشد.', 'error');
+    });
   };
 
   const toggleAdminStatus = (id: string) => {
-    setAdminUsers(prev => prev.map(u => {
-      if (u.id === id) {
-        if (u.role === 'super_admin') {
-          showToast('امکان غیرفعال‌سازی مدیر ارشد کل سیستم وجود ندارد.', 'error');
-          return u;
-        }
-        const next = !u.isActive;
-        showToast(`حساب کاربری مدیر ${u.fullName} ${next ? 'فعال' : 'غیرفعال'} شد.`);
-        return { ...u, isActive: next };
-      }
-      return u;
-    }));
+    const target = adminUsers.find(user => user.id === id);
+    if (target?.role === 'super_admin') {
+      showToast('امکان غیرفعال‌سازی مدیر ارشد کل سیستم وجود ندارد.', 'error');
+      return;
+    }
+
+    void apiRequest<{ id: string; isActive: boolean }>(`/api/admin-data/admins/${encodeURIComponent(id)}/status`, {
+      method: 'PATCH'
+    }).then(result => {
+      setAdminUsers(prev => prev.map(user => user.id === result.id ? { ...user, isActive: result.isActive } : user));
+      showToast(`حساب کاربری مدیر ${target?.fullName || ''} ${result.isActive ? 'فعال' : 'غیرفعال'} شد.`, result.isActive ? 'success' : 'info');
+    }).catch(error => {
+      console.error(error);
+      showToast('تغییر وضعیت مدیر انجام نشد.', 'error');
+    });
   };
 
   // Pages & Section Builder Methods
-  useEffect(() => {
-    localStorage.setItem('chinpart_pages', JSON.stringify(pages));
-  }, [pages]);
+  // Pages & Section Builder Methods
+
+  const persistPage = (page: SitePage, successMessage: string) => {
+    const normalized = { ...page, updatedAt: new Date().toLocaleDateString('fa-IR') };
+    void apiRequest<{ page: SitePage }>(`/api/cms/pages/${encodeURIComponent(normalized.id)}`, {
+      method: 'PUT',
+      body: JSON.stringify(normalized)
+    }).then(({ page: saved }) => {
+      setPages(prev => {
+        const exists = prev.some(item => item.id === saved.id);
+        return exists ? prev.map(item => item.id === saved.id ? saved : item) : [...prev, saved];
+      });
+      showToast(successMessage);
+    }).catch(error => {
+      console.error(error);
+      showToast('ذخیره برگه در سرور انجام نشد.', 'error');
+    });
+  };
 
   const updatePage = (updatedPage: SitePage) => {
-    setPages(prev => {
-      const exists = prev.some(p => p.id === updatedPage.id);
-      if (exists) {
-        return prev.map(p => p.id === updatedPage.id ? { ...updatedPage, updatedAt: new Date().toLocaleDateString('fa-IR') } : p);
-      }
-      return [...prev, { ...updatedPage, updatedAt: new Date().toLocaleDateString('fa-IR') }];
-    });
-    showToast(`برگه "${updatedPage.title}" با موفقیت ذخیره شد.`);
+    persistPage(updatedPage, `برگه "${updatedPage.title}" با موفقیت ذخیره شد.`);
   };
 
   const deletePage = (pageId: string) => {
-    const target = pages.find(p => p.id === pageId);
+    const target = pages.find(page => page.id === pageId);
     if (!target) return;
     if (target.isSystem) {
       showToast('برگه‌های اصلی سیستمی غیرقابل حذف هستند.', 'error');
       return;
     }
-    setPages(prev => prev.filter(p => p.id !== pageId));
-    showToast(`برگه "${target.title}" با موفقیت حذف شد.`, 'info');
+
+    void apiRequest<{ ok: boolean }>(`/api/cms/pages/${encodeURIComponent(pageId)}`, {
+      method: 'DELETE'
+    }).then(() => {
+      setPages(prev => prev.filter(page => page.id !== pageId));
+      showToast(`برگه "${target.title}" با موفقیت حذف شد.`, 'info');
+    }).catch(error => {
+      console.error(error);
+      showToast('حذف برگه انجام نشد.', 'error');
+    });
   };
 
   const updateSection = (pageSlug: string, updatedSection: PageSection) => {
-    setPages(prev => prev.map(page => {
-      if (page.slug === pageSlug) {
-        return {
-          ...page,
-          sections: page.sections.map(s => s.id === updatedSection.id ? updatedSection : s),
-          updatedAt: new Date().toLocaleDateString('fa-IR')
-        };
-      }
-      return page;
-    }));
-    showToast(`بخش "${updatedSection.title}" با موفقیت به‌روزرسانی شد.`);
+    const page = pages.find(item => item.slug === pageSlug);
+    if (!page) return;
+    persistPage({
+      ...page,
+      sections: page.sections.map(section => section.id === updatedSection.id ? updatedSection : section)
+    }, `بخش "${updatedSection.title}" با موفقیت به‌روزرسانی شد.`);
   };
 
   const addSection = (pageSlug: string, newSection: PageSection) => {
-    setPages(prev => prev.map(page => {
-      if (page.slug === pageSlug) {
-        return {
-          ...page,
-          sections: [...page.sections, newSection],
-          updatedAt: new Date().toLocaleDateString('fa-IR')
-        };
-      }
-      return page;
-    }));
-    showToast('بخش جدید با موفقیت اضافه شد.');
+    const page = pages.find(item => item.slug === pageSlug);
+    if (!page) return;
+    persistPage({ ...page, sections: [...page.sections, newSection] }, 'بخش جدید با موفقیت اضافه شد.');
   };
 
   const deleteSection = (pageSlug: string, sectionId: string) => {
-    setPages(prev => prev.map(page => {
-      if (page.slug === pageSlug) {
-        return {
-          ...page,
-          sections: page.sections.filter(s => s.id !== sectionId),
-          updatedAt: new Date().toLocaleDateString('fa-IR')
-        };
-      }
-      return page;
-    }));
-    showToast('بخش با موفقیت حذف شد.', 'info');
+    const page = pages.find(item => item.slug === pageSlug);
+    if (!page) return;
+    persistPage({
+      ...page,
+      sections: page.sections.filter(section => section.id !== sectionId)
+    }, 'بخش با موفقیت حذف شد.');
   };
 
   const setFontSize = (size: 'compact' | 'normal' | 'large' | 'xlarge') => {
@@ -818,108 +906,62 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     showToast(`اندازه فونت کل سایت به ${size === 'compact' ? 'فشرده' : size === 'large' ? 'بزرگ' : size === 'xlarge' ? 'خیلی بزرگ' : 'استاندارد'} تغییر یافت.`);
   };
 
-  // Admin Auth functions (Multi-Admin Supported with strict password invalidation)
-  const adminLogin = (user: string, pass: string) => {
-    const cleanUser = user.trim().toLowerCase();
-    
-    // Check against multi-admin user database
-    const matchedUser = adminUsers.find(u => u.username.toLowerCase() === cleanUser);
-
-    if (!matchedUser) {
-      if (cleanUser !== 'admin') {
-        return { success: false, error: 'نام کاربری در سامانه مدیریت یافت نشد.' };
-      }
-      // Strict password check: ONLY current adminPassword is accepted
-      if (pass !== adminPassword) {
-        return { success: false, error: 'رمز عبور وارد شده اشتباه است.' };
-      }
-      const isInitialDefault = (adminPassword === '123456');
-      const authState: AdminAuthState = {
+  // Admin authentication is handled by the server and an HttpOnly session cookie.
+  const adminLogin = async (user: string, pass: string) => {
+    try {
+      const data = await apiRequest<{ admin: AdminUser }>('/api/auth/admin/login', {
+        method: 'POST',
+        body: JSON.stringify({ username: user, password: pass })
+      });
+      setAdminAuth({
         isAuthenticated: true,
-        username: 'admin',
-        currentUser: INITIAL_ADMIN_USERS[0],
-        isMustChangePassword: isInitialDefault
-      };
-      setAdminAuth(authState);
-      if (isInitialDefault) {
-        showToast('ورود با رمز عبور اولیه (123456) انجام شد. جهت امنیت، تغییر فوری رمز عبور الزامی است.', 'error');
-      } else {
-        showToast(`خوش آمدید، ${INITIAL_ADMIN_USERS[0].fullName}`);
-      }
-      return { success: true };
-    }
-
-    if (!matchedUser.isActive) {
-      return { success: false, error: 'حساب کاربری این مدیر غیرفعال گردیده است.' };
-    }
-
-    // STRICT PASSWORD VERIFICATION:
-    // If username is admin, the only valid password is the active adminPassword.
-    // If admin changed their password, old default '123456' is strictly rejected.
-    let requiredPass = '';
-    if (matchedUser.username.toLowerCase() === 'admin') {
-      requiredPass = adminPassword;
-    } else {
-      requiredPass = matchedUser.password || '';
-    }
-
-    if (!requiredPass || pass !== requiredPass) {
-      return { success: false, error: 'رمز عبور وارد شده اشتباه است.' };
-    }
-
-    const isInitialDefault = (matchedUser.username.toLowerCase() === 'admin' && adminPassword === '123456');
-    const authState: AdminAuthState = {
-      isAuthenticated: true,
-      username: matchedUser.username,
-      currentUser: matchedUser,
-      isMustChangePassword: isInitialDefault
-    };
-
-    setAdminAuth(authState);
-    if (isInitialDefault) {
-      showToast('ورود با رمز عبور اولیه (123456) انجام شد. لطفاً فوراً رمز خود را تغییر دهید.', 'error');
-    } else {
-      showToast(`خوش آمدید، ${matchedUser.fullName} (${matchedUser.roleTitle})`);
-    }
-    return { success: true };
-  };
-
-  const adminChangePassword = (oldPass: string, newPass: string) => {
-    if (oldPass !== adminPassword) {
-      return { success: false, error: 'رمز عبور فعلی وارد شده نادرست است.' };
-    }
-    if (!newPass || newPass.trim().length < 6) {
-      return { success: false, error: 'رمز عبور جدید باید حداقل ۶ کاراکتر باشد.' };
-    }
-    if (newPass.trim() === '123456') {
-      return { success: false, error: 'رمز عبور جدید نمی‌تواند همان رمز پیش‌فرض 123456 باشد.' };
-    }
-
-    const cleanNewPass = newPass.trim();
-    setAdminPassword(cleanNewPass);
-    localStorage.setItem('chinpart_admin_pass', cleanNewPass);
-
-    // Synchronize with admin user in database
-    setAdminUsers(prev => {
-      const updated = prev.map(u => u.username.toLowerCase() === 'admin' ? { ...u, password: cleanNewPass } : u);
-      localStorage.setItem('chinpart_admin_users', JSON.stringify(updated));
-      return updated;
-    });
-
-    setAdminAuth(prev => {
-      const updated = {
-        ...prev,
+        username: data.admin.username,
+        currentUser: data.admin,
         isMustChangePassword: false
-      };
-      localStorage.setItem('chinpart_admin_auth', JSON.stringify(updated));
-      return updated;
-    });
-
-    showToast('رمز عبور مدیر ارشد با موفقیت تغییر کرد. رمز پیش‌فرض 123456 برای همیشه منقضی و مسدود شد.');
-    return { success: true };
+      });
+      await loadAdminData(data.admin);
+      showToast(`خوش آمدید، ${data.admin.fullName}`);
+      return { success: true };
+    } catch (error) {
+      const code = error instanceof ApiError ? error.code : '';
+      const message =
+        code === 'ACCOUNT_BLOCKED'
+          ? 'حساب کاربری این مدیر غیرفعال است.'
+          : code === 'TOO_MANY_LOGIN_ATTEMPTS'
+            ? 'تعداد تلاش‌های ورود بیش از حد مجاز است. کمی بعد دوباره تلاش کنید.'
+            : 'نام کاربری یا رمز عبور نادرست است.';
+      return { success: false, error: message };
+    }
   };
 
-  const adminLogout = () => {
+  const adminChangePassword = async (oldPass: string, newPass: string) => {
+    if (newPass.trim().length < 10) {
+      return { success: false, error: 'رمز عبور جدید باید حداقل ۱۰ کاراکتر باشد.' };
+    }
+    try {
+      await apiRequest<{ ok: boolean }>('/api/auth/admin/change-password', {
+        method: 'POST',
+        body: JSON.stringify({ currentPassword: oldPass, newPassword: newPass })
+      });
+      showToast('رمز عبور مدیر با موفقیت و به‌صورت امن روی سرور تغییر کرد.');
+      return { success: true };
+    } catch (error) {
+      const code = error instanceof ApiError ? error.code : '';
+      return {
+        success: false,
+        error: code === 'INVALID_CURRENT_PASSWORD'
+          ? 'رمز عبور فعلی نادرست است.'
+          : 'تغییر رمز عبور انجام نشد.'
+      };
+    }
+  };
+
+  const adminLogout = async () => {
+    try {
+      await apiRequest<{ ok: boolean }>('/api/auth/logout', { method: 'POST' });
+    } catch {
+      // Clear the local view even if the network request fails.
+    }
     setAdminAuth({
       isAuthenticated: false,
       username: '',
@@ -930,200 +972,336 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   // Settings
   const updateSettings = (newSettings: Partial<SiteSettings>) => {
-    setSettings(prev => ({ ...prev, ...newSettings }));
-    showToast('تنظیمات فروشگاه (قالب، رنگ و سیاست‌ها) با موفقیت ذخیره شد.');
+    void apiRequest<{ settings: SiteSettings }>('/api/cms/settings', {
+      method: 'PATCH',
+      body: JSON.stringify(newSettings)
+    }).then(({ settings: saved }) => {
+      setSettings(saved);
+      showToast('تنظیمات فروشگاه (قالب، رنگ و سیاست‌ها) با موفقیت ذخیره شد.');
+    }).catch(error => {
+      console.error(error);
+      showToast('ذخیره تنظیمات فروشگاه انجام نشد.', 'error');
+    });
   };
 
-  // Payment Gateways
+  const persistPaymentGateways = (gateways: PaymentGatewayConfig[], message: string) => {
+    void apiRequest<{ paymentGateways: PaymentGatewayConfig[] }>('/api/cms/payment-gateways', {
+      method: 'PUT',
+      body: JSON.stringify({ gateways })
+    }).then(({ paymentGateways: saved }) => {
+      setPaymentGateways(saved);
+      showToast(message);
+    }).catch(error => {
+      console.error(error);
+      showToast('ذخیره تنظیمات نمایشی درگاه‌ها انجام نشد.', 'error');
+    });
+  };
+
   const updatePaymentGateway = (gateway: PaymentGatewayConfig) => {
-    setPaymentGateways(prev => prev.map(g => g.id === gateway.id ? gateway : g));
-    showToast(`درگاه ${gateway.name} به‌روزرسانی شد.`);
+    const next = paymentGateways.map(item => item.id === gateway.id ? gateway : item);
+    persistPaymentGateways(next, `درگاه ${gateway.name} به‌روزرسانی شد.`);
   };
 
   const toggleGatewayActive = (gatewayId: string) => {
-    setPaymentGateways(prev => prev.map(g => {
-      if (g.id === gatewayId) {
-        const next = !g.isActive;
-        showToast(`درگاه ${g.name} ${next ? 'فعال' : 'غیرفعال'} شد.`, next ? 'success' : 'info');
-        return { ...g, isActive: next };
-      }
-      return g;
-    }));
+    const target = paymentGateways.find(item => item.id === gatewayId);
+    if (!target) return;
+    const nextActive = !target.isActive;
+    const next = paymentGateways.map(item => item.id === gatewayId ? { ...item, isActive: nextActive } : item);
+    persistPaymentGateways(next, `درگاه ${target.name} ${nextActive ? 'فعال' : 'غیرفعال'} شد.`);
   };
 
   // API Integrations
-  const updateApiIntegrations = (config: Partial<ApiIntegrationsConfig>) => {
-    setApiIntegrations(prev => ({ ...prev, ...config }));
-    showToast('تنظیمات سرویس‌های پیامک و سیستم حسابداری ذخیره شد.');
+  // API Integrations
+  const updateApiIntegrations = (nextConfig: Partial<ApiIntegrationsConfig>) => {
+    const payload = { ...apiIntegrations, ...nextConfig };
+    void apiRequest<{ integrations: ApiIntegrationsConfig }>('/api/integrations', {
+      method: 'PUT',
+      body: JSON.stringify(payload)
+    }).then(({ integrations }) => {
+      setApiIntegrations(integrations);
+      showToast('تنظیمات سرویس‌ها به‌صورت رمزنگاری‌شده روی سرور ذخیره شد.');
+    }).catch(error => {
+      console.error(error);
+      const message =
+        error instanceof ApiError && error.code === 'ENCRYPTION_KEY_NOT_CONFIGURED'
+          ? 'کلید رمزنگاری APP_ENCRYPTION_KEY روی سرور تنظیم نشده است.'
+          : 'ذخیره تنظیمات سرویس‌ها انجام نشد.';
+      showToast(message, 'error');
+    });
   };
 
   // Customers (CRM)
   const addCustomer = (custData: Omit<CustomerUser, 'id' | 'registeredAt' | 'totalOrders' | 'totalSpent'>) => {
-    const newCust: CustomerUser = {
-      ...custData,
-      id: `cust-${Date.now()}`,
-      registeredAt: new Date().toLocaleDateString('fa-IR'),
-      totalOrders: 0,
-      totalSpent: 0
-    };
-    setCustomers(prev => [newCust, ...prev]);
-    showToast(`مشتری ${newCust.firstName} ${newCust.lastName} ثبت شد.`);
+    void apiRequest<{ customer: CustomerUser }>('/api/admin-data/customers', {
+      method: 'POST',
+      body: JSON.stringify(custData)
+    }).then(({ customer }) => {
+      setCustomers(prev => [customer, ...prev]);
+      showToast(`مشتری ${customer.firstName} ${customer.lastName} ثبت شد.`);
+    }).catch(error => {
+      console.error(error);
+      const message = error instanceof ApiError && error.code === 'PHONE_ALREADY_REGISTERED'
+        ? 'این شماره موبایل قبلاً ثبت شده است.'
+        : 'ثبت مشتری انجام نشد.';
+      showToast(message, 'error');
+    });
   };
 
   const updateCustomer = (cust: CustomerUser) => {
-    setCustomers(prev => prev.map(c => c.id === cust.id ? cust : c));
-    showToast(`اطلاعات مشتری ${cust.firstName} ${cust.lastName} به‌روزرسانی شد.`);
+    void apiRequest<{ customer: CustomerUser }>(`/api/admin-data/customers/${encodeURIComponent(cust.id)}`, {
+      method: 'PUT',
+      body: JSON.stringify(cust)
+    }).then(({ customer }) => {
+      setCustomers(prev => prev.map(item => item.id === customer.id ? customer : item));
+      if (currentCustomer?.id === customer.id) setCurrentCustomer(customer);
+      showToast(`اطلاعات مشتری ${customer.firstName} ${customer.lastName} به‌روزرسانی شد.`);
+    }).catch(error => {
+      console.error(error);
+      showToast('ویرایش اطلاعات مشتری انجام نشد.', 'error');
+    });
   };
 
   const toggleCustomerStatus = (id: string) => {
-    setCustomers(prev => prev.map(c => {
-      if (c.id === id) {
-        const nextStatus = c.status === 'active' ? 'blocked' : 'active';
-        showToast(`وضعیت مشتری به ${nextStatus === 'active' ? 'فعال' : 'مسدود'} تغییر کرد.`, 'info');
-        return { ...c, status: nextStatus };
-      }
-      return c;
-    }));
+    void apiRequest<{ id: string; status: 'active' | 'blocked' }>(`/api/admin-data/customers/${encodeURIComponent(id)}/status`, {
+      method: 'PATCH'
+    }).then(result => {
+      setCustomers(prev => prev.map(customer => customer.id === result.id ? { ...customer, status: result.status } : customer));
+      showToast(`وضعیت مشتری به ${result.status === 'active' ? 'فعال' : 'مسدود'} تغییر کرد.`, 'info');
+    }).catch(error => {
+      console.error(error);
+      showToast('تغییر وضعیت مشتری انجام نشد.', 'error');
+    });
   };
 
   // Categories
+  // Categories
   const addCategory = (cat: Category) => {
-    setCategories(prev => [...prev, cat]);
-    showToast(`دسته‌بندی ${cat.nameFa} افزوده شد.`);
+    void apiRequest<{ category: Category }>('/api/catalog/categories', {
+      method: 'POST',
+      body: JSON.stringify(cat)
+    }).then(({ category }) => {
+      setCategories(prev => [...prev, category]);
+      showToast(`دسته‌بندی ${category.nameFa} افزوده شد.`);
+    }).catch(error => {
+      console.error(error);
+      showToast('ثبت دسته‌بندی در سرور انجام نشد.', 'error');
+    });
   };
 
   const updateCategory = (cat: Category) => {
-    setCategories(prev => prev.map(c => c.id === cat.id ? cat : c));
-    showToast(`دسته‌بندی ${cat.nameFa} به‌روزرسانی شد.`);
+    void apiRequest<{ category: Category }>(`/api/catalog/categories/${encodeURIComponent(cat.id)}`, {
+      method: 'PUT',
+      body: JSON.stringify(cat)
+    }).then(({ category }) => {
+      setCategories(prev => prev.map(item => item.id === category.id ? category : item));
+      showToast(`دسته‌بندی ${category.nameFa} به‌روزرسانی شد.`);
+    }).catch(error => {
+      console.error(error);
+      showToast('ویرایش دسته‌بندی در سرور انجام نشد.', 'error');
+    });
   };
 
   const deleteCategory = (catId: string) => {
-    setCategories(prev => prev.filter(c => c.id !== catId));
-    showToast('دسته‌بندی حذف شد.', 'info');
+    void apiRequest<{ ok: boolean }>(`/api/catalog/categories/${encodeURIComponent(catId)}`, {
+      method: 'DELETE'
+    }).then(() => {
+      setCategories(prev => prev.filter(item => item.id !== catId));
+      showToast('دسته‌بندی حذف شد.', 'info');
+    }).catch(error => {
+      console.error(error);
+      showToast('حذف دسته‌بندی در سرور انجام نشد.', 'error');
+    });
   };
 
   // Brands & Models
   const addBrand = (brand: CarBrand) => {
-    setBrands(prev => [...prev, brand]);
-    showToast(`برند ${brand.nameFa} اضافه شد.`);
+    void apiRequest<{ brand: CarBrand }>('/api/vehicles/brands', {
+      method: 'POST',
+      body: JSON.stringify(brand)
+    }).then(({ brand: saved }) => {
+      setBrands(prev => [...prev, saved]);
+      showToast(`برند ${saved.nameFa} اضافه شد.`);
+    }).catch(error => {
+      console.error(error);
+      showToast('ثبت برند خودرو انجام نشد.', 'error');
+    });
   };
 
   const updateBrand = (brand: CarBrand) => {
-    setBrands(prev => prev.map(b => b.id === brand.id ? brand : b));
-    showToast(`برند ${brand.nameFa} به‌روزرسانی شد.`);
+    void apiRequest<{ brand: CarBrand }>(`/api/vehicles/brands/${encodeURIComponent(brand.id)}`, {
+      method: 'PUT',
+      body: JSON.stringify(brand)
+    }).then(({ brand: saved }) => {
+      setBrands(prev => prev.map(item => item.id === saved.id ? saved : item));
+      showToast(`برند ${saved.nameFa} به‌روزرسانی شد.`);
+    }).catch(error => {
+      console.error(error);
+      showToast('ویرایش برند خودرو انجام نشد.', 'error');
+    });
   };
 
   const deleteBrand = (brandId: string) => {
-    setBrands(prev => prev.filter(b => b.id !== brandId));
-    setModels(prev => prev.filter(m => m.brandId !== brandId));
-    showToast('برند خودرو و مدل‌های تابعه آن از سیستم حذف شدند.', 'info');
+    void apiRequest<{ ok: boolean }>(`/api/vehicles/brands/${encodeURIComponent(brandId)}`, {
+      method: 'DELETE'
+    }).then(() => {
+      setBrands(prev => prev.filter(item => item.id !== brandId));
+      setModels(prev => prev.filter(model => model.brandId !== brandId));
+      showToast('برند خودرو و مدل‌های تابعه آن از سیستم حذف شدند.', 'info');
+    }).catch(error => {
+      console.error(error);
+      showToast('حذف برند خودرو انجام نشد.', 'error');
+    });
   };
 
   const addModel = (model: VehicleModel) => {
-    setModels(prev => [...prev, model]);
-    showToast(`مدل ${model.nameFa} اضافه شد.`);
+    void apiRequest<{ model: VehicleModel }>('/api/vehicles/models', {
+      method: 'POST',
+      body: JSON.stringify(model)
+    }).then(({ model: saved }) => {
+      setModels(prev => [...prev, saved]);
+      showToast(`مدل ${saved.nameFa} اضافه شد.`);
+    }).catch(error => {
+      console.error(error);
+      showToast('ثبت مدل خودرو انجام نشد.', 'error');
+    });
   };
 
   const updateModel = (model: VehicleModel) => {
-    setModels(prev => prev.map(m => m.id === model.id ? model : m));
-    showToast(`مدل ${model.nameFa} به‌روزرسانی شد.`);
+    void apiRequest<{ model: VehicleModel }>(`/api/vehicles/models/${encodeURIComponent(model.id)}`, {
+      method: 'PUT',
+      body: JSON.stringify(model)
+    }).then(({ model: saved }) => {
+      setModels(prev => prev.map(item => item.id === saved.id ? saved : item));
+      showToast(`مدل ${saved.nameFa} به‌روزرسانی شد.`);
+    }).catch(error => {
+      console.error(error);
+      showToast('ویرایش مدل خودرو انجام نشد.', 'error');
+    });
   };
 
   const deleteModel = (modelId: string) => {
-    setModels(prev => prev.filter(m => m.id !== modelId));
-    showToast('مدل خودرو حذف شد.', 'info');
+    void apiRequest<{ ok: boolean }>(`/api/vehicles/models/${encodeURIComponent(modelId)}`, {
+      method: 'DELETE'
+    }).then(() => {
+      setModels(prev => prev.filter(item => item.id !== modelId));
+      showToast('مدل خودرو حذف شد.', 'info');
+    }).catch(error => {
+      console.error(error);
+      showToast('حذف مدل خودرو انجام نشد.', 'error');
+    });
   };
 
   // Articles (Blog)
   const addArticle = (art: Article) => {
-    setArticles(prev => [art, ...prev]);
-    showToast(`مقاله "${art.title}" با موفقیت منتشر گردید.`);
+    void apiRequest<{ article: Article }>('/api/cms/articles', {
+      method: 'POST',
+      body: JSON.stringify(art)
+    }).then(({ article }) => {
+      setArticles(prev => [article, ...prev]);
+      showToast(`مقاله "${article.title}" با موفقیت منتشر گردید.`);
+    }).catch(error => {
+      console.error(error);
+      showToast('انتشار مقاله انجام نشد.', 'error');
+    });
   };
 
   const updateArticle = (art: Article) => {
-    setArticles(prev => prev.map(a => a.id === art.id ? art : a));
-    showToast(`مقاله "${art.title}" به‌روزرسانی شد.`);
+    void apiRequest<{ article: Article }>(`/api/cms/articles/${encodeURIComponent(art.id)}`, {
+      method: 'PUT',
+      body: JSON.stringify(art)
+    }).then(({ article }) => {
+      setArticles(prev => prev.map(item => item.id === article.id ? article : item));
+      showToast(`مقاله "${article.title}" به‌روزرسانی شد.`);
+    }).catch(error => {
+      console.error(error);
+      showToast('ویرایش مقاله انجام نشد.', 'error');
+    });
   };
 
   const deleteArticle = (id: string) => {
-    setArticles(prev => prev.filter(a => a.id !== id));
-    showToast('مقاله از وبلاگ حذف شد.', 'info');
+    void apiRequest<{ ok: boolean }>(`/api/cms/articles/${encodeURIComponent(id)}`, {
+      method: 'DELETE'
+    }).then(() => {
+      setArticles(prev => prev.filter(article => article.id !== id));
+      showToast('مقاله از وبلاگ حذف شد.', 'info');
+    }).catch(error => {
+      console.error(error);
+      showToast('حذف مقاله انجام نشد.', 'error');
+    });
   };
 
-  // Customer Auth / Registration
-  const customerLogin = (phone: string, _pass: string) => {
-    const cleanPhone = phone.trim();
-    const user = customers.find(c => c.phone === cleanPhone);
-    if (!user) {
-      return { success: false, error: 'کاربری با این شماره همراه یافت نشد. لطفا ابتدا ثبت‌نام کنید.' };
+  // Customer authentication is handled by the production API.
+  // Customer authentication is handled by the production API.
+  const customerLogin = async (phone: string, pass: string) => {
+    if (!pass) {
+      return { success: false, error: 'رمز عبور الزامی است.' };
     }
-    if (user.status === 'blocked') {
-      return { success: false, error: 'حساب کاربری شما توسط مدیر سیستم غیرفعال شده است.' };
+    try {
+      const data = await apiRequest<{ customer: CustomerUser }>('/api/auth/customer/login', {
+        method: 'POST',
+        body: JSON.stringify({ phone, password: pass })
+      });
+      setCurrentCustomer(data.customer);
+      setCustomers(prev => {
+        const exists = prev.some(item => item.id === data.customer.id);
+        return exists ? prev.map(item => item.id === data.customer.id ? data.customer : item) : [data.customer, ...prev];
+      });
+      await loadCustomerPrivateData();
+      showToast(`خوش آمدید، ${data.customer.firstName} عزیز.`);
+      return { success: true };
+    } catch (error) {
+      const code = error instanceof ApiError ? error.code : '';
+      const message =
+        code === 'ACCOUNT_BLOCKED'
+          ? 'حساب کاربری شما غیرفعال شده است.'
+          : code === 'TOO_MANY_LOGIN_ATTEMPTS'
+            ? 'تعداد تلاش‌های ورود بیش از حد مجاز است. کمی بعد دوباره تلاش کنید.'
+            : 'شماره همراه یا رمز عبور نادرست است.';
+      return { success: false, error: message };
     }
-    setCurrentCustomer(user);
-    showToast(`خوش آمدید، ${user.firstName} عزیز.`);
-    return { success: true };
   };
 
-  const customerRegister = (data: {
+  const customerRegister = async (data: {
     firstName: string;
     lastName: string;
     phone: string;
-    password?: string;
+    password: string;
     type: CustomerUser['type'];
     vehicle?: string;
   }) => {
-    const cleanPhone = data.phone.trim();
-    if (customers.some(c => c.phone === cleanPhone)) {
-      return { success: false, error: 'این شماره تماس قبلاً در سامانه ثبت شده است. لطفاً وارد شوید.' };
+    if (!data.password || data.password.length < 8) {
+      return { success: false, error: 'رمز عبور باید حداقل ۸ کاراکتر باشد.' };
     }
-    const typeTitle = data.type === 'wholesale' ? 'همکار / عمده‌فروش' : data.type === 'mechanic' ? 'تعمیرکار / مکانیک' : 'مشتری عادی';
-    const welcomeBonus = settings.loyaltySettings?.signupBonusPoints ?? 50;
-    const now = new Date();
-    const dateFa = new Intl.DateTimeFormat('fa-IR', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit'
-    }).format(now);
-
-    const newCust: CustomerUser = {
-      id: `cust-${Date.now()}`,
-      firstName: data.firstName,
-      lastName: data.lastName,
-      phone: cleanPhone,
-      email: '',
-      type: data.type,
-      typeTitle,
-      status: 'active',
-      registeredAt: new Date().toLocaleDateString('fa-IR'),
-      totalOrders: 0,
-      totalSpent: 0,
-      vehicle: data.vehicle || '',
-      address: '',
-      loyaltyPoints: welcomeBonus,
-      loyaltyTier: 'bronze'
-    };
-
-    const welcomeTx: LoyaltyTransaction = {
-      id: `tx-loyalty-${Date.now()}`,
-      customerId: newCust.id,
-      type: 'bonus',
-      points: welcomeBonus,
-      description: 'هدیه خوش‌آمدگویی باشگاه مشتریان چین‌پارت',
-      date: dateFa,
-      balanceAfter: welcomeBonus
-    };
-
-    setCustomers(prev => [newCust, ...prev]);
-    setCurrentCustomer(newCust);
-    setLoyaltyTransactions(prev => [welcomeTx, ...prev]);
-    showToast(`ثبت‌نام شما با موفقیت انجام شد! ${welcomeBonus} امتیاز هدیه عضویت به حساب شما اضافه شد.`);
-    return { success: true };
+    try {
+      const response = await apiRequest<{ customer: CustomerUser }>('/api/auth/customer/register', {
+        method: 'POST',
+        body: JSON.stringify(data)
+      });
+      setCurrentCustomer(response.customer);
+      setCustomers(prev => [response.customer, ...prev.filter(item => item.id !== response.customer.id)]);
+      await loadCustomerPrivateData();
+      showToast('ثبت‌نام با موفقیت انجام شد.');
+      return { success: true };
+    } catch (error) {
+      const code = error instanceof ApiError ? error.code : '';
+      const message =
+        code === 'PHONE_ALREADY_REGISTERED'
+          ? 'این شماره همراه قبلاً ثبت شده است.'
+          : code === 'ACCOUNT_ACTIVATION_REQUIRED'
+            ? 'این شماره قبلاً در CRM ثبت شده و برای فعال‌سازی حساب نیاز به تأیید هویت/OTP دارد.'
+            : code === 'PASSWORD_TOO_SHORT'
+            ? 'رمز عبور باید حداقل ۸ کاراکتر باشد.'
+            : 'ثبت‌نام انجام نشد. اطلاعات را بررسی کنید.';
+      return { success: false, error: message };
+    }
   };
 
-  const customerLogout = () => {
+  const customerLogout = async () => {
+    try {
+      await apiRequest<{ ok: boolean }>('/api/auth/logout', { method: 'POST' });
+    } catch {
+      // Local logout must still complete.
+    }
     setCurrentCustomer(null);
     showToast('از حساب کاربری خود خارج شدید.', 'info');
   };
@@ -1175,32 +1353,64 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   // Products
   const addProduct = (product: Product) => {
-    setProducts(prev => [product, ...prev]);
-    showToast(`قطعه ${product.nameFa} با موفقیت ثبت شد.`);
+    void apiRequest<{ product: Product }>('/api/catalog/products', {
+      method: 'POST',
+      body: JSON.stringify(product)
+    }).then(result => {
+      setProducts(prev => [result.product, ...prev]);
+      showToast(`قطعه ${result.product.nameFa} با موفقیت ثبت شد.`);
+    }).catch(error => {
+      console.error(error);
+      showToast('ثبت محصول در پایگاه داده انجام نشد.', 'error');
+    });
   };
 
   const updateProduct = (updated: Product) => {
-    setProducts(prev => prev.map(p => p.id === updated.id ? updated : p));
-    showToast(`محصول ${updated.nameFa} با موفقیت ویرایش شد.`);
+    void apiRequest<{ product: Product }>(`/api/catalog/products/${encodeURIComponent(updated.id)}`, {
+      method: 'PUT',
+      body: JSON.stringify(updated)
+    }).then(result => {
+      setProducts(prev => prev.map(p => p.id === result.product.id ? result.product : p));
+      showToast(`محصول ${result.product.nameFa} با موفقیت ویرایش شد.`);
+    }).catch(error => {
+      console.error(error);
+      showToast('ویرایش محصول در پایگاه داده انجام نشد.', 'error');
+    });
   };
 
   const deleteProduct = (id: string) => {
-    setProducts(prev => prev.filter(p => p.id !== id));
-    showToast('محصول از پایگاه داده حذف شد.', 'info');
+    void apiRequest<{ ok: boolean }>(`/api/catalog/products/${encodeURIComponent(id)}`, {
+      method: 'DELETE'
+    }).then(() => {
+      setProducts(prev => prev.filter(p => p.id !== id));
+      showToast('محصول از پایگاه داده حذف شد.', 'info');
+    }).catch(error => {
+      console.error(error);
+      showToast('حذف محصول در سرور انجام نشد.', 'error');
+    });
   };
 
   const bulkUpdateProducts = (updates: { id: string; price?: number; stock?: number; status?: string }[]) => {
-    setProducts(prev => prev.map(p => {
-      const target = updates.find(u => u.id === p.id);
-      if (!target) return p;
-      return {
-        ...p,
-        price: target.price !== undefined ? target.price : p.price,
-        stock: target.stock !== undefined ? target.stock : p.stock,
-        stockStatus: (target.status as any) || (target.stock && target.stock > 0 ? 'in_stock' : 'out_of_stock')
-      };
-    }));
-    showToast(`${updates.length} محصول با موفقیت به‌روزرسانی گروهی شدند.`);
+    void apiRequest<{ ok: boolean }>('/api/catalog/products/bulk', {
+      method: 'PATCH',
+      body: JSON.stringify({ updates })
+    }).then(() => {
+      setProducts(prev => prev.map(p => {
+        const target = updates.find(u => u.id === p.id);
+        if (!target) return p;
+        const stock = target.stock !== undefined ? target.stock : p.stock;
+        return {
+          ...p,
+          price: target.price !== undefined ? target.price : p.price,
+          stock,
+          stockStatus: stock <= 0 ? 'out_of_stock' : stock <= 3 ? 'low_stock' : 'in_stock'
+        };
+      }));
+      showToast(`${updates.length} محصول با موفقیت به‌روزرسانی گروهی شدند.`);
+    }).catch(error => {
+      console.error(error);
+      showToast('به‌روزرسانی گروهی محصولات انجام نشد.', 'error');
+    });
   };
 
   // Vehicle Selection
@@ -1459,42 +1669,28 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     type: LoyaltyTransaction['type'] = 'bonus'
   ) => {
     if (points <= 0) return;
-    const currentPts = getCustomerPoints(customerId);
-    const newBalance = currentPts + points;
-    const now = new Date();
-    const dateFa = new Intl.DateTimeFormat('fa-IR', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit'
-    }).format(now);
 
-    const newTx: LoyaltyTransaction = {
-      id: `tx-loyalty-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
-      customerId,
-      type,
-      points,
-      description,
-      orderNumber,
-      date: dateFa,
-      balanceAfter: newBalance
-    };
-
-    setLoyaltyTransactions(prev => [newTx, ...prev]);
-
-    setCustomers(prev => prev.map(c => {
-      if (c.id === customerId || c.phone === customerId) {
-        const tier = getTierInfo(newBalance).tier;
-        return { ...c, loyaltyPoints: newBalance, loyaltyTier: tier };
+    void apiRequest<{ transaction: LoyaltyTransaction }>('/api/admin-data/loyalty', {
+      method: 'POST',
+      body: JSON.stringify({ customerId, points, description, orderNumber, type })
+    }).then(({ transaction }) => {
+      setLoyaltyTransactions(prev => [transaction, ...prev]);
+      setCustomers(prev => prev.map(customer =>
+        customer.id === customerId
+          ? { ...customer, loyaltyPoints: transaction.balanceAfter, loyaltyTier: getTierInfo(transaction.balanceAfter).tier }
+          : customer
+      ));
+      if (currentCustomer?.id === customerId) {
+        setCurrentCustomer(prev => prev ? {
+          ...prev,
+          loyaltyPoints: transaction.balanceAfter,
+          loyaltyTier: getTierInfo(transaction.balanceAfter).tier
+        } : null);
       }
-      return c;
-    }));
-
-    if (currentCustomer && (currentCustomer.id === customerId || currentCustomer.phone === customerId)) {
-      const tier = getTierInfo(newBalance).tier;
-      setCurrentCustomer(prev => prev ? { ...prev, loyaltyPoints: newBalance, loyaltyTier: tier } : null);
-    }
+    }).catch(error => {
+      console.error(error);
+      showToast('ثبت امتیاز وفاداری انجام نشد.', 'error');
+    });
   };
 
   const redeemLoyaltyPoints = (
@@ -1504,218 +1700,170 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   ): boolean => {
     const currentPts = getCustomerPoints(customerId);
     if (points <= 0 || currentPts < points) return false;
-    const newBalance = currentPts - points;
-    const now = new Date();
-    const dateFa = new Intl.DateTimeFormat('fa-IR', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit'
-    }).format(now);
 
-    const newTx: LoyaltyTransaction = {
-      id: `tx-loyalty-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
-      customerId,
-      type: 'redeemed',
-      points: -points,
-      description: orderNumber ? `کسر امتیاز بابت تخفیف در سفارش ${orderNumber}` : 'کسر امتیاز بابت تخفیف خرید',
-      orderNumber,
-      date: dateFa,
-      balanceAfter: newBalance
-    };
-
-    setLoyaltyTransactions(prev => [newTx, ...prev]);
-
-    setCustomers(prev => prev.map(c => {
-      if (c.id === customerId || c.phone === customerId) {
-        const tier = getTierInfo(newBalance).tier;
-        return { ...c, loyaltyPoints: newBalance, loyaltyTier: tier };
+    void apiRequest<{ transaction: LoyaltyTransaction }>('/api/admin-data/loyalty', {
+      method: 'POST',
+      body: JSON.stringify({
+        customerId,
+        points: -points,
+        description: orderNumber
+          ? `کسر امتیاز بابت تخفیف در سفارش ${orderNumber}`
+          : 'کسر امتیاز بابت تخفیف خرید',
+        orderNumber,
+        type: 'redeemed'
+      })
+    }).then(({ transaction }) => {
+      setLoyaltyTransactions(prev => [transaction, ...prev]);
+      setCustomers(prev => prev.map(customer =>
+        customer.id === customerId
+          ? { ...customer, loyaltyPoints: transaction.balanceAfter, loyaltyTier: getTierInfo(transaction.balanceAfter).tier }
+          : customer
+      ));
+      if (currentCustomer?.id === customerId) {
+        setCurrentCustomer(prev => prev ? {
+          ...prev,
+          loyaltyPoints: transaction.balanceAfter,
+          loyaltyTier: getTierInfo(transaction.balanceAfter).tier
+        } : null);
       }
-      return c;
-    }));
+    }).catch(error => {
+      console.error(error);
+      showToast('کسر امتیاز وفاداری انجام نشد.', 'error');
+    });
 
-    if (currentCustomer && (currentCustomer.id === customerId || currentCustomer.phone === customerId)) {
-      const tier = getTierInfo(newBalance).tier;
-      setCurrentCustomer(prev => prev ? { ...prev, loyaltyPoints: newBalance, loyaltyTier: tier } : null);
-    }
     return true;
   };
 
   // Orders
-  const createOrder = (orderData: Omit<Order, 'id' | 'orderNumber' | 'date'> & { loyaltyPointsToRedeem?: number }): Order => {
-    const orderNum = `CHP-${Math.floor(10000 + Math.random() * 90000)}`;
-    const now = new Date();
-    const dateFa = new Intl.DateTimeFormat('fa-IR', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit'
-    }).format(now);
+  // Orders
+  const createOrder = async (
+    orderData: Omit<Order, 'id' | 'orderNumber' | 'date'> & { loyaltyPointsToRedeem?: number }
+  ): Promise<Order> => {
+    const response = await apiRequest<{ order: Order }>('/api/orders', {
+      method: 'POST',
+      body: JSON.stringify({
+        customer: orderData.customer,
+        items: orderData.items.map(item => ({
+          productId: item.productId,
+          quantity: item.quantity,
+          vehicleInfo: item.vehicleInfo
+        })),
+        shippingMethodId: orderData.shippingMethod.id,
+        paymentMethodId: orderData.paymentMethod.id
+      })
+    });
 
-    const pointsToRedeem = orderData.loyaltyPointsToRedeem || 0;
-    const customerPhone = orderData.customer.phone;
-
-    // Identify customer ID (from current logged-in customer or existing customer matching phone)
-    let customerId = currentCustomer?.id;
-    if (!customerId) {
-      const matched = customers.find(c => c.phone === customerPhone);
-      if (matched) {
-        customerId = matched.id;
-      }
-    }
-
-    let discountFromPoints = 0;
-    if (pointsToRedeem > 0 && customerId) {
-      discountFromPoints = calculatePointsValue(pointsToRedeem);
-      redeemLoyaltyPoints(customerId, pointsToRedeem, orderNum);
-    }
-
-    // Calculate points earned from this purchase
-    const effectiveTotal = Math.max(0, orderData.subtotal - (orderData.discountAmount || 0) - discountFromPoints);
-    const pointsEarned = calculatePointsEarned(effectiveTotal, customerId);
-
-    // Credit newly earned points
-    if (pointsEarned > 0 && customerId) {
-      addLoyaltyPoints(
-        customerId,
-        pointsEarned,
-        `امتیاز خرید فاکتور ${orderNum}`,
-        orderNum,
-        'earned'
-      );
-    }
-
-    const newOrder: Order = {
-      ...orderData,
-      id: `ord-${Date.now()}`,
-      orderNumber: orderNum,
-      date: dateFa,
-      loyaltyPointsEarned: pointsEarned,
-      loyaltyPointsRedeemed: pointsToRedeem,
-      loyaltyDiscountAmount: discountFromPoints,
-      trackingPostCode: `POST-${Math.floor(1000000000 + Math.random() * 9000000000)}`
-    };
-
-    // Update customer total orders & spent
-    if (customerId) {
-      setCustomers(prev => prev.map(c => {
-        if (c.id === customerId || c.phone === customerPhone) {
-          return {
-            ...c,
-            totalOrders: (c.totalOrders || 0) + 1,
-            totalSpent: (c.totalSpent || 0) + newOrder.total
-          };
-        }
-        return c;
-      }));
-
-      if (currentCustomer && (currentCustomer.id === customerId || currentCustomer.phone === customerPhone)) {
-        setCurrentCustomer(prev => prev ? {
-          ...prev,
-          totalOrders: (prev.totalOrders || 0) + 1,
-          totalSpent: (prev.totalSpent || 0) + newOrder.total
-        } : null);
-      }
-    }
-
-    setOrders(prev => [newOrder, ...prev]);
-    clearCart();
-
-    if (pointsEarned > 0) {
-      showToast(`سفارش ${orderNum} با موفقیت ثبت شد و ${pointsEarned} امتیاز وفاداری به حساب شما افزوده گردید!`);
-    }
-
-    return newOrder;
+    setOrders(prev => [response.order, ...prev.filter(item => item.id !== response.order.id)]);
+    showToast(`سفارش ${response.order.orderNumber} در سرور ثبت شد.`);
+    return response.order;
   };
 
   const updateOrderStatus = (orderId: string, status: OrderStatus, trackingCode?: string) => {
-    setOrders(prev => prev.map(o => {
-      if (o.id === orderId || o.orderNumber === orderId) {
-        let title = '';
-        switch (status) {
-          case 'pending': title = 'در انتظار پرداخت'; break;
-          case 'paid': title = 'پرداخت شده'; break;
-          case 'processing': title = 'در حال پردازش در انبار'; break;
-          case 'ready_to_ship': title = 'آماده ارسال'; break;
-          case 'shipped': title = 'ارسال شده به متصدی حمل'; break;
-          case 'delivered': title = 'تحویل داده شده'; break;
-          case 'cancelled': title = 'لغو شده'; break;
-          case 'payment_failed': title = 'خطای پرداخت'; break;
-        }
-        return {
-          ...o,
-          status,
-          statusTitle: title,
-          trackingPostCode: trackingCode || o.trackingPostCode
-        };
-      }
-      return o;
-    }));
-    showToast(`وضعیت سفارش ${orderId} به‌روز شد.`);
+    void apiRequest<{ order: Order }>(`/api/orders/${encodeURIComponent(orderId)}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status, trackingCode })
+    }).then(({ order }) => {
+      setOrders(prev => prev.map(item =>
+        item.id === order.id || item.orderNumber === order.orderNumber ? order : item
+      ));
+      showToast(`وضعیت سفارش ${order.orderNumber} به‌روز شد.`);
+    }).catch(error => {
+      console.error(error);
+      showToast('تغییر وضعیت سفارش روی سرور انجام نشد.', 'error');
+    });
   };
 
   const deleteOrder = (orderId: string) => {
-    setOrders(prev => prev.filter(o => o.id !== orderId && o.orderNumber !== orderId));
-    showToast('سفارش حذف شد.', 'info');
+    void apiRequest<{ ok: boolean }>(`/api/orders/${encodeURIComponent(orderId)}`, {
+      method: 'DELETE'
+    }).then(() => {
+      setOrders(prev => prev.filter(o => o.id !== orderId && o.orderNumber !== orderId));
+      showToast('سفارش حذف شد.', 'info');
+    }).catch(error => {
+      console.error(error);
+      showToast('حذف سفارش روی سرور انجام نشد.', 'error');
+    });
   };
 
-  const getOrderById = (orderId: string) => orders.find(o => o.id === orderId || o.orderNumber === orderId);
+  const getOrderById = (orderId: string) =>
+    orders.find(o => o.id === orderId || o.orderNumber === orderId);
 
-  const getOrderByTracking = (orderNumber: string, phone: string) => {
-    const cleanNum = orderNumber.trim().toUpperCase();
-    const cleanPhone = phone.trim();
-    return orders.find(o => 
-      (o.orderNumber.toUpperCase() === cleanNum || o.id === cleanNum) &&
-      (o.customer.phone.includes(cleanPhone) || cleanPhone === '')
-    );
+  const getOrderByTracking = async (orderNumber: string, phone: string) => {
+    try {
+      const response = await apiRequest<{ order: Order }>('/api/orders/track', {
+        method: 'POST',
+        body: JSON.stringify({ orderNumber, phone })
+      });
+      setOrders(prev => [response.order, ...prev.filter(item => item.id !== response.order.id)]);
+      return response.order;
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 404) return undefined;
+      console.error(error);
+      showToast('ارتباط با سامانه رهگیری سفارش برقرار نشد.', 'error');
+      return undefined;
+    }
   };
 
   // Part Requests
   const submitPartRequest = (req: Omit<PartRequest, 'id' | 'createdAt' | 'status'>) => {
-    const newReq: PartRequest = {
-      ...req,
-      id: `req-${Date.now()}`,
-      createdAt: new Date().toLocaleDateString('fa-IR'),
-      status: 'در حال بررسی'
-    };
-    setPartRequests(prev => [newReq, ...prev]);
-    showToast('درخواست استعلام قطعه با موفقیت ثبت شد.');
+    void apiRequest<{ request: PartRequest }>('/api/engagement/part-requests', {
+      method: 'POST',
+      body: JSON.stringify(req)
+    }).then(({ request }) => {
+      setPartRequests(prev => [request, ...prev.filter(item => item.id !== request.id)]);
+      showToast('درخواست استعلام قطعه با موفقیت ثبت شد.');
+    }).catch(error => {
+      console.error(error);
+      showToast('ثبت درخواست استعلام انجام نشد.', 'error');
+    });
   };
 
   const updatePartRequestStatus = (id: string, status: 'در حال بررسی' | 'پاسخ داده شد' | 'ناموجود در گمرک') => {
-    setPartRequests(prev => prev.map(r => r.id === id ? { ...r, status } : r));
-    showToast('وضعیت استعلام به‌روزرسانی شد.');
+    void apiRequest<{ request: PartRequest }>(`/api/engagement/part-requests/${encodeURIComponent(id)}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status })
+    }).then(({ request }) => {
+      setPartRequests(prev => prev.map(item => item.id === request.id ? request : item));
+      showToast('وضعیت استعلام به‌روزرسانی شد.');
+    }).catch(error => {
+      console.error(error);
+      showToast('به‌روزرسانی وضعیت استعلام انجام نشد.', 'error');
+    });
   };
 
   // Stock Alerts
   const subscribeToStockAlert = (productId: string, phone: string) => {
-    const item = {
-      productId,
-      phone,
-      date: new Date().toLocaleDateString('fa-IR')
-    };
-    setStockAlerts(prev => [...prev, item]);
-    showToast('درخواست اطلاع‌رسانی ثبت شد.');
+    void apiRequest<{ alert: { productId: string; phone: string; date: string } }>('/api/engagement/stock-alerts', {
+      method: 'POST',
+      body: JSON.stringify({ productId, phone })
+    }).then(({ alert }) => {
+      setStockAlerts(prev => {
+        const filtered = prev.filter(item => !(item.productId === alert.productId && item.phone === alert.phone));
+        return [alert, ...filtered];
+      });
+      showToast('درخواست اطلاع‌رسانی ثبت شد.');
+    }).catch(error => {
+      console.error(error);
+      showToast('ثبت درخواست اطلاع‌رسانی انجام نشد.', 'error');
+    });
   };
 
   // Search Logging
   const logSearch = (query: string, resultsCount: number) => {
     if (!query.trim()) return;
-    setSearchLogs(prev => {
-      const idx = prev.findIndex(item => item.query.toLowerCase() === query.trim().toLowerCase());
-      if (idx > -1) {
+    void apiRequest<{ log: SearchQueryLog }>('/api/engagement/search-log', {
+      method: 'POST',
+      body: JSON.stringify({ query, resultsCount })
+    }).then(({ log }) => {
+      setSearchLogs(prev => {
+        const idx = prev.findIndex(item => item.query.toLowerCase() === log.query.toLowerCase());
+        if (idx < 0) return [log, ...prev];
         const next = [...prev];
-        next[idx] = {
-          ...next[idx],
-          count: next[idx].count + 1,
-          resultsCount,
-          lastDate: 'اکنون'
-        };
+        next[idx] = log;
         return next;
-      }
-      return [{ query: query.trim(), count: 1, lastDate: 'اکنون', resultsCount }, ...prev];
+      });
+    }).catch(error => {
+      console.error('Search log failed:', error);
     });
   };
 

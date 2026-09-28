@@ -1,134 +1,175 @@
+import 'dotenv/config';
 import express from 'express';
+import cookieParser from 'cookie-parser';
+import helmet from 'helmet';
+import { rateLimit } from 'express-rate-limit';
 import { createServer as createViteServer } from 'vite';
 import { GoogleGenAI } from '@google/genai';
-import dotenv from 'dotenv';
 import path from 'path';
-import { fileURLToPath } from 'url';
-
-dotenv.config();
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+import fs from 'fs/promises';
+import { authRouter } from './src/server/routes/auth';
+import { healthRouter } from './src/server/routes/health';
+import { catalogRouter } from './src/server/routes/catalog';
+import { ordersRouter } from './src/server/routes/orders';
+import { paymentsRouter } from './src/server/routes/payments';
+import { cmsRouter } from './src/server/routes/cms';
+import { adminDataRouter } from './src/server/routes/admin-data';
+import { mediaRouter } from './src/server/routes/media';
+import { integrationsRouter } from './src/server/routes/integrations';
+import { vehiclesRouter } from './src/server/routes/vehicles';
+import { engagementRouter } from './src/server/routes/engagement';
+import { uploadDirectory } from './src/server/media';
+import { checkDatabase } from './src/server/db';
+import { config } from './src/server/config';
+import { buildSitemapXml, renderSeoHtml, robotsText } from './src/server/seo';
 
 const app = express();
-const port = 3000;
 
-app.use(express.json());
+app.disable('x-powered-by');
+app.set('trust proxy', config.trustProxy);
 
-function getFallbackAdvisorText(query: string, vehicle?: string): string {
-  const targetCar = vehicle || 'خودروهای چینی (KMC, Chery, MVM, JAC, Fownix, Lamari, Changan)';
-  return `### بررسی فنی و استعلام بازار قطعات یدکی: ${query}
+app.use(
+  helmet({
+    contentSecurityPolicy: false,
+    crossOriginResourcePolicy: { policy: 'cross-origin' }
+  })
+);
+app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ extended: false, limit: '1mb' }));
+app.use(cookieParser());
 
-**خودروی مرجع:** ${targetCar}
+app.use('/uploads', express.static(uploadDirectory(), {
+  maxAge: '7d',
+  etag: true,
+  fallthrough: false
+}));
 
-#### ۱. بررسی اصالت، استاندارد و برندهای معتبر در بازار ایران
-- قطعات اصلی شرکتی (Genuine OEM) با بسته‌بندی ممهور به هولوگرام لیزری شرکت‌های مادر (مدیران خودرو MVM/Fownix، کرمان موتور KMC/JAC و گروه بهمن) بالاترین سطح دوام و سازگاری فیتمنت را دارا هستند.
-- برندهای وارداتی درجه یک (OEM Aftermarket) مانند برندهای کره‌ای Hi-Q و Sangsin برای ترمز، و برندهای اصلی گتس Gates و Continental برای تسمه‌تایم، گزینه‌های جایگزین اقتصادی با استانداردهای کارخانه‌ای هستند.
+app.get('/robots.txt', (_req, res) => {
+  res.type('text/plain').send(robotsText());
+});
 
-#### ۲. نکات حیاتی فنی و پیشگیری از خرابی
-- تطبیق شماره فنی اصلی قطعه (OEM Part Number) با کد پیشرانه (مانند موتور 1.5 TGDI یا 2.0 Turbo) پیش از نصب الزامی است.
-- در خودروهای مجهز به گیربکس‌های دوکلاچه (DCT) و توربوشارژ، استفاده از قطعات مصرفی استاندارد مانع از بالا رفتن دمای روغن و ایجاد خطاهای ECU می‌گردد.
+app.get('/sitemap.xml', async (_req, res, next) => {
+  try {
+    const xml = await buildSitemapXml();
+    res.type('application/xml').send(xml);
+  } catch (error) {
+    next(error);
+  }
+});
 
-#### ۳. حدود قیمت روز در بازار چراغ برق
-- نمونه‌های شرکتی به دلیل واردات مستقیم و عوارض گمرکی معمولاً بین ۱۵ تا ۳۰ درصد قیمت بالاتری نسبت به برندهای متفرقه دارند اما گارانتی تعویض کتبی به همراه دارند.
-- شما می‌توانید با استفاده از امتیازات انباشته در **باشگاه مشتریان چین‌پارت**، بخشی از هزینه خرید این قطعه را از فاکتور خود کسر فرمایید.
+app.use('/api/health', healthRouter);
 
-> **راهنمای مهندسی چین‌پارت:** در صورت تمایل می‌توانید شماره شاسی (VIN) خودرو را در استعلام قطعات ثبت نمایید تا تیم فنی کد دقیق قطعه فابریک را با کاتالوگ کارخانه بررسی کند.`;
-}
+const apiLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  limit: 180,
+  standardHeaders: 'draft-8',
+  legacyHeaders: false
+});
+app.use('/api', apiLimiter);
 
-// Google Search Grounded Parts & Market Advisor Endpoint
-app.post('/api/ai/search-advisor', async (req, res) => {
-  const { query, vehicle, partCategory } = req.body;
-  if (!query || typeof query !== 'string') {
-    return res.status(400).json({ error: 'لطفاً پرسش یا نام قطعه مورد نظر را وارد نمایید.' });
+app.use('/api/auth', authRouter);
+app.use('/api/catalog', catalogRouter);
+app.use('/api/orders', ordersRouter);
+app.use('/api/payments', paymentsRouter);
+app.use('/api/cms', cmsRouter);
+app.use('/api/admin-data', adminDataRouter);
+app.use('/api/media', mediaRouter);
+app.use('/api/integrations', integrationsRouter);
+app.use('/api/vehicles', vehiclesRouter);
+app.use('/api/engagement', engagementRouter);
+
+const aiLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  limit: 30,
+  standardHeaders: 'draft-8',
+  legacyHeaders: false,
+  message: { error: 'AI_RATE_LIMIT' }
+});
+
+app.post('/api/ai/search-advisor', aiLimiter, async (req, res) => {
+  const query = String(req.body?.query ?? '').trim();
+  const vehicle = String(req.body?.vehicle ?? '').trim();
+  const partCategory = String(req.body?.partCategory ?? '').trim();
+
+  if (query.length < 2 || query.length > 500) {
+    res.status(400).json({ error: 'INVALID_QUERY' });
+    return;
   }
 
-  const prompt = `شما مشاور ارشد فنی و بازار قطعات یدکی خودروهای چینی (KMC, Chery, MVM, Fownix, JAC, Lamari, Changan) در ایران هستید.
-کاربر سوال زیر را پرسیده است:
-"${query.trim()}"
+  if (!process.env.GEMINI_API_KEY) {
+    res.status(503).json({
+      error: 'AI_NOT_CONFIGURED',
+      message: 'سرویس هوش مصنوعی روی سرور پیکربندی نشده است.'
+    });
+    return;
+  }
+
+  const prompt = `شما مشاور فنی قطعات یدکی خودروهای چینی در ایران هستید.
+پرسش کاربر:
+"${query}"
 ${vehicle ? `خودروی مربوطه: ${vehicle}` : ''}
 ${partCategory ? `دسته‌بندی قطعه: ${partCategory}` : ''}
 
-دستورالعمل:
-۱. از ابزار جستجوی گوگل برای دریافت دقیق‌ترین و به‌روزترین اطلاعات بازار ایران، قیمت روز، شماره فنی OEM و نکات تشخیص اصالت قطعه استفاده کن.
-۲. پاسخ را به زبان فارسی روان، ساختاریافته با عنوان‌بندی و نکات کلیدی واضح ارائه کن.
-۳. بازه قیمتی تقریبی در بازار ایران و تفاوت نسخه شرکتی اصلی با برندهای متفرقه را ذکر کن.
-۴. لحن محترمانه، راهنما و کارشناسی باشد.`;
+قواعد پاسخ:
+- فقط اطلاعاتی را قطعی بیان کن که از داده‌های معتبر یا نتایج جستجو پشتیبانی می‌شوند.
+- شماره فنی، قیمت، موجودی یا ادعای اصالت را حدس نزن.
+- در صورت نبود اطلاعات کافی، صریحاً عدم قطعیت را اعلام کن.
+- پاسخ را فارسی، کوتاه و ساختاریافته ارائه کن.
+- برای ادعاهای به‌روز از جستجوی گوگل استفاده کن.`;
 
   try {
-    const ai = new GoogleGenAI();
-    let response: any = null;
-
-    // Use gemini-2.5-flash with googleSearch tool, with fallback to gemini-3.8-flash
-    try {
-      response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
-        contents: prompt,
-        config: {
-          tools: [{ googleSearch: {} }]
-        }
-      });
-    } catch (err: any) {
-      console.warn('gemini-2.5-flash failed, trying gemini-3.8-flash:', err?.message);
-      try {
-        response = await ai.models.generateContent({
-          model: 'gemini-3.8-flash',
-          contents: prompt,
-          config: {
-            tools: [{ googleSearch: {} }]
-          }
-        });
-      } catch (err2: any) {
-        console.warn('gemini-3.8-flash also unavailable:', err2?.message);
-      }
-    }
-
-    if (response && response.text) {
-      const grounding = response.candidates?.[0]?.groundingMetadata || null;
-      return res.json({
-        text: response.text,
-        groundingMetadata: grounding,
-        isFallback: false
-      });
-    }
-
-    // Graceful response with realistic Iranian market data
-    return res.json({
-      text: getFallbackAdvisorText(query, vehicle),
-      isFallback: true,
-      groundingMetadata: {
-        webSearchQueries: [
-          query,
-          `${vehicle || 'خودرو چینی'} قیمت قطعات یدکی چراغ برق`,
-          `${vehicle || 'خودرو چینی'} استعلام اصالت کدهای فنی OEM`
-        ],
-        groundingChunks: [
-          { web: { title: 'فروشگاه تخصصی چین‌پارت | استعلام قیمت روز قطعات فابریک', uri: 'https://chinpart.ir' } },
-          { web: { title: 'بانک جامع کدهای فنی OEM خودروهای مونتاژی چینی', uri: 'https://chinpart.ir/catalog' } },
-          { web: { title: 'سامانه بررسی اصالت هولوگرام‌های شرکتی', uri: 'https://chinpart.ir/guarantee' } }
-        ]
+    const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+    const response = await ai.models.generateContent({
+      model: process.env.GEMINI_MODEL || 'gemini-2.5-flash',
+      contents: prompt,
+      config: {
+        tools: [{ googleSearch: {} }]
       }
     });
-  } catch (error: any) {
-    console.error('Error generating AI search response:', error);
-    return res.json({
-      text: getFallbackAdvisorText(query, vehicle),
-      isFallback: true,
-      groundingMetadata: {
-        webSearchQueries: [query, `${vehicle || 'خودرو چینی'} قیمت قطعات`],
-        groundingChunks: [
-          { web: { title: 'فروشگاه تخصصی چین‌پارت', uri: 'https://chinpart.ir' } }
-        ]
-      }
+
+    if (!response.text) {
+      res.status(502).json({ error: 'AI_EMPTY_RESPONSE' });
+      return;
+    }
+
+    res.json({
+      text: response.text,
+      groundingMetadata: response.candidates?.[0]?.groundingMetadata || null,
+      isFallback: false
+    });
+  } catch (error) {
+    console.error('AI advisor error:', error);
+    res.status(502).json({
+      error: 'AI_PROVIDER_ERROR',
+      message: 'در حال حاضر دریافت پاسخ معتبر از سرویس هوش مصنوعی ممکن نیست.'
     });
   }
 });
 
+app.use('/api', (_req, res) => {
+  res.status(404).json({ error: 'API_ROUTE_NOT_FOUND' });
+});
+
 async function startServer() {
-  if (process.env.NODE_ENV === 'production') {
-    app.use(express.static(path.resolve(__dirname, 'dist')));
-    app.get('*', (_req, res) => {
-      res.sendFile(path.resolve(__dirname, 'dist', 'index.html'));
+  await checkDatabase();
+
+  if (config.nodeEnv === 'production') {
+    const distPath = path.resolve(process.cwd(), 'dist');
+    const indexTemplate = await fs.readFile(path.join(distPath, 'index.html'), 'utf8');
+
+    app.use(express.static(distPath, {
+      maxAge: '1h',
+      etag: true,
+      index: false
+    }));
+
+    app.get('*', async (req, res, next) => {
+      try {
+        const html = await renderSeoHtml(indexTemplate, req.path);
+        res.type('html').send(html);
+      } catch (error) {
+        next(error);
+      }
     });
   } else {
     const vite = await createViteServer({
@@ -138,9 +179,17 @@ async function startServer() {
     app.use(vite.middlewares);
   }
 
-  app.listen(port, '0.0.0.0', () => {
-    console.log(`Server running at http://0.0.0.0:${port}`);
+  app.use((error: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+    console.error('Unhandled server error:', error);
+    res.status(500).json({ error: 'INTERNAL_SERVER_ERROR' });
+  });
+
+  app.listen(config.port, '0.0.0.0', () => {
+    console.log(`ChinPart server running on port ${config.port} (${config.nodeEnv})`);
   });
 }
 
-startServer();
+startServer().catch(error => {
+  console.error('Server startup failed:', error);
+  process.exit(1);
+});

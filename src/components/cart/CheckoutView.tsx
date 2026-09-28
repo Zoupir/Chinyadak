@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useStore } from '../../context/StoreContext';
 import { formatToman, getGradeInfo } from '../../utils/formatters';
+import { apiRequest, ApiError } from '../../api/client';
 import { 
   ShoppingBag, 
   CreditCard, 
@@ -29,7 +30,8 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderCompleted, on
   const { 
     cart, 
     cartTotal, 
-    createOrder, 
+    createOrder,
+    clearCart,
     showToast, 
     currentCustomer,
     getCustomerPoints,
@@ -60,6 +62,11 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderCompleted, on
   
   // Payment Gateway
   const [selectedGateway, setSelectedGateway] = useState<'saman' | 'mellat'>('saman');
+  const [gatewayAvailability, setGatewayAvailability] = useState<Record<'saman' | 'mellat', boolean>>({
+    saman: false,
+    mellat: false
+  });
+  const [gatewayStatusLoaded, setGatewayStatusLoaded] = useState(false);
 
   // Coupon state
   const [couponCode, setCouponCode] = useState('');
@@ -72,63 +79,111 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderCompleted, on
   // Simulation of payment step
   const [isProcessing, setIsProcessing] = useState(false);
   const [paymentFailed, setPaymentFailed] = useState(false);
+  const [pendingOrderId, setPendingOrderId] = useState<string | null>(null);
+
+  // Gateway availability is read from server-side configuration; credentials never reach the browser.
+  useEffect(() => {
+    let cancelled = false;
+    apiRequest<{ providers: Array<{ id: 'saman' | 'mellat'; configured: boolean }> }>('/api/payments/providers')
+      .then(result => {
+        if (cancelled) return;
+        const next = { saman: false, mellat: false };
+        result.providers.forEach(provider => {
+          if (provider.id === 'saman' || provider.id === 'mellat') {
+            next[provider.id] = Boolean(provider.configured);
+          }
+        });
+        setGatewayAvailability(next);
+        if (!next[selectedGateway]) {
+          if (next.saman) setSelectedGateway('saman');
+          else if (next.mellat) setSelectedGateway('mellat');
+        }
+      })
+      .catch(error => {
+        console.error('Payment provider status load failed:', error);
+      })
+      .finally(() => {
+        if (!cancelled) setGatewayStatusLoaded(true);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // Loyalty calculations
-  const remainingSubtotal = Math.max(0, cartTotal - appliedDiscount);
-  const maxDiscountAllowed = Math.floor((remainingSubtotal * maxRedeemPercent) / 100);
-  const maxPointsAllowed = Math.min(customerPoints, Math.floor(maxDiscountAllowed / pointValue));
+  const remainingSubtotal = Math.max(0, cartTotal);
+  const maxDiscountAllowed = 0;
+  const maxPointsAllowed = 0;
 
-  const effectiveRedeemedPoints = useLoyaltyPoints ? Math.min(redeemedPoints, maxPointsAllowed) : 0;
-  const loyaltyDiscount = effectiveRedeemedPoints * pointValue;
+  const effectiveRedeemedPoints = 0;
+  const loyaltyDiscount = 0;
 
   const shippingCost = selectedShipping === 'express' ? 120000 : selectedShipping === 'tipax' ? 110000 : 85000;
   const finalTotal = Math.max(0, cartTotal - appliedDiscount - loyaltyDiscount + shippingCost);
 
-  const pointsEarnedFromThisOrder = calculatePointsEarned(
-    Math.max(0, cartTotal - appliedDiscount - loyaltyDiscount),
-    currentCustomer?.id
-  );
+  const pointsEarnedFromThisOrder = 0;
 
-  const handleToggleLoyalty = (checked: boolean) => {
-    setUseLoyaltyPoints(checked);
-    if (checked) {
-      setRedeemedPoints(maxPointsAllowed);
-    } else {
-      setRedeemedPoints(0);
-    }
+  const handleToggleLoyalty = (_checked: boolean) => {
+    setUseLoyaltyPoints(false);
+    setRedeemedPoints(0);
+    showToast('استفاده از امتیاز بعد از انتقال کامل باشگاه وفاداری به سرور فعال می‌شود.', 'info');
   };
 
   const handleApplyCoupon = (e: React.FormEvent) => {
     e.preventDefault();
-    const clean = couponCode.trim().toUpperCase();
-    if (clean === 'CHINPART' || clean === 'KMC1403' || clean === 'CHERY10') {
-      const discount = Math.round(cartTotal * 0.1); // 10% discount
-      setAppliedDiscount(discount);
-      showToast('کد تخفیف ۱۰ درصدی با موفقیت اعمال گردید.');
-    } else {
-      showToast('کد تخفیف وارد شده معتبر نمی‌باشد.', 'error');
-    }
+    setAppliedDiscount(0);
+    showToast('کد تخفیف تا فعال‌شدن اعتبارسنجی سمت سرور غیرفعال است.', 'info');
   };
 
-  const handleProcessPayment = (simulateFailure = false) => {
+  const redirectToGateway = (
+    redirectUrl: string,
+    method: 'GET' | 'POST',
+    fields: Record<string, string>
+  ) => {
+    if (method === 'GET') {
+      window.location.assign(redirectUrl);
+      return;
+    }
+
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = redirectUrl;
+    form.style.display = 'none';
+
+    Object.entries(fields).forEach(([name, value]) => {
+      const input = document.createElement('input');
+      input.type = 'hidden';
+      input.name = name;
+      input.value = value;
+      form.appendChild(input);
+    });
+
+    document.body.appendChild(form);
+    form.submit();
+  };
+
+  const handleProcessPayment = async (simulateFailure = false) => {
     if (!firstName || !lastName || !phone || !address) {
       showToast('لطفاً اطلاعات هویتی و آدرس پستی را تکمیل فرمایید.', 'error');
+      return;
+    }
+
+    if (!gatewayStatusLoaded || !gatewayAvailability[selectedGateway]) {
+      showToast('درگاه انتخاب‌شده روی سرور فعال و پیکربندی نشده است.', 'error');
+      return;
+    }
+
+    if (simulateFailure && import.meta.env.DEV) {
+      setPaymentFailed(true);
+      showToast('پرداخت آزمایشی ناموفق شبیه‌سازی شد.', 'error');
       return;
     }
 
     setIsProcessing(true);
     setPaymentFailed(false);
 
-    setTimeout(() => {
-      setIsProcessing(false);
-
-      if (simulateFailure) {
-        setPaymentFailed(true);
-        showToast('پرداخت بانکی ناموفق بود یا توسط کاربر لغو شد.', 'error');
-        return;
-      }
-
-      // Success
+    try {
       const orderItems = cart.map(item => ({
         productId: item.product.id,
         productName: item.product.nameFa,
@@ -140,9 +195,11 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderCompleted, on
         vehicleInfo: item.selectedVehicle?.modelName
       }));
 
-      const newOrder = createOrder({
-        status: 'paid',
-        statusTitle: 'پرداخت موفق - در انتظار تایید انبار',
+      let orderId = pendingOrderId;
+      if (!orderId) {
+        const newOrder = await createOrder({
+        status: 'pending',
+        statusTitle: 'در انتظار پرداخت',
         items: orderItems,
         customer: {
           firstName,
@@ -156,23 +213,63 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderCompleted, on
         },
         shippingMethod: {
           id: selectedShipping,
-          title: selectedShipping === 'express' ? 'پیک موتوری ۲ ساعته' : selectedShipping === 'tipax' ? 'تیپاکس اکسپرس' : 'پست پیشتاز بیمه‌شده',
+          title: selectedShipping === 'express'
+            ? 'پیک موتوری ۲ ساعته'
+            : selectedShipping === 'tipax'
+              ? 'تیپاکس اکسپرس'
+              : 'پست پیشتاز بیمه‌شده',
           cost: shippingCost,
           estimatedDelivery: selectedShipping === 'express' ? '۲ ساعت کاری' : '۲۴ الی ۴۸ ساعت'
         },
         paymentMethod: {
           id: selectedGateway,
-          title: selectedGateway === 'saman' ? 'درگاه بانک سامان' : 'درگاه بانک ملت'
+          title: selectedGateway === 'saman'
+            ? 'درگاه پرداخت الکترونیک سامان'
+            : 'به‌پرداخت بانک ملت'
         },
         subtotal: cartTotal,
         discountAmount: appliedDiscount,
         loyaltyPointsToRedeem: useLoyaltyPoints ? effectiveRedeemedPoints : 0,
         shippingFee: shippingCost,
         total: finalTotal
+        });
+        orderId = newOrder.id;
+        setPendingOrderId(newOrder.id);
+      }
+
+      const payment = await apiRequest<{
+        orderId: string;
+        orderNumber: string;
+        provider: string;
+        redirectUrl: string;
+        redirectMethod: 'GET' | 'POST';
+        fields: Record<string, string>;
+      }>('/api/payments/start', {
+        method: 'POST',
+        body: JSON.stringify({ orderId, provider: selectedGateway })
       });
 
-      onOrderCompleted(newOrder.orderNumber);
-    }, 1500);
+      setPendingOrderId(null);
+      clearCart();
+      redirectToGateway(payment.redirectUrl, payment.redirectMethod, payment.fields || {});
+    } catch (error) {
+      console.error('Checkout payment start failed:', error);
+      setPaymentFailed(true);
+
+      let message = 'شروع پرداخت بانکی انجام نشد. دوباره تلاش کنید.';
+      if (error instanceof ApiError) {
+        if (error.code === 'INSUFFICIENT_STOCK') {
+          message = 'موجودی یکی از کالاها برای این سفارش کافی نیست.';
+        } else if (error.code === 'PAYMENT_ALREADY_IN_PROGRESS') {
+          message = 'یک پرداخت فعال برای این سفارش وجود دارد.';
+        } else if (error.code === 'PAYMENT_PROVIDER_NOT_CONFIGURED') {
+          message = 'درگاه انتخاب‌شده هنوز روی سرور پیکربندی نشده است.';
+        }
+      }
+      showToast(message, 'error');
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   if (cart.length === 0) {
@@ -424,12 +521,13 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderCompleted, on
                   type="radio"
                   name="gateway"
                   checked={selectedGateway === 'saman'}
+                  disabled={!gatewayAvailability.saman}
                   onChange={() => setSelectedGateway('saman')}
                   className="text-red-600 focus:ring-red-500 w-4 h-4"
                 />
                 <div>
                   <h4 className="font-bold text-xs text-neutral-900">درگاه پرداخت الکترونیک سامان (SEP)</h4>
-                  <p className="text-[10px] text-neutral-500">پشتیبانی از کلیه کارت‌های عضو شتاب</p>
+                  <p className="text-[10px] text-neutral-500">{gatewayAvailability.saman ? 'پشتیبانی از کلیه کارت‌های عضو شتاب' : 'هنوز روی سرور پیکربندی نشده'}</p>
                 </div>
               </label>
 
@@ -444,12 +542,13 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderCompleted, on
                   type="radio"
                   name="gateway"
                   checked={selectedGateway === 'mellat'}
+                  disabled={!gatewayAvailability.mellat}
                   onChange={() => setSelectedGateway('mellat')}
                   className="text-red-600 focus:ring-red-500 w-4 h-4"
                 />
                 <div>
                   <h4 className="font-bold text-xs text-neutral-900">به‌پرداخت ملت (BPM)</h4>
-                  <p className="text-[10px] text-neutral-500">تسویه و تایید آنی با شاپرک</p>
+                  <p className="text-[10px] text-neutral-500">{gatewayAvailability.mellat ? 'تسویه و تایید آنی با شاپرک' : 'هنوز روی سرور پیکربندی نشده'}</p>
                 </div>
               </label>
             </div>
@@ -687,13 +786,15 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderCompleted, on
                 )}
               </button>
 
-              <button
-                onClick={() => handleProcessPayment(true)}
-                disabled={isProcessing}
-                className="w-full py-2 text-[11px] text-neutral-400 hover:text-red-600 text-center transition-colors"
-              >
-                (تست حالت شبیه‌سازی خطای پرداخت بانکی)
-              </button>
+              {import.meta.env.DEV && (
+                <button
+                  onClick={() => handleProcessPayment(true)}
+                  disabled={isProcessing}
+                  className="w-full py-2 text-[11px] text-neutral-400 hover:text-red-600 text-center transition-colors"
+                >
+                  (تست حالت شبیه‌سازی خطای پرداخت بانکی)
+                </button>
+              )}
             </div>
 
             <div className="p-3 bg-neutral-50 rounded-xl border border-neutral-100 text-[11px] text-neutral-500 space-y-1">

@@ -18,6 +18,7 @@ interface CustomerRow extends RowDataPacket {
   last_name: string;
   phone: string;
   password_hash: string;
+  password_initialized: number;
   customer_type: 'retail' | 'mechanic' | 'wholesale';
   status: 'active' | 'blocked';
   vehicle: string | null;
@@ -120,22 +121,41 @@ authRouter.post('/customer/register', loginLimiter, async (req, res) => {
   }
 
   const [existing] = await pool.query<CustomerRow[]>(
-    'SELECT id FROM customers WHERE phone = ? LIMIT 1',
+    'SELECT * FROM customers WHERE phone = ? LIMIT 1',
     [phone]
   );
-  if (existing.length) {
-    res.status(409).json({ error: 'PHONE_ALREADY_REGISTERED' });
-    return;
-  }
 
-  const id = randomUUID();
   const passwordHash = await hashPassword(password);
-  await pool.execute<ResultSetHeader>(
-    `INSERT INTO customers
-      (id, first_name, last_name, phone, password_hash, customer_type, vehicle)
-     VALUES (?, ?, ?, ?, ?, ?, ?)`,
-    [id, firstName, lastName, phone, passwordHash, type, vehicle || null]
-  );
+  let id: string;
+
+  if (existing.length) {
+    const current = existing[0];
+    if (current.password_initialized) {
+      res.status(409).json({ error: 'PHONE_ALREADY_REGISTERED' });
+      return;
+    }
+    if (current.status !== 'active') {
+      res.status(403).json({ error: 'ACCOUNT_BLOCKED' });
+      return;
+    }
+
+    id = current.id;
+    await pool.execute<ResultSetHeader>(
+      `UPDATE customers
+       SET first_name = ?, last_name = ?, password_hash = ?, password_initialized = 1,
+           customer_type = ?, vehicle = COALESCE(NULLIF(?, ''), vehicle), updated_at = NOW()
+       WHERE id = ?`,
+      [firstName, lastName, passwordHash, type, vehicle, id]
+    );
+  } else {
+    id = randomUUID();
+    await pool.execute<ResultSetHeader>(
+      `INSERT INTO customers
+        (id, first_name, last_name, phone, password_hash, password_initialized, customer_type, vehicle)
+       VALUES (?, ?, ?, ?, ?, 1, ?, ?)`,
+      [id, firstName, lastName, phone, passwordHash, type, vehicle || null]
+    );
+  }
 
   const [rows] = await pool.query<CustomerRow[]>(
     'SELECT * FROM customers WHERE id = ? LIMIT 1',
@@ -160,7 +180,7 @@ authRouter.post('/customer/login', loginLimiter, async (req, res) => {
     [phone]
   );
   const customer = rows[0];
-  if (!customer || !(await verifyPassword(password, customer.password_hash))) {
+  if (!customer || !customer.password_initialized || !(await verifyPassword(password, customer.password_hash))) {
     res.status(401).json({ error: 'INVALID_CREDENTIALS' });
     return;
   }

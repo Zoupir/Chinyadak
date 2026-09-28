@@ -3,7 +3,7 @@ import { Router } from 'express';
 import {
   authenticate,
   getOptionalSession,
-  requireAdmin,
+  requireAdminPermission,
   type AuthenticatedRequest
 } from '../auth';
 import {
@@ -364,12 +364,12 @@ ordersRouter.get('/mine', authenticate, async (req: AuthenticatedRequest, res) =
   res.json({ orders });
 });
 
-ordersRouter.get('/', requireAdmin, async (_req, res) => {
+ordersRouter.get('/', requireAdminPermission('canManageOrders'), async (_req, res) => {
   const orders = await fetchOrdersByWhere('', []);
   res.json({ orders });
 });
 
-ordersRouter.patch('/:id/status', requireAdmin, async (req, res) => {
+ordersRouter.patch('/:id/status', requireAdminPermission('canManageOrders'), async (req, res) => {
   const status = String(req.body?.status || '');
   const allowed = [
     'pending',
@@ -401,7 +401,7 @@ ordersRouter.patch('/:id/status', requireAdmin, async (req, res) => {
   res.json({ order: orders[0] });
 });
 
-ordersRouter.delete('/:id', requireAdmin, async (req, res) => {
+ordersRouter.delete('/:id', requireAdminPermission('canManageOrders'), async (req, res) => {
   const [result] = await pool.execute<ResultSetHeader>(
     'DELETE FROM orders WHERE id = ? OR order_number = ?',
     [req.params.id, req.params.id]

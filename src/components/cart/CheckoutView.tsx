@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useStore } from '../../context/StoreContext';
 import { formatToman, getGradeInfo } from '../../utils/formatters';
+import { apiRequest, ApiError } from '../../api/client';
 import { 
   ShoppingBag, 
   CreditCard, 
@@ -29,7 +30,8 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderCompleted, on
   const { 
     cart, 
     cartTotal, 
-    createOrder, 
+    createOrder,
+    clearCart,
     showToast, 
     currentCustomer,
     getCustomerPoints,
@@ -110,30 +112,49 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderCompleted, on
     }
   };
 
-  const handleProcessPayment = (simulateFailure = false) => {
+  const redirectToGateway = (
+    redirectUrl: string,
+    method: 'GET' | 'POST',
+    fields: Record<string, string>
+  ) => {
+    if (method === 'GET') {
+      window.location.assign(redirectUrl);
+      return;
+    }
+
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = redirectUrl;
+    form.style.display = 'none';
+
+    Object.entries(fields).forEach(([name, value]) => {
+      const input = document.createElement('input');
+      input.type = 'hidden';
+      input.name = name;
+      input.value = value;
+      form.appendChild(input);
+    });
+
+    document.body.appendChild(form);
+    form.submit();
+  };
+
+  const handleProcessPayment = async (simulateFailure = false) => {
     if (!firstName || !lastName || !phone || !address) {
       showToast('لطفاً اطلاعات هویتی و آدرس پستی را تکمیل فرمایید.', 'error');
       return;
     }
 
-    if (import.meta.env.PROD) {
-      showToast('پرداخت آنلاین واقعی هنوز به درگاه سمت سرور متصل نشده و برای جلوگیری از ثبت پرداخت جعلی غیرفعال است.', 'error');
+    if (simulateFailure && import.meta.env.DEV) {
+      setPaymentFailed(true);
+      showToast('پرداخت آزمایشی ناموفق شبیه‌سازی شد.', 'error');
       return;
     }
 
     setIsProcessing(true);
     setPaymentFailed(false);
 
-    setTimeout(async () => {
-      setIsProcessing(false);
-
-      if (simulateFailure) {
-        setPaymentFailed(true);
-        showToast('پرداخت بانکی ناموفق بود یا توسط کاربر لغو شد.', 'error');
-        return;
-      }
-
-      // Success
+    try {
       const orderItems = cart.map(item => ({
         productId: item.product.id,
         productName: item.product.nameFa,
@@ -146,8 +167,8 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderCompleted, on
       }));
 
       const newOrder = await createOrder({
-        status: 'paid',
-        statusTitle: 'پرداخت موفق - در انتظار تایید انبار',
+        status: 'pending',
+        statusTitle: 'در انتظار پرداخت',
         items: orderItems,
         customer: {
           firstName,
@@ -161,13 +182,19 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderCompleted, on
         },
         shippingMethod: {
           id: selectedShipping,
-          title: selectedShipping === 'express' ? 'پیک موتوری ۲ ساعته' : selectedShipping === 'tipax' ? 'تیپاکس اکسپرس' : 'پست پیشتاز بیمه‌شده',
+          title: selectedShipping === 'express'
+            ? 'پیک موتوری ۲ ساعته'
+            : selectedShipping === 'tipax'
+              ? 'تیپاکس اکسپرس'
+              : 'پست پیشتاز بیمه‌شده',
           cost: shippingCost,
           estimatedDelivery: selectedShipping === 'express' ? '۲ ساعت کاری' : '۲۴ الی ۴۸ ساعت'
         },
         paymentMethod: {
           id: selectedGateway,
-          title: selectedGateway === 'saman' ? 'درگاه بانک سامان' : 'درگاه بانک ملت'
+          title: selectedGateway === 'saman'
+            ? 'درگاه پرداخت الکترونیک سامان'
+            : 'به‌پرداخت بانک ملت'
         },
         subtotal: cartTotal,
         discountAmount: appliedDiscount,
@@ -176,8 +203,38 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderCompleted, on
         total: finalTotal
       });
 
-      onOrderCompleted(newOrder.orderNumber);
-    }, 1500);
+      const payment = await apiRequest<{
+        orderId: string;
+        orderNumber: string;
+        provider: string;
+        redirectUrl: string;
+        redirectMethod: 'GET' | 'POST';
+        fields: Record<string, string>;
+      }>('/api/payments/start', {
+        method: 'POST',
+        body: JSON.stringify({ orderId: newOrder.id })
+      });
+
+      clearCart();
+      redirectToGateway(payment.redirectUrl, payment.redirectMethod, payment.fields || {});
+    } catch (error) {
+      console.error('Checkout payment start failed:', error);
+      setPaymentFailed(true);
+
+      let message = 'شروع پرداخت بانکی انجام نشد. دوباره تلاش کنید.';
+      if (error instanceof ApiError) {
+        if (error.code === 'INSUFFICIENT_STOCK') {
+          message = 'موجودی یکی از کالاها برای این سفارش کافی نیست.';
+        } else if (error.code === 'PAYMENT_ALREADY_IN_PROGRESS') {
+          message = 'یک پرداخت فعال برای این سفارش وجود دارد.';
+        } else if (error.code === 'PAYMENT_PROVIDER_NOT_CONFIGURED') {
+          message = 'درگاه انتخاب‌شده هنوز روی سرور پیکربندی نشده است.';
+        }
+      }
+      showToast(message, 'error');
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   if (cart.length === 0) {

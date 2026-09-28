@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useStore } from '../../context/StoreContext';
 import { Product, Category, CustomerUser, PaymentGatewayConfig, OrderStatus, AdminRole, VehicleFitment } from '../../types';
 import { formatToman, getGradeInfo } from '../../utils/formatters';
@@ -201,6 +201,10 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
 
   // APIs Form Local State
   const [apiForm, setApiForm] = useState(apiIntegrations);
+
+  useEffect(() => {
+    setApiForm(apiIntegrations);
+  }, [apiIntegrations]);
 
   // Permissions helper
   const currentUser = adminAuth.currentUser;

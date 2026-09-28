@@ -112,40 +112,28 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderCompleted, on
   }, []);
 
   // Loyalty calculations
-  const remainingSubtotal = Math.max(0, cartTotal - appliedDiscount);
-  const maxDiscountAllowed = Math.floor((remainingSubtotal * maxRedeemPercent) / 100);
-  const maxPointsAllowed = Math.min(customerPoints, Math.floor(maxDiscountAllowed / pointValue));
+  const remainingSubtotal = Math.max(0, cartTotal);
+  const maxDiscountAllowed = 0;
+  const maxPointsAllowed = 0;
 
-  const effectiveRedeemedPoints = useLoyaltyPoints ? Math.min(redeemedPoints, maxPointsAllowed) : 0;
-  const loyaltyDiscount = effectiveRedeemedPoints * pointValue;
+  const effectiveRedeemedPoints = 0;
+  const loyaltyDiscount = 0;
 
   const shippingCost = selectedShipping === 'express' ? 120000 : selectedShipping === 'tipax' ? 110000 : 85000;
   const finalTotal = Math.max(0, cartTotal - appliedDiscount - loyaltyDiscount + shippingCost);
 
-  const pointsEarnedFromThisOrder = calculatePointsEarned(
-    Math.max(0, cartTotal - appliedDiscount - loyaltyDiscount),
-    currentCustomer?.id
-  );
+  const pointsEarnedFromThisOrder = 0;
 
-  const handleToggleLoyalty = (checked: boolean) => {
-    setUseLoyaltyPoints(checked);
-    if (checked) {
-      setRedeemedPoints(maxPointsAllowed);
-    } else {
-      setRedeemedPoints(0);
-    }
+  const handleToggleLoyalty = (_checked: boolean) => {
+    setUseLoyaltyPoints(false);
+    setRedeemedPoints(0);
+    showToast('استفاده از امتیاز بعد از انتقال کامل باشگاه وفاداری به سرور فعال می‌شود.', 'info');
   };
 
   const handleApplyCoupon = (e: React.FormEvent) => {
     e.preventDefault();
-    const clean = couponCode.trim().toUpperCase();
-    if (clean === 'CHINPART' || clean === 'KMC1403' || clean === 'CHERY10') {
-      const discount = Math.round(cartTotal * 0.1); // 10% discount
-      setAppliedDiscount(discount);
-      showToast('کد تخفیف ۱۰ درصدی با موفقیت اعمال گردید.');
-    } else {
-      showToast('کد تخفیف وارد شده معتبر نمی‌باشد.', 'error');
-    }
+    setAppliedDiscount(0);
+    showToast('کد تخفیف تا فعال‌شدن اعتبارسنجی سمت سرور غیرفعال است.', 'info');
   };
 
   const redirectToGateway = (

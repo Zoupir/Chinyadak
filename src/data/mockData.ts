@@ -1951,8 +1951,8 @@ export const INITIAL_PAYMENT_GATEWAYS = [
     name: 'درگاه پرداخت الکترونیک سامان (SEP)',
     provider: 'saman' as const,
     isActive: true,
-    merchantId: '10984210',
-    terminalId: 'SEP-77291',
+    merchantId: '',
+    terminalId: '',
     isSandbox: false,
     description: 'درگاه پیش‌فرض و پایدار بانکی با بالاترین نرخ تراکنش موفق عضو شتاب'
   },
@@ -1961,8 +1961,8 @@ export const INITIAL_PAYMENT_GATEWAYS = [
     name: 'به‌پرداخت بانک ملت (BPM)',
     provider: 'mellat' as const,
     isActive: true,
-    merchantId: '84920194',
-    terminalId: 'BPM-48102',
+    merchantId: '',
+    terminalId: '',
     isSandbox: false,
     description: 'درگاه معتبر شبکه شاپرک با تسویه حساب آنی روزانه'
   },
@@ -1980,7 +1980,7 @@ export const INITIAL_PAYMENT_GATEWAYS = [
     name: 'پرداخت در محل (Cash On Delivery)',
     provider: 'cod' as const,
     isActive: true,
-    merchantId: 'COD-TEH',
+    merchantId: '',
     isSandbox: false,
     description: 'پرداخت وجه پس از تحویل و رویت قطعه با کارت‌خوان سیار (ویژه سفارش‌های تهران)'
   }

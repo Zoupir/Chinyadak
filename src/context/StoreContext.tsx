@@ -378,6 +378,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const loadAdminData = async (admin: AdminUser, cancelled = false) => {
     const canOrders = admin.role === 'super_admin' || admin.permissions?.canManageOrders;
     const canAdmins = admin.role === 'super_admin' || admin.permissions?.canManageAdmins;
+    const canSettings = admin.role === 'super_admin' || admin.permissions?.canManageSettings;
 
     const requests: Promise<void>[] = [];
 
@@ -402,6 +403,14 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         apiRequest<{ admins: AdminUser[] }>('/api/admin-data/admins')
           .then(result => { if (!cancelled) setAdminUsers(result.admins); })
           .catch(error => console.error('Admin users load failed:', error))
+      );
+    }
+
+    if (canSettings) {
+      requests.push(
+        apiRequest<{ integrations: ApiIntegrationsConfig }>('/api/integrations')
+          .then(result => { if (!cancelled) setApiIntegrations(result.integrations); })
+          .catch(error => console.error('Integration settings load failed:', error))
       );
     }
 
@@ -1031,9 +1040,22 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   // API Integrations
   // API Integrations
-  const updateApiIntegrations = (config: Partial<ApiIntegrationsConfig>) => {
-    setApiIntegrations(prev => ({ ...prev, ...config }));
-    showToast('تنظیمات سرویس‌های پیامک و سیستم حسابداری ذخیره شد.');
+  const updateApiIntegrations = (nextConfig: Partial<ApiIntegrationsConfig>) => {
+    const payload = { ...apiIntegrations, ...nextConfig };
+    void apiRequest<{ integrations: ApiIntegrationsConfig }>('/api/integrations', {
+      method: 'PUT',
+      body: JSON.stringify(payload)
+    }).then(({ integrations }) => {
+      setApiIntegrations(integrations);
+      showToast('تنظیمات سرویس‌ها به‌صورت رمزنگاری‌شده روی سرور ذخیره شد.');
+    }).catch(error => {
+      console.error(error);
+      const message =
+        error instanceof ApiError && error.code === 'ENCRYPTION_KEY_NOT_CONFIGURED'
+          ? 'کلید رمزنگاری APP_ENCRYPTION_KEY روی سرور تنظیم نشده است.'
+          : 'ذخیره تنظیمات سرویس‌ها انجام نشد.';
+      showToast(message, 'error');
+    });
   };
 
   // Customers (CRM)

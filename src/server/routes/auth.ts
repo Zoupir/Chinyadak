@@ -174,6 +174,46 @@ authRouter.post('/customer/login', loginLimiter, async (req, res) => {
   res.json({ customer: customerDto(customer) });
 });
 
+authRouter.get('/customer/loyalty', authenticate, async (req: AuthenticatedRequest, res) => {
+  if (req.auth?.role !== 'customer') {
+    res.status(403).json({ error: 'CUSTOMER_REQUIRED' });
+    return;
+  }
+
+  const [rows] = await pool.query<Array<RowDataPacket & {
+    id: string;
+    customer_id: string;
+    points: number;
+    transaction_type: string;
+    data_json: any;
+  }>>(
+    `SELECT id, customer_id, points, transaction_type, data_json
+     FROM loyalty_transactions
+     WHERE customer_id = ?
+     ORDER BY created_at DESC
+     LIMIT 1000`,
+    [req.auth.sub]
+  );
+
+  const transactions = rows.map(row => {
+    let data: any = {};
+    try {
+      data = typeof row.data_json === 'object' ? row.data_json : JSON.parse(String(row.data_json || '{}'));
+    } catch {
+      data = {};
+    }
+    return {
+      ...data,
+      id: row.id,
+      customerId: row.customer_id,
+      points: Number(row.points),
+      type: row.transaction_type
+    };
+  });
+
+  res.json({ transactions });
+});
+
 authRouter.post('/admin/login', loginLimiter, async (req, res) => {
   const username = String(req.body?.username ?? '').trim().toLowerCase();
   const password = String(req.body?.password ?? '');

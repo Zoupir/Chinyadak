@@ -1,0 +1,257 @@
+import assert from 'node:assert/strict';
+
+const base = String(process.env.TEST_BASE_URL || 'http://127.0.0.1:3000').replace(/\/$/, '');
+
+const request = async (
+  path: string,
+  options: RequestInit = {},
+  expected = 200
+): Promise<Response> => {
+  const response = await fetch(`${base}${path}`, options);
+  if (response.status !== expected) {
+    const body = await response.text().catch(() => '');
+    throw new Error(`${options.method || 'GET'} ${path}: expected ${expected}, received ${response.status}: ${body}`);
+  }
+  return response;
+};
+
+const json = async <T>(
+  path: string,
+  options: RequestInit = {},
+  expected = 200
+): Promise<{ response: Response; data: T }> => {
+  const response = await request(path, {
+    ...options,
+    headers: {
+      'content-type': 'application/json',
+      ...(options.headers || {})
+    }
+  }, expected);
+  return { response, data: await response.json() as T };
+};
+
+const cookieFrom = (response: Response): string => {
+  const value = response.headers.get('set-cookie') || '';
+  const cookie = value.split(';')[0]?.trim();
+  assert(cookie, 'Session cookie was not returned.');
+  return cookie;
+};
+
+const cookieHeaders = (cookie: string) => ({ Cookie: cookie });
+
+const run = async () => {
+  const health = await json<{ ok: boolean; database: string }>('/api/health');
+  assert.equal(health.data.ok, true);
+  assert.equal(health.data.database, 'connected');
+
+  const catalog = await json<{ products: any[] }>('/api/catalog/products');
+  const categories = await json<{ categories: any[] }>('/api/catalog/categories');
+  const vehicles = await json<{ brands: any[]; models: any[] }>('/api/vehicles');
+  const cms = await json<{ articles: any[]; pages: any[]; sliders: any[] }>('/api/cms/bundle');
+
+  assert(catalog.data.products.length > 0, 'Seeded product catalog is empty.');
+  assert(categories.data.categories.length > 0, 'Seeded categories are empty.');
+  assert(vehicles.data.brands.length > 0, 'Seeded vehicle brands are empty.');
+  assert(vehicles.data.models.length > 0, 'Seeded vehicle models are empty.');
+  assert(cms.data.articles.length > 0, 'Seeded articles are empty.');
+
+  const product = catalog.data.products.find(item => Number(item.stock || 0) > 0) || catalog.data.products[0];
+  assert(product?.id && product?.slug, 'No usable seeded product.');
+
+  const productHtml = await (await request(`/product/${encodeURIComponent(product.slug)}`)).text();
+  assert(productHtml.includes('rel="canonical"'), 'Product HTML is missing canonical URL.');
+  assert(productHtml.includes('/product/'), 'Product canonical URL is not product-specific.');
+  assert(productHtml.includes('"@type":"Product"'), 'Product JSON-LD was not server-rendered.');
+
+  const sitemap = await (await request('/sitemap.xml')).text();
+  assert(sitemap.includes('/product/'), 'Sitemap is missing products.');
+  assert(sitemap.includes('/category/'), 'Sitemap is missing categories.');
+  assert(sitemap.includes('/article/'), 'Sitemap is missing articles.');
+
+  const robots = await (await request('/robots.txt')).text();
+  assert(robots.includes('Sitemap:'), 'robots.txt is missing sitemap declaration.');
+  assert(robots.includes('Disallow: /admin'), 'robots.txt must block admin indexing.');
+
+  const adminPassword = process.env.ADMIN_BOOTSTRAP_PASSWORD || '';
+  assert(adminPassword.length >= 10, 'ADMIN_BOOTSTRAP_PASSWORD is required by smoke test.');
+  const adminLogin = await json<{ admin: any }>('/api/auth/admin/login', {
+    method: 'POST',
+    body: JSON.stringify({
+      username: process.env.ADMIN_BOOTSTRAP_USER || 'admin',
+      password: adminPassword
+    })
+  });
+  const adminCookie = cookieFrom(adminLogin.response);
+  assert.equal(adminLogin.data.admin.role, 'super_admin');
+
+  const admins = await json<{ admins: any[] }>('/api/admin-data/admins', {
+    headers: cookieHeaders(adminCookie)
+  });
+  assert(admins.data.admins.length >= 1, 'Admin list is unavailable.');
+
+  // RBAC: a content-only manager must not be able to read orders.
+  const limitedUsername = `ci_content_${Date.now()}`;
+  const limitedPassword = 'CI-Content-Manager-123!';
+  await json('/api/admin-data/admins', {
+    method: 'POST',
+    headers: cookieHeaders(adminCookie),
+    body: JSON.stringify({
+      username: limitedUsername,
+      password: limitedPassword,
+      fullName: 'CI Content Manager',
+      role: 'content_manager',
+      isActive: true,
+      permissions: {
+        canManageProducts: false,
+        canManageOrders: false,
+        canManageArticles: true,
+        canManageSliders: false,
+        canManageSettings: false,
+        canManageAdmins: false,
+        canAccessSandbox: false,
+        canManageVehicles: false
+      }
+    })
+  }, 201);
+
+  const limitedLogin = await json<{ admin: any }>('/api/auth/admin/login', {
+    method: 'POST',
+    body: JSON.stringify({ username: limitedUsername, password: limitedPassword })
+  });
+  const limitedCookie = cookieFrom(limitedLogin.response);
+  await request('/api/orders', { headers: cookieHeaders(limitedCookie) }, 403);
+
+  // Encrypted integrations: plaintext secrets must never be returned.
+  const secretValue = 'ci-secret-api-key-1234567890';
+  const integrations = await json<{ integrations: any }>('/api/integrations', {
+    method: 'PUT',
+    headers: cookieHeaders(adminCookie),
+    body: JSON.stringify({
+      smsProvider: 'kavenegar',
+      smsApiKey: secretValue,
+      smsSenderNumber: '10004346',
+      smsNotifyOnOrder: true,
+      smsNotifyOnStock: true,
+      smsTrackingPattern: 'ci-pattern',
+      accountingSoftware: 'none',
+      accountingApiKey: 'ci-accounting-secret',
+      accountingAutoSyncStock: false,
+      webhookUrl: 'https://example.com/chinpart-ci-webhook',
+      webhookSecret: 'ci-webhook-secret'
+    })
+  });
+  assert.notEqual(integrations.data.integrations.smsApiKey, secretValue);
+  assert.match(integrations.data.integrations.smsApiKey, /•/);
+
+  // Media upload: write a real PNG to persistent upload storage.
+  const png = Buffer.from(
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Y9Z5Z0AAAAASUVORK5CYII=',
+    'base64'
+  );
+  const form = new FormData();
+  form.append('category', 'ci');
+  form.append('image', new Blob([png], { type: 'image/png' }), 'ci.png');
+  const mediaResponse = await request('/api/media/image', {
+    method: 'POST',
+    headers: cookieHeaders(adminCookie),
+    body: form
+  }, 201);
+  const media = await mediaResponse.json() as { url: string };
+  assert(media.url.startsWith('/uploads/'));
+  await request(media.url);
+
+  // Public engagement capture.
+  const customerPhone = '09120000001';
+  const partRequest = await json<{ request: any }>('/api/engagement/part-requests', {
+    method: 'POST',
+    body: JSON.stringify({
+      carBrand: 'KMC',
+      carModel: 'J7',
+      year: '1403',
+      partName: 'قطعه تست CI',
+      oemNumber: 'CI-OEM-1',
+      phoneNumber: customerPhone,
+      fullName: 'کاربر تست CI',
+      notes: 'Automated integration smoke test'
+    })
+  }, 201);
+  assert(partRequest.data.request.id);
+
+  await json('/api/engagement/stock-alerts', {
+    method: 'POST',
+    body: JSON.stringify({ productId: product.id, phone: customerPhone })
+  }, 201);
+
+  await json('/api/engagement/search-log', {
+    method: 'POST',
+    body: JSON.stringify({ query: 'واتر پمپ تست CI', resultsCount: 3 })
+  });
+
+  // Customer activation + secure retrieval of their own request.
+  const customerRegister = await json<{ customer: any }>('/api/auth/customer/register', {
+    method: 'POST',
+    body: JSON.stringify({
+      firstName: 'کاربر',
+      lastName: 'تست',
+      phone: customerPhone,
+      password: 'CI-Customer-Password-123!',
+      type: 'retail',
+      vehicle: 'KMC J7'
+    })
+  }, 201);
+  const customerCookie = cookieFrom(customerRegister.response);
+
+  const mine = await json<{ requests: any[] }>('/api/engagement/part-requests/mine', {
+    headers: cookieHeaders(customerCookie)
+  });
+  assert(mine.data.requests.some(item => item.id === partRequest.data.request.id));
+
+  // Order creation is recalculated by the server and must be trackable only with phone + order number.
+  const orderCreated = await json<{ order: any }>('/api/orders', {
+    method: 'POST',
+    headers: cookieHeaders(customerCookie),
+    body: JSON.stringify({
+      customer: {
+        firstName: 'کاربر',
+        lastName: 'تست',
+        phone: customerPhone,
+        province: 'تهران',
+        city: 'تهران',
+        postalCode: '1234567890',
+        address: 'نشانی تست CI',
+        notes: ''
+      },
+      items: [{ productId: product.id, quantity: 1 }],
+      shippingMethodId: 'post',
+      paymentMethodId: 'saman'
+    })
+  }, 201);
+
+  assert(orderCreated.data.order.orderNumber, 'Order number was not created.');
+  assert(Number(orderCreated.data.order.total) > 0, 'Server-calculated order total is invalid.');
+
+  const tracking = await json<{ order: any }>('/api/orders/track', {
+    method: 'POST',
+    body: JSON.stringify({
+      orderNumber: orderCreated.data.order.orderNumber,
+      phone: customerPhone
+    })
+  });
+  assert.equal(tracking.data.order.orderNumber, orderCreated.data.order.orderNumber);
+
+  // Admin reporting must contain data captured above.
+  const engagementAdmin = await json<{ partRequests: any[]; stockAlerts: any[]; searchLogs: any[] }>(
+    '/api/engagement/admin',
+    { headers: cookieHeaders(adminCookie) }
+  );
+  assert(engagementAdmin.data.partRequests.some(item => item.id === partRequest.data.request.id));
+  assert(engagementAdmin.data.stockAlerts.some(item => item.productId === product.id && item.phone === customerPhone));
+  assert(engagementAdmin.data.searchLogs.some(item => item.query === 'واتر پمپ تست CI'));
+
+  console.log('Smoke test passed: DB, auth, RBAC, CMS, SEO, media, integrations, engagement and orders.');
+};
+
+run().catch(error => {
+  console.error(error);
+  process.exit(1);
+});

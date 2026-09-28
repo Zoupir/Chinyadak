@@ -8,13 +8,46 @@ import {
   INITIAL_SLIDERS,
   INITIAL_PAGES,
   INITIAL_SETTINGS,
-  INITIAL_PAYMENT_GATEWAYS
+  INITIAL_PAYMENT_GATEWAYS,
+  INITIAL_BRANDS,
+  INITIAL_MODELS
 } from '../src/data/mockData';
 
 const main = async () => {
   const connection = await pool.getConnection();
   try {
     await connection.beginTransaction();
+
+    for (const brand of INITIAL_BRANDS) {
+      await connection.execute(
+        `INSERT INTO vehicle_brands (id, slug, name_fa, name_en, data_json, is_active)
+         VALUES (?, ?, ?, ?, ?, 1)
+         ON DUPLICATE KEY UPDATE
+           slug = VALUES(slug),
+           name_fa = VALUES(name_fa),
+           name_en = VALUES(name_en),
+           data_json = VALUES(data_json),
+           is_active = 1,
+           updated_at = NOW()`,
+        [brand.id, brand.slug, brand.nameFa, brand.nameEn || null, JSON.stringify(brand)]
+      );
+    }
+
+    for (const model of INITIAL_MODELS) {
+      await connection.execute(
+        `INSERT INTO vehicle_models (id, brand_id, slug, name_fa, name_en, data_json, is_active)
+         VALUES (?, ?, ?, ?, ?, ?, 1)
+         ON DUPLICATE KEY UPDATE
+           brand_id = VALUES(brand_id),
+           slug = VALUES(slug),
+           name_fa = VALUES(name_fa),
+           name_en = VALUES(name_en),
+           data_json = VALUES(data_json),
+           is_active = 1,
+           updated_at = NOW()`,
+        [model.id, model.brandId, model.slug, model.nameFa, model.nameEn || null, JSON.stringify(model)]
+      );
+    }
 
     for (const category of CATEGORIES) {
       await connection.execute(

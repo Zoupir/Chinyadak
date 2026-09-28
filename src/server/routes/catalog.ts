@@ -1,6 +1,6 @@
 import { randomUUID } from 'crypto';
 import { Router } from 'express';
-import { requireAdmin } from '../auth';
+import { requireAdminPermission } from '../auth';
 import { pool, type ResultSetHeader, type RowDataPacket } from '../db';
 
 interface ProductRow extends RowDataPacket {
@@ -139,7 +139,7 @@ catalogRouter.get('/products/:idOrSlug', async (req, res) => {
   res.json({ product: productDto(rows[0]) });
 });
 
-catalogRouter.post('/products', requireAdmin, async (req, res) => {
+catalogRouter.post('/products', requireAdminPermission('canManageProducts'), async (req, res) => {
   const product = normalizeProduct(req.body);
   const invalid = validateProduct(product);
   if (invalid) {
@@ -186,7 +186,7 @@ catalogRouter.post('/products', requireAdmin, async (req, res) => {
   }
 });
 
-catalogRouter.put('/products/:id', requireAdmin, async (req, res) => {
+catalogRouter.put('/products/:id', requireAdminPermission('canManageProducts'), async (req, res) => {
   const product = normalizeProduct({ ...req.body, id: req.params.id });
   const invalid = validateProduct(product);
   if (invalid) {
@@ -255,7 +255,7 @@ catalogRouter.put('/products/:id', requireAdmin, async (req, res) => {
   }
 });
 
-catalogRouter.patch('/products/bulk', requireAdmin, async (req, res) => {
+catalogRouter.patch('/products/bulk', requireAdminPermission('canManageProducts'), async (req, res) => {
   const updates = Array.isArray(req.body?.updates) ? req.body.updates : [];
   if (!updates.length || updates.length > 500) {
     res.status(400).json({ error: 'INVALID_BULK_UPDATE' });
@@ -298,7 +298,7 @@ catalogRouter.patch('/products/bulk', requireAdmin, async (req, res) => {
   }
 });
 
-catalogRouter.delete('/products/:id', requireAdmin, async (req, res) => {
+catalogRouter.delete('/products/:id', requireAdminPermission('canManageProducts'), async (req, res) => {
   const [result] = await pool.execute<ResultSetHeader>(
     "UPDATE products SET status = 'deleted', updated_at = NOW() WHERE id = ?",
     [req.params.id]
@@ -322,7 +322,7 @@ catalogRouter.get('/categories', async (_req, res) => {
   });
 });
 
-catalogRouter.post('/categories', requireAdmin, async (req, res) => {
+catalogRouter.post('/categories', requireAdminPermission('canManageProducts'), async (req, res) => {
   const category = normalizeCategory(req.body);
   if (!category.slug || !category.nameFa) {
     res.status(400).json({ error: 'CATEGORY_DATA_INVALID' });
@@ -353,7 +353,7 @@ catalogRouter.post('/categories', requireAdmin, async (req, res) => {
   }
 });
 
-catalogRouter.put('/categories/:id', requireAdmin, async (req, res) => {
+catalogRouter.put('/categories/:id', requireAdminPermission('canManageProducts'), async (req, res) => {
   const category = normalizeCategory({ ...req.body, id: req.params.id });
   if (!category.slug || !category.nameFa) {
     res.status(400).json({ error: 'CATEGORY_DATA_INVALID' });
@@ -380,7 +380,7 @@ catalogRouter.put('/categories/:id', requireAdmin, async (req, res) => {
   res.json({ category });
 });
 
-catalogRouter.delete('/categories/:id', requireAdmin, async (req, res) => {
+catalogRouter.delete('/categories/:id', requireAdminPermission('canManageProducts'), async (req, res) => {
   const [result] = await pool.execute<ResultSetHeader>(
     'UPDATE categories SET is_active = 0, updated_at = NOW() WHERE id = ?',
     [req.params.id]

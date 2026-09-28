@@ -1776,35 +1776,13 @@ export const INITIAL_SETTINGS = {
       links: [
         { id: 'flink-5', title: 'آموزش فنی و عیب‌یابی خودرو', url: 'blog' },
         { id: 'flink-6', title: 'مدیریت گاراژ خودروهای من', url: 'account:garage' },
-        { id: 'flink-7', title: 'ورود به پنل مدیریت انبار', url: 'admin' },
-        { id: 'flink-8', title: 'ثبت‌نام خریداران و مکانیک‌ها', url: 'account' }
+        { id: 'flink-7', title: 'ثبت‌نام خریداران و مکانیک‌ها', url: 'account' }
       ]
     }
   ],
-  footerShowBadges: true,
-  footerBadges: [
-    {
-      id: 'badge-enamad',
-      title: 'نماد اعتماد الکترونیکی (اینماد)',
-      imageUrl: 'https://trustseal.enamad.ir/logo.aspx?id=123456',
-      linkUrl: 'https://enamad.ir',
-      htmlCode: '<div class="p-2 bg-neutral-800/80 rounded-xl text-center border border-neutral-700/60 hover:border-red-500/50 transition-colors"><div class="w-14 h-14 mx-auto flex items-center justify-center bg-white rounded-lg p-1 mb-1.5 shadow-sm"><img src="https://cdn-icons-png.flaticon.com/512/1162/1162499.png" alt="اینماد" class="w-10 h-10 object-contain" /></div><span class="text-[10px] text-neutral-300 font-bold block">اینماد ۲ ستاره</span><span class="text-[9px] text-neutral-500 block">مرکز توسعه تجارت</span></div>'
-    },
-    {
-      id: 'badge-samandehi',
-      title: 'نشان ملی ثبت رسانه‌های دیجیتال (ساماندهی)',
-      imageUrl: 'https://logo.samandehi.ir/logo.aspx?id=123456',
-      linkUrl: 'https://samandehi.ir',
-      htmlCode: '<div class="p-2 bg-neutral-800/80 rounded-xl text-center border border-neutral-700/60 hover:border-red-500/50 transition-colors"><div class="w-14 h-14 mx-auto flex items-center justify-center bg-white rounded-lg p-1 mb-1.5 shadow-sm"><img src="https://cdn-icons-png.flaticon.com/512/924/924915.png" alt="ساماندهی" class="w-10 h-10 object-contain" /></div><span class="text-[10px] text-neutral-300 font-bold block">ستاد ساماندهی</span><span class="text-[9px] text-neutral-500 block">وزارت ارشاد</span></div>'
-    },
-    {
-      id: 'badge-shaparak',
-      title: 'درگاه پرداخت امن شاپرک و عضو شتاب',
-      imageUrl: 'https://cdn-icons-png.flaticon.com/512/893/893081.png',
-      linkUrl: '#',
-      htmlCode: '<div class="p-2 bg-neutral-800/80 rounded-xl text-center border border-neutral-700/60 hover:border-red-500/50 transition-colors"><div class="w-14 h-14 mx-auto flex items-center justify-center bg-white rounded-lg p-1 mb-1.5 shadow-sm"><img src="https://cdn-icons-png.flaticon.com/512/893/893081.png" alt="شاپرک" class="w-10 h-10 object-contain" /></div><span class="text-[10px] text-emerald-400 font-bold block">پرداخت امن شاپرک</span><span class="text-[9px] text-neutral-500 block">پروتکل SSL ۲۵۶ بیتی</span></div>'
-    }
-  ],
+  // Trust/certification badges stay disabled until real verification codes are configured.
+  footerShowBadges: false,
+  footerBadges: [],
   footerCustomHtml: '',
   footerCopyrightText: 'تمامی حقوق مادی و معنوی برای فروشگاه اینترنتی چین‌پارت محفوظ است. طراحی تخصصی مخصوص صنعت خودروهای چینی.',
   loyaltySettings: {

@@ -9,8 +9,8 @@ import {
   INITIAL_PAGES,
   INITIAL_SETTINGS,
   INITIAL_PAYMENT_GATEWAYS,
-  INITIAL_BRANDS,
-  INITIAL_MODELS
+  BRANDS,
+  VEHICLE_MODELS
 } from '../src/data/mockData';
 
 const main = async () => {
@@ -18,7 +18,7 @@ const main = async () => {
   try {
     await connection.beginTransaction();
 
-    for (const brand of INITIAL_BRANDS) {
+    for (const brand of BRANDS) {
       await connection.execute(
         `INSERT INTO vehicle_brands (id, slug, name_fa, name_en, data_json, is_active)
          VALUES (?, ?, ?, ?, ?, 1)
@@ -33,7 +33,7 @@ const main = async () => {
       );
     }
 
-    for (const model of INITIAL_MODELS) {
+    for (const model of VEHICLE_MODELS) {
       await connection.execute(
         `INSERT INTO vehicle_models (id, brand_id, slug, name_fa, name_en, data_json, is_active)
          VALUES (?, ?, ?, ?, ?, ?, 1)

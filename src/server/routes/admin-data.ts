@@ -332,6 +332,11 @@ adminDataRouter.post('/admins', requireAdminPermission('canManageAdmins'), async
   const password = String(req.body?.password || '');
   const fullName = String(req.body?.fullName || '').trim();
   const role = String(req.body?.role || 'order_manager');
+  const allowedRoles = ['super_admin', 'content_manager', 'order_manager', 'inventory_manager'];
+  if (!allowedRoles.includes(role)) {
+    res.status(400).json({ error: 'ADMIN_ROLE_INVALID' });
+    return;
+  }
   const email = String(req.body?.email || '').trim() || null;
   const phone = String(req.body?.phone || '').trim() || null;
   const avatar = String(req.body?.avatar || '').trim() || null;
@@ -385,6 +390,11 @@ adminDataRouter.put('/admins/:id', requireAdminPermission('canManageAdmins'), as
   const username = String(req.body?.username || existing.username).trim().toLowerCase();
   const fullName = String(req.body?.fullName || existing.full_name).trim();
   const role = String(req.body?.role || existing.role);
+  const allowedRoles = ['super_admin', 'content_manager', 'order_manager', 'inventory_manager'];
+  if (!allowedRoles.includes(role)) {
+    res.status(400).json({ error: 'ADMIN_ROLE_INVALID' });
+    return;
+  }
   const password = String(req.body?.password || '');
   const email = String(req.body?.email || '').trim() || null;
   const phone = String(req.body?.phone || '').trim() || null;

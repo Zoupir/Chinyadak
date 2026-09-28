@@ -6,41 +6,56 @@ export interface RouteState {
 }
 
 /**
- * Builds the canonical hash fragment for any view and parameter
+ * Builds an SEO-friendly pathname for any view and parameter.
  */
-export const buildRouteHash = (view: string, param?: string): string => {
-  if (!view || view === 'home') return '#/';
-  if (view === 'admin') return '#/admin';
-  if (view === 'shop') return param ? `#/shop/${encodeURIComponent(param)}` : '#/shop';
-  if (view === 'category') return `#/category/${encodeURIComponent(param || 'all')}`;
-  if (view === 'product') return `#/product/${encodeURIComponent(param || '')}`;
-  if (view === 'car-brand' || view === 'brand') return `#/brand/${encodeURIComponent(param || '')}`;
-  if (view === 'car-model' || view === 'model') return `#/car-model/${encodeURIComponent(param || '')}`;
-  if (view === 'account') return param ? `#/account/${encodeURIComponent(param)}` : '#/account';
-  if (view === 'tracking') return param ? `#/tracking/${encodeURIComponent(param)}` : '#/tracking';
-  if (view === 'invoice') return `#/invoice/${encodeURIComponent(param || '')}`;
-  if (view === 'compare') return '#/compare';
-  if (view === 'part-request') return param ? `#/part-request/${encodeURIComponent(param)}` : '#/part-request';
-  if (view === 'blog') return '#/blog';
-  if (view === 'article') return `#/article/${encodeURIComponent(param || '')}`;
-  if (view === 'page') return `#/page/${encodeURIComponent(param || 'about')}`;
-  if (view === 'about') return '#/about';
-  if (view === 'guarantee') return '#/guarantee';
-  if (view === 'checkout') return '#/checkout';
-  
-  return param ? `#/${view}/${encodeURIComponent(param)}` : `#/${view}`;
+export const buildRoutePath = (view: string, param?: string): string => {
+  if (!view || view === 'home') return '/';
+  if (view === 'admin') return '/admin';
+  if (view === 'shop') return param ? `/shop/${encodeURIComponent(param)}` : '/shop';
+  if (view === 'category') return `/category/${encodeURIComponent(param || 'all')}`;
+  if (view === 'product') return `/product/${encodeURIComponent(param || '')}`;
+  if (view === 'car-brand' || view === 'brand') return `/brand/${encodeURIComponent(param || '')}`;
+  if (view === 'car-model' || view === 'model') return `/car-model/${encodeURIComponent(param || '')}`;
+  if (view === 'account') return param ? `/account/${encodeURIComponent(param)}` : '/account';
+  if (view === 'tracking') return param ? `/tracking/${encodeURIComponent(param)}` : '/tracking';
+  if (view === 'invoice') return `/invoice/${encodeURIComponent(param || '')}`;
+  if (view === 'compare') return '/compare';
+  if (view === 'part-request') return param ? `/part-request/${encodeURIComponent(param)}` : '/part-request';
+  if (view === 'blog') return '/blog';
+  if (view === 'article') return `/article/${encodeURIComponent(param || '')}`;
+  if (view === 'page') return `/page/${encodeURIComponent(param || 'about')}`;
+  if (view === 'about') return '/about';
+  if (view === 'guarantee') return '/guarantee';
+  if (view === 'checkout') return '/checkout';
+  return param ? `/${encodeURIComponent(view)}/${encodeURIComponent(param)}` : `/${encodeURIComponent(view)}`;
 };
 
 /**
- * Parses the current hash fragment into view and param
+ * Parses a pathname into the SPA's view + parameter state.
  */
-export const parseRouteHash = (rawHash: string): RouteState => {
-  let cleaned = rawHash.replace(/^#\/?/, '').trim();
-  if (!cleaned || cleaned === '/') {
-    return { view: 'home' };
-  }
+export const parseRoutePath = (rawPath: string): RouteState => {
+  const cleaned = rawPath.replace(/^\/+|\/+$/g, '').trim();
+  if (!cleaned) return { view: 'home' };
 
-  // Support legacy format e.g. #product=123 or #admin
+  const parts = cleaned.split('/').filter(Boolean).map(part => decodeURIComponent(part));
+  const rawView = parts[0] || 'home';
+  const rawParam = parts.length > 1 ? parts.slice(1).join('/') : undefined;
+
+  let view = rawView;
+  if (view === 'brand') view = 'car-brand';
+  if (view === 'model') view = 'car-model';
+
+  return { view, param: rawParam };
+};
+
+/**
+ * Legacy hash URLs are converted to normal path routes once, so old shared links keep working.
+ */
+export const parseLegacyHash = (rawHash: string): RouteState | null => {
+  if (!rawHash) return null;
+  let cleaned = rawHash.replace(/^#\/?/, '').trim();
+  if (!cleaned || cleaned === '/') return { view: 'home' };
+
   if (cleaned.includes('=')) {
     const [viewKey, paramVal] = cleaned.split('=');
     return {
@@ -50,29 +65,26 @@ export const parseRouteHash = (rawHash: string): RouteState => {
   }
 
   const parts = cleaned.split('/').filter(Boolean);
-  const rawView = parts[0] || 'home';
-  const rawParam = parts.length > 1 ? decodeURIComponent(parts.slice(1).join('/')) : undefined;
-
-  let view = rawView;
+  let view = parts[0] || 'home';
   if (view === 'brand') view = 'car-brand';
   if (view === 'model') view = 'car-model';
-
   return {
     view,
-    param: rawParam
+    param: parts.length > 1 ? decodeURIComponent(parts.slice(1).join('/')) : undefined
   };
 };
 
+// Temporary aliases for components that may still import the old names.
+export const buildRouteHash = buildRoutePath;
+export const parseRouteHash = parseRoutePath;
+
 /**
- * Returns full absolute URL for sharing
+ * Returns full absolute URL for sharing.
  */
 export const getFullShareUrl = (view: string, param?: string): string => {
-  const hash = buildRouteHash(view, param);
-  if (typeof window === 'undefined') return hash;
-  
-  const origin = window.location.origin || '';
-  const pathname = window.location.pathname || '';
-  return `${origin}${pathname}${hash}`;
+  const routePath = buildRoutePath(view, param);
+  if (typeof window === 'undefined') return routePath;
+  return `${window.location.origin}${routePath}`;
 };
 
 /**

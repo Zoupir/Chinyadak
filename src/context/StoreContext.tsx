@@ -379,13 +379,14 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const canOrders = admin.role === 'super_admin' || admin.permissions?.canManageOrders;
     const canAdmins = admin.role === 'super_admin' || admin.permissions?.canManageAdmins;
 
-    const requests: Promise<void>[] = [
-      apiRequest<{ orders: Order[] }>('/api/orders')
-        .then(result => { if (!cancelled) setOrders(result.orders); })
-        .catch(error => console.error('Admin orders load failed:', error))
-    ];
+    const requests: Promise<void>[] = [];
 
     if (canOrders) {
+      requests.push(
+        apiRequest<{ orders: Order[] }>('/api/orders')
+          .then(result => { if (!cancelled) setOrders(result.orders); })
+          .catch(error => console.error('Admin orders load failed:', error))
+      );
       requests.push(
         apiRequest<{ customers: CustomerUser[] }>('/api/admin-data/customers')
           .then(result => { if (!cancelled) setCustomers(result.customers); })

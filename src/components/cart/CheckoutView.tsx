@@ -124,7 +124,7 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderCompleted, on
     setIsProcessing(true);
     setPaymentFailed(false);
 
-    setTimeout(() => {
+    setTimeout(async () => {
       setIsProcessing(false);
 
       if (simulateFailure) {
@@ -145,7 +145,7 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderCompleted, on
         vehicleInfo: item.selectedVehicle?.modelName
       }));
 
-      const newOrder = createOrder({
+      const newOrder = await createOrder({
         status: 'paid',
         statusTitle: 'پرداخت موفق - در انتظار تایید انبار',
         items: orderItems,

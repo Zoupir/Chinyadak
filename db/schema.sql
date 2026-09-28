@@ -38,6 +38,33 @@ CREATE TABLE IF NOT EXISTS admin_users (
   INDEX idx_admin_active (is_active)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS vehicle_brands (
+  id CHAR(64) PRIMARY KEY,
+  slug VARCHAR(190) NOT NULL UNIQUE,
+  name_fa VARCHAR(255) NOT NULL,
+  name_en VARCHAR(255) NULL,
+  data_json JSON NOT NULL,
+  is_active TINYINT(1) NOT NULL DEFAULT 1,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_vehicle_brands_active (is_active)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS vehicle_models (
+  id CHAR(64) PRIMARY KEY,
+  brand_id CHAR(64) NOT NULL,
+  slug VARCHAR(190) NOT NULL UNIQUE,
+  name_fa VARCHAR(255) NOT NULL,
+  name_en VARCHAR(255) NULL,
+  data_json JSON NOT NULL,
+  is_active TINYINT(1) NOT NULL DEFAULT 1,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_vehicle_models_brand (brand_id),
+  INDEX idx_vehicle_models_active (is_active),
+  CONSTRAINT fk_vehicle_models_brand FOREIGN KEY (brand_id) REFERENCES vehicle_brands(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS categories (
   id CHAR(36) PRIMARY KEY,
   slug VARCHAR(190) NOT NULL UNIQUE,

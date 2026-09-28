@@ -29,7 +29,7 @@ jobs:
           DB_NAME: ci
           DB_USER: ci
           DB_PASSWORD: ci
-          JWT_SECRET: 01234567890123456789012345678901
+          JWT_SECRET: '01234567890123456789012345678901'
         run: npm run build
 
   integration:
@@ -70,7 +70,7 @@ jobs:
       DB_USER: ci
       DB_PASSWORD: ci
       DB_CONNECTION_LIMIT: 5
-      JWT_SECRET: 01234567890123456789012345678901
+      JWT_SECRET: '01234567890123456789012345678901'
       SESSION_COOKIE_NAME: chinpart_ci_session
       ADMIN_BOOTSTRAP_USER: admin
       ADMIN_BOOTSTRAP_PASSWORD: CI-Admin-Password-123!

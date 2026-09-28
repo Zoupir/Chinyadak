@@ -16,6 +16,7 @@ import { cmsRouter } from './src/server/routes/cms';
 import { adminDataRouter } from './src/server/routes/admin-data';
 import { mediaRouter } from './src/server/routes/media';
 import { integrationsRouter } from './src/server/routes/integrations';
+import { vehiclesRouter } from './src/server/routes/vehicles';
 import { uploadDirectory } from './src/server/media';
 import { checkDatabase } from './src/server/db';
 import { config } from './src/server/config';
@@ -73,6 +74,7 @@ app.use('/api/cms', cmsRouter);
 app.use('/api/admin-data', adminDataRouter);
 app.use('/api/media', mediaRouter);
 app.use('/api/integrations', integrationsRouter);
+app.use('/api/vehicles', vehiclesRouter);
 
 const aiLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,

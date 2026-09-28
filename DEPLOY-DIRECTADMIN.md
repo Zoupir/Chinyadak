@@ -3,7 +3,7 @@
 این branch برای اجرای مستقل Node.js + MySQL آماده شده است.
 
 ## پیش‌نیاز
-- Node.js 20 یا 22
+- Node.js 22 (پیشنهادی؛ CI رسمی پروژه روی Node 22 اجرا می‌شود)
 - MySQL/MariaDB
 - SSH یا Terminal
 - SSL فعال
@@ -23,6 +23,8 @@
 - `JWT_SECRET` حداقل 32 کاراکتر تصادفی
 - `ADMIN_BOOTSTRAP_PASSWORD` حداقل 10 کاراکتر
 - `APP_URL`
+- `APP_ENCRYPTION_KEY` حداقل 32 کاراکتر و متفاوت از JWT_SECRET
+- `UPLOAD_DIR` برای فایل‌های رسانه‌ای پایدار
 
 فایل `.env` نباید داخل Git commit شود.
 
@@ -72,7 +74,21 @@ https://YOUR-DOMAIN/api/health
 - پوشه پروژه و فایل `.env` نباید از وب به‌صورت مستقیم قابل دانلود باشند.
 
 ## وضعیت فعلی branch
-احراز هویت مشتری و مدیر به backend منتقل شده است. کاتالوگ، سفارش، پرداخت، تنظیمات، رسانه و بخش‌هایی از پنل مدیریت هنوز باید به دیتابیس/API منتقل شوند و تا تکمیل این موارد این branch نباید به‌عنوان فروشگاه نهایی منتشر شود.
+
+ساختار Production این branch کامل شده است:
+- احراز هویت مشتری و مدیر روی Backend با Cookie امن HttpOnly
+- RBAC سمت سرور برای مدیران
+- کاتالوگ، برند/مدل خودرو، CRM، سفارش، وفاداری، CMS، صفحات، اسلایدر و تنظیمات روی MySQL/MariaDB
+- آپلود واقعی رسانه روی هاست
+- رمزنگاری Secretهای SMS/Accounting/Webhook
+- درگاه SEP سامان و به‌پرداخت ملت با verify سمت سرور
+- رزرو و کسر موجودی تراکنشی
+- URLهای استاندارد بدون Hash
+- canonical، robots، sitemap و JSON-LD سمت سرور
+- استعلام قطعه، هشدار موجودی و آمار جستجو روی دیتابیس
+- CI با Build و Smoke Test روی MySQL 8.4 و MariaDB 11.4
+
+قبل از Live فقط Credential واقعی سرویس‌ها/بانک و تست Staging با حساب خودتان لازم است.
 
 
 ## پرداخت آنلاین واقعی
@@ -114,3 +130,32 @@ MAX_UPLOAD_MB=8
 پوشه `uploads` باید برای کاربر Node.js قابل نوشتن باشد و در deployهای بعدی حذف نشود. این پوشه داخل Git نگهداری نمی‌شود.
 
 فرمت‌های فایل تصویری قابل آپلود: JPG، PNG، WEBP و GIF. SVG عمداً برای جلوگیری از اجرای محتوای فعال در آپلود مستقیم پذیرفته نمی‌شود.
+
+
+## چک‌لیست Launch
+
+1. دامنه نهایی را در `APP_URL` با HTTPS تنظیم کنید.
+2. `JWT_SECRET` و `APP_ENCRYPTION_KEY` را دو مقدار تصادفی و مستقل قرار دهید.
+3. `npm run db:init` را اجرا کنید.
+4. فقط در نصب اولیه، در صورت نیاز به داده فعلی پروژه، `npm run db:seed` را اجرا کنید.
+5. `npm run build` و سپس Restart برنامه Node.js.
+6. آدرس `/api/health` باید `database: connected` برگرداند.
+7. `/sitemap.xml` و `/robots.txt` را بررسی کنید.
+8. مجوز نوشتن پوشه `UPLOAD_DIR` را بررسی کنید.
+9. Cron آزادسازی رزرو پرداخت را فعال کنید.
+10. Credential واقعی SEP/Mellat را ابتدا روی Staging تست کنید و سپس Live کنید.
+11. نشان‌های اعتماد/مجوز در Footer به‌صورت پیش‌فرض خاموش هستند؛ فقط کد واقعی متعلق به فروشگاه را در پنل وارد و فعال کنید.
+
+### URLهای SEO
+
+مسیرهای عمومی به شکل استاندارد هستند، برای مثال:
+
+```
+/product/product-slug
+/category/category-slug
+/brand/brand-slug
+/car-model/model-slug
+/article/article-slug
+```
+
+صفحات خصوصی مانند `/admin`، `/account`، `/checkout` و `/tracking` با `noindex` سرو می‌شوند.

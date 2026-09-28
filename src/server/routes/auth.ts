@@ -125,37 +125,28 @@ authRouter.post('/customer/register', loginLimiter, async (req, res) => {
     [phone]
   );
 
-  const passwordHash = await hashPassword(password);
-  let id: string;
-
   if (existing.length) {
     const current = existing[0];
-    if (current.password_initialized) {
-      res.status(409).json({ error: 'PHONE_ALREADY_REGISTERED' });
-      return;
-    }
     if (current.status !== 'active') {
       res.status(403).json({ error: 'ACCOUNT_BLOCKED' });
       return;
     }
-
-    id = current.id;
-    await pool.execute<ResultSetHeader>(
-      `UPDATE customers
-       SET first_name = ?, last_name = ?, password_hash = ?, password_initialized = 1,
-           customer_type = ?, vehicle = COALESCE(NULLIF(?, ''), vehicle), updated_at = NOW()
-       WHERE id = ?`,
-      [firstName, lastName, passwordHash, type, vehicle, id]
-    );
-  } else {
-    id = randomUUID();
-    await pool.execute<ResultSetHeader>(
-      `INSERT INTO customers
-        (id, first_name, last_name, phone, password_hash, password_initialized, customer_type, vehicle)
-       VALUES (?, ?, ?, ?, ?, 1, ?, ?)`,
-      [id, firstName, lastName, phone, passwordHash, type, vehicle || null]
-    );
+    res.status(409).json({
+      error: current.password_initialized
+        ? 'PHONE_ALREADY_REGISTERED'
+        : 'ACCOUNT_ACTIVATION_REQUIRED'
+    });
+    return;
   }
+
+  const id = randomUUID();
+  const passwordHash = await hashPassword(password);
+  await pool.execute<ResultSetHeader>(
+    `INSERT INTO customers
+      (id, first_name, last_name, phone, password_hash, password_initialized, customer_type, vehicle)
+     VALUES (?, ?, ?, ?, ?, 1, ?, ?)`,
+    [id, firstName, lastName, phone, passwordHash, type, vehicle || null]
+  );
 
   const [rows] = await pool.query<CustomerRow[]>(
     'SELECT * FROM customers WHERE id = ? LIMIT 1',

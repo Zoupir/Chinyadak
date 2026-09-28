@@ -257,41 +257,23 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const [categories, setCategories] = useState<Category[]>([]);
 
-  const [articles, setArticles] = useState<Article[]>(() => {
-    const saved = localStorage.getItem('chinpart_articles');
-    return saved ? JSON.parse(saved) : INITIAL_ARTICLES;
-  });
+  const [articles, setArticles] = useState<Article[]>([]);
 
-  const [articleCategories, setArticleCategories] = useState<ArticleCategory[]>(() => {
-    const saved = localStorage.getItem('chinpart_article_categories');
-    return saved ? JSON.parse(saved) : INITIAL_ARTICLE_CATEGORIES;
-  });
+  const [articleCategories, setArticleCategories] = useState<ArticleCategory[]>([]);
 
   // Customers
-  const [customers, setCustomers] = useState<CustomerUser[]>(() => {
-    const saved = localStorage.getItem('chinpart_customers');
-    return saved ? JSON.parse(saved) : INITIAL_CUSTOMERS;
-  });
+  const [customers, setCustomers] = useState<CustomerUser[]>([]);
 
   const [currentCustomer, setCurrentCustomer] = useState<CustomerUser | null>(null);
 
   // Loyalty Transactions
-  const [loyaltyTransactions, setLoyaltyTransactions] = useState<LoyaltyTransaction[]>(() => {
-    const saved = localStorage.getItem('chinpart_loyalty_transactions');
-    return saved ? JSON.parse(saved) : INITIAL_LOYALTY_TRANSACTIONS;
-  });
+  const [loyaltyTransactions, setLoyaltyTransactions] = useState<LoyaltyTransaction[]>([]);
 
   // Settings
-  const [settings, setSettings] = useState<SiteSettings>(() => {
-    const saved = localStorage.getItem('chinpart_settings');
-    return saved ? JSON.parse(saved) : INITIAL_SETTINGS;
-  });
+  const [settings, setSettings] = useState<SiteSettings>(INITIAL_SETTINGS);
 
   // Payment Gateways
-  const [paymentGateways, setPaymentGateways] = useState<PaymentGatewayConfig[]>(() => {
-    const saved = localStorage.getItem('chinpart_gateways');
-    return saved ? JSON.parse(saved) : INITIAL_PAYMENT_GATEWAYS;
-  });
+  const [paymentGateways, setPaymentGateways] = useState<PaymentGatewayConfig[]>([]);
 
   // Integration secrets must never be persisted in localStorage.
   // This remains an in-memory configuration until the server-side settings API is connected.
@@ -299,22 +281,13 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   // Admin authentication is server-side. No password is stored in the browser.
   // Sliders Management
-  const [sliders, setSliders] = useState<SliderItem[]>(() => {
-    const saved = localStorage.getItem('chinpart_sliders');
-    return saved ? JSON.parse(saved) : INITIAL_SLIDERS;
-  });
+  const [sliders, setSliders] = useState<SliderItem[]>([]);
 
   // Multi-Admin Users & Roles System
-  const [adminUsers, setAdminUsers] = useState<AdminUser[]>(() => {
-    const saved = localStorage.getItem('chinpart_admin_users');
-    return saved ? JSON.parse(saved) : INITIAL_ADMIN_USERS;
-  });
+  const [adminUsers, setAdminUsers] = useState<AdminUser[]>([]);
 
   // Pages & Section Builder Management
-  const [pages, setPages] = useState<SitePage[]>(() => {
-    const saved = localStorage.getItem('chinpart_pages');
-    return saved ? JSON.parse(saved) : INITIAL_PAGES;
-  });
+  const [pages, setPages] = useState<SitePage[]>([]);
 
   const [isLiveEditActive, setIsLiveEditActive] = useState<boolean>(false);
 
@@ -402,23 +375,84 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }, 3800);
   };
 
+  const loadAdminData = async (admin: AdminUser, cancelled = false) => {
+    const canOrders = admin.role === 'super_admin' || admin.permissions?.canManageOrders;
+    const canAdmins = admin.role === 'super_admin' || admin.permissions?.canManageAdmins;
+
+    const requests: Promise<void>[] = [
+      apiRequest<{ orders: Order[] }>('/api/orders')
+        .then(result => { if (!cancelled) setOrders(result.orders); })
+        .catch(error => console.error('Admin orders load failed:', error))
+    ];
+
+    if (canOrders) {
+      requests.push(
+        apiRequest<{ customers: CustomerUser[] }>('/api/admin-data/customers')
+          .then(result => { if (!cancelled) setCustomers(result.customers); })
+          .catch(error => console.error('CRM customers load failed:', error)),
+        apiRequest<{ transactions: LoyaltyTransaction[] }>('/api/admin-data/loyalty')
+          .then(result => { if (!cancelled) setLoyaltyTransactions(result.transactions); })
+          .catch(error => console.error('Loyalty data load failed:', error))
+      );
+    }
+
+    if (canAdmins) {
+      requests.push(
+        apiRequest<{ admins: AdminUser[] }>('/api/admin-data/admins')
+          .then(result => { if (!cancelled) setAdminUsers(result.admins); })
+          .catch(error => console.error('Admin users load failed:', error))
+      );
+    }
+
+    await Promise.allSettled(requests);
+  };
+
+  const loadCustomerPrivateData = async (cancelled = false) => {
+    await Promise.allSettled([
+      apiRequest<{ orders: Order[] }>('/api/orders/mine')
+        .then(result => { if (!cancelled) setOrders(result.orders); }),
+      apiRequest<{ transactions: LoyaltyTransaction[] }>('/api/auth/customer/loyalty')
+        .then(result => { if (!cancelled) setLoyaltyTransactions(result.transactions); })
+    ]);
+  };
+
   useEffect(() => {
     let cancelled = false;
 
     Promise.all([
       apiRequest<{ products: Product[] }>('/api/catalog/products'),
-      apiRequest<{ categories: Category[] }>('/api/catalog/categories')
+      apiRequest<{ categories: Category[] }>('/api/catalog/categories'),
+      apiRequest<{
+        articles: Article[];
+        articleCategories: ArticleCategory[];
+        sliders: SliderItem[];
+        pages: SitePage[];
+        settings: SiteSettings | null;
+        paymentGateways: PaymentGatewayConfig[];
+      }>('/api/cms/bundle')
     ])
-      .then(([productData, categoryData]) => {
+      .then(([productData, categoryData, cmsData]) => {
         if (cancelled) return;
         setProducts(productData.products);
         setCategories(categoryData.categories);
+        setArticles(cmsData.articles);
+        setArticleCategories(cmsData.articleCategories);
+        setSliders(cmsData.sliders);
+        setPages(cmsData.pages);
+        if (cmsData.settings) setSettings(cmsData.settings);
+        setPaymentGateways(cmsData.paymentGateways);
       })
       .catch(error => {
-        console.error('Catalog load failed:', error);
+        console.error('Public store data load failed:', error);
         if (import.meta.env.DEV) {
           setProducts(INITIAL_PRODUCTS);
           setCategories(INITIAL_CATEGORIES);
+          setArticles(INITIAL_ARTICLES);
+          setArticleCategories(INITIAL_ARTICLE_CATEGORIES);
+          setSliders(INITIAL_SLIDERS);
+          setPages(INITIAL_PAGES);
+          setSettings(INITIAL_SETTINGS);
+          setPaymentGateways(INITIAL_PAYMENT_GATEWAYS);
         }
       });
 
@@ -440,9 +474,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             const exists = prev.some(item => item.id === data.customer!.id);
             return exists ? prev.map(item => item.id === data.customer!.id ? data.customer! : item) : [data.customer!, ...prev];
           });
-          void apiRequest<{ orders: Order[] }>('/api/orders/mine')
-            .then(result => !cancelled && setOrders(result.orders))
-            .catch(error => console.error('Customer orders load failed:', error));
+          void loadCustomerPrivateData(cancelled);
         } else if (data.role === 'admin' && data.admin) {
           setAdminAuth({
             isAuthenticated: true,
@@ -450,9 +482,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             currentUser: data.admin,
             isMustChangePassword: false
           });
-          void apiRequest<{ orders: Order[] }>('/api/orders')
-            .then(result => !cancelled && setOrders(result.orders))
-            .catch(error => console.error('Admin orders load failed:', error));
+          void loadAdminData(data.admin, cancelled);
         }
       })
       .catch(error => {
@@ -475,22 +505,6 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     localStorage.setItem('chinpart_models', JSON.stringify(models));
   }, [models]);
 
-  useEffect(() => {
-    localStorage.setItem('chinpart_customers', JSON.stringify(customers));
-  }, [customers]);
-
-
-  useEffect(() => {
-    localStorage.setItem('chinpart_loyalty_transactions', JSON.stringify(loyaltyTransactions));
-  }, [loyaltyTransactions]);
-
-  useEffect(() => {
-    localStorage.setItem('chinpart_settings', JSON.stringify(settings));
-  }, [settings]);
-
-  useEffect(() => {
-    localStorage.setItem('chinpart_gateways', JSON.stringify(paymentGateways));
-  }, [paymentGateways]);
 
 
 
@@ -519,26 +533,10 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     localStorage.setItem('chinpart_stock_alerts', JSON.stringify(stockAlerts));
   }, [stockAlerts]);
 
-  useEffect(() => {
-    localStorage.setItem('chinpart_articles', JSON.stringify(articles));
-  }, [articles]);
-
-  useEffect(() => {
-    localStorage.setItem('chinpart_article_categories', JSON.stringify(articleCategories));
-  }, [articleCategories]);
-
 
   useEffect(() => {
     localStorage.setItem('chinpart_search_logs', JSON.stringify(searchLogs));
   }, [searchLogs]);
-
-  useEffect(() => {
-    localStorage.setItem('chinpart_sliders', JSON.stringify(sliders));
-  }, [sliders]);
-
-  useEffect(() => {
-    localStorage.setItem('chinpart_admin_users', JSON.stringify(adminUsers));
-  }, [adminUsers]);
 
   // Dynamic Theme Styling Application (Colors, Glow, Typography, Border Radius, Font Scale)
   useEffect(() => {
@@ -759,10 +757,6 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   // Pages & Section Builder Methods
-  useEffect(() => {
-    localStorage.setItem('chinpart_pages', JSON.stringify(pages));
-  }, [pages]);
-
   const updatePage = (updatedPage: SitePage) => {
     setPages(prev => {
       const exists = prev.some(p => p.id === updatedPage.id);

@@ -1,5 +1,4 @@
 import React from 'react';
-import { ARTICLES } from '../../data/mockData';
 import { useStore } from '../../context/StoreContext';
 import { ProductCard } from '../product/ProductCard';
 import { Clock, User, ArrowRight, Share2, HelpCircle, BookOpen, Layers } from 'lucide-react';
@@ -10,8 +9,19 @@ interface ArticleDetailViewProps {
 }
 
 export const ArticleDetailView: React.FC<ArticleDetailViewProps> = ({ articleId, onNavigate }) => {
-  const { products } = useStore();
-  const article = ARTICLES.find(a => a.id === articleId || a.slug === articleId) || ARTICLES[0];
+  const { products, articles } = useStore();
+  const article = articles.find(a => a.id === articleId || a.slug === articleId);
+
+  if (!article) {
+    return (
+      <div className="max-w-4xl mx-auto px-4 py-16 text-center">
+        <h1 className="font-black text-xl text-neutral-900">مقاله پیدا نشد</h1>
+        <button onClick={() => onNavigate('blog')} className="mt-4 text-sm font-bold text-red-600">
+          بازگشت به وبلاگ
+        </button>
+      </div>
+    );
+  }
 
   const linkedProducts = products.filter(p => article.relatedProductIds.includes(p.id));
 

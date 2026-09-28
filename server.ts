@@ -6,6 +6,7 @@ import { rateLimit } from 'express-rate-limit';
 import { createServer as createViteServer } from 'vite';
 import { GoogleGenAI } from '@google/genai';
 import path from 'path';
+import fs from 'fs/promises';
 import { authRouter } from './src/server/routes/auth';
 import { healthRouter } from './src/server/routes/health';
 import { catalogRouter } from './src/server/routes/catalog';
@@ -18,6 +19,7 @@ import { integrationsRouter } from './src/server/routes/integrations';
 import { uploadDirectory } from './src/server/media';
 import { checkDatabase } from './src/server/db';
 import { config } from './src/server/config';
+import { buildSitemapXml, renderSeoHtml, robotsText } from './src/server/seo';
 
 const app = express();
 
@@ -39,6 +41,19 @@ app.use('/uploads', express.static(uploadDirectory(), {
   etag: true,
   fallthrough: false
 }));
+
+app.get('/robots.txt', (_req, res) => {
+  res.type('text/plain').send(robotsText());
+});
+
+app.get('/sitemap.xml', async (_req, res, next) => {
+  try {
+    const xml = await buildSitemapXml();
+    res.type('application/xml').send(xml);
+  } catch (error) {
+    next(error);
+  }
+});
 
 app.use('/api/health', healthRouter);
 
@@ -136,13 +151,21 @@ async function startServer() {
 
   if (config.nodeEnv === 'production') {
     const distPath = path.resolve(process.cwd(), 'dist');
+    const indexTemplate = await fs.readFile(path.join(distPath, 'index.html'), 'utf8');
+
     app.use(express.static(distPath, {
       maxAge: '1h',
-      etag: true
+      etag: true,
+      index: false
     }));
 
-    app.get('*', (_req, res) => {
-      res.sendFile(path.join(distPath, 'index.html'));
+    app.get('*', async (req, res, next) => {
+      try {
+        const html = await renderSeoHtml(indexTemplate, req.path);
+        res.type('html').send(html);
+      } catch (error) {
+        next(error);
+      }
     });
   } else {
     const vite = await createViteServer({

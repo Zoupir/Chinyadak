@@ -1,0 +1,33 @@
+name: CI
+
+on:
+  push:
+    branches: [main, production-hardening]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Type check
+        run: npm run lint
+
+      - name: Production build
+        env:
+          DB_HOST: localhost
+          DB_NAME: ci
+          DB_USER: ci
+          DB_PASSWORD: ci
+          JWT_SECRET: 01234567890123456789012345678901
+        run: npm run build

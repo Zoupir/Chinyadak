@@ -126,6 +126,916 @@ interface StoreContextType {
   getOrderByTracking: (orderNumber: string, phone: string) => Promise<Order | undefined>;
   
   // Customers (CRM)
+  customers: CustomerUser[];
+  addCustomer: (cust: Omit<CustomerUser, 'id' | 'registeredAt' | 'totalOrders' | 'totalSpent'>) => void;
+  updateCustomer: (cust: CustomerUser) => void;
+  toggleCustomerStatus: (id: string) => void;
+
+  // Store Settings (Theme, Font, Color, Contact, Shipping)
+  settings: SiteSettings;
+  updateSettings: (newSettings: Partial<SiteSettings>) => void;
+
+  // Payment Gateways
+  paymentGateways: PaymentGatewayConfig[];
+  updatePaymentGateway: (gateway: PaymentGatewayConfig) => void;
+  toggleGatewayActive: (gatewayId: string) => void;
+
+  // API Integrations (SMS, Accounting, Webhooks)
+  apiIntegrations: ApiIntegrationsConfig;
+  updateApiIntegrations: (config: Partial<ApiIntegrationsConfig>) => void;
+
+  // Part Requests
+  partRequests: PartRequest[];
+  submitPartRequest: (req: Omit<PartRequest, 'id' | 'createdAt' | 'status'>) => void;
+  updatePartRequestStatus: (id: string, status: 'در حال بررسی' | 'پاسخ داده شد' | 'ناموجود در گمرک') => void;
+  
+  // Stock Alert (Notify Me)
+  stockAlerts: { productId: string; phone: string; date: string }[];
+  subscribeToStockAlert: (productId: string, phone: string) => void;
+  
+  // Search Analytics
+  searchLogs: SearchQueryLog[];
+  logSearch: (query: string, resultsCount: number) => void;
+
+  // Customer Session (CRM / Auth)
+  currentCustomer: CustomerUser | null;
+  customerLogin: (phone: string, pass: string) => Promise<{ success: boolean; error?: string }>;
+  customerRegister: (data: { firstName: string; lastName: string; phone: string; password: string; type: CustomerUser['type']; vehicle?: string }) => Promise<{ success: boolean; error?: string }>;
+  customerLogout: () => Promise<void>;
+
+  // Admin Sandbox Payment Simulator
+  simulateAdminPayment: (
+    amount: number,
+    gatewayId: string,
+    cardNumber: string,
+    outcome: 'success' | 'insufficient_funds' | 'user_cancelled' | 'network_error'
+  ) => { success: boolean; trackingNumber?: string; message: string; receipt?: any };
+
+  // Sliders & Banners
+  sliders: SliderItem[];
+  addSlider: (slide: SliderItem) => void;
+  updateSlider: (slide: SliderItem) => void;
+  deleteSlider: (id: string) => void;
+  reorderSliders: (sliders: SliderItem[]) => void;
+
+  // Multi-Admin Users & Roles Management
+  adminUsers: AdminUser[];
+  addAdminUser: (user: AdminUser) => void;
+  updateAdminUser: (user: AdminUser) => void;
+  deleteAdminUser: (id: string) => void;
+  toggleAdminStatus: (id: string) => void;
+
+  // Pages & Section Builder
+  pages: SitePage[];
+  updatePage: (page: SitePage) => void;
+  deletePage: (pageId: string) => void;
+  updateSection: (pageSlug: string, section: PageSection) => void;
+  addSection: (pageSlug: string, section: PageSection) => void;
+  deleteSection: (pageSlug: string, sectionId: string) => void;
+
+  // Typography & Font Scale
+  setFontSize: (size: 'compact' | 'normal' | 'large' | 'xlarge') => void;
+
+  // Live Section Edit Mode for Admin
+  isLiveEditActive: boolean;
+  setIsLiveEditActive: (active: boolean) => void;
+
+  // Admin Auth
+  adminAuth: AdminAuthState;
+  adminLogin: (user: string, pass: string) => Promise<{ success: boolean; error?: string }>;
+  adminChangePassword: (oldPass: string, newPass: string) => Promise<{ success: boolean; error?: string }>;
+  adminLogout: () => Promise<void>;
+
+  // Loyalty Points & Rewards Club
+  loyaltyTransactions: LoyaltyTransaction[];
+  getCustomerPoints: (customerId?: string) => number;
+  getCustomerTransactions: (customerId?: string) => LoyaltyTransaction[];
+  addLoyaltyPoints: (
+    customerId: string,
+    points: number,
+    description: string,
+    orderNumber?: string,
+    type?: LoyaltyTransaction['type']
+  ) => void;
+  redeemLoyaltyPoints: (
+    customerId: string,
+    points: number,
+    orderNumber?: string
+  ) => boolean;
+  calculatePointsEarned: (amount: number, customerId?: string) => number;
+  calculatePointsValue: (points: number) => number;
+  getTierInfo: (points: number) => {
+    tier: LoyaltyTier;
+    title: string;
+    badgeClass: string;
+    discountMultiplier: number;
+    minPoints: number;
+    perks: string[];
+    nextTier?: { title: string; pointsNeeded: number; percent: number };
+  };
+
+  // Notification Toast
+  toast: { message: string; type: 'success' | 'info' | 'error' } | null;
+  showToast: (message: string, type?: 'success' | 'info' | 'error') => void;
+}
+
+const StoreContext = createContext<StoreContextType | undefined>(undefined);
+
+export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  // Products
+  const [products, setProducts] = useState<Product[]>([]);
+
+  const [brands, setBrands] = useState<CarBrand[]>(() => {
+    const saved = localStorage.getItem('chinpart_brands');
+    return saved ? JSON.parse(saved) : INITIAL_BRANDS;
+  });
+
+  const [models, setModels] = useState<VehicleModel[]>(() => {
+    const saved = localStorage.getItem('chinpart_models');
+    return saved ? JSON.parse(saved) : INITIAL_MODELS;
+  });
+
+  const [categories, setCategories] = useState<Category[]>([]);
+
+  const [articles, setArticles] = useState<Article[]>([]);
+
+  const [articleCategories, setArticleCategories] = useState<ArticleCategory[]>([]);
+
+  // Customers
+  const [customers, setCustomers] = useState<CustomerUser[]>([]);
+
+  const [currentCustomer, setCurrentCustomer] = useState<CustomerUser | null>(null);
+
+  // Loyalty Transactions
+  const [loyaltyTransactions, setLoyaltyTransactions] = useState<LoyaltyTransaction[]>([]);
+
+  // Settings
+  const [settings, setSettings] = useState<SiteSettings>(INITIAL_SETTINGS);
+
+  // Payment Gateways
+  const [paymentGateways, setPaymentGateways] = useState<PaymentGatewayConfig[]>([]);
+
+  // Integration secrets must never be persisted in localStorage.
+  // This remains an in-memory configuration until the server-side settings API is connected.
+  const [apiIntegrations, setApiIntegrations] = useState<ApiIntegrationsConfig>(INITIAL_API_CONFIG);
+
+  // Admin authentication is server-side. No password is stored in the browser.
+  // Sliders Management
+  const [sliders, setSliders] = useState<SliderItem[]>([]);
+
+  // Multi-Admin Users & Roles System
+  const [adminUsers, setAdminUsers] = useState<AdminUser[]>([]);
+
+  // Pages & Section Builder Management
+  const [pages, setPages] = useState<SitePage[]>([]);
+
+  const [isLiveEditActive, setIsLiveEditActive] = useState<boolean>(false);
+
+  const [adminAuth, setAdminAuth] = useState<AdminAuthState>({
+    isAuthenticated: false,
+    username: '',
+    isMustChangePassword: false
+  });
+
+  // Selected Vehicle for active fitment filtering
+  const [selectedVehicle, setSelectedVehicleState] = useState<GarageCar | null>(() => {
+    const saved = localStorage.getItem('chinpart_selected_car');
+    return saved ? JSON.parse(saved) : INITIAL_GARAGE[0];
+  });
+
+  // Garage
+  const [garage, setGarage] = useState<GarageCar[]>(() => {
+    const saved = localStorage.getItem('chinpart_garage');
+    return saved ? JSON.parse(saved) : INITIAL_GARAGE;
+  });
+
+  // Cart
+  const [cart, setCart] = useState<CartItem[]>(() => {
+    const saved = localStorage.getItem('chinpart_cart');
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  // Wishlist
+  const [wishlist, setWishlist] = useState<string[]>(() => {
+    const saved = localStorage.getItem('chinpart_wishlist');
+    return saved ? JSON.parse(saved) : ['prod-water-pump-kmc-j7'];
+  });
+
+  // Compare List
+  const [compareList, setCompareList] = useState<Product[]>([]);
+
+  // Orders
+  const [orders, setOrders] = useState<Order[]>([]);
+
+  // Part Requests
+  const [partRequests, setPartRequests] = useState<PartRequest[]>(() => {
+    const saved = localStorage.getItem('chinpart_part_requests');
+    return saved ? JSON.parse(saved) : [
+      {
+        id: 'req-1',
+        carBrand: 'کی‌ام‌سی (KMC)',
+        carModel: 'KMC J7',
+        year: '1402',
+        partName: 'قاب آینه بغل سمت راننده فیبر کربن فابریک',
+        oemNumber: '8202100U7001',
+        phoneNumber: '09121112233',
+        fullName: 'کامبیز پیروز',
+        notes: 'نمونه اصلی مشکی براق یا کربنی',
+        createdAt: '۱۴۰۳/۰۶/۲۲',
+        status: 'پاسخ داده شد'
+      }
+    ];
+  });
+
+  // Stock Alerts
+  const [stockAlerts, setStockAlerts] = useState<{ productId: string; phone: string; date: string }[]>(() => {
+    const saved = localStorage.getItem('chinpart_stock_alerts');
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  // Search Logs
+  const [searchLogs, setSearchLogs] = useState<SearchQueryLog[]>(() => {
+    const saved = localStorage.getItem('chinpart_search_logs');
+    return saved ? JSON.parse(saved) : [
+      { query: 'واتر پمپ J7', count: 48, lastDate: 'امروز', resultsCount: 2 },
+      { query: 'لنت ترمز تیگو ۷', count: 35, lastDate: 'امروز', resultsCount: 4 },
+      { query: 'توربو شارژر لاماری', count: 29, lastDate: 'دیروز', resultsCount: 1 },
+      { query: 'روغن موتور 5W-30', count: 21, lastDate: 'دیروز', resultsCount: 3 },
+      { query: 'کمک فنر فیدلیتی', count: 18, lastDate: '۲ روز پیش', resultsCount: 1 }
+    ];
+  });
+
+  // Toast
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'info' | 'error' } | null>(null);
+
+  const showToast = (message: string, type: 'success' | 'info' | 'error' = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => {
+      setToast(null);
+    }, 3800);
+  };
+
+  const loadAdminData = async (admin: AdminUser, cancelled = false) => {
+    const canOrders = admin.role === 'super_admin' || admin.permissions?.canManageOrders;
+    const canAdmins = admin.role === 'super_admin' || admin.permissions?.canManageAdmins;
+
+    const requests: Promise<void>[] = [
+      apiRequest<{ orders: Order[] }>('/api/orders')
+        .then(result => { if (!cancelled) setOrders(result.orders); })
+        .catch(error => console.error('Admin orders load failed:', error))
+    ];
+
+    if (canOrders) {
+      requests.push(
+        apiRequest<{ customers: CustomerUser[] }>('/api/admin-data/customers')
+          .then(result => { if (!cancelled) setCustomers(result.customers); })
+          .catch(error => console.error('CRM customers load failed:', error)),
+        apiRequest<{ transactions: LoyaltyTransaction[] }>('/api/admin-data/loyalty')
+          .then(result => { if (!cancelled) setLoyaltyTransactions(result.transactions); })
+          .catch(error => console.error('Loyalty data load failed:', error))
+      );
+    }
+
+    if (canAdmins) {
+      requests.push(
+        apiRequest<{ admins: AdminUser[] }>('/api/admin-data/admins')
+          .then(result => { if (!cancelled) setAdminUsers(result.admins); })
+          .catch(error => console.error('Admin users load failed:', error))
+      );
+    }
+
+    await Promise.allSettled(requests);
+  };
+
+  const loadCustomerPrivateData = async (cancelled = false) => {
+    await Promise.allSettled([
+      apiRequest<{ orders: Order[] }>('/api/orders/mine')
+        .then(result => { if (!cancelled) setOrders(result.orders); }),
+      apiRequest<{ transactions: LoyaltyTransaction[] }>('/api/auth/customer/loyalty')
+        .then(result => { if (!cancelled) setLoyaltyTransactions(result.transactions); })
+    ]);
+  };
+
+  useEffect(() => {
+    let cancelled = false;
+
+    Promise.all([
+      apiRequest<{ products: Product[] }>('/api/catalog/products'),
+      apiRequest<{ categories: Category[] }>('/api/catalog/categories'),
+      apiRequest<{
+        articles: Article[];
+        articleCategories: ArticleCategory[];
+        sliders: SliderItem[];
+        pages: SitePage[];
+        settings: SiteSettings | null;
+        paymentGateways: PaymentGatewayConfig[];
+      }>('/api/cms/bundle')
+    ])
+      .then(([productData, categoryData, cmsData]) => {
+        if (cancelled) return;
+        setProducts(productData.products);
+        setCategories(categoryData.categories);
+        setArticles(cmsData.articles);
+        setArticleCategories(cmsData.articleCategories);
+        setSliders(cmsData.sliders);
+        setPages(cmsData.pages);
+        if (cmsData.settings) setSettings(cmsData.settings);
+        setPaymentGateways(cmsData.paymentGateways);
+      })
+      .catch(error => {
+        console.error('Public store data load failed:', error);
+        if (import.meta.env.DEV) {
+          setProducts(INITIAL_PRODUCTS);
+          setCategories(INITIAL_CATEGORIES);
+          setArticles(INITIAL_ARTICLES);
+          setArticleCategories(INITIAL_ARTICLE_CATEGORIES);
+          setSliders(INITIAL_SLIDERS);
+          setPages(INITIAL_PAGES);
+          setSettings(INITIAL_SETTINGS);
+          setPaymentGateways(INITIAL_PAYMENT_GATEWAYS);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Restore the HttpOnly server session without exposing credentials to JavaScript.
+  useEffect(() => {
+    let cancelled = false;
+
+    apiRequest<{ role: 'customer' | 'admin'; customer?: CustomerUser; admin?: AdminUser }>('/api/auth/me')
+      .then(data => {
+        if (cancelled) return;
+        if (data.role === 'customer' && data.customer) {
+          setCurrentCustomer(data.customer);
+          setCustomers(prev => {
+            const exists = prev.some(item => item.id === data.customer!.id);
+            return exists ? prev.map(item => item.id === data.customer!.id ? data.customer! : item) : [data.customer!, ...prev];
+          });
+          void loadCustomerPrivateData(cancelled);
+        } else if (data.role === 'admin' && data.admin) {
+          setAdminAuth({
+            isAuthenticated: true,
+            username: data.admin.username,
+            currentUser: data.admin,
+            isMustChangePassword: false
+          });
+          void loadAdminData(data.admin, cancelled);
+        }
+      })
+      .catch(error => {
+        if (!(error instanceof ApiError) || error.status !== 401) {
+          console.error('Session restore failed:', error);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Sync state to local storage
+  useEffect(() => {
+    localStorage.setItem('chinpart_brands', JSON.stringify(brands));
+  }, [brands]);
+
+  useEffect(() => {
+    localStorage.setItem('chinpart_models', JSON.stringify(models));
+  }, [models]);
+
+
+
+
+
+
+
+
+
+  useEffect(() => {
+    localStorage.setItem('chinpart_selected_car', JSON.stringify(selectedVehicle));
+  }, [selectedVehicle]);
+
+  useEffect(() => {
+    localStorage.setItem('chinpart_garage', JSON.stringify(garage));
+  }, [garage]);
+
+  useEffect(() => {
+    localStorage.setItem('chinpart_cart', JSON.stringify(cart));
+  }, [cart]);
+
+  useEffect(() => {
+    localStorage.setItem('chinpart_wishlist', JSON.stringify(wishlist));
+  }, [wishlist]);
+
+  useEffect(() => {
+    localStorage.setItem('chinpart_part_requests', JSON.stringify(partRequests));
+  }, [partRequests]);
+
+  useEffect(() => {
+    localStorage.setItem('chinpart_stock_alerts', JSON.stringify(stockAlerts));
+  }, [stockAlerts]);
+
+
+
+
+  useEffect(() => {
+    localStorage.setItem('chinpart_search_logs', JSON.stringify(searchLogs));
+  }, [searchLogs]);
+
+
+
+  // Dynamic Theme Styling Application (Colors, Glow, Typography, Border Radius, Font Scale)
+  useEffect(() => {
+    const root = document.documentElement;
+    const hex = settings.primaryColor || '#DC2626';
+    root.style.setProperty('--primary-color', hex);
+
+    // Calculate hover color (slightly darker)
+    const adjustBrightness = (h: string, delta: number) => {
+      let num = parseInt(h.replace('#', ''), 16);
+      if (isNaN(num)) return h;
+      let r = Math.min(255, Math.max(0, (num >> 16) + delta));
+      let g = Math.min(255, Math.max(0, ((num >> 8) & 0x00ff) + delta));
+      let b = Math.min(255, Math.max(0, (num & 0x0000ff) + delta));
+      return '#' + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+    };
+
+    const toRgba = (h: string, alpha: number) => {
+      let c = h.replace('#', '');
+      if (c.length === 3) c = c.split('').map(x => x + x).join('');
+      const num = parseInt(c, 16);
+      if (isNaN(num)) return `rgba(220, 38, 38, ${alpha})`;
+      const r = (num >> 16) & 255;
+      const g = (num >> 8) & 255;
+      const b = num & 255;
+      return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    };
+
+    const primaryHover = settings.primaryHover || adjustBrightness(hex, -25);
+    root.style.setProperty('--primary-hover', primaryHover);
+    root.style.setProperty('--primary-light', toRgba(hex, 0.08));
+    root.style.setProperty('--primary-border', toRgba(hex, 0.25));
+    root.style.setProperty('--primary-dark', adjustBrightness(hex, -45));
+
+    // Accent Glow (Red/Custom Highlight under buttons and hover states)
+    const accentGlow = settings.accentGlowColor || hex;
+    root.style.setProperty('--accent-glow', accentGlow);
+    root.style.setProperty('--accent-glow-subtle', toRgba(accentGlow, 0.2));
+    root.style.setProperty('--accent-glow-strong', toRgba(accentGlow, 0.5));
+
+    // Dynamic Site & Card Background Themes
+    const themeMode = settings.themeMode || 'dark';
+    let siteBg = settings.siteBgColor;
+    let cardBg = settings.cardBgColor;
+    let headerBg = settings.headerBgColor;
+    let footerBg = settings.footerBgColor;
+    let textColor = settings.textColor;
+
+    if (!siteBg) {
+      if (themeMode === 'light') siteBg = '#f8fafc';
+      else if (themeMode === 'slate') siteBg = '#0f172a';
+      else if (themeMode === 'navy') siteBg = '#020617';
+      else siteBg = '#0a0a0a';
+    }
+    if (!cardBg) {
+      if (themeMode === 'light') cardBg = '#ffffff';
+      else if (themeMode === 'slate') cardBg = '#1e293b';
+      else if (themeMode === 'navy') cardBg = '#0f172a';
+      else cardBg = '#171717';
+    }
+    if (!headerBg) headerBg = themeMode === 'light' ? '#ffffff' : siteBg;
+    if (!footerBg) footerBg = themeMode === 'light' ? '#0f172a' : siteBg;
+    if (!textColor) textColor = themeMode === 'light' ? '#0f172a' : '#f8fafc';
+
+    root.style.setProperty('--site-bg', siteBg);
+    root.style.setProperty('--card-bg', cardBg);
+    root.style.setProperty('--header-bg', headerBg);
+    root.style.setProperty('--footer-bg', footerBg);
+    root.style.setProperty('--text-color', textColor);
+
+    // Typography
+    const font = settings.fontFamily || 'Vazirmatn';
+    root.style.setProperty('--site-font', `'${font}', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif`);
+
+    // Font Scale
+    const sizeScale: Record<string, string> = {
+      compact: '14px',
+      normal: '16px',
+      large: '17.5px',
+      xlarge: '19px'
+    };
+    root.style.fontSize = sizeScale[settings.fontSize || 'normal'] || '16px';
+
+    // Border Radius
+    const radiusMap: Record<string, string> = {
+      sharp: '0px',
+      normal: '12px',
+      rounded: '20px',
+      full: '9999px'
+    };
+    const radiusVal = settings.themeRadiusPx ? `${settings.themeRadiusPx}px` : (radiusMap[settings.borderRadius || 'normal'] || '12px');
+    root.style.setProperty('--theme-radius', radiusVal);
+
+    // Global SEO Synchronization
+    const effectiveTitle = settings.metaTitle || settings.siteTitle || 'چین‌پارت | قطعات یدکی خودروهای چینی';
+    document.title = effectiveTitle;
+
+    const updateOrCreateMeta = (nameAttr: string, nameValue: string, content: string) => {
+      let el = document.querySelector(`meta[${nameAttr}="${nameValue}"]`);
+      if (!el) {
+        el = document.createElement('meta');
+        el.setAttribute(nameAttr, nameValue);
+        document.head.appendChild(el);
+      }
+      el.setAttribute('content', content);
+    };
+
+    if (settings.metaDescription || settings.siteSlogan) {
+      updateOrCreateMeta('name', 'description', settings.metaDescription || settings.siteSlogan || '');
+    }
+    if (settings.metaKeywords) {
+      updateOrCreateMeta('name', 'keywords', settings.metaKeywords);
+    }
+    if (settings.ogTitle || effectiveTitle) {
+      updateOrCreateMeta('property', 'og:title', settings.ogTitle || effectiveTitle);
+    }
+    if (settings.ogDescription || settings.metaDescription) {
+      updateOrCreateMeta('property', 'og:description', settings.ogDescription || settings.metaDescription || '');
+    }
+    if (settings.ogImageUrl || settings.logoUrl) {
+      updateOrCreateMeta('property', 'og:image', settings.ogImageUrl || settings.logoUrl || '');
+    }
+  }, [
+    settings.primaryColor, 
+    settings.primaryHover, 
+    settings.accentGlowColor, 
+    settings.themeMode, 
+    settings.siteBgColor, 
+    settings.cardBgColor, 
+    settings.headerBgColor, 
+    settings.footerBgColor, 
+    settings.textColor, 
+    settings.fontFamily, 
+    settings.fontSize, 
+    settings.borderRadius, 
+    settings.themeRadiusPx,
+    settings.metaTitle,
+    settings.metaDescription,
+    settings.metaKeywords,
+    settings.ogTitle,
+    settings.ogDescription,
+    settings.ogImageUrl,
+    settings.siteTitle,
+    settings.siteSlogan
+  ]);
+
+  // Article Categories Handlers
+  const addArticleCategory = (cat: ArticleCategory) => {
+    void apiRequest<{ category: ArticleCategory }>('/api/cms/article-categories', {
+      method: 'POST',
+      body: JSON.stringify(cat)
+    }).then(({ category }) => {
+      setArticleCategories(prev => [...prev, category]);
+      showToast(`دسته‌بندی "${category.name}" ایجاد شد.`);
+    }).catch(error => {
+      console.error(error);
+      showToast('ثبت دسته‌بندی مقاله انجام نشد.', 'error');
+    });
+  };
+
+  const updateArticleCategory = (cat: ArticleCategory) => {
+    void apiRequest<{ category: ArticleCategory }>(`/api/cms/article-categories/${encodeURIComponent(cat.id)}`, {
+      method: 'PUT',
+      body: JSON.stringify(cat)
+    }).then(({ category }) => {
+      setArticleCategories(prev => prev.map(item => item.id === category.id ? category : item));
+      showToast('دسته‌بندی مقاله به‌روزرسانی شد.');
+    }).catch(error => {
+      console.error(error);
+      showToast('ویرایش دسته‌بندی مقاله انجام نشد.', 'error');
+    });
+  };
+
+  const deleteArticleCategory = (id: string) => {
+    void apiRequest<{ ok: boolean }>(`/api/cms/article-categories/${encodeURIComponent(id)}`, {
+      method: 'DELETE'
+    }).then(() => {
+      setArticleCategories(prev => prev.filter(item => item.id !== id));
+      showToast('دسته‌بندی مقاله حذف شد.', 'info');
+    }).catch(error => {
+      console.error(error);
+      showToast('حذف دسته‌بندی مقاله انجام نشد.', 'error');
+    });
+  };
+
+  // Sliders Management
+  // Sliders Management
+  const addSlider = (slide: SliderItem) => {
+    void apiRequest<{ slider: SliderItem }>('/api/cms/sliders', {
+      method: 'POST',
+      body: JSON.stringify(slide)
+    }).then(({ slider }) => {
+      setSliders(prev => [...prev, slider]);
+      showToast(`اسلاید "${slider.title}" با موفقیت ذخیره شد.`);
+    }).catch(error => {
+      console.error(error);
+      showToast('ثبت اسلاید انجام نشد.', 'error');
+    });
+  };
+
+  const updateSlider = (slide: SliderItem) => {
+    void apiRequest<{ slider: SliderItem }>(`/api/cms/sliders/${encodeURIComponent(slide.id)}`, {
+      method: 'PUT',
+      body: JSON.stringify(slide)
+    }).then(({ slider }) => {
+      setSliders(prev => prev.map(item => item.id === slider.id ? slider : item));
+      showToast('اسلاید به‌روزرسانی شد.');
+    }).catch(error => {
+      console.error(error);
+      showToast('ویرایش اسلاید انجام نشد.', 'error');
+    });
+  };
+
+  const deleteSlider = (id: string) => {
+    void apiRequest<{ ok: boolean }>(`/api/cms/sliders/${encodeURIComponent(id)}`, {
+      method: 'DELETE'
+    }).then(() => {
+      setSliders(prev => prev.filter(item => item.id !== id));
+      showToast('اسلاید حذف شد.', 'info');
+    }).catch(error => {
+      console.error(error);
+      showToast('حذف اسلاید انجام نشد.', 'error');
+    });
+  };
+
+  const reorderSliders = (newSliders: SliderItem[]) => {
+    void apiRequest<{ sliders: SliderItem[] }>('/api/cms/sliders/reorder', {
+      method: 'PATCH',
+      body: JSON.stringify({ sliders: newSliders })
+    }).then(({ sliders: saved }) => {
+      setSliders(saved);
+      showToast('ترتیب نمایش اسلایدها تغییر یافت.');
+    }).catch(error => {
+      console.error(error);
+      showToast('ذخیره ترتیب اسلایدها انجام نشد.', 'error');
+    });
+  };
+
+  // Multi-Admin Management
+  // Multi-Admin Management
+  const addAdminUser = (user: AdminUser) => {
+    void apiRequest<{ admin: AdminUser }>('/api/admin-data/admins', {
+      method: 'POST',
+      body: JSON.stringify(user)
+    }).then(({ admin }) => {
+      setAdminUsers(prev => [...prev, admin]);
+      showToast(`مدیر جدید "${admin.fullName}" با نقش ${admin.roleTitle} اضافه شد.`);
+    }).catch(error => {
+      console.error(error);
+      const message = error instanceof ApiError && error.code === 'ADMIN_USERNAME_EXISTS'
+        ? 'این نام کاربری قبلاً استفاده شده است.'
+        : 'ثبت مدیر جدید انجام نشد.';
+      showToast(message, 'error');
+    });
+  };
+
+  const updateAdminUser = (user: AdminUser) => {
+    void apiRequest<{ admin: AdminUser }>(`/api/admin-data/admins/${encodeURIComponent(user.id)}`, {
+      method: 'PUT',
+      body: JSON.stringify(user)
+    }).then(({ admin }) => {
+      setAdminUsers(prev => prev.map(item => item.id === admin.id ? admin : item));
+      if (adminAuth.currentUser?.id === admin.id) {
+        setAdminAuth(prev => ({ ...prev, currentUser: admin, username: admin.username }));
+      }
+      showToast(`اطلاعات و سطوح دسترسی مدیر "${admin.fullName}" به‌روزرسانی شد.`);
+    }).catch(error => {
+      console.error(error);
+      showToast('ویرایش مدیر انجام نشد.', 'error');
+    });
+  };
+
+  const deleteAdminUser = (id: string) => {
+    const target = adminUsers.find(user => user.id === id);
+    if (target?.role === 'super_admin') {
+      showToast('امکان حذف مدیر ارشد کل سیستم وجود ندارد.', 'error');
+      return;
+    }
+    void apiRequest<{ ok: boolean }>(`/api/admin-data/admins/${encodeURIComponent(id)}`, {
+      method: 'DELETE'
+    }).then(() => {
+      setAdminUsers(prev => prev.filter(user => user.id !== id));
+      showToast('مدیر حذف شد.', 'info');
+    }).catch(error => {
+      console.error(error);
+      showToast('حذف مدیر انجام نشد.', 'error');
+    });
+  };
+
+  const toggleAdminStatus = (id: string) => {
+    const target = adminUsers.find(user => user.id === id);
+    if (target?.role === 'super_admin') {
+      showToast('امکان غیرفعال‌سازی مدیر ارشد کل سیستم وجود ندارد.', 'error');
+      return;
+    }
+
+    void apiRequest<{ id: string; isActive: boolean }>(`/api/admin-data/admins/${encodeURIComponent(id)}/status`, {
+      method: 'PATCH'
+    }).then(result => {
+      setAdminUsers(prev => prev.map(user => user.id === result.id ? { ...user, isActive: result.isActive } : user));
+      showToast(`حساب کاربری مدیر ${target?.fullName || ''} ${result.isActive ? 'فعال' : 'غیرفعال'} شد.`, result.isActive ? 'success' : 'info');
+    }).catch(error => {
+      console.error(error);
+      showToast('تغییر وضعیت مدیر انجام نشد.', 'error');
+    });
+  };
+
+  // Pages & Section Builder Methods
+  // Pages & Section Builder Methods
+
+  const persistPage = (page: SitePage, successMessage: string) => {
+    const normalized = { ...page, updatedAt: new Date().toLocaleDateString('fa-IR') };
+    void apiRequest<{ page: SitePage }>(`/api/cms/pages/${encodeURIComponent(normalized.id)}`, {
+      method: 'PUT',
+      body: JSON.stringify(normalized)
+    }).then(({ page: saved }) => {
+      setPages(prev => {
+        const exists = prev.some(item => item.id === saved.id);
+        return exists ? prev.map(item => item.id === saved.id ? saved : item) : [...prev, saved];
+      });
+      showToast(successMessage);
+    }).catch(error => {
+      console.error(error);
+      showToast('ذخیره برگه در سرور انجام نشد.', 'error');
+    });
+  };
+
+  const updatePage = (updatedPage: SitePage) => {
+    persistPage(updatedPage, `برگه "${updatedPage.title}" با موفقیت ذخیره شد.`);
+  };
+
+  const deletePage = (pageId: string) => {
+    const target = pages.find(page => page.id === pageId);
+    if (!target) return;
+    if (target.isSystem) {
+      showToast('برگه‌های اصلی سیستمی غیرقابل حذف هستند.', 'error');
+      return;
+    }
+
+    void apiRequest<{ ok: boolean }>(`/api/cms/pages/${encodeURIComponent(pageId)}`, {
+      method: 'DELETE'
+    }).then(() => {
+      setPages(prev => prev.filter(page => page.id !== pageId));
+      showToast(`برگه "${target.title}" با موفقیت حذف شد.`, 'info');
+    }).catch(error => {
+      console.error(error);
+      showToast('حذف برگه انجام نشد.', 'error');
+    });
+  };
+
+  const updateSection = (pageSlug: string, updatedSection: PageSection) => {
+    const page = pages.find(item => item.slug === pageSlug);
+    if (!page) return;
+    persistPage({
+      ...page,
+      sections: page.sections.map(section => section.id === updatedSection.id ? updatedSection : section)
+    }, `بخش "${updatedSection.title}" با موفقیت به‌روزرسانی شد.`);
+  };
+
+  const addSection = (pageSlug: string, newSection: PageSection) => {
+    const page = pages.find(item => item.slug === pageSlug);
+    if (!page) return;
+    persistPage({ ...page, sections: [...page.sections, newSection] }, 'بخش جدید با موفقیت اضافه شد.');
+  };
+
+  const deleteSection = (pageSlug: string, sectionId: string) => {
+    const page = pages.find(item => item.slug === pageSlug);
+    if (!page) return;
+    persistPage({
+      ...page,
+      sections: page.sections.filter(section => section.id !== sectionId)
+    }, 'بخش با موفقیت حذف شد.');
+  };
+
+  const setFontSize =  const setFontSize = (size: 'compact' | 'normal' | 'large' | 'xlarge') => {
+    updateSettings({ fontSize: size });
+    showToast(`اندازه فونت کل سایت به ${size === 'compact' ? 'فشرده' : size === 'large' ? 'بزرگ' : size === 'xlarge' ? 'خیلی بزرگ' : 'استاندارد'} تغییر یافت.`);
+  };
+
+  // Admin authentication is handled by the server and an HttpOnly session cookie.
+  const adminLogin = async (user: string, pass: string) => {
+    try {
+      const data = await apiRequest<{ admin: AdminUser }>('/api/auth/admin/login', {
+        method: 'POST',
+        body: JSON.stringify({ username: user, password: pass })
+      });
+      setAdminAuth({
+        isAuthenticated: true,
+        username: data.admin.username,
+        currentUser: data.admin,
+        isMustChangePassword: false
+      });
+      await loadAdminData(data.admin);
+      showToast(`خوش آمدید، ${data.admin.fullName}`);
+      return { success: true };
+    } catch (error) {
+      const code = error instanceof ApiError ? error.code : '';
+      const message =
+        code === 'ACCOUNT_BLOCKED'
+          ? 'حساب کاربری این مدیر غیرفعال است.'
+          : code === 'TOO_MANY_LOGIN_ATTEMPTS'
+            ? 'تعداد تلاش‌های ورود بیش از حد مجاز است. کمی بعد دوباره تلاش کنید.'
+            : 'نام کاربری یا رمز عبور نادرست است.';
+      return { success: false, error: message };
+    }
+  };
+
+  const adminChangePassword = async (oldPass: string, newPass: string) => {
+    if (newPass.trim().length < 10) {
+      return { success: false, error: 'رمز عبور جدید باید حداقل ۱۰ کاراکتر باشد.' };
+    }
+    try {
+      await apiRequest<{ ok: boolean }>('/api/auth/admin/change-password', {
+        method: 'POST',
+        body: JSON.stringify({ currentPassword: oldPass, newPassword: newPass })
+      });
+      showToast('رمز عبور مدیر با موفقیت و به‌صورت امن روی سرور تغییر کرد.');
+      return { success: true };
+    } catch (error) {
+      const code = error instanceof ApiError ? error.code : '';
+      return {
+        success: false,
+        error: code === 'INVALID_CURRENT_PASSWORD'
+          ? 'رمز عبور فعلی نادرست است.'
+          : 'تغییر رمز عبور انجام نشد.'
+      };
+    }
+  };
+
+  const adminLogout = async () => {
+    try {
+      await apiRequest<{ ok: boolean }>('/api/auth/logout', { method: 'POST' });
+    } catch {
+      // Clear the local view even if the network request fails.
+    }
+    setAdminAuth({
+      isAuthenticated: false,
+      username: '',
+      isMustChangePassword: false
+    });
+    showToast('از حساب مدیریت خارج شدید.', 'info');
+  };
+
+  // Settings
+  const updateSettings = (newSettings: Partial<SiteSettings>) => {
+    void apiRequest<{ settings: SiteSettings }>('/api/cms/settings', {
+      method: 'PATCH',
+      body: JSON.stringify(newSettings)
+    }).then(({ settings: saved }) => {
+      setSettings(saved);
+      showToast('تنظیمات فروشگاه (قالب، رنگ و سیاست‌ها) با موفقیت ذخیره شد.');
+    }).catch(error => {
+      console.error(error);
+      showToast('ذخیره تنظیمات فروشگاه انجام نشد.', 'error');
+    });
+  };
+
+  const persistPaymentGateways = (gateways: PaymentGatewayConfig[], message: string) => {
+    void apiRequest<{ paymentGateways: PaymentGatewayConfig[] }>('/api/cms/payment-gateways', {
+      method: 'PUT',
+      body: JSON.stringify({ gateways })
+    }).then(({ paymentGateways: saved }) => {
+      setPaymentGateways(saved);
+      showToast(message);
+    }).catch(error => {
+      console.error(error);
+      showToast('ذخیره تنظیمات نمایشی درگاه‌ها انجام نشد.', 'error');
+    });
+  };
+
+  const updatePaymentGateway = (gateway: PaymentGatewayConfig) => {
+    const next = paymentGateways.map(item => item.id === gateway.id ? gateway : item);
+    persistPaymentGateways(next, `درگاه ${gateway.name} به‌روزرسانی شد.`);
+  };
+
+  const toggleGatewayActive = (gatewayId: string) => {
+    const target = paymentGateways.find(item => item.id === gatewayId);
+    if (!target) return;
+    const nextActive = !target.isActive;
+    const next = paymentGateways.map(item => item.id === gatewayId ? { ...item, isActive: nextActive } : item);
+    persistPaymentGateways(next, `درگاه ${target.name} ${nextActive ? 'فعال' : 'غیرفعال'} شد.`);
+  };
+
+  // API Integrations
+  // API Integrations
+  const updateApiIntegrations = (config: Partial<ApiIntegrationsConfig>) => {
+    setApiIntegrations(prev => ({ ...prev, ...config }));
+    showToast('تنظیمات سرویس‌های پیامک و سیستم حسابداری ذخیره شد.');
+  };
+
+  // Customers (CRM)
   const addCustomer = (custData: Omit<CustomerUser, 'id' | 'registeredAt' | 'totalOrders' | 'totalSpent'>) => {
     void apiRequest<{ customer: CustomerUser }>('/api/admin-data/customers', {
       method: 'POST',
@@ -168,6 +1078,7 @@ interface StoreContextType {
     });
   };
 
+  // Categories
   // Categories
   const addCategory = (cat: Category) => {
     void apiRequest<{ category: Category }>('/api/catalog/categories', {
@@ -279,6 +1190,7 @@ interface StoreContextType {
   };
 
   // Customer authentication is handled by the production API.
+  // Customer authentication is handled by the production API.
   const customerLogin = async (phone: string, pass: string) => {
     if (!pass) {
       return { success: false, error: 'رمز عبور الزامی است.' };
@@ -293,6 +1205,7 @@ interface StoreContextType {
         const exists = prev.some(item => item.id === data.customer.id);
         return exists ? prev.map(item => item.id === data.customer.id ? data.customer : item) : [data.customer, ...prev];
       });
+      await loadCustomerPrivateData();
       showToast(`خوش آمدید، ${data.customer.firstName} عزیز.`);
       return { success: true };
     } catch (error) {
@@ -325,6 +1238,7 @@ interface StoreContextType {
       });
       setCurrentCustomer(response.customer);
       setCustomers(prev => [response.customer, ...prev.filter(item => item.id !== response.customer.id)]);
+      await loadCustomerPrivateData();
       showToast('ثبت‌نام با موفقیت انجام شد.');
       return { success: true };
     } catch (error) {
@@ -712,42 +1626,28 @@ interface StoreContextType {
     type: LoyaltyTransaction['type'] = 'bonus'
   ) => {
     if (points <= 0) return;
-    const currentPts = getCustomerPoints(customerId);
-    const newBalance = currentPts + points;
-    const now = new Date();
-    const dateFa = new Intl.DateTimeFormat('fa-IR', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit'
-    }).format(now);
 
-    const newTx: LoyaltyTransaction = {
-      id: `tx-loyalty-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
-      customerId,
-      type,
-      points,
-      description,
-      orderNumber,
-      date: dateFa,
-      balanceAfter: newBalance
-    };
-
-    setLoyaltyTransactions(prev => [newTx, ...prev]);
-
-    setCustomers(prev => prev.map(c => {
-      if (c.id === customerId || c.phone === customerId) {
-        const tier = getTierInfo(newBalance).tier;
-        return { ...c, loyaltyPoints: newBalance, loyaltyTier: tier };
+    void apiRequest<{ transaction: LoyaltyTransaction }>('/api/admin-data/loyalty', {
+      method: 'POST',
+      body: JSON.stringify({ customerId, points, description, orderNumber, type })
+    }).then(({ transaction }) => {
+      setLoyaltyTransactions(prev => [transaction, ...prev]);
+      setCustomers(prev => prev.map(customer =>
+        customer.id === customerId
+          ? { ...customer, loyaltyPoints: transaction.balanceAfter, loyaltyTier: getTierInfo(transaction.balanceAfter).tier }
+          : customer
+      ));
+      if (currentCustomer?.id === customerId) {
+        setCurrentCustomer(prev => prev ? {
+          ...prev,
+          loyaltyPoints: transaction.balanceAfter,
+          loyaltyTier: getTierInfo(transaction.balanceAfter).tier
+        } : null);
       }
-      return c;
-    }));
-
-    if (currentCustomer && (currentCustomer.id === customerId || currentCustomer.phone === customerId)) {
-      const tier = getTierInfo(newBalance).tier;
-      setCurrentCustomer(prev => prev ? { ...prev, loyaltyPoints: newBalance, loyaltyTier: tier } : null);
-    }
+    }).catch(error => {
+      console.error(error);
+      showToast('ثبت امتیاز وفاداری انجام نشد.', 'error');
+    });
   };
 
   const redeemLoyaltyPoints = (
@@ -757,44 +1657,41 @@ interface StoreContextType {
   ): boolean => {
     const currentPts = getCustomerPoints(customerId);
     if (points <= 0 || currentPts < points) return false;
-    const newBalance = currentPts - points;
-    const now = new Date();
-    const dateFa = new Intl.DateTimeFormat('fa-IR', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit'
-    }).format(now);
 
-    const newTx: LoyaltyTransaction = {
-      id: `tx-loyalty-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
-      customerId,
-      type: 'redeemed',
-      points: -points,
-      description: orderNumber ? `کسر امتیاز بابت تخفیف در سفارش ${orderNumber}` : 'کسر امتیاز بابت تخفیف خرید',
-      orderNumber,
-      date: dateFa,
-      balanceAfter: newBalance
-    };
-
-    setLoyaltyTransactions(prev => [newTx, ...prev]);
-
-    setCustomers(prev => prev.map(c => {
-      if (c.id === customerId || c.phone === customerId) {
-        const tier = getTierInfo(newBalance).tier;
-        return { ...c, loyaltyPoints: newBalance, loyaltyTier: tier };
+    void apiRequest<{ transaction: LoyaltyTransaction }>('/api/admin-data/loyalty', {
+      method: 'POST',
+      body: JSON.stringify({
+        customerId,
+        points: -points,
+        description: orderNumber
+          ? `کسر امتیاز بابت تخفیف در سفارش ${orderNumber}`
+          : 'کسر امتیاز بابت تخفیف خرید',
+        orderNumber,
+        type: 'redeemed'
+      })
+    }).then(({ transaction }) => {
+      setLoyaltyTransactions(prev => [transaction, ...prev]);
+      setCustomers(prev => prev.map(customer =>
+        customer.id === customerId
+          ? { ...customer, loyaltyPoints: transaction.balanceAfter, loyaltyTier: getTierInfo(transaction.balanceAfter).tier }
+          : customer
+      ));
+      if (currentCustomer?.id === customerId) {
+        setCurrentCustomer(prev => prev ? {
+          ...prev,
+          loyaltyPoints: transaction.balanceAfter,
+          loyaltyTier: getTierInfo(transaction.balanceAfter).tier
+        } : null);
       }
-      return c;
-    }));
+    }).catch(error => {
+      console.error(error);
+      showToast('کسر امتیاز وفاداری انجام نشد.', 'error');
+    });
 
-    if (currentCustomer && (currentCustomer.id === customerId || currentCustomer.phone === customerId)) {
-      const tier = getTierInfo(newBalance).tier;
-      setCurrentCustomer(prev => prev ? { ...prev, loyaltyPoints: newBalance, loyaltyTier: tier } : null);
-    }
     return true;
   };
 
+  // Orders
   // Orders
   const createOrder = async (
     orderData: Omit<Order, 'id' | 'orderNumber' | 'date'> & { loyaltyPointsToRedeem?: number }

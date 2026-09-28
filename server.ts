@@ -10,6 +10,7 @@ import { authRouter } from './src/server/routes/auth';
 import { healthRouter } from './src/server/routes/health';
 import { catalogRouter } from './src/server/routes/catalog';
 import { ordersRouter } from './src/server/routes/orders';
+import { paymentsRouter } from './src/server/routes/payments';
 import { checkDatabase } from './src/server/db';
 import { config } from './src/server/config';
 
@@ -25,6 +26,7 @@ app.use(
   })
 );
 app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ extended: false, limit: '1mb' }));
 app.use(cookieParser());
 
 app.use('/api/health', healthRouter);
@@ -40,6 +42,7 @@ app.use('/api', apiLimiter);
 app.use('/api/auth', authRouter);
 app.use('/api/catalog', catalogRouter);
 app.use('/api/orders', ordersRouter);
+app.use('/api/payments', paymentsRouter);
 
 const aiLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,

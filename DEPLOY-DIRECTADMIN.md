@@ -30,6 +30,8 @@
 ```bash
 npm install
 npm run db:init
+# فقط در اولین نصب، اگر می‌خواهید کاتالوگ فعلی پروژه وارد MySQL شود:
+npm run db:seed
 npm run build
 ```
 

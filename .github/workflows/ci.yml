@@ -18,7 +18,7 @@ jobs:
           node-version: 22
 
       - name: Install dependencies
-        run: npm install
+        run: npm install --include=dev
 
       - name: Type check
         run: npm run lint
@@ -91,7 +91,7 @@ jobs:
           node-version: 22
 
       - name: Install dependencies
-        run: npm install
+        run: npm install --include=dev
 
       - name: Type check
         run: npm run lint

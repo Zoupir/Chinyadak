@@ -68,6 +68,7 @@ CREATE TABLE IF NOT EXISTS products (
   price BIGINT UNSIGNED NOT NULL DEFAULT 0,
   discount_price BIGINT UNSIGNED NULL,
   stock INT NOT NULL DEFAULT 0,
+  reserved_stock INT NOT NULL DEFAULT 0,
   status VARCHAR(30) NOT NULL DEFAULT 'active',
   images_json JSON NULL,
   specs_json JSON NULL,
@@ -99,6 +100,7 @@ CREATE TABLE IF NOT EXISTS orders (
   payment_authority VARCHAR(190) NULL,
   payment_reference VARCHAR(190) NULL,
   paid_at DATETIME NULL,
+  reservation_expires_at DATETIME NULL,
   tracking_code VARCHAR(190) NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -122,6 +124,28 @@ CREATE TABLE IF NOT EXISTS order_items (
   CONSTRAINT fk_order_items_order FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE,
   CONSTRAINT fk_order_items_product FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE SET NULL,
   INDEX idx_order_items_order (order_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS payment_transactions (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  order_id CHAR(36) NOT NULL,
+  provider VARCHAR(30) NOT NULL,
+  gateway_order_id BIGINT UNSIGNED NOT NULL,
+  amount_toman BIGINT UNSIGNED NOT NULL,
+  amount_rial BIGINT UNSIGNED NOT NULL,
+  authority VARCHAR(255) NULL,
+  reference_id VARCHAR(255) NULL,
+  status VARCHAR(40) NOT NULL DEFAULT 'created',
+  provider_response_json JSON NULL,
+  callback_json JSON NULL,
+  verified_at DATETIME NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT fk_payment_transactions_order FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE,
+  UNIQUE KEY uq_payment_gateway_order (provider, gateway_order_id),
+  INDEX idx_payment_order (order_id),
+  INDEX idx_payment_authority (authority),
+  INDEX idx_payment_status (status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS app_settings (
@@ -170,3 +194,6 @@ SET data_json = JSON_OBJECT(
   'description', COALESCE(description, '')
 )
 WHERE data_json IS NULL;
+
+ALTER TABLE products ADD COLUMN IF NOT EXISTS reserved_stock INT NOT NULL DEFAULT 0 AFTER stock;
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS reservation_expires_at DATETIME NULL AFTER paid_at;

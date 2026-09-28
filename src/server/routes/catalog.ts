@@ -5,6 +5,8 @@ import { pool, type ResultSetHeader, type RowDataPacket } from '../db';
 
 interface ProductRow extends RowDataPacket {
   id: string;
+  stock: number;
+  reserved_stock: number;
   data_json: any;
 }
 
@@ -21,6 +23,17 @@ const parseJson = <T>(value: unknown, fallback: T): T => {
   } catch {
     return fallback;
   }
+};
+
+const productDto = (row: ProductRow) => {
+  const data = parseJson<any>(row.data_json, {});
+  const availableStock = Math.max(0, Number(row.stock) - Number(row.reserved_stock || 0));
+  return {
+    ...data,
+    id: row.id,
+    stock: availableStock,
+    stockStatus: availableStock <= 0 ? 'out_of_stock' : availableStock <= 3 ? 'low_stock' : 'in_stock'
+  };
 };
 
 const normalizeProduct = (input: any) => {
@@ -105,29 +118,25 @@ catalogRouter.get('/products', async (req, res) => {
   }
 
   const [rows] = await pool.query<ProductRow[]>(
-    `SELECT id, data_json FROM products WHERE ${clauses.join(' AND ')} ORDER BY updated_at DESC`,
+    `SELECT id, stock, reserved_stock, data_json FROM products WHERE ${clauses.join(' AND ')} ORDER BY updated_at DESC`,
     params
   );
   res.json({
-    products: rows.map(row => {
-      const data = parseJson<any>(row.data_json, {});
-      return { ...data, id: row.id };
-    })
+    products: rows.map(productDto)
   });
 });
 
 catalogRouter.get('/products/:idOrSlug', async (req, res) => {
   const key = String(req.params.idOrSlug || '');
   const [rows] = await pool.query<ProductRow[]>(
-    "SELECT id, data_json FROM products WHERE status = 'active' AND (id = ? OR slug = ?) LIMIT 1",
+    "SELECT id, stock, reserved_stock, data_json FROM products WHERE status = 'active' AND (id = ? OR slug = ?) LIMIT 1",
     [key, key]
   );
   if (!rows[0]) {
     res.status(404).json({ error: 'PRODUCT_NOT_FOUND' });
     return;
   }
-  const data = parseJson<any>(rows[0].data_json, {});
-  res.json({ product: { ...data, id: rows[0].id } });
+  res.json({ product: productDto(rows[0]) });
 });
 
 catalogRouter.post('/products', requireAdmin, async (req, res) => {
@@ -186,6 +195,23 @@ catalogRouter.put('/products/:id', requireAdmin, async (req, res) => {
   }
 
   try {
+    const [currentRows] = await pool.query<ProductRow[]>(
+      'SELECT id, stock, reserved_stock, data_json FROM products WHERE id = ? LIMIT 1',
+      [product.id]
+    );
+    const current = currentRows[0];
+    if (!current) {
+      res.status(404).json({ error: 'PRODUCT_NOT_FOUND' });
+      return;
+    }
+    if (product.stock < Number(current.reserved_stock || 0)) {
+      res.status(409).json({
+        error: 'STOCK_BELOW_ACTIVE_RESERVATIONS',
+        reserved: Number(current.reserved_stock || 0)
+      });
+      return;
+    }
+
     const [result] = await pool.execute<ResultSetHeader>(
       `UPDATE products SET
         sku = ?, slug = ?, name_fa = ?, name_en = ?, oem_number = ?, part_number = ?,
@@ -243,7 +269,7 @@ catalogRouter.patch('/products/bulk', requireAdmin, async (req, res) => {
       const id = String(update.id || '');
       if (!id) continue;
       const [rows] = await connection.query<ProductRow[]>(
-        'SELECT id, data_json FROM products WHERE id = ? FOR UPDATE',
+        'SELECT id, stock, reserved_stock, data_json FROM products WHERE id = ? FOR UPDATE',
         [id]
       );
       if (!rows[0]) continue;
@@ -252,6 +278,9 @@ catalogRouter.patch('/products/bulk', requireAdmin, async (req, res) => {
         ...(update.price !== undefined ? { price: update.price } : {}),
         ...(update.stock !== undefined ? { stock: update.stock } : {})
       });
+      if (product.stock < Number(rows[0].reserved_stock || 0)) {
+        throw new Error('STOCK_BELOW_ACTIVE_RESERVATIONS');
+      }
       await connection.execute(
         `UPDATE products
          SET price = ?, stock = ?, data_json = ?, updated_at = NOW()

@@ -13,6 +13,9 @@ import { ordersRouter } from './src/server/routes/orders';
 import { paymentsRouter } from './src/server/routes/payments';
 import { cmsRouter } from './src/server/routes/cms';
 import { adminDataRouter } from './src/server/routes/admin-data';
+import { mediaRouter } from './src/server/routes/media';
+import { integrationsRouter } from './src/server/routes/integrations';
+import { uploadDirectory } from './src/server/media';
 import { checkDatabase } from './src/server/db';
 import { config } from './src/server/config';
 
@@ -31,6 +34,12 @@ app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: false, limit: '1mb' }));
 app.use(cookieParser());
 
+app.use('/uploads', express.static(uploadDirectory(), {
+  maxAge: '7d',
+  etag: true,
+  fallthrough: false
+}));
+
 app.use('/api/health', healthRouter);
 
 const apiLimiter = rateLimit({
@@ -47,6 +56,8 @@ app.use('/api/orders', ordersRouter);
 app.use('/api/payments', paymentsRouter);
 app.use('/api/cms', cmsRouter);
 app.use('/api/admin-data', adminDataRouter);
+app.use('/api/media', mediaRouter);
+app.use('/api/integrations', integrationsRouter);
 
 const aiLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,

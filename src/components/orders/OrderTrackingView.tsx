@@ -24,6 +24,7 @@ export const OrderTrackingView: React.FC<OrderTrackingViewProps> = ({
   onNavigate
 }) => {
   const { getOrderByTracking, orders } = useStore();
+  const paymentResult = new URLSearchParams(window.location.search).get('payment');
 
   const [orderNumber, setOrderNumber] = useState(initialOrderNumber || '');
   const [phoneNumber, setPhoneNumber] = useState('');
@@ -77,6 +78,22 @@ export const OrderTrackingView: React.FC<OrderTrackingViewProps> = ({
           شماره سفارش و شماره موبایل ثبت‌شده در هنگام خرید را برای مشاهده وضعیت مرسوله وارد فرمایید.
         </p>
       </div>
+
+      {paymentResult === 'success' && (
+        <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold">
+          پرداخت بانکی با موفقیت تایید شد. برای مشاهده جزئیات سفارش، شماره موبایل خریدار را وارد کنید.
+        </div>
+      )}
+      {paymentResult === 'review' && (
+        <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-800 text-xs font-bold">
+          پرداخت تایید شد؛ سفارش برای بررسی موجودی نهایی به مدیریت ارجاع شده است.
+        </div>
+      )}
+      {paymentResult === 'failed' && (
+        <div className="p-4 rounded-2xl bg-red-50 border border-red-200 text-red-800 text-xs font-bold">
+          پرداخت تایید نشد. وجه موفق ثبت نشده است و می‌توانید دوباره برای پرداخت اقدام کنید.
+        </div>
+      )}
 
       {/* Track Form */}
       <div className="bg-white rounded-3xl border border-neutral-200 p-6 shadow-xs">

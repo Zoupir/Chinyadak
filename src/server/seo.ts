@@ -346,22 +346,76 @@ export const getSeoMeta = async (pathname: string): Promise<SeoMeta> => {
   }
 
   if (parts[0] === 'brand' && parts[1]) {
-    const label = cleanText(parts[1], 80);
+    const key = parts.slice(1).join('/');
+    const [rows] = await pool.query<JsonSeoRow[]>(
+      `SELECT id, slug, data_json, updated_at
+       FROM vehicle_brands
+       WHERE is_active = 1 AND (id = ? OR slug = ?)
+       LIMIT 1`,
+      [key, key]
+    );
+    const row = rows[0];
+    if (!row) return { ...meta, robots: 'noindex,follow' };
+    const data = parseJson<any>(row.data_json, {});
+    const label = cleanText(data.nameFa || row.slug, 80);
+    const description = cleanText(data.description || `کاتالوگ قطعات یدکی و مصرفی خودروهای برند ${label}.`);
+    const path = `/brand/${encodeURIComponent(row.slug)}`;
     return {
       ...meta,
       title: `قطعات خودروهای ${label} | چین پارت`,
-      description: `کاتالوگ قطعات یدکی و مصرفی خودروهای برند ${label} با بررسی سازگاری و شماره فنی.`,
-      canonical: canonicalFor(safePath)
+      description,
+      canonical: canonicalFor(path),
+      image: absoluteUrl(data.heroImage || data.logo),
+      schemas: [
+        {
+          '@context': 'https://schema.org',
+          '@type': 'CollectionPage',
+          name: `قطعات خودروهای ${label}`,
+          description,
+          url: canonicalFor(path)
+        },
+        breadcrumbSchema([
+          { name: 'خانه', path: '/' },
+          { name: label, path }
+        ])
+      ]
     };
   }
 
   if (parts[0] === 'car-model' && parts[1]) {
-    const label = cleanText(parts[1], 80);
+    const key = parts.slice(1).join('/');
+    const [rows] = await pool.query<JsonSeoRow[]>(
+      `SELECT id, slug, data_json, updated_at
+       FROM vehicle_models
+       WHERE is_active = 1 AND (id = ? OR slug = ?)
+       LIMIT 1`,
+      [key, key]
+    );
+    const row = rows[0];
+    if (!row) return { ...meta, robots: 'noindex,follow' };
+    const data = parseJson<any>(row.data_json, {});
+    const label = cleanText(data.nameFa || row.slug, 80);
+    const description = cleanText(data.description || `فهرست قطعات یدکی و مصرفی ${label} با تطبیق فنی خودرو.`);
+    const path = `/car-model/${encodeURIComponent(row.slug)}`;
     return {
       ...meta,
       title: `قطعات ${label} | چین پارت`,
-      description: `فهرست قطعات یدکی، موتوری، برقی و مصرفی ${label} با تطبیق فنی خودرو.`,
-      canonical: canonicalFor(safePath)
+      description,
+      canonical: canonicalFor(path),
+      image: absoluteUrl(data.imageUrl),
+      schemas: [
+        {
+          '@context': 'https://schema.org',
+          '@type': 'CollectionPage',
+          name: `قطعات ${label}`,
+          description,
+          url: canonicalFor(path)
+        },
+        breadcrumbSchema([
+          { name: 'خانه', path: '/' },
+          { name: label, path }
+        ])
+      ]
     };
   }
 
@@ -432,7 +486,7 @@ export const renderSeoHtml = async (template: string, pathname: string): Promise
 };
 
 export const buildSitemapXml = async (): Promise<string> => {
-  const [products, categories, articles, pages] = await Promise.all([
+  const [products, categories, articles, pages, brands, models] = await Promise.all([
     pool.query<Array<RowDataPacket & { slug: string; updated_at: Date }>>(
       "SELECT slug, updated_at FROM products WHERE status = 'active' ORDER BY updated_at DESC"
     ),
@@ -444,6 +498,12 @@ export const buildSitemapXml = async (): Promise<string> => {
     ),
     pool.query<Array<RowDataPacket & { slug: string; updated_at: Date }>>(
       'SELECT slug, updated_at FROM site_pages ORDER BY updated_at DESC'
+    ),
+    pool.query<Array<RowDataPacket & { slug: string; updated_at: Date }>>(
+      'SELECT slug, updated_at FROM vehicle_brands WHERE is_active = 1 ORDER BY updated_at DESC'
+    ),
+    pool.query<Array<RowDataPacket & { slug: string; updated_at: Date }>>(
+      'SELECT slug, updated_at FROM vehicle_models WHERE is_active = 1 ORDER BY updated_at DESC'
     )
   ]);
 
@@ -457,6 +517,8 @@ export const buildSitemapXml = async (): Promise<string> => {
   for (const row of categories[0]) urls.push({ loc: `/category/${encodeURIComponent(row.slug)}`, lastmod: row.updated_at, priority: '0.8' });
   for (const row of articles[0]) urls.push({ loc: `/article/${encodeURIComponent(row.slug)}`, lastmod: row.updated_at, priority: '0.7' });
   for (const row of pages[0]) urls.push({ loc: `/page/${encodeURIComponent(row.slug)}`, lastmod: row.updated_at, priority: '0.5' });
+  for (const row of brands[0]) urls.push({ loc: `/brand/${encodeURIComponent(row.slug)}`, lastmod: row.updated_at, priority: '0.8' });
+  for (const row of models[0]) urls.push({ loc: `/car-model/${encodeURIComponent(row.slug)}`, lastmod: row.updated_at, priority: '0.8' });
 
   const body = urls.map(item => {
     const lastmod = item.lastmod ? `<lastmod>${new Date(item.lastmod).toISOString()}</lastmod>` : '';

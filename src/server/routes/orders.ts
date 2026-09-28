@@ -37,6 +37,8 @@ interface OrderRow extends RowDataPacket {
   shipping_fee: number | string;
   total: number | string;
   payment_status: string;
+  payment_reference: string | null;
+  paid_at: Date | null;
   tracking_code: string | null;
   created_at: Date;
 }
@@ -142,7 +144,10 @@ const orderDto = (row: OrderRow, items: OrderItemRow[]) => {
     discountAmount: Number(row.discount_amount),
     shippingFee: Number(row.shipping_fee),
     total: Number(row.total),
-    trackingPostCode: row.tracking_code || undefined
+    trackingPostCode: row.tracking_code || undefined,
+    paymentStatus: row.payment_status,
+    paymentReference: row.payment_reference || undefined,
+    paidAt: row.paid_at ? new Date(row.paid_at).toISOString() : undefined
   };
 };
 

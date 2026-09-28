@@ -116,6 +116,11 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderCompleted, on
       return;
     }
 
+    if (import.meta.env.PROD) {
+      showToast('پرداخت آنلاین واقعی هنوز به درگاه سمت سرور متصل نشده و برای جلوگیری از ثبت پرداخت جعلی غیرفعال است.', 'error');
+      return;
+    }
+
     setIsProcessing(true);
     setPaymentFailed(false);
 
@@ -687,13 +692,15 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderCompleted, on
                 )}
               </button>
 
-              <button
-                onClick={() => handleProcessPayment(true)}
-                disabled={isProcessing}
-                className="w-full py-2 text-[11px] text-neutral-400 hover:text-red-600 text-center transition-colors"
-              >
-                (تست حالت شبیه‌سازی خطای پرداخت بانکی)
-              </button>
+              {import.meta.env.DEV && (
+                <button
+                  onClick={() => handleProcessPayment(true)}
+                  disabled={isProcessing}
+                  className="w-full py-2 text-[11px] text-neutral-400 hover:text-red-600 text-center transition-colors"
+                >
+                  (تست حالت شبیه‌سازی خطای پرداخت بانکی)
+                </button>
+              )}
             </div>
 
             <div className="p-3 bg-neutral-50 rounded-xl border border-neutral-100 text-[11px] text-neutral-500 space-y-1">

@@ -113,6 +113,9 @@ const loyaltyDto = (row: LoyaltyRow) => ({
   points: Number(row.points)
 });
 
+const loyaltyTierForPoints = (points: number): string =>
+  points >= 3000 ? 'diamond' : points >= 1000 ? 'gold' : points >= 500 ? 'silver' : 'bronze';
+
 const normalizePhone = (input: unknown): string => {
   let value = String(input ?? '').replace(/\D/g, '');
   if (value.startsWith('0098')) value = '0' + value.slice(4);
@@ -173,8 +176,8 @@ adminDataRouter.post('/customers', requireAdminPermission('canManageOrders'), as
   try {
     await pool.execute(
       `INSERT INTO customers
-       (id, first_name, last_name, phone, password_hash, email, customer_type, status, vehicle, address)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       (id, first_name, last_name, phone, password_hash, password_initialized, email, customer_type, status, vehicle, address)
+       VALUES (?, ?, ?, ?, ?, 0, ?, ?, ?, ?, ?)`,
       [id, firstName, lastName, phone, passwordHash, email, type, status, vehicle, address]
     );
   } catch (error: any) {
@@ -301,8 +304,8 @@ adminDataRouter.post('/loyalty', requireAdminPermission('canManageOrders'), asyn
       [id, customerId, points, type, JSON.stringify(data)]
     );
     await connection.execute(
-      'UPDATE customers SET loyalty_points = ?, updated_at = NOW() WHERE id = ?',
-      [nextBalance, customerId]
+      'UPDATE customers SET loyalty_points = ?, loyalty_tier = ?, updated_at = NOW() WHERE id = ?',
+      [nextBalance, loyaltyTierForPoints(nextBalance), customerId]
     );
     return data;
   }).catch(error => {

@@ -8,6 +8,8 @@ import { GoogleGenAI } from '@google/genai';
 import path from 'path';
 import { authRouter } from './src/server/routes/auth';
 import { healthRouter } from './src/server/routes/health';
+import { catalogRouter } from './src/server/routes/catalog';
+import { ordersRouter } from './src/server/routes/orders';
 import { checkDatabase } from './src/server/db';
 import { config } from './src/server/config';
 
@@ -36,6 +38,8 @@ const apiLimiter = rateLimit({
 app.use('/api', apiLimiter);
 
 app.use('/api/auth', authRouter);
+app.use('/api/catalog', catalogRouter);
+app.use('/api/orders', ordersRouter);
 
 const aiLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,

@@ -1858,7 +1858,6 @@ export const INITIAL_ADMIN_USERS: AdminUser[] = [
   {
     id: 'admin-super',
     username: 'admin',
-    password: '123456',
     fullName: 'مهندس رضایی (مدیر ارشد سیستم)',
     role: 'super_admin',
     roleTitle: 'مدیر کل ارشد (Super Admin)',
@@ -1881,7 +1880,6 @@ export const INITIAL_ADMIN_USERS: AdminUser[] = [
   {
     id: 'admin-content',
     username: 'content',
-    password: 'password123',
     fullName: 'خانم علیزاده (سرپرست تولید محتوا)',
     role: 'content_manager',
     roleTitle: 'مدیر محتوا و بلاگ',
@@ -1904,7 +1902,6 @@ export const INITIAL_ADMIN_USERS: AdminUser[] = [
   {
     id: 'admin-orders',
     username: 'orders',
-    password: 'password123',
     fullName: 'آقای کاظمی (مدیر سفارشات و مالی)',
     role: 'order_manager',
     roleTitle: 'مدیر فروش و فاکتورها',
@@ -1927,7 +1924,6 @@ export const INITIAL_ADMIN_USERS: AdminUser[] = [
   {
     id: 'admin-inventory',
     username: 'inventory',
-    password: 'password123',
     fullName: 'آقای حسینی (انباردار مرکزی)',
     role: 'inventory_manager',
     roleTitle: 'مدیر کاتالوگ و انبار',
@@ -1992,16 +1988,16 @@ export const INITIAL_PAYMENT_GATEWAYS = [
 
 export const INITIAL_API_CONFIG = {
   smsProvider: 'kavenegar' as const,
-  smsApiKey: '6874415843467A427845324D6E6A7A387063463365773D3D',
+  smsApiKey: '',
   smsSenderNumber: '10008585',
   smsNotifyOnOrder: true,
   smsNotifyOnStock: true,
   smsTrackingPattern: 'chinpart-tracking',
   accountingSoftware: 'sepidar' as const,
-  accountingApiKey: 'SEPIDAR-API-LIVE-84920194',
+  accountingApiKey: '',
   accountingAutoSyncStock: true,
   webhookUrl: 'https://api.chinpart.ir/webhooks/orders',
-  webhookSecret: 'whsec_9482910481029481029481'
+  webhookSecret: ''
 };
 
 export const INITIAL_PAGES: SitePage[] = [

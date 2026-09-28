@@ -2,6 +2,7 @@ import { randomInt, randomUUID } from 'crypto';
 import { Router } from 'express';
 import {
   authenticate,
+  getOptionalSession,
   requireAdmin,
   type AuthenticatedRequest
 } from '../auth';
@@ -266,17 +267,9 @@ ordersRouter.post('/', async (req: AuthenticatedRequest, res) => {
   const orderId = randomUUID();
   const orderNumber = createOrderNumber();
 
-  let customerId: string | null = null;
-  const sessionToken = req.cookies?.[process.env.SESSION_COOKIE_NAME || 'chinpart_session'];
-  if (sessionToken) {
-    try {
-      await new Promise<void>((resolve) => authenticate(req, res, resolve));
-      if (res.headersSent) return;
-      if (req.auth?.role === 'customer') customerId = req.auth.sub;
-    } catch {
-      customerId = null;
-    }
-  }
+  const optionalSession = getOptionalSession(req);
+  const customerId =
+    optionalSession?.role === 'customer' ? optionalSession.sub : null;
 
   const customerSnapshot = {
     firstName,

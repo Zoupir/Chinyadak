@@ -25,20 +25,23 @@ export const OrderTrackingView: React.FC<OrderTrackingViewProps> = ({
 }) => {
   const { getOrderByTracking, orders } = useStore();
 
-  const [orderNumber, setOrderNumber] = useState(initialOrderNumber || (orders[0]?.orderNumber || 'CHP-84920'));
+  const [orderNumber, setOrderNumber] = useState(initialOrderNumber || '');
   const [phoneNumber, setPhoneNumber] = useState('');
-  const [foundOrder, setFoundOrder] = useState<Order | undefined>(() => {
-    return initialOrderNumber 
-      ? orders.find(o => o.orderNumber === initialOrderNumber)
-      : orders[0];
-  });
-  const [searched, setSearched] = useState(Boolean(initialOrderNumber || orders.length > 0));
+  const [foundOrder, setFoundOrder] = useState<Order | undefined>(undefined);
+  const [searched, setSearched] = useState(false);
+  const [isTracking, setIsTracking] = useState(false);
 
-  const handleTrackSubmit = (e: React.FormEvent) => {
+  const handleTrackSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const result = getOrderByTracking(orderNumber, phoneNumber);
-    setFoundOrder(result);
-    setSearched(true);
+    if (!phoneNumber.trim()) return;
+    setIsTracking(true);
+    try {
+      const result = await getOrderByTracking(orderNumber, phoneNumber);
+      setFoundOrder(result);
+      setSearched(true);
+    } finally {
+      setIsTracking(false);
+    }
   };
 
   // Step index helper
@@ -91,23 +94,25 @@ export const OrderTrackingView: React.FC<OrderTrackingViewProps> = ({
           </div>
 
           <div className="sm:col-span-4">
-            <label className="block text-xs font-bold text-neutral-700 mb-1.5">شماره موبایل خریدار (اختیاری):</label>
+            <label className="block text-xs font-bold text-neutral-700 mb-1.5">شماره موبایل خریدار:</label>
             <input
               type="tel"
               value={phoneNumber}
               onChange={e => setPhoneNumber(e.target.value)}
               placeholder="0912..."
               className="w-full text-xs p-3 border border-neutral-300 rounded-xl focus:border-red-600 focus:outline-hidden font-mono text-left"
+              required
             />
           </div>
 
           <div className="sm:col-span-2">
             <button
               type="submit"
-              className="w-full h-11 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-1.5 shadow-sm"
+              disabled={isTracking}
+              className="w-full h-11 disabled:opacity-60 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-1.5 shadow-sm"
             >
               <Search className="w-4 h-4" />
-              <span>رهگیری</span>
+              <span>{isTracking ? 'در حال بررسی...' : 'رهگیری'}</span>
             </button>
           </div>
         </form>

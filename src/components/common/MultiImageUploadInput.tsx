@@ -1,4 +1,5 @@
 import React, { useState, useRef } from 'react';
+import { uploadImage } from '../../api/media';
 import { 
   Upload, 
   Image as ImageIcon, 
@@ -42,6 +43,8 @@ export const MultiImageUploadInput: React.FC<MultiImageUploadInputProps> = ({
   const [mode, setMode] = useState<'upload' | 'url' | 'presets'>('upload');
   const [urlInput, setUrlInput] = useState('');
   const [isDragging, setIsDragging] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleAddImage = (newUrl: string) => {
@@ -66,30 +69,43 @@ export const MultiImageUploadInput: React.FC<MultiImageUploadInputProps> = ({
     onChange([target, ...rest]);
   };
 
-  const handleFileProcess = (file: File) => {
-    if (!file.type.startsWith('image/')) {
-      alert('لطفاً یک فایل تصویری معتبر انتخاب کنید.');
+  const uploadFiles = async (files: File[]) => {
+    const slots = Math.max(0, maxImages - images.length);
+    const selected = files.slice(0, slots);
+    if (!selected.length) {
+      alert(`حداکثر می‌توانید ${maxImages} تصویر برای هر محصول اضافه نمایید.`);
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const result = e.target?.result as string;
-      if (result) {
-        handleAddImage(result);
+    const invalid = selected.find(file =>
+      !['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(file.type)
+    );
+    if (invalid) {
+      setUploadError('یکی از فایل‌ها فرمت مجاز JPG، PNG، WEBP یا GIF ندارد.');
+      return;
+    }
+
+    setIsUploading(true);
+    setUploadError('');
+    try {
+      const uploaded: string[] = [];
+      for (const file of selected) {
+        const result = await uploadImage(file, 'parts');
+        uploaded.push(result.url);
       }
-    };
-    reader.readAsDataURL(file);
+      onChange([...images, ...uploaded]);
+    } catch (error) {
+      console.error('Gallery upload failed:', error);
+      setUploadError('آپلود یکی از تصاویر روی سرور انجام نشد.');
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
-    if (files && files.length > 0) {
-      Array.from(files).forEach(file => handleFileProcess(file));
-    }
-    if (e.target) {
-      e.target.value = '';
-    }
+    if (files?.length) void uploadFiles(Array.from(files));
+    e.target.value = '';
   };
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -106,7 +122,7 @@ export const MultiImageUploadInput: React.FC<MultiImageUploadInputProps> = ({
     setIsDragging(false);
     const files = e.dataTransfer.files;
     if (files && files.length > 0) {
-      Array.from(files).forEach(file => handleFileProcess(file));
+      void uploadFiles(Array.from(files));
     }
   };
 
@@ -161,8 +177,9 @@ export const MultiImageUploadInput: React.FC<MultiImageUploadInputProps> = ({
           <input
             ref={fileInputRef}
             type="file"
-            accept="image/*"
+            accept=".jpg,.jpeg,.png,.webp,.gif,image/jpeg,image/png,image/webp,image/gif"
             multiple
+            disabled={isUploading}
             onChange={handleFileChange}
             className="hidden"
           />
@@ -171,12 +188,17 @@ export const MultiImageUploadInput: React.FC<MultiImageUploadInputProps> = ({
           </div>
           <div>
             <span className="text-xs font-bold text-neutral-800 block">
-              برای آپلود عکس‌های محصول کلیک کنید یا عکس‌ها را بکشید و رها کنید
+              {isUploading ? 'در حال آپلود تصاویر روی سرور...' : 'برای آپلود عکس‌های محصول کلیک کنید یا عکس‌ها را بکشید و رها کنید'}
             </span>
             <span className="text-[10px] text-neutral-400 mt-0.5 block">
               امکان انتخاب همزمان چند عکس (PNG, JPG, WEBP)
             </span>
           </div>
+          {uploadError && (
+            <span className="text-[10px] text-red-600 font-bold bg-red-50 px-2 py-1 rounded-md">
+              {uploadError}
+            </span>
+          )}
         </div>
       )}
 

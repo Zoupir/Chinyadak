@@ -130,7 +130,7 @@ CREATE TABLE IF NOT EXISTS payment_transactions (
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
   order_id CHAR(36) NOT NULL,
   provider VARCHAR(30) NOT NULL,
-  gateway_order_id BIGINT UNSIGNED NOT NULL,
+  gateway_order_id BIGINT UNSIGNED NULL,
   amount_toman BIGINT UNSIGNED NOT NULL,
   amount_rial BIGINT UNSIGNED NOT NULL,
   authority VARCHAR(255) NULL,
@@ -197,3 +197,4 @@ WHERE data_json IS NULL;
 
 ALTER TABLE products ADD COLUMN IF NOT EXISTS reserved_stock INT NOT NULL DEFAULT 0 AFTER stock;
 ALTER TABLE orders ADD COLUMN IF NOT EXISTS reservation_expires_at DATETIME NULL AFTER paid_at;
+ALTER TABLE payment_transactions MODIFY gateway_order_id BIGINT UNSIGNED NULL;

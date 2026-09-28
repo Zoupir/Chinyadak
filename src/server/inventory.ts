@@ -139,7 +139,8 @@ export const reserveOrderInventory = async (
   const expiresAt = new Date(Date.now() + reservationMinutes() * 60_000);
   await connection.execute(
     `UPDATE orders
-     SET reservation_expires_at = ?,
+     SET status = 'pending',
+         reservation_expires_at = ?,
          payment_status = 'initiated',
          updated_at = NOW()
      WHERE id = ?`,

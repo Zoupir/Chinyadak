@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS customers (
   last_name VARCHAR(100) NOT NULL,
   phone VARCHAR(20) NOT NULL UNIQUE,
   password_hash VARCHAR(255) NOT NULL,
+  password_initialized TINYINT(1) NOT NULL DEFAULT 1,
   email VARCHAR(190) NULL,
   customer_type VARCHAR(30) NOT NULL DEFAULT 'retail',
   status VARCHAR(20) NOT NULL DEFAULT 'active',
@@ -257,3 +258,4 @@ ALTER TABLE orders ADD COLUMN IF NOT EXISTS reservation_expires_at DATETIME NULL
 ALTER TABLE payment_transactions MODIFY gateway_order_id BIGINT UNSIGNED NULL;
 
 ALTER TABLE admin_users ADD COLUMN IF NOT EXISTS avatar_url TEXT NULL AFTER phone;
+ALTER TABLE customers ADD COLUMN IF NOT EXISTS password_initialized TINYINT(1) NOT NULL DEFAULT 1 AFTER password_hash;

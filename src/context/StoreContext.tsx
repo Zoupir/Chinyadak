@@ -245,15 +245,8 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   // Products
   const [products, setProducts] = useState<Product[]>([]);
 
-  const [brands, setBrands] = useState<CarBrand[]>(() => {
-    const saved = localStorage.getItem('chinpart_brands');
-    return saved ? JSON.parse(saved) : INITIAL_BRANDS;
-  });
-
-  const [models, setModels] = useState<VehicleModel[]>(() => {
-    const saved = localStorage.getItem('chinpart_models');
-    return saved ? JSON.parse(saved) : INITIAL_MODELS;
-  });
+  const [brands, setBrands] = useState<CarBrand[]>([]);
+  const [models, setModels] = useState<VehicleModel[]>([]);
 
   const [categories, setCategories] = useState<Category[]>([]);
 
@@ -432,6 +425,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     Promise.all([
       apiRequest<{ products: Product[] }>('/api/catalog/products'),
       apiRequest<{ categories: Category[] }>('/api/catalog/categories'),
+      apiRequest<{ brands: CarBrand[]; models: VehicleModel[] }>('/api/vehicles'),
       apiRequest<{
         articles: Article[];
         articleCategories: ArticleCategory[];
@@ -441,10 +435,12 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         paymentGateways: PaymentGatewayConfig[];
       }>('/api/cms/bundle')
     ])
-      .then(([productData, categoryData, cmsData]) => {
+      .then(([productData, categoryData, vehicleData, cmsData]) => {
         if (cancelled) return;
         setProducts(productData.products);
         setCategories(categoryData.categories);
+        setBrands(vehicleData.brands);
+        setModels(vehicleData.models);
         setArticles(cmsData.articles);
         setArticleCategories(cmsData.articleCategories);
         setSliders(cmsData.sliders);
@@ -457,6 +453,8 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         if (import.meta.env.DEV) {
           setProducts(INITIAL_PRODUCTS);
           setCategories(INITIAL_CATEGORIES);
+          setBrands(INITIAL_BRANDS);
+          setModels(INITIAL_MODELS);
           setArticles(INITIAL_ARTICLES);
           setArticleCategories(INITIAL_ARTICLE_CATEGORIES);
           setSliders(INITIAL_SLIDERS);
@@ -507,13 +505,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, []);
 
   // Sync state to local storage
-  useEffect(() => {
-    localStorage.setItem('chinpart_brands', JSON.stringify(brands));
-  }, [brands]);
 
-  useEffect(() => {
-    localStorage.setItem('chinpart_models', JSON.stringify(models));
-  }, [models]);
 
 
 
@@ -1143,34 +1135,80 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   // Brands & Models
   const addBrand = (brand: CarBrand) => {
-    setBrands(prev => [...prev, brand]);
-    showToast(`برند ${brand.nameFa} اضافه شد.`);
+    void apiRequest<{ brand: CarBrand }>('/api/vehicles/brands', {
+      method: 'POST',
+      body: JSON.stringify(brand)
+    }).then(({ brand: saved }) => {
+      setBrands(prev => [...prev, saved]);
+      showToast(`برند ${saved.nameFa} اضافه شد.`);
+    }).catch(error => {
+      console.error(error);
+      showToast('ثبت برند خودرو انجام نشد.', 'error');
+    });
   };
 
   const updateBrand = (brand: CarBrand) => {
-    setBrands(prev => prev.map(b => b.id === brand.id ? brand : b));
-    showToast(`برند ${brand.nameFa} به‌روزرسانی شد.`);
+    void apiRequest<{ brand: CarBrand }>(`/api/vehicles/brands/${encodeURIComponent(brand.id)}`, {
+      method: 'PUT',
+      body: JSON.stringify(brand)
+    }).then(({ brand: saved }) => {
+      setBrands(prev => prev.map(item => item.id === saved.id ? saved : item));
+      showToast(`برند ${saved.nameFa} به‌روزرسانی شد.`);
+    }).catch(error => {
+      console.error(error);
+      showToast('ویرایش برند خودرو انجام نشد.', 'error');
+    });
   };
 
   const deleteBrand = (brandId: string) => {
-    setBrands(prev => prev.filter(b => b.id !== brandId));
-    setModels(prev => prev.filter(m => m.brandId !== brandId));
-    showToast('برند خودرو و مدل‌های تابعه آن از سیستم حذف شدند.', 'info');
+    void apiRequest<{ ok: boolean }>(`/api/vehicles/brands/${encodeURIComponent(brandId)}`, {
+      method: 'DELETE'
+    }).then(() => {
+      setBrands(prev => prev.filter(item => item.id !== brandId));
+      setModels(prev => prev.filter(model => model.brandId !== brandId));
+      showToast('برند خودرو و مدل‌های تابعه آن از سیستم حذف شدند.', 'info');
+    }).catch(error => {
+      console.error(error);
+      showToast('حذف برند خودرو انجام نشد.', 'error');
+    });
   };
 
   const addModel = (model: VehicleModel) => {
-    setModels(prev => [...prev, model]);
-    showToast(`مدل ${model.nameFa} اضافه شد.`);
+    void apiRequest<{ model: VehicleModel }>('/api/vehicles/models', {
+      method: 'POST',
+      body: JSON.stringify(model)
+    }).then(({ model: saved }) => {
+      setModels(prev => [...prev, saved]);
+      showToast(`مدل ${saved.nameFa} اضافه شد.`);
+    }).catch(error => {
+      console.error(error);
+      showToast('ثبت مدل خودرو انجام نشد.', 'error');
+    });
   };
 
   const updateModel = (model: VehicleModel) => {
-    setModels(prev => prev.map(m => m.id === model.id ? model : m));
-    showToast(`مدل ${model.nameFa} به‌روزرسانی شد.`);
+    void apiRequest<{ model: VehicleModel }>(`/api/vehicles/models/${encodeURIComponent(model.id)}`, {
+      method: 'PUT',
+      body: JSON.stringify(model)
+    }).then(({ model: saved }) => {
+      setModels(prev => prev.map(item => item.id === saved.id ? saved : item));
+      showToast(`مدل ${saved.nameFa} به‌روزرسانی شد.`);
+    }).catch(error => {
+      console.error(error);
+      showToast('ویرایش مدل خودرو انجام نشد.', 'error');
+    });
   };
 
   const deleteModel = (modelId: string) => {
-    setModels(prev => prev.filter(m => m.id !== modelId));
-    showToast('مدل خودرو حذف شد.', 'info');
+    void apiRequest<{ ok: boolean }>(`/api/vehicles/models/${encodeURIComponent(modelId)}`, {
+      method: 'DELETE'
+    }).then(() => {
+      setModels(prev => prev.filter(item => item.id !== modelId));
+      showToast('مدل خودرو حذف شد.', 'info');
+    }).catch(error => {
+      console.error(error);
+      showToast('حذف مدل خودرو انجام نشد.', 'error');
+    });
   };
 
   // Articles (Blog)

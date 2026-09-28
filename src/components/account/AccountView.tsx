@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useStore } from '../../context/StoreContext';
 import { ProductCard } from '../product/ProductCard';
 import { formatToman } from '../../utils/formatters';
@@ -15,10 +15,18 @@ import {
   MapPin, 
   Package, 
   FileText,
-  ShieldCheck
+  ShieldCheck,
+  LogOut,
+  Printer,
+  Sparkles,
+  Coins,
+  Award,
+  Share2
 } from 'lucide-react';
-
-import { LogOut } from 'lucide-react';
+import { InvoiceModal } from '../orders/InvoiceModal';
+import { LoyaltyDashboardTab } from './LoyaltyDashboardTab';
+import { ShareButton } from '../common/ShareButton';
+import { Order } from '../../types';
 
 interface AccountViewProps {
   initialTab?: string;
@@ -45,12 +53,31 @@ export const AccountView: React.FC<AccountViewProps> = ({
     currentCustomer,
     customerLogout,
     updateCustomer,
-    showToast
+    getCustomerPoints,
+    getTierInfo,
+    showToast,
+    settings
   } = useStore();
 
-  const [activeTab, setActiveTab] = useState<'garage' | 'orders' | 'wishlist' | 'requests' | 'profile'>(
+  const customerPoints = getCustomerPoints(currentCustomer?.id);
+  const tierInfo = getTierInfo(customerPoints);
+
+  const [selectedOrderForInvoice, setSelectedOrderForInvoice] = useState<Order | null>(null);
+
+  const [activeTab, setActiveTab] = useState<'garage' | 'orders' | 'wishlist' | 'requests' | 'profile' | 'loyalty'>(
     (initialTab as any) || 'garage'
   );
+
+  useEffect(() => {
+    if (initialTab && ['garage', 'orders', 'wishlist', 'requests', 'profile', 'loyalty'].includes(initialTab)) {
+      setActiveTab(initialTab as any);
+    }
+  }, [initialTab]);
+
+  const handleTabChange = (tabId: string) => {
+    setActiveTab(tabId as any);
+    onNavigate('account', tabId);
+  };
 
   const [profileForm, setProfileForm] = useState({
     firstName: currentCustomer?.firstName || 'کاربر',
@@ -108,16 +135,36 @@ export const AccountView: React.FC<AccountViewProps> = ({
               خودروی فعال در سایت: <strong className="text-white">{selectedVehicle ? selectedVehicle.modelName : 'انتخاب نشده'}</strong>
               {currentCustomer?.phone && ` · شماره همراه: ${currentCustomer.phone}`}
             </p>
+            <div className="flex flex-wrap items-center gap-2 mt-2">
+              <button
+                onClick={() => setActiveTab('loyalty')}
+                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 text-xs font-bold transition-all cursor-pointer shadow-xs"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
+                <span>{customerPoints.toLocaleString('fa-IR')} امتیاز باشگاه مشتریان</span>
+                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-400 text-neutral-950 font-black">
+                  {tierInfo.title}
+                </span>
+              </button>
+            </div>
           </div>
         </div>
 
-        <div className="flex items-center gap-2.5">
+        <div className="flex flex-wrap items-center gap-2.5">
+          <ShareButton
+            view="account"
+            param={activeTab}
+            variant="button"
+            label="اشتراک‌گذاری لینک این بخش"
+            className="bg-neutral-800 text-white border-neutral-700 hover:bg-neutral-700"
+          />
+
           <button
             onClick={onOpenVehicleModal}
-            className="px-5 py-2.5 bg-neutral-800 hover:bg-neutral-700 text-white border border-neutral-700 rounded-xl text-xs font-bold transition-colors flex items-center gap-2 shrink-0 self-start sm:self-auto"
+            className="px-4 py-2.5 bg-neutral-800 hover:bg-neutral-700 text-white border border-neutral-700 rounded-xl text-xs font-bold transition-colors flex items-center gap-2 shrink-0"
           >
             <Car className="w-4 h-4 text-red-500" />
-            <span>مدیریت گاراژ من ({garage.length} خودرو)</span>
+            <span>مدیریت گاراژ من ({garage.length})</span>
           </button>
 
           {currentCustomer && (
@@ -133,39 +180,59 @@ export const AccountView: React.FC<AccountViewProps> = ({
       </div>
 
       {/* Tabs Navigation */}
-      <div className="flex border-b border-neutral-200 bg-white rounded-2xl p-2 gap-2 shadow-xs overflow-x-auto">
-        {[
-          { id: 'garage', label: 'گاراژ من (خودروها)', icon: Car, count: garage.length },
-          { id: 'orders', label: 'سفارش‌های من', icon: ShoppingBag, count: orders.length },
-          { id: 'wishlist', label: 'علاقه‌مندی‌ها', icon: Heart, count: wishlist.length },
-          { id: 'requests', label: 'استعلام‌های قطعه', icon: FileText, count: partRequests.length },
-          { id: 'profile', label: 'اطلاعات کاربری و آدرس‌ها', icon: User }
-        ].map(tab => {
-          const Icon = tab.icon;
-          const isActive = activeTab === tab.id;
-          return (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id as any)}
-              className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap ${
-                isActive
-                  ? 'bg-neutral-900 text-white shadow-xs'
-                  : 'text-neutral-600 hover:bg-neutral-100'
-              }`}
-            >
-              <Icon className="w-4 h-4" />
-              <span>{tab.label}</span>
-              {tab.count !== undefined && (
-                <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
-                  isActive ? 'bg-neutral-800 text-neutral-300' : 'bg-neutral-200 text-neutral-700'
-                }`}>
-                  {tab.count}
-                </span>
-              )}
-            </button>
-          );
-        })}
+      <div className="flex items-center justify-between border-b border-neutral-200 bg-white rounded-2xl p-2 gap-2 shadow-xs overflow-x-auto">
+        <div className="flex items-center gap-2">
+          {[
+            { id: 'loyalty', label: 'باشگاه مشتریان و امتیازات', icon: Sparkles, count: customerPoints },
+            { id: 'garage', label: 'گاراژ من (خودروها)', icon: Car, count: garage.length },
+            { id: 'orders', label: 'سفارش‌های من', icon: ShoppingBag, count: orders.length },
+            { id: 'wishlist', label: 'علاقه‌مندی‌ها', icon: Heart, count: wishlist.length },
+            { id: 'requests', label: 'استعلام‌های قطعه', icon: FileText, count: partRequests.length },
+            { id: 'profile', label: 'اطلاعات کاربری و آدرس‌ها', icon: User }
+          ].map(tab => {
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => handleTabChange(tab.id)}
+                className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer ${
+                  isActive
+                    ? 'bg-neutral-900 text-white shadow-xs'
+                    : 'text-neutral-600 hover:bg-neutral-100'
+                }`}
+              >
+                <Icon className="w-4 h-4" />
+                <span>{tab.label}</span>
+                {tab.count !== undefined && (
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
+                    isActive ? 'bg-neutral-800 text-neutral-300' : 'bg-neutral-200 text-neutral-700'
+                  }`}>
+                    {tab.count}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="pr-2 shrink-0 hidden sm:block">
+          <ShareButton
+            view="account"
+            param={activeTab}
+            variant="badge"
+            label="لینک مستقیم تب"
+          />
+        </div>
       </div>
+
+      {/* Tab: Loyalty Point System & Rewards */}
+      {activeTab === 'loyalty' && (
+        <LoyaltyDashboardTab
+          onNavigate={onNavigate}
+          onOpenVehicleModal={onOpenVehicleModal}
+        />
+      )}
 
       {/* Tab 1: My Garage */}
       {activeTab === 'garage' && (
@@ -318,9 +385,28 @@ export const AccountView: React.FC<AccountViewProps> = ({
                   ))}
                 </div>
 
-                <div className="pt-3 border-t border-neutral-100 flex items-center justify-between text-xs font-bold text-neutral-800">
-                  <span>روش ارسال: {order.shippingMethod.title}</span>
-                  <span>مبلغ کل فاکتور: <strong className="text-red-600 text-sm">{formatToman(order.total)}</strong></span>
+                <div className="pt-3 border-t border-neutral-100 flex flex-wrap items-center justify-between gap-3 text-xs font-bold text-neutral-800">
+                  <div className="flex items-center gap-4">
+                    <span>روش ارسال: {order.shippingMethod.title}</span>
+                    <span>مبلغ کل فاکتور: <strong className="text-red-600 text-sm">{formatToman(order.total)}</strong></span>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => onNavigate('invoice', order.id)}
+                      className="px-3 py-1.5 bg-neutral-100 hover:bg-neutral-200 text-neutral-800 rounded-xl text-xs font-bold transition-colors cursor-pointer border border-neutral-300"
+                      title="نمایش در صفحه مجزا بدون پاپ‌آپ و دانلود PDF"
+                    >
+                      صفحه جداگانه و PDF
+                    </button>
+                    <button
+                      onClick={() => setSelectedOrderForInvoice(order)}
+                      className="px-3.5 py-1.5 bg-neutral-900 hover:bg-neutral-800 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
+                    >
+                      <Printer className="w-3.5 h-3.5 text-red-500" />
+                      <span>چاپ فاکتور رسمی</span>
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}
@@ -481,6 +567,19 @@ export const AccountView: React.FC<AccountViewProps> = ({
             </button>
           </form>
         </div>
+      )}
+
+      {/* Official Printable Tax Invoice Modal */}
+      {selectedOrderForInvoice && (
+        <InvoiceModal
+          order={selectedOrderForInvoice}
+          settings={settings}
+          onClose={() => setSelectedOrderForInvoice(null)}
+          onOpenDedicatedPage={(orderId) => {
+            setSelectedOrderForInvoice(null);
+            onNavigate('invoice', orderId);
+          }}
+        />
       )}
 
     </div>

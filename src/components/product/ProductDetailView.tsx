@@ -26,6 +26,7 @@ import {
   Wrench,
   AlertCircle
 } from 'lucide-react';
+import { ShareButton } from '../common/ShareButton';
 
 interface ProductDetailViewProps {
   productId: string;
@@ -104,22 +105,32 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8 space-y-12">
-      {/* Breadcrumb Navigation */}
-      <nav className="flex items-center gap-2 text-xs text-neutral-500 overflow-x-auto whitespace-nowrap pb-2">
-        <button onClick={() => onNavigate('home')} className="hover:text-red-600 transition-colors">
-          خانه
-        </button>
-        <span>/</span>
-        <button onClick={() => onNavigate('shop')} className="hover:text-red-600 transition-colors">
-          فروشگاه قطعات
-        </button>
-        <span>/</span>
-        <button onClick={() => onNavigate('category', product.categorySlug)} className="hover:text-red-600 transition-colors">
-          {product.categorySlug}
-        </button>
-        <span>/</span>
-        <span className="text-neutral-900 font-bold truncate max-w-xs">{product.nameFa}</span>
-      </nav>
+      {/* Breadcrumb Navigation & Direct Share */}
+      <div className="flex items-center justify-between gap-4 pb-2 border-b border-neutral-100">
+        <nav className="flex items-center gap-2 text-xs text-neutral-500 overflow-x-auto whitespace-nowrap">
+          <button onClick={() => onNavigate('home')} className="hover:text-red-600 transition-colors">
+            خانه
+          </button>
+          <span>/</span>
+          <button onClick={() => onNavigate('shop')} className="hover:text-red-600 transition-colors">
+            فروشگاه قطعات
+          </button>
+          <span>/</span>
+          <button onClick={() => onNavigate('category', product.categorySlug)} className="hover:text-red-600 transition-colors">
+            {product.categorySlug}
+          </button>
+          <span>/</span>
+          <span className="text-neutral-900 font-bold truncate max-w-xs">{product.nameFa}</span>
+        </nav>
+
+        <ShareButton
+          view="product"
+          param={product.id}
+          variant="button"
+          label="اشتراک‌گذاری قطعه"
+          className="shrink-0 text-xs"
+        />
+      </div>
 
       {/* Main Top Grid: Gallery & Product Info */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
@@ -162,6 +173,13 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
               >
                 <ArrowRightLeft className="w-5 h-5" />
               </button>
+
+              <ShareButton
+                view="product"
+                param={product.id}
+                variant="icon"
+                className="bg-white/90 text-neutral-600 border-neutral-200 hover:bg-white backdrop-blur-md"
+              />
             </div>
           </div>
 

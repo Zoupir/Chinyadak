@@ -1,17 +1,18 @@
 import React from 'react';
 import { Order, SiteSettings } from '../../types';
 import { formatToman } from '../../utils/formatters';
-import { Printer, X, Download, ShieldCheck, CheckCircle2, Wrench, Building2, User, Phone, MapPin, Hash, Calendar, CreditCard } from 'lucide-react';
+import { Printer, X, Download, ShieldCheck, CheckCircle2, Wrench, Building2, User, Phone, MapPin, Hash, Calendar, CreditCard, Sparkles, Coins } from 'lucide-react';
 
 interface InvoiceModalProps {
   order: Order | null;
   settings: SiteSettings;
   onClose: () => void;
+  onOpenDedicatedPage?: (orderId: string) => void;
 }
 
 // Convert numbers to Persian text words (simplified for currency totals)
 function numberToPersianWords(amount: number): string {
-  if (amount <= 0) return 'صفر تومان';
+  if (amount <= 0) return 'صفر ریال';
   const units = ['', 'یک', 'دو', 'سه', 'چهار', 'پنج', 'شش', 'هفت', 'هشت', 'نه'];
   const teens = ['ده', 'یازده', 'دوازده', 'سیزده', 'چهارده', 'پانزده', 'شانزده', 'هفده', 'هجده', 'نوزده'];
   const tens = ['', 'ده', 'بیست', 'سی', 'چهل', 'پنجاه', 'شصت', 'هفتاد', 'هشتاد', 'نود'];
@@ -29,11 +30,21 @@ function numberToPersianWords(amount: number): string {
   if (th > 0) parts.push(`${th} هزار`);
   if (rem2 > 0) parts.push(`${rem2}`);
 
-  return (parts.length > 0 ? parts.join(' و ') : `${amount}`) + ' تومان';
+  return (parts.length > 0 ? parts.join(' و ') : `${amount}`) + ' ریال';
 }
 
-export const InvoiceModal: React.FC<InvoiceModalProps> = ({ order, settings, onClose }) => {
+export const InvoiceModal: React.FC<InvoiceModalProps> = ({ order, settings, onClose, onOpenDedicatedPage }) => {
   if (!order) return null;
+
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
 
   const handlePrint = () => {
     window.print();
@@ -48,11 +59,18 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({ order, settings, onC
   const sellerAddress = settings.sellerAddress || settings.address || 'تهران، خیابان امیرکبیر (چراغ برق)، کوچه سراج، پاساژ کاشانی، طبقه همکف، پلاک ۲۸';
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/70 backdrop-blur-xs overflow-y-auto">
-      <div className="bg-white rounded-3xl max-w-4xl w-full my-6 overflow-hidden shadow-2xl border border-neutral-200 text-right print:shadow-none print:border-none print:m-0 print:p-0 print:max-w-none print:w-full">
+    <div 
+      className="fixed inset-0 z-50 overflow-y-auto p-2 sm:p-6 bg-black/75 backdrop-blur-xs flex justify-center items-start text-right"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          onClose();
+        }
+      }}
+    >
+      <div className="bg-white rounded-3xl max-w-4xl w-full my-4 sm:my-8 overflow-hidden shadow-2xl border border-neutral-200 text-right print:shadow-none print:border-none print:m-0 print:p-0 print:max-w-none print:w-full relative">
         
-        {/* Top Control Bar (Hidden in Print) */}
-        <div className="bg-neutral-900 text-white p-4 px-6 flex items-center justify-between print:hidden">
+        {/* Top Control Bar (Hidden in Print) - Sticky */}
+        <div className="sticky top-0 z-30 bg-neutral-900 text-white p-4 px-6 flex flex-wrap items-center justify-between gap-3 border-b border-neutral-800 print:hidden shadow-md">
           <div className="flex items-center gap-2">
             <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
             <span className="font-bold text-sm">پیش‌فاکتور و صورت‌حساب رسمی فروش</span>
@@ -62,18 +80,32 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({ order, settings, onC
           </div>
 
           <div className="flex items-center gap-2">
+            {onOpenDedicatedPage && (
+              <button
+                onClick={() => {
+                  onClose();
+                  onOpenDedicatedPage(order.id);
+                }}
+                className="px-3 py-2 bg-neutral-800 hover:bg-neutral-700 text-neutral-200 rounded-xl text-xs font-bold transition-colors cursor-pointer border border-neutral-700"
+                title="نمایش در صفحه مجزا بدون پاپ‌آپ"
+              >
+                صفحه جداگانه و PDF
+              </button>
+            )}
             <button
               onClick={handlePrint}
-              className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors shadow-md"
+              className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors shadow-md cursor-pointer"
             >
               <Printer className="w-4 h-4" />
               <span>چاپ فاکتور رسمی (A4)</span>
             </button>
             <button
               onClick={onClose}
-              className="p-2 hover:bg-neutral-800 text-neutral-400 hover:text-white rounded-xl transition-colors"
+              className="px-3 py-2 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-white rounded-xl text-xs font-bold flex items-center gap-1 transition-colors cursor-pointer"
+              title="بستن پنجره فاکتور (Esc)"
             >
-              <X className="w-5 h-5" />
+              <X className="w-4 h-4" />
+              <span>بستن</span>
             </button>
           </div>
         </div>
@@ -199,9 +231,9 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({ order, settings, onC
                   <th className="p-2.5">شرح کالا یا قطعه یدکی</th>
                   <th className="p-2.5 text-center w-20">گرید کیفی</th>
                   <th className="p-2.5 text-center w-14">تعداد</th>
-                  <th className="p-2.5 text-left w-28">مبلغ واحد (تومان)</th>
+                  <th className="p-2.5 text-left w-28">مبلغ واحد (ریال)</th>
                   <th className="p-2.5 text-left w-24">تخفیف</th>
-                  <th className="p-2.5 text-left w-32">مبلغ کل (تومان)</th>
+                  <th className="p-2.5 text-left w-32">مبلغ کل (ریال)</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-neutral-200">
@@ -265,10 +297,21 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({ order, settings, onC
               </div>
               {order.discountAmount > 0 && (
                 <div className="p-3 flex justify-between items-center bg-red-50/50 text-red-700">
-                  <span>تخفیف ویژه اعمال‌شده:</span>
+                  <span>تخفیف ویژه کوپن:</span>
                   <span className="font-mono font-bold">-{formatToman(order.discountAmount)}</span>
                 </div>
               )}
+              {order.loyaltyPointsRedeemed && order.loyaltyPointsRedeemed > 0 ? (
+                <div className="p-3 flex justify-between items-center bg-amber-50/70 text-amber-900 border-t border-amber-200">
+                  <span className="flex items-center gap-1 font-bold">
+                    <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+                    <span>تخفیف امتیاز باشگاه مشتریان ({order.loyaltyPointsRedeemed} امتیاز):</span>
+                  </span>
+                  <span className="font-mono font-bold text-amber-800">
+                    -{formatToman(order.loyaltyDiscountAmount || 0)}
+                  </span>
+                </div>
+              ) : null}
               <div className="p-3 flex justify-between items-center bg-white">
                 <span className="text-neutral-600">هزینه بسته‌بندی ایمن و ارسال:</span>
                 <span className="font-mono font-bold">
@@ -283,6 +326,15 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({ order, settings, onC
                 <span>مبلغ نهایی قابل پرداخت:</span>
                 <span className="font-mono text-base text-red-400">{formatToman(order.total)}</span>
               </div>
+              {order.loyaltyPointsEarned && order.loyaltyPointsEarned > 0 ? (
+                <div className="p-2.5 flex justify-between items-center bg-emerald-50 text-emerald-800 text-[11px] font-bold">
+                  <span className="flex items-center gap-1.5">
+                    <Coins className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>امتیاز وفاداری افزوده شده از این خرید:</span>
+                  </span>
+                  <span className="font-mono font-bold text-emerald-700">+{order.loyaltyPointsEarned} امتیاز</span>
+                </div>
+              ) : null}
             </div>
           </div>
 
@@ -309,6 +361,29 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({ order, settings, onC
             </div>
           </div>
 
+        </div>
+
+        {/* Bottom Control Bar (Hidden in Print) */}
+        <div className="bg-neutral-100 p-4 px-6 border-t border-neutral-200 flex items-center justify-between print:hidden">
+          <span className="text-xs text-neutral-500">
+            برای خروج کلید Esc را بفشارید یا روی دکمه بستن کلیک کنید.
+          </span>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handlePrint}
+              className="px-4 py-2 bg-neutral-900 hover:bg-neutral-800 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+            >
+              <Printer className="w-4 h-4" />
+              <span>چاپ فاکتور رسمی</span>
+            </button>
+            <button
+              onClick={onClose}
+              className="px-5 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors shadow-md cursor-pointer"
+            >
+              <X className="w-4 h-4" />
+              <span>بستن فاکتور</span>
+            </button>
+          </div>
         </div>
 
       </div>

@@ -147,7 +147,7 @@ export const AdminSandboxGateway: React.FC = () => {
             </div>
 
             <div>
-              <label className="block text-neutral-700 font-bold mb-1">مبلغ آزمایشی تراکنش (تومان):</label>
+              <label className="block text-neutral-700 font-bold mb-1">مبلغ آزمایشی تراکنش (ریال):</label>
               <input
                 type="number"
                 value={testAmount}

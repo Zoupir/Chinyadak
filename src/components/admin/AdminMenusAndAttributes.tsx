@@ -12,11 +12,16 @@ import {
   ExternalLink, 
   Layers,
   Sparkles,
-  Tag
+  Tag,
+  ArrowUp,
+  ArrowDown,
+  LayoutTemplate,
+  Globe,
+  Columns
 } from 'lucide-react';
 
 export const AdminMenusAndAttributes: React.FC = () => {
-  const { settings, updateSettings, showToast } = useStore();
+  const { settings, updateSettings, showToast, categories, pages } = useStore();
 
   const [activeSection, setActiveSection] = useState<'menus' | 'attributes'>('menus');
 
@@ -30,6 +35,9 @@ export const AdminMenusAndAttributes: React.FC = () => {
     { id: 'm6', title: 'گاراژ خودروهای من', link: 'account:garage' }
   ]);
 
+  // Selected Category for Quick-Add
+  const [quickAddCatSlug, setQuickAddCatSlug] = useState<string>(categories[0]?.slug || '');
+
   // Attributes State
   const [attributes, setAttributes] = useState<ProductAttributeDefinition[]>(settings.productAttributes || [
     { id: 'attr-1', nameFa: 'شماره فنی اصلی (OEM)', category: 'all', defaultValue: 'استاندارد کارخانه' },
@@ -42,6 +50,7 @@ export const AdminMenusAndAttributes: React.FC = () => {
   // Modal State for Menu
   const [isMenuModalOpen, setIsMenuModalOpen] = useState(false);
   const [editingMenu, setEditingMenu] = useState<MenuItem | null>(null);
+  const [menuType, setMenuType] = useState<'category' | 'page' | 'system' | 'custom'>('system');
   const [menuForm, setMenuForm] = useState<{ title: string; link: string; badge: string }>({
     title: '',
     link: '',
@@ -58,14 +67,61 @@ export const AdminMenusAndAttributes: React.FC = () => {
   });
 
   // --- Handlers for Menus ---
+  const handleQuickAddCategory = () => {
+    if (!quickAddCatSlug) return;
+    const cat = categories.find(c => c.slug === quickAddCatSlug);
+    if (!cat) return;
+
+    // Check if already in menu
+    const targetLink = `category:${cat.slug}`;
+    if (menus.some(m => m.link === targetLink)) {
+      showToast(`دسته‌بندی «${cat.nameFa}» قبلاً در منو قرار دارد.`, 'info');
+      return;
+    }
+
+    const newItem: MenuItem = {
+      id: `m-cat-${Date.now()}`,
+      title: cat.nameFa,
+      link: targetLink,
+      badge: 'دسته'
+    };
+
+    const next = [...menus, newItem];
+    setMenus(next);
+    updateSettings({ navigationMenus: next });
+    showToast(`دسته‌بندی «${cat.nameFa}» به صورت خودکار به منوی بالای سایت افزوده شد.`);
+  };
+
+  const handleMoveMenu = (index: number, direction: 'up' | 'down') => {
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= menus.length) return;
+
+    const next = [...menus];
+    const [moved] = next.splice(index, 1);
+    next.splice(targetIndex, 0, moved);
+
+    setMenus(next);
+    updateSettings({ navigationMenus: next });
+  };
+
   const handleOpenAddMenu = () => {
     setEditingMenu(null);
+    setMenuType('system');
     setMenuForm({ title: '', link: 'shop', badge: '' });
     setIsMenuModalOpen(true);
   };
 
   const handleEditMenu = (menu: MenuItem) => {
     setEditingMenu(menu);
+    if (menu.link.startsWith('category:')) {
+      setMenuType('category');
+    } else if (menu.link.startsWith('page:')) {
+      setMenuType('page');
+    } else if (menu.link.startsWith('http://') || menu.link.startsWith('https://')) {
+      setMenuType('custom');
+    } else {
+      setMenuType('system');
+    }
     setMenuForm({ title: menu.title, link: menu.link, badge: menu.badge || '' });
     setIsMenuModalOpen(true);
   };
@@ -153,33 +209,35 @@ export const AdminMenusAndAttributes: React.FC = () => {
 
   return (
     <div className="bg-white rounded-3xl border border-neutral-200 p-6 sm:p-8 shadow-xs space-y-6">
+      
+      {/* Top Header */}
       <div className="border-b border-neutral-100 pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h3 className="text-lg font-black text-neutral-900 flex items-center gap-2">
             <Sliders className="w-5 h-5 text-red-600" />
-            <span>مدیریت منوهای ناوبری و ویژگی‌های فنی قطعات</span>
+            <span>مدیریت منوی بالای سایت (Header) و ویژگی‌های فنی قطعات</span>
           </h3>
           <p className="text-xs text-neutral-500 mt-1">
-            سفارشی‌سازی کامل منوی هدر سایت و ویژگی‌های فنی جدول مشخصات قطعات خودرو
+            امکان افزودن خودکار دسته‌بندی‌ها به منو، حذف، تعیین ترتیب و تنظیم لینک‌های دلخواه داخلی یا اینترنتی
           </p>
         </div>
 
         <div className="flex items-center gap-2">
           <button
             onClick={() => setActiveSection('menus')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
               activeSection === 'menus'
                 ? 'bg-neutral-900 text-white shadow-xs'
                 : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200'
             }`}
           >
             <Menu className="w-4 h-4" />
-            <span>منوهای سایت ({menus.length})</span>
+            <span>منوی بالای سایت ({menus.length})</span>
           </button>
 
           <button
             onClick={() => setActiveSection('attributes')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
               activeSection === 'attributes'
                 ? 'bg-neutral-900 text-white shadow-xs'
                 : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200'
@@ -193,25 +251,65 @@ export const AdminMenusAndAttributes: React.FC = () => {
 
       {/* SECTION 1: MENUS */}
       {activeSection === 'menus' && (
-        <div className="space-y-4">
+        <div className="space-y-6">
+          
+          {/* Quick Add From Categories Box */}
+          <div className="bg-neutral-50 p-4 rounded-2xl border border-neutral-200 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-2.5">
+              <div className="w-9 h-9 rounded-xl bg-red-100 text-red-600 flex items-center justify-center shrink-0">
+                <Layers className="w-5 h-5" />
+              </div>
+              <div>
+                <h4 className="font-bold text-xs sm:text-sm text-neutral-900">افزودن خودکار دسته‌بندی به منوی بالا:</h4>
+                <p className="text-[11px] text-neutral-500 mt-0.5">دسته‌بندی مورد نظر را انتخاب کنید تا با یک کلیک به عنوان آیتم ناوبری هدر افزوده شود.</p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <select
+                value={quickAddCatSlug}
+                onChange={e => setQuickAddCatSlug(e.target.value)}
+                className="p-2 border border-neutral-300 rounded-xl text-xs bg-white flex-1 sm:w-56 cursor-pointer"
+              >
+                {categories.map(cat => (
+                  <option key={cat.id} value={cat.slug}>
+                    {cat.nameFa} ({cat.nameEn})
+                  </option>
+                ))}
+              </select>
+
+              <button
+                type="button"
+                onClick={handleQuickAddCategory}
+                className="px-4 py-2 bg-neutral-900 hover:bg-neutral-800 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shrink-0 shadow-xs cursor-pointer"
+              >
+                <Plus className="w-4 h-4 text-red-500" />
+                <span>+ افزودن به منو</span>
+              </button>
+            </div>
+          </div>
+
           <div className="flex items-center justify-between">
-            <span className="text-xs text-neutral-500 font-bold">آیتم‌های منوی افقی بالای سایت:</span>
+            <span className="text-xs text-neutral-500 font-bold">لیست آیتم‌های فعال در نوار ناوبری بالای سایت (با امکان تغییر ترتیب):</span>
             <button
               onClick={handleOpenAddMenu}
-              className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors"
+              className="px-3.5 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors shadow-md shadow-red-600/20 cursor-pointer"
             >
               <Plus className="w-4 h-4" />
-              <span>افزودن آیتم جدید به منو</span>
+              <span>افزودن آیتم جدید دستی به منو</span>
             </button>
           </div>
 
-          <div className="divide-y divide-neutral-100 border border-neutral-200 rounded-2xl overflow-hidden text-xs">
+          {/* Menus List with Reordering */}
+          <div className="divide-y divide-neutral-100 border border-neutral-200 rounded-2xl overflow-hidden text-xs bg-white shadow-2xs">
             {menus.map((item, index) => (
-              <div key={item.id} className="p-4 flex items-center justify-between gap-4 hover:bg-neutral-50 transition-colors">
+              <div key={item.id} className="p-4 flex items-center justify-between gap-4 hover:bg-neutral-50/80 transition-colors">
                 <div className="flex items-center gap-3">
-                  <span className="w-6 h-6 rounded-full bg-neutral-100 text-neutral-600 flex items-center justify-center font-mono font-bold text-[11px]">
+                  {/* Order Index */}
+                  <span className="w-6 h-6 rounded-full bg-neutral-100 text-neutral-700 flex items-center justify-center font-mono font-bold text-[11px]">
                     {index + 1}
                   </span>
+
                   <div>
                     <div className="flex items-center gap-2">
                       <span className="font-bold text-neutral-900 text-sm">{item.title}</span>
@@ -221,21 +319,46 @@ export const AdminMenusAndAttributes: React.FC = () => {
                         </span>
                       )}
                     </div>
-                    <span className="text-[11px] text-neutral-400 font-mono">مسیر مقصد: #{item.link}</span>
+                    <span className="text-[11px] text-neutral-400 font-mono block mt-0.5">مسیر مقصد: #{item.link}</span>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5">
+                  {/* Move Up */}
+                  <button
+                    onClick={() => handleMoveMenu(index, 'up')}
+                    disabled={index === 0}
+                    className="p-1.5 text-neutral-400 hover:text-neutral-800 disabled:opacity-20 rounded-lg hover:bg-neutral-200 transition-colors cursor-pointer"
+                    title="انتقال به بالا"
+                  >
+                    <ArrowUp className="w-4 h-4" />
+                  </button>
+
+                  {/* Move Down */}
+                  <button
+                    onClick={() => handleMoveMenu(index, 'down')}
+                    disabled={index === menus.length - 1}
+                    className="p-1.5 text-neutral-400 hover:text-neutral-800 disabled:opacity-20 rounded-lg hover:bg-neutral-200 transition-colors cursor-pointer"
+                    title="انتقال به پایین"
+                  >
+                    <ArrowDown className="w-4 h-4" />
+                  </button>
+
+                  <div className="w-px h-4 bg-neutral-200 mx-1"></div>
+
+                  {/* Edit */}
                   <button
                     onClick={() => handleEditMenu(item)}
-                    className="p-2 hover:bg-neutral-200 rounded-lg text-neutral-600 transition-colors"
+                    className="p-2 hover:bg-blue-50 rounded-lg text-blue-600 transition-colors cursor-pointer"
                     title="ویرایش منو"
                   >
-                    <Edit3 className="w-4 h-4 text-blue-600" />
+                    <Edit3 className="w-4 h-4" />
                   </button>
+
+                  {/* Delete */}
                   <button
                     onClick={() => handleDeleteMenu(item.id, item.title)}
-                    className="p-2 hover:bg-red-100 rounded-lg text-red-600 transition-colors"
+                    className="p-2 hover:bg-red-50 rounded-lg text-red-600 transition-colors cursor-pointer"
                     title="حذف منو"
                   >
                     <Trash2 className="w-4 h-4" />
@@ -244,6 +367,7 @@ export const AdminMenusAndAttributes: React.FC = () => {
               </div>
             ))}
           </div>
+
         </div>
       )}
 
@@ -254,7 +378,7 @@ export const AdminMenusAndAttributes: React.FC = () => {
             <span className="text-xs text-neutral-500 font-bold">فیلدها و ویژگی‌های فنی جدول مشخصات قطعات:</span>
             <button
               onClick={handleOpenAddAttr}
-              className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors"
+              className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
             >
               <Plus className="w-4 h-4" />
               <span>افزودن ویژگی جدید</span>
@@ -279,13 +403,13 @@ export const AdminMenusAndAttributes: React.FC = () => {
                 <div className="flex items-center gap-1.5">
                   <button
                     onClick={() => handleEditAttr(attr)}
-                    className="p-1.5 hover:bg-neutral-200 rounded-lg text-neutral-600 transition-colors"
+                    className="p-1.5 hover:bg-neutral-200 rounded-lg text-neutral-600 transition-colors cursor-pointer"
                   >
                     <Edit3 className="w-4 h-4 text-blue-600" />
                   </button>
                   <button
                     onClick={() => handleDeleteAttr(attr.id, attr.nameFa)}
-                    className="p-1.5 hover:bg-red-100 rounded-lg text-red-600 transition-colors"
+                    className="p-1.5 hover:bg-red-100 rounded-lg text-red-600 transition-colors cursor-pointer"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -296,22 +420,153 @@ export const AdminMenusAndAttributes: React.FC = () => {
         </div>
       )}
 
-      {/* ================= MODAL: MENU ITEM ================= */}
+      {/* ================= MODAL: MENU ITEM (SMART PICKER & CUSTOM LINK) ================= */}
       {isMenuModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl border border-neutral-200 max-w-md w-full p-6 shadow-2xl space-y-4">
             <div className="flex items-center justify-between border-b border-neutral-100 pb-3">
               <h4 className="font-black text-sm text-neutral-900">
-                {editingMenu ? 'ویرایش آیتم منو' : 'افزودن آیتم به منو'}
+                {editingMenu ? 'ویرایش آیتم منو' : 'افزودن آیتم حرفه‌ای به منو'}
               </h4>
-              <button onClick={() => setIsMenuModalOpen(false)} className="w-7 h-7 rounded-full bg-neutral-100 flex items-center justify-center">
+              <button onClick={() => setIsMenuModalOpen(false)} className="w-7 h-7 rounded-full bg-neutral-100 flex items-center justify-center cursor-pointer">
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <form onSubmit={handleSaveMenu} className="space-y-3 text-xs">
+            <form onSubmit={handleSaveMenu} className="space-y-3.5 text-xs">
+              
+              {/* Type Switcher */}
               <div>
-                <label className="block text-neutral-700 font-bold mb-1">عنوان نمایشی منو:</label>
+                <label className="block text-neutral-700 font-bold mb-1">نوع لینک منو:</label>
+                <div className="grid grid-cols-4 gap-1 p-1 bg-neutral-100 rounded-xl text-center">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMenuType('category');
+                      if (categories[0]) {
+                        setMenuForm({ ...menuForm, title: categories[0].nameFa, link: `category:${categories[0].slug}` });
+                      }
+                    }}
+                    className={`py-1.5 rounded-lg font-bold transition-colors cursor-pointer ${menuType === 'category' ? 'bg-white shadow-xs text-neutral-900' : 'text-neutral-600'}`}
+                  >
+                    دسته‌بندی
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMenuType('page');
+                      if (pages[0]) {
+                        setMenuForm({ ...menuForm, title: pages[0].title, link: `page:${pages[0].slug}` });
+                      }
+                    }}
+                    className={`py-1.5 rounded-lg font-bold transition-colors cursor-pointer ${menuType === 'page' ? 'bg-white shadow-xs text-neutral-900' : 'text-neutral-600'}`}
+                  >
+                    برگه‌ها
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMenuType('system');
+                      setMenuForm({ ...menuForm, title: 'فروشگاه قطعات', link: 'shop' });
+                    }}
+                    className={`py-1.5 rounded-lg font-bold transition-colors cursor-pointer ${menuType === 'system' ? 'bg-white shadow-xs text-neutral-900' : 'text-neutral-600'}`}
+                  >
+                    سیستمی
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMenuType('custom');
+                      setMenuForm({ ...menuForm, link: 'https://' });
+                    }}
+                    className={`py-1.5 rounded-lg font-bold transition-colors cursor-pointer ${menuType === 'custom' ? 'bg-white shadow-xs text-neutral-900' : 'text-neutral-600'}`}
+                  >
+                    دستی / وب
+                  </button>
+                </div>
+              </div>
+
+              {/* Dynamic Pickers */}
+              {menuType === 'category' && (
+                <div>
+                  <label className="block text-neutral-700 font-bold mb-1">انتخاب دسته‌بندی قطعات:</label>
+                  <select
+                    onChange={(e) => {
+                      const selected = categories.find(c => c.slug === e.target.value);
+                      if (selected) {
+                        setMenuForm({
+                          ...menuForm,
+                          title: selected.nameFa,
+                          link: `category:${selected.slug}`
+                        });
+                      }
+                    }}
+                    className="w-full p-2.5 border border-neutral-300 rounded-xl bg-white"
+                  >
+                    {categories.map(c => (
+                      <option key={c.id} value={c.slug}>
+                        {c.nameFa} ({c.nameEn})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {menuType === 'page' && (
+                <div>
+                  <label className="block text-neutral-700 font-bold mb-1">انتخاب برگه سایت:</label>
+                  <select
+                    onChange={(e) => {
+                      const selected = pages.find(p => p.slug === e.target.value);
+                      if (selected) {
+                        setMenuForm({
+                          ...menuForm,
+                          title: selected.title,
+                          link: `page:${selected.slug}`
+                        });
+                      }
+                    }}
+                    className="w-full p-2.5 border border-neutral-300 rounded-xl bg-white"
+                  >
+                    {pages.map(p => (
+                      <option key={p.id} value={p.slug}>
+                        {p.title}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {menuType === 'system' && (
+                <div>
+                  <label className="block text-neutral-700 font-bold mb-1">صفحه سیستمی پیش‌فرض:</label>
+                  <select
+                    onChange={(e) => {
+                      const link = e.target.value;
+                      const opt = e.target.options[e.target.selectedIndex];
+                      setMenuForm({
+                        ...menuForm,
+                        title: opt ? opt.text : menuForm.title,
+                        link
+                      });
+                    }}
+                    className="w-full p-2.5 border border-neutral-300 rounded-xl bg-white"
+                  >
+                    <option value="shop">فروشگاه قطعات</option>
+                    <option value="shop:maintenance">قطعات مصرفی و سرویس دوره‌ای</option>
+                    <option value="part-request">استعلام قطعه نایاب با شاسی</option>
+                    <option value="tracking">پیگیری سفارش و مرسوله</option>
+                    <option value="blog">مقالات و آموزش تعمیرات</option>
+                    <option value="account:garage">گاراژ خودروهای من</option>
+                    <option value="account">ورود یا حساب کاربری</option>
+                    <option value="admin">پنل مدیریت انبار</option>
+                  </select>
+                </div>
+              )}
+
+              {/* Title Input */}
+              <div>
+                <label className="block text-neutral-700 font-bold mb-1">عنوان نمایشی منو *:</label>
                 <input
                   type="text"
                   value={menuForm.title}
@@ -322,25 +577,30 @@ export const AdminMenusAndAttributes: React.FC = () => {
                 />
               </div>
 
+              {/* Link Target Input */}
               <div>
-                <label className="block text-neutral-700 font-bold mb-1">لینک یا شناسه صفحه (Link Target):</label>
+                <label className="block text-neutral-700 font-bold mb-1">
+                  مسیر مقصد (Link Target) *:
+                </label>
                 <input
                   type="text"
                   value={menuForm.link}
                   onChange={e => setMenuForm({ ...menuForm, link: e.target.value })}
-                  placeholder="shop یا blog یا part-request"
+                  placeholder="shop یا category:cooling یا https://..."
                   className="w-full p-2.5 border border-neutral-300 rounded-xl font-mono text-left"
+                  dir="ltr"
                   required
                 />
               </div>
 
+              {/* Badge Input */}
               <div>
                 <label className="block text-neutral-700 font-bold mb-1">نشان یا برچسب ویژه (Badge اختیاری):</label>
                 <input
                   type="text"
                   value={menuForm.badge}
                   onChange={e => setMenuForm({ ...menuForm, badge: e.target.value })}
-                  placeholder="مثال: جدید، تخفیف، فوری"
+                  placeholder="مثال: جدید، تخفیف، فوری، سرویس"
                   className="w-full p-2.5 border border-neutral-300 rounded-xl"
                 />
               </div>
@@ -349,15 +609,15 @@ export const AdminMenusAndAttributes: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setIsMenuModalOpen(false)}
-                  className="flex-1 py-2 bg-neutral-100 rounded-xl font-bold"
+                  className="flex-1 py-2 bg-neutral-100 rounded-xl font-bold cursor-pointer"
                 >
                   انصراف
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-2 bg-red-600 text-white rounded-xl font-bold shadow-md"
+                  className="flex-1 py-2 bg-red-600 text-white rounded-xl font-bold shadow-md hover:bg-red-700 cursor-pointer"
                 >
-                  ذخیره آیتم
+                  ذخیره آیتم منو
                 </button>
               </div>
             </form>
@@ -373,19 +633,19 @@ export const AdminMenusAndAttributes: React.FC = () => {
               <h4 className="font-black text-sm text-neutral-900">
                 {editingAttr ? 'ویرایش ویژگی فنی' : 'افزودن ویژگی فنی جدید'}
               </h4>
-              <button onClick={() => setIsAttrModalOpen(false)} className="w-7 h-7 rounded-full bg-neutral-100 flex items-center justify-center">
+              <button onClick={() => setIsAttrModalOpen(false)} className="w-7 h-7 rounded-full bg-neutral-100 flex items-center justify-center cursor-pointer">
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <form onSubmit={handleSaveAttr} className="space-y-3 text-xs">
+            <form onSubmit={handleSaveAttr} className="space-y-3.5 text-xs">
               <div>
-                <label className="block text-neutral-700 font-bold mb-1">نام فارسی ویژگی:</label>
+                <label className="block text-neutral-700 font-bold mb-1">نام ویژگی فنی *:</label>
                 <input
                   type="text"
                   value={attrForm.nameFa}
                   onChange={e => setAttrForm({ ...attrForm, nameFa: e.target.value })}
-                  placeholder="مثال: نوع آلیاژ رادیاتور"
+                  placeholder="مثال: نوع استاندارد آلیاژ سرسیلندر"
                   className="w-full p-2.5 border border-neutral-300 rounded-xl"
                   required
                 />
@@ -398,22 +658,23 @@ export const AdminMenusAndAttributes: React.FC = () => {
                   onChange={e => setAttrForm({ ...attrForm, category: e.target.value })}
                   className="w-full p-2.5 border border-neutral-300 rounded-xl bg-white"
                 >
-                  <option value="all">عمومی (تمام قطعات)</option>
-                  <option value="engine">سیستم موتور و خنک‌کننده</option>
+                  <option value="all">عمومی (همه قطعات)</option>
+                  <option value="engine">موتوری و متعلقات</option>
                   <option value="gearbox">گیربکس و انتقال قدرت</option>
-                  <option value="body_chassis">بدنه و جلوبندی</option>
-                  <option value="brake">ترمز و ایمنی</option>
-                  <option value="electrical">برقی و الکترونیک</option>
+                  <option value="brakes">سیستم ترمز</option>
+                  <option value="suspension">جلوبندی و تعلیق</option>
+                  <option value="cooling">سیستم خنک‌کاری</option>
+                  <option value="electrical">برق و سنسورها</option>
                 </select>
               </div>
 
               <div>
-                <label className="block text-neutral-700 font-bold mb-1">مقدار پیش‌فرض یا نمونه:</label>
+                <label className="block text-neutral-700 font-bold mb-1">مقدار پیش‌فرض (اختیاری):</label>
                 <input
                   type="text"
                   value={attrForm.defaultValue}
                   onChange={e => setAttrForm({ ...attrForm, defaultValue: e.target.value })}
-                  placeholder="مثال: آلومینیوم دوجداره تقویت شده"
+                  placeholder="مثال: استاندارد OEM کارخانه"
                   className="w-full p-2.5 border border-neutral-300 rounded-xl"
                 />
               </div>
@@ -422,13 +683,13 @@ export const AdminMenusAndAttributes: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setIsAttrModalOpen(false)}
-                  className="flex-1 py-2 bg-neutral-100 rounded-xl font-bold"
+                  className="flex-1 py-2 bg-neutral-100 rounded-xl font-bold cursor-pointer"
                 >
                   انصراف
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-2 bg-red-600 text-white rounded-xl font-bold shadow-md"
+                  className="flex-1 py-2 bg-red-600 text-white rounded-xl font-bold shadow-md hover:bg-red-700 cursor-pointer"
                 >
                   ذخیره ویژگی
                 </button>
@@ -437,6 +698,7 @@ export const AdminMenusAndAttributes: React.FC = () => {
           </div>
         </div>
       )}
+
     </div>
   );
 };

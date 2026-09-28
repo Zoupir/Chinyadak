@@ -50,24 +50,29 @@ import {
   FileCheck2,
   Sparkles,
   LayoutTemplate,
-  Type
+  Type,
+  PanelsTopLeft
 } from 'lucide-react';
 import { AdminCarsTab } from './AdminCarsTab';
 import { AdminArticlesTab } from './AdminArticlesTab';
 import { AdminSandboxGateway } from './AdminSandboxGateway';
 import { AdminMenusAndAttributes } from './AdminMenusAndAttributes';
+import { AdminFooterTab } from './AdminFooterTab';
 import { AdminSlidersTab } from './AdminSlidersTab';
 import { AdminUsersTab } from './AdminUsersTab';
 import { AdminPagesTab } from './AdminPagesTab';
+import { AdminThemeTab } from './AdminThemeTab';
 import { InvoiceModal } from '../orders/InvoiceModal';
 import { RichTextEditor } from '../common/RichTextEditor';
 import { ImageUploadInput } from '../common/ImageUploadInput';
+import { MultiImageUploadInput } from '../common/MultiImageUploadInput';
 
 interface AdminViewProps {
   onExitToStore?: () => void;
+  onNavigate?: (view: string, param?: string) => void;
 }
 
-export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore }) => {
+export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate }) => {
   const { 
     products, 
     addProduct,
@@ -110,7 +115,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore }) => {
 
   // Navigation tab inside Admin
   const [activeTab, setActiveTab] = useState<
-    'overview' | 'cars' | 'products' | 'categories' | 'menus_attrs' | 'pages' | 'articles' | 'sliders' | 'orders' | 'customers' | 'admins' | 'gateways' | 'sandbox' | 'apis' | 'theme' | 'bulk' | 'analytics'
+    'overview' | 'cars' | 'products' | 'categories' | 'menus_attrs' | 'footer' | 'pages' | 'articles' | 'sliders' | 'orders' | 'customers' | 'admins' | 'gateways' | 'sandbox' | 'apis' | 'theme' | 'bulk' | 'analytics'
   >('overview');
 
   // Sidebar Layout State
@@ -163,11 +168,15 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore }) => {
     ]
   });
 
-  // Category Modal
+  // Category Modals
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
+  const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [newCatFa, setNewCatFa] = useState('');
   const [newCatEn, setNewCatEn] = useState('');
   const [newCatSlug, setNewCatSlug] = useState('');
+  const [newCatIcon, setNewCatIcon] = useState('Cpu');
+  const [newCatIconUrl, setNewCatIconUrl] = useState('');
+  const [newCatImage, setNewCatImage] = useState('');
   const [newCatDesc, setNewCatDesc] = useState('');
 
   // Customer Modal
@@ -217,6 +226,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore }) => {
       case 'sliders':
         return permissions.canManageSliders;
       case 'menus_attrs':
+      case 'footer':
       case 'theme':
       case 'gateways':
       case 'apis':
@@ -359,15 +369,27 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore }) => {
       nameFa: newCatFa,
       nameEn: newCatEn || newCatSlug,
       slug: newCatSlug.toLowerCase().replace(/[^a-z0-9]/g, '-'),
-      icon: 'Package',
+      icon: newCatIcon || 'Cpu',
+      iconUrl: newCatIconUrl.trim() || undefined,
+      imageUrl: newCatImage.trim() || undefined,
       description: newCatDesc || 'دسته‌بندی تخصصی قطعات خودرو'
     };
     addCategory(newCategory);
     setNewCatFa('');
     setNewCatEn('');
     setNewCatSlug('');
+    setNewCatIcon('Cpu');
+    setNewCatIconUrl('');
+    setNewCatImage('');
     setNewCatDesc('');
     setIsCategoryModalOpen(false);
+  };
+
+  const handleSaveCategory = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingCategory || !editingCategory.nameFa || !editingCategory.slug) return;
+    updateCategory(editingCategory);
+    setEditingCategory(null);
   };
 
   const handleCreateCustomerSubmit = (e: React.FormEvent) => {
@@ -414,7 +436,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore }) => {
 
   const handleExportCSV = () => {
     const csvContent = "data:text/csv;charset=utf-8,\uFEFF" 
-      + "کد کالا,نام فارسی,شماره فنی OEM,قیمت (تومان),موجودی,دسته,گرید کیفی\n"
+      + "کد کالا,نام فارسی,شماره فنی OEM,قیمت (ریال),موجودی,دسته,گرید کیفی\n"
       + products.map(p => `"${p.sku}","${p.nameFa}","${p.oemNumber}",${p.price},${p.stock},"${p.categorySlug}","${p.grade}"`).join("\n");
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
@@ -615,7 +637,8 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore }) => {
         { id: 'pages', label: 'برگه‌ها و سکشن‌ها (Builder)', icon: LayoutTemplate, count: pages.length },
         { id: 'articles', label: 'مقالات و آموزش‌ها', icon: BookOpen, count: articles.length },
         { id: 'sliders', label: 'اسلایدرها و بنرها', icon: Compass, count: sliders.length },
-        { id: 'menus_attrs', label: 'منوها و ویژگی‌ها', icon: Menu }
+        { id: 'menus_attrs', label: 'منوی بالای سایت (Header)', icon: Menu },
+        { id: 'footer', label: 'مدیریت فوتر و اینماد', icon: PanelsTopLeft }
       ]
     },
     {
@@ -960,6 +983,8 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore }) => {
                     <tr>
                       <th className="p-3">تصویر</th>
                       <th className="p-3">نام قطعه</th>
+                      <th className="p-3">خودروهای سازگار</th>
+                      <th className="p-3">شرکت / برند سازنده</th>
                       <th className="p-3">OEM / پارت</th>
                       <th className="p-3">گرید کیفی</th>
                       <th className="p-3">قیمت فعلی</th>
@@ -968,22 +993,36 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore }) => {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-neutral-100">
-                    {products.map(p => (
-                      <tr key={p.id} className="hover:bg-neutral-50/50">
-                        <td className="p-3">
-                          <img src={p.images[0]} alt={p.nameFa} className="w-10 h-10 object-cover rounded-lg border bg-neutral-100" />
-                        </td>
-                        <td className="p-3">
-                          <div className="font-bold text-neutral-900">{p.nameFa}</div>
-                          <div className="text-[10px] text-neutral-400 font-mono">{p.nameEn}</div>
-                        </td>
-                        <td className="p-3 font-mono font-bold text-neutral-700">{p.oemNumber}</td>
-                        <td className="p-3">
-                          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-neutral-100 text-neutral-800">
-                            {p.grade === 'genuine' ? 'شرکتی' : p.grade === 'oem' ? 'وارداتی' : 'استاندارد'}
-                          </span>
-                        </td>
-                        <td className="p-3 font-bold text-neutral-900 font-mono">{formatToman(p.price)}</td>
+                    {products.map(p => {
+                      const fitCars = p.fitments && p.fitments.length > 0 
+                        ? p.fitments.map(f => f.modelName).join('، ')
+                        : 'همه مدل‌ها';
+                      return (
+                        <tr key={p.id} className="hover:bg-neutral-50/50">
+                          <td className="p-3">
+                            <img src={p.images[0]} alt={p.nameFa} className="w-10 h-10 object-cover rounded-lg border bg-neutral-100" />
+                          </td>
+                          <td className="p-3">
+                            <div className="font-bold text-neutral-900">{p.nameFa}</div>
+                            <div className="text-[10px] text-neutral-400 font-mono">{p.nameEn}</div>
+                          </td>
+                          <td className="p-3">
+                            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-blue-800 border border-blue-200">
+                              {fitCars}
+                            </span>
+                          </td>
+                          <td className="p-3">
+                            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-purple-50 text-purple-800 border border-purple-200">
+                              {p.brandManufacturer || 'چری شرکتی'}
+                            </span>
+                          </td>
+                          <td className="p-3 font-mono font-bold text-neutral-700">{p.oemNumber}</td>
+                          <td className="p-3">
+                            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-neutral-100 text-neutral-800">
+                              {p.grade === 'genuine' ? 'شرکتی' : p.grade === 'oem' ? 'وارداتی' : 'استاندارد'}
+                            </span>
+                          </td>
+                          <td className="p-3 font-bold text-neutral-900 font-mono">{formatToman(p.price)}</td>
                         <td className="p-3">
                           <span className={`px-2 py-0.5 rounded font-mono font-bold text-[11px] ${
                             p.stock > 5 ? 'bg-emerald-50 text-emerald-700' :
@@ -1011,7 +1050,8 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore }) => {
                           </div>
                         </td>
                       </tr>
-                    ))}
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -1043,20 +1083,42 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore }) => {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {categories.map(cat => (
-                  <div key={cat.id} className="p-5 rounded-2xl border border-neutral-200 bg-neutral-50/50 space-y-3">
+                  <div key={cat.id} className="p-5 rounded-2xl border border-neutral-200 bg-neutral-50/50 space-y-3 hover:border-neutral-300 transition-colors">
                     <div className="flex items-center justify-between">
-                      <div>
-                        <h3 className="font-bold text-sm text-neutral-900">{cat.nameFa}</h3>
-                        <span className="text-[10px] text-neutral-400 font-mono">{cat.nameEn} ({cat.slug})</span>
+                      <div className="flex items-center gap-3">
+                        {cat.imageUrl ? (
+                          <img 
+                            src={cat.imageUrl} 
+                            alt={cat.nameFa} 
+                            className="w-12 h-12 rounded-xl object-cover border border-neutral-200 bg-white shrink-0" 
+                          />
+                        ) : (
+                          <div className="w-12 h-12 rounded-xl bg-red-100 text-red-600 flex items-center justify-center font-bold shrink-0">
+                            <Layers className="w-6 h-6" />
+                          </div>
+                        )}
+                        <div>
+                          <h3 className="font-bold text-sm text-neutral-900">{cat.nameFa}</h3>
+                          <span className="text-[10px] text-neutral-400 font-mono">{cat.nameEn} ({cat.slug})</span>
+                        </div>
                       </div>
 
-                      <button
-                        onClick={() => deleteCategory(cat.id)}
-                        className="p-1.5 text-neutral-400 hover:text-red-600 rounded-lg hover:bg-red-50"
-                        title="حذف دسته‌بندی"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => setEditingCategory(cat)}
+                          className="p-1.5 text-neutral-500 hover:text-blue-600 rounded-lg hover:bg-blue-50 transition-colors"
+                          title="ویرایش دسته‌بندی و عکس"
+                        >
+                          <Edit3 className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => deleteCategory(cat.id)}
+                          className="p-1.5 text-neutral-400 hover:text-red-600 rounded-lg hover:bg-red-50 transition-colors"
+                          title="حذف دسته‌بندی"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
                     </div>
 
                     <p className="text-xs text-neutral-500">{cat.description}</p>
@@ -1071,9 +1133,17 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore }) => {
             <AdminMenusAndAttributes />
           )}
 
+          {/* TAB: FOOTER BUILDER & ENAMAD */}
+          {activeTab === 'footer' && (
+            <AdminFooterTab />
+          )}
+
           {/* TAB: PAGES & SECTION BUILDER */}
           {activeTab === 'pages' && (
-            <AdminPagesTab />
+            <AdminPagesTab onNavigate={(view, param) => {
+              if (onExitToStore) onExitToStore();
+              if (onNavigate) onNavigate(view, param);
+            }} />
           )}
 
           {/* TAB 6: ARTICLES (BLOG) */}
@@ -1157,13 +1227,24 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore }) => {
                           </select>
                         </td>
                         <td className="p-3 text-left">
-                          <button
-                            onClick={() => setSelectedOrderForInvoice(order)}
-                            className="px-3 py-1.5 bg-neutral-900 hover:bg-red-600 text-white rounded-xl text-xs font-bold transition-colors flex items-center gap-1 mr-auto shadow-xs"
-                          >
-                            <Printer className="w-3.5 h-3.5" />
-                            <span>چاپ فاکتور</span>
-                          </button>
+                          <div className="flex items-center gap-1.5 justify-end">
+                            {onNavigate && (
+                              <button
+                                onClick={() => onNavigate('invoice', order.id)}
+                                className="px-2.5 py-1.5 bg-neutral-100 hover:bg-neutral-200 text-neutral-800 rounded-xl text-xs font-bold transition-colors cursor-pointer border border-neutral-300"
+                                title="نمایش در صفحه مجزا بدون پاپ‌آپ و دانلود PDF"
+                              >
+                                صفحه فاکتور و PDF
+                              </button>
+                            )}
+                            <button
+                              onClick={() => setSelectedOrderForInvoice(order)}
+                              className="px-3 py-1.5 bg-neutral-900 hover:bg-red-600 text-white rounded-xl text-xs font-bold transition-colors flex items-center gap-1 shadow-xs cursor-pointer"
+                            >
+                              <Printer className="w-3.5 h-3.5" />
+                              <span>چاپ</span>
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -1368,192 +1449,9 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore }) => {
             </div>
           )}
 
-          {/* TAB 14: THEME, GOOGLE FONTS, LOGO & FAVICON BRANDING */}
+          {/* TAB 14: THEME CONTROLLER & SEO */}
           {activeTab === 'theme' && (
-            <div className="bg-white rounded-3xl border border-neutral-200 p-6 sm:p-8 shadow-xs space-y-6">
-              <div className="border-b border-neutral-100 pb-4">
-                <h2 className="text-lg font-black text-neutral-900 flex items-center gap-2">
-                  <Palette className="w-5 h-5 text-red-600" />
-                  <span>شخصی‌سازی کامل هویت بصری، لوگو، فیوآیکن و فونت گوگل</span>
-                </h2>
-                <p className="text-xs text-neutral-500 mt-1">
-                  تغییر لوگو، فیوآیکن مرورگر، مشخصات فاکتور رسمی و فونت‌ها به صورت آنی در کل سایت
-                </p>
-              </div>
-
-              <form onSubmit={handleSaveTheme} className="space-y-6 text-xs">
-                
-                {/* 1. Logo & Favicon Management */}
-                <div className="p-5 bg-neutral-50 rounded-2xl border border-neutral-200 space-y-4">
-                  <h3 className="font-bold text-sm text-neutral-900 flex items-center gap-2">
-                    <ImageIcon className="w-4 h-4 text-red-600" />
-                    <span>مدیریت نشان تجاری (Logo) و آیکون مرورگر (Favicon):</span>
-                  </h3>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* Logo Section */}
-                    <ImageUploadInput
-                      label="لوگو و نشان تجاری فروشگاه (Logo):"
-                      value={themeForm.logoUrl || ''}
-                      onChange={url => setThemeForm({ ...themeForm, logoUrl: url })}
-                      presetCategory="logos"
-                      aspectRatio="auto"
-                      placeholder="فایل تصویر لوگو را آپلود کنید یا آدرس آن را وارد نمایید..."
-                      helperText="در هدر، فوتر، فاکتورهای رسمی و پیش‌فاکتور مشتریان نمایش داده می‌شود."
-                    />
-
-                    {/* Favicon Section */}
-                    <ImageUploadInput
-                      label="آیکون برگه مرورگر (Favicon):"
-                      value={themeForm.faviconUrl || ''}
-                      onChange={url => setThemeForm({ ...themeForm, faviconUrl: url })}
-                      presetCategory="favicons"
-                      aspectRatio="square"
-                      placeholder="فایل آیکون (PNG / ICO / SVG) را آپلود کنید..."
-                      helperText="به‌صورت آنی در برگه مرورگر، نشانک‌ها و میانبرهای گوشی اعمال می‌گردد."
-                    />
-                  </div>
-                </div>
-
-                {/* 2. Color Scheme Picker */}
-                <div className="space-y-3 pt-2">
-                  <label className="block text-neutral-800 font-bold">رنگ سازمانی و دکمه‌های اصلی (Primary Accent Color):</label>
-                  <div className="flex flex-wrap items-center gap-3">
-                    {[
-                      { name: 'قرمز مسابقه‌ای (پیش‌فرض)', hex: '#DC2626' },
-                      { name: 'مشکی کربن / تیتانیوم', hex: '#0F172A' },
-                      { name: 'آبی رویال اسپرت', hex: '#2563EB' },
-                      { name: 'نارنجی صنعتی GT', hex: '#EA580C' },
-                      { name: 'سبز پرفورمنس', hex: '#16A34A' }
-                    ].map(col => (
-                      <button
-                        key={col.hex}
-                        type="button"
-                        onClick={() => setThemeForm({ ...themeForm, primaryColor: col.hex })}
-                        className={`px-3 py-2 rounded-xl border flex items-center gap-2 transition-all ${
-                          themeForm.primaryColor === col.hex
-                            ? 'border-neutral-900 ring-2 ring-neutral-900/20 font-bold'
-                            : 'border-neutral-200 hover:border-neutral-300'
-                        }`}
-                      >
-                        <span className="w-4 h-4 rounded-full border border-black/10" style={{ backgroundColor: col.hex }}></span>
-                        <span>{col.name}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* 3. Google Font Family Picker */}
-                <div className="space-y-3 pt-4 border-t border-neutral-100">
-                  <div className="flex items-center justify-between">
-                    <label className="block text-neutral-800 font-bold">تایپوگرافی و فونت‌های استاندارد گوگل (Google Fonts CDN):</label>
-                    <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-full">
-                      فراخوانی زنده از سرورهای گوگل
-                    </span>
-                  </div>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-                    {[
-                      { id: 'Vazirmatn', label: 'وزیرمتن (Vazirmatn)', desc: 'فونت رسمی پیش‌فرض مدرن' },
-                      { id: 'Noto Sans Arabic', label: 'نوتو سنس (Noto Sans)', desc: 'فونت رسمی و جامع گوگل' },
-                      { id: 'Rubik', label: 'روبیک (Rubik)', desc: 'طراحی هندسی اسپرت و پویا' },
-                      { id: 'Alexandria', label: 'الکساندریا (Alexandria)', desc: 'خوانایی بالا در متن و اعداد' },
-                      { id: 'Cairo', label: 'قاهره (Cairo)', desc: 'فونت صنعتی خودرویی و ضخیم' }
-                    ].map(f => (
-                      <button
-                        key={f.id}
-                        type="button"
-                        onClick={() => setThemeForm({ ...themeForm, fontFamily: f.id as any })}
-                        className={`p-3 rounded-2xl border text-center transition-all ${
-                          themeForm.fontFamily === f.id
-                            ? 'bg-neutral-900 text-white font-bold border-neutral-900 shadow-md ring-2 ring-red-500/30'
-                            : 'bg-neutral-50 text-neutral-700 border-neutral-200 hover:border-neutral-300'
-                        }`}
-                      >
-                        <span className="block text-xs font-black">{f.label}</span>
-                        <span className={`block text-[10px] mt-1 ${themeForm.fontFamily === f.id ? 'text-neutral-300' : 'text-neutral-400'}`}>
-                          {f.desc}
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* 4. Seller Tax & Official Invoice Information */}
-                <div className="space-y-4 pt-4 border-t border-neutral-100">
-                  <h3 className="font-bold text-sm text-neutral-900">مشخصات فروشنده در فاکتور رسمی مالیاتی:</h3>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <div>
-                      <label className="block text-neutral-600 font-semibold mb-1">نام شخص حقیقی/حقوقی فروشنده:</label>
-                      <input
-                        type="text"
-                        value={themeForm.sellerName || ''}
-                        onChange={e => setThemeForm({ ...themeForm, sellerName: e.target.value })}
-                        className="w-full p-2.5 border border-neutral-300 rounded-xl"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-neutral-600 font-semibold mb-1">کد اقتصادی:</label>
-                      <input
-                        type="text"
-                        value={themeForm.sellerEconomicCode || ''}
-                        onChange={e => setThemeForm({ ...themeForm, sellerEconomicCode: e.target.value })}
-                        className="w-full p-2.5 border border-neutral-300 rounded-xl font-mono text-left"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-neutral-600 font-semibold mb-1">شناسه ملی / شماره ثبت:</label>
-                      <input
-                        type="text"
-                        value={themeForm.sellerNationalId || ''}
-                        onChange={e => setThemeForm({ ...themeForm, sellerNationalId: e.target.value })}
-                        className="w-full p-2.5 border border-neutral-300 rounded-xl font-mono text-left"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* 5. General Site Texts */}
-                <div className="space-y-4 pt-4 border-t border-neutral-100">
-                  <h3 className="font-bold text-sm text-neutral-900">عناوین، شعار و اطلاعات تماس:</h3>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-neutral-600 font-semibold mb-1">عنوان اصلی فروشگاه:</label>
-                      <input
-                        type="text"
-                        value={themeForm.siteTitle}
-                        onChange={e => setThemeForm({ ...themeForm, siteTitle: e.target.value })}
-                        className="w-full p-3 border border-neutral-300 rounded-xl"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-neutral-600 font-semibold mb-1">شعار برند:</label>
-                      <input
-                        type="text"
-                        value={themeForm.siteSlogan}
-                        onChange={e => setThemeForm({ ...themeForm, siteSlogan: e.target.value })}
-                        className="w-full p-3 border border-neutral-300 rounded-xl"
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-neutral-600 font-semibold mb-1">آدرس فیزیکی فروشگاه و انبار مرکزی:</label>
-                    <textarea
-                      rows={2}
-                      value={themeForm.address}
-                      onChange={e => setThemeForm({ ...themeForm, address: e.target.value })}
-                      className="w-full p-3 border border-neutral-300 rounded-xl"
-                    />
-                  </div>
-                </div>
-
-                <button
-                  type="submit"
-                  className="px-8 py-3.5 bg-red-600 hover:bg-red-700 text-white font-bold text-xs rounded-xl shadow-lg shadow-red-600/20"
-                >
-                  ذخیره تمام تنظیمات برندینگ و قالب
-                </button>
-              </form>
-            </div>
+            <AdminThemeTab />
           )}
 
           {/* TAB 15: BULK EDIT */}
@@ -1586,7 +1484,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore }) => {
                       <th className="p-3">نام قطعه</th>
                       <th className="p-3">شماره فنی OEM</th>
                       <th className="p-3">قیمت فعلی</th>
-                      <th className="p-3 w-40">قیمت جدید (تومان)</th>
+                      <th className="p-3 w-40">قیمت جدید (ریال)</th>
                       <th className="p-3">موجودی فعلی</th>
                       <th className="p-3 w-32">موجودی جدید</th>
                     </tr>
@@ -1758,7 +1656,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore }) => {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-neutral-600 mb-1 font-semibold">قیمت فروش (تومان):</label>
+                  <label className="block text-neutral-600 mb-1 font-semibold">قیمت فروش (ریال):</label>
                   <input
                     type="number"
                     value={newProductForm.price}
@@ -1777,6 +1675,16 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore }) => {
                     required
                   />
                 </div>
+              </div>
+
+              {/* Product Gallery Images (Upload, Add, Remove) */}
+              <div className="pt-2 border-t border-neutral-100">
+                <MultiImageUploadInput
+                  label="تصاویر و گالری کالا (آپلود عکس، حذف، شاخص کردن و پیش‌نمایش):"
+                  images={newProductForm.images || []}
+                  onChange={imgs => setNewProductForm({ ...newProductForm, images: imgs })}
+                  helperText="می‌توانید چندین تصویر آپلود کنید، تصاویر را حذف نمایید یا هر تصویر دلخواه را به عنوان عکس اصلی کالا تعیین کنید."
+                />
               </div>
 
               {/* Short Description */}
@@ -1872,7 +1780,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore }) => {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-neutral-600 mb-1 font-semibold">قیمت فروش (تومان):</label>
+                  <label className="block text-neutral-600 mb-1 font-semibold">قیمت فروش (ریال):</label>
                   <input
                     type="number"
                     value={editingProduct.price}
@@ -1891,6 +1799,133 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore }) => {
                     required
                   />
                 </div>
+              </div>
+
+              {/* Category & Manufacturer Company */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-neutral-100">
+                <div>
+                  <label className="block text-neutral-600 mb-1 font-semibold">دسته‌بندی تخصصی قطعه *:</label>
+                  <select
+                    value={editingProduct.categorySlug}
+                    onChange={e => setEditingProduct({ ...editingProduct, categorySlug: e.target.value })}
+                    className="w-full p-2.5 border border-neutral-300 rounded-xl bg-white"
+                  >
+                    {categories.map(c => (
+                      <option key={c.id} value={c.slug}>{c.nameFa} ({c.nameEn})</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-neutral-600 mb-1 font-semibold">شرکت / برند سازنده قطعه (تولیدکننده) *:</label>
+                  <input
+                    type="text"
+                    value={editingProduct.brandManufacturer || ''}
+                    onChange={e => setEditingProduct({ ...editingProduct, brandManufacturer: e.target.value })}
+                    placeholder="مثال: چری شرکتی، مدیران خودرو، ایساکو، بوش..."
+                    className="w-full p-2.5 border border-neutral-300 rounded-xl"
+                    required
+                  />
+                  <div className="flex flex-wrap gap-1 mt-1.5">
+                    {['چری شرکتی', 'مدیران خودرو', 'کرمان موتور (KMC)', 'ایساکو', 'سایپا یدک', 'بوش (Bosch)', 'والئو (Valeo)', 'گتس (Gates)'].map(brandName => (
+                      <button
+                        type="button"
+                        key={brandName}
+                        onClick={() => setEditingProduct({ ...editingProduct, brandManufacturer: brandName })}
+                        className="text-[10px] px-2 py-0.5 rounded-lg bg-neutral-100 hover:bg-red-50 hover:text-red-700 text-neutral-600 transition-colors cursor-pointer"
+                      >
+                        {brandName}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Compatible Vehicle Models (Fitments) */}
+              <div className="pt-2 border-t border-neutral-100 space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="block text-neutral-700 font-bold">
+                    خودروهای سازگار با این قطعه (فیتمنت خودروها):
+                  </label>
+                  <span className="text-[11px] text-blue-700 font-bold bg-blue-50 px-2 py-0.5 rounded-lg border border-blue-200">
+                    {(editingProduct.fitments || []).length} خودرو انتخاب شده
+                  </span>
+                </div>
+                <p className="text-[11px] text-neutral-500">
+                  مشخص کنید این قطعه برای کدام خودرو یا خودروها کاربرد دارد (خریداران با فیلتر هوشمند خودرو این کالا را می‌بینند):
+                </p>
+                <div className="max-h-48 overflow-y-auto p-3 border border-neutral-200 rounded-2xl bg-neutral-50/50 space-y-3">
+                  {brands.map(brand => {
+                    const brandModels = models.filter(m => m.brandId === brand.id);
+                    if (brandModels.length === 0) return null;
+                    return (
+                      <div key={brand.id} className="space-y-1.5">
+                        <div className="font-bold text-[11px] text-neutral-800 flex items-center gap-1.5">
+                          <span className="w-1.5 h-1.5 rounded-full bg-red-600"></span>
+                          <span>{brand.nameFa} ({brand.nameEn}):</span>
+                        </div>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+                          {brandModels.map(m => {
+                            const isChecked = (editingProduct.fitments || []).some(f => f.modelId === m.id);
+                            return (
+                              <label
+                                key={m.id}
+                                className={`flex items-center gap-2 p-2 rounded-xl border text-[11px] cursor-pointer transition-colors ${
+                                  isChecked
+                                    ? 'bg-blue-50 border-blue-300 text-blue-900 font-bold'
+                                    : 'bg-white border-neutral-200 hover:border-neutral-300 text-neutral-700'
+                                }`}
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={isChecked}
+                                  onChange={e => {
+                                    const currentFitments = editingProduct.fitments || [];
+                                    if (e.target.checked) {
+                                      const newFitment = {
+                                        id: `fit-${m.id}-${Date.now()}`,
+                                        brandId: brand.id,
+                                        brandName: brand.nameFa,
+                                        modelId: m.id,
+                                        modelName: m.nameFa,
+                                        yearFrom: m.yearFrom,
+                                        yearTo: m.yearTo,
+                                        engine: m.engineSummary
+                                      };
+                                      setEditingProduct({
+                                        ...editingProduct,
+                                        fitments: [...currentFitments, newFitment],
+                                        vehicleModelIds: [...(editingProduct.vehicleModelIds || []), m.id]
+                                      });
+                                    } else {
+                                      setEditingProduct({
+                                        ...editingProduct,
+                                        fitments: currentFitments.filter(f => f.modelId !== m.id),
+                                        vehicleModelIds: (editingProduct.vehicleModelIds || []).filter(id => id !== m.id)
+                                      });
+                                    }
+                                  }}
+                                  className="rounded text-red-600 focus:ring-red-500"
+                                />
+                                <span>{m.nameFa}</span>
+                              </label>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Product Gallery Images (Upload, Add, Remove) */}
+              <div className="pt-2 border-t border-neutral-100">
+                <MultiImageUploadInput
+                  label="تصاویر و گالری کالا (آپلود عکس، حذف، شاخص کردن و پیش‌نمایش):"
+                  images={editingProduct.images || []}
+                  onChange={imgs => setEditingProduct({ ...editingProduct, images: imgs })}
+                  helperText="می‌توانید چندین تصویر آپلود کنید، تصاویر را حذف نمایید یا هر تصویر دلخواه را به عنوان عکس اصلی کالا تعیین کنید."
+                />
               </div>
 
               {/* Short Description */}
@@ -1922,15 +1957,263 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore }) => {
                 <button
                   type="button"
                   onClick={() => setEditingProduct(null)}
-                  className="flex-1 py-2.5 bg-neutral-100 text-neutral-700 rounded-xl font-bold"
+                  className="flex-1 py-2.5 bg-neutral-100 text-neutral-700 rounded-xl font-bold cursor-pointer"
                 >
                   انصراف
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-2.5 bg-red-600 text-white rounded-xl font-bold shadow-md hover:bg-red-700"
+                  className="flex-1 py-2.5 bg-red-600 text-white rounded-xl font-bold shadow-md hover:bg-red-700 cursor-pointer"
                 >
                   ذخیره تغییرات
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* =========================================================================
+          MODAL: ADD NEW PRODUCT TO INVENTORY
+      ========================================================================= */}
+      {isNewProductModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto space-y-4 text-right shadow-2xl">
+            <div className="flex items-center justify-between pb-3 border-b border-neutral-100">
+              <h3 className="font-bold text-base text-neutral-900 flex items-center gap-2">
+                <Package className="w-5 h-5 text-red-600" />
+                <span>تعریف و افزودن قطعه جدید به انبار</span>
+              </h3>
+              <button onClick={() => setIsNewProductModalOpen(false)} className="text-neutral-400 hover:text-neutral-700 cursor-pointer">✕</button>
+            </div>
+
+            <form onSubmit={handleCreateProduct} className="space-y-4 text-xs">
+              <div>
+                <label className="block text-neutral-600 mb-1 font-semibold">نام فارسی قطعه *:</label>
+                <input
+                  type="text"
+                  value={newProductForm.nameFa || ''}
+                  onChange={e => setNewProductForm({ ...newProductForm, nameFa: e.target.value })}
+                  placeholder="مثال: واتر پمپ، لنت ترمز جلو، دیسک و صفحه..."
+                  className="w-full p-2.5 border border-neutral-300 rounded-xl"
+                  required
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-neutral-600 mb-1 font-semibold">کد بین‌المللی OEM *:</label>
+                  <input
+                    type="text"
+                    value={newProductForm.oemNumber || ''}
+                    onChange={e => setNewProductForm({ ...newProductForm, oemNumber: e.target.value })}
+                    placeholder="1016001234"
+                    className="w-full p-2.5 border border-neutral-300 rounded-xl font-mono uppercase"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-neutral-600 mb-1 font-semibold">کد SKU انبار:</label>
+                  <input
+                    type="text"
+                    value={newProductForm.sku || ''}
+                    onChange={e => setNewProductForm({ ...newProductForm, sku: e.target.value })}
+                    placeholder="SKU-8921"
+                    className="w-full p-2.5 border border-neutral-300 rounded-xl font-mono"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-neutral-600 mb-1 font-semibold">قیمت فروش (ریال) *:</label>
+                  <input
+                    type="number"
+                    value={newProductForm.price || ''}
+                    onChange={e => setNewProductForm({ ...newProductForm, price: Number(e.target.value) })}
+                    placeholder="25000000"
+                    className="w-full p-2.5 border border-neutral-300 rounded-xl font-mono"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-neutral-600 mb-1 font-semibold">موجودی انبار *:</label>
+                  <input
+                    type="number"
+                    value={newProductForm.stock || ''}
+                    onChange={e => setNewProductForm({ ...newProductForm, stock: Number(e.target.value) })}
+                    placeholder="10"
+                    className="w-full p-2.5 border border-neutral-300 rounded-xl font-mono"
+                    required
+                  />
+                </div>
+              </div>
+
+              {/* Category & Manufacturer Company */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-neutral-100">
+                <div>
+                  <label className="block text-neutral-600 mb-1 font-semibold">دسته‌بندی تخصصی قطعه *:</label>
+                  <select
+                    value={newProductForm.categorySlug || 'engine'}
+                    onChange={e => setNewProductForm({ ...newProductForm, categorySlug: e.target.value })}
+                    className="w-full p-2.5 border border-neutral-300 rounded-xl bg-white"
+                  >
+                    {categories.map(c => (
+                      <option key={c.id} value={c.slug}>{c.nameFa} ({c.nameEn})</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-neutral-600 mb-1 font-semibold">شرکت / برند سازنده قطعه (تولیدکننده) *:</label>
+                  <input
+                    type="text"
+                    value={newProductForm.brandManufacturer || ''}
+                    onChange={e => setNewProductForm({ ...newProductForm, brandManufacturer: e.target.value })}
+                    placeholder="مثال: چری شرکتی، مدیران خودرو، کرمان موتور، بوش..."
+                    className="w-full p-2.5 border border-neutral-300 rounded-xl"
+                    required
+                  />
+                  <div className="flex flex-wrap gap-1 mt-1.5">
+                    {['چری شرکتی', 'مدیران خودرو', 'کرمان موتور (KMC)', 'ایساکو', 'سایپا یدک', 'بوش (Bosch)', 'والئو (Valeo)', 'گتس (Gates)'].map(brandName => (
+                      <button
+                        type="button"
+                        key={brandName}
+                        onClick={() => setNewProductForm({ ...newProductForm, brandManufacturer: brandName })}
+                        className="text-[10px] px-2 py-0.5 rounded-lg bg-neutral-100 hover:bg-red-50 hover:text-red-700 text-neutral-600 transition-colors cursor-pointer"
+                      >
+                        {brandName}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Compatible Vehicle Models (Fitments) */}
+              <div className="pt-2 border-t border-neutral-100 space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="block text-neutral-700 font-bold">
+                    خودروهای سازگار با این قطعه (وابستگی به مدل و کارخانه):
+                  </label>
+                  <span className="text-[11px] text-blue-700 font-bold bg-blue-50 px-2 py-0.5 rounded-lg border border-blue-200">
+                    {(newProductForm.fitments || []).length} خودرو انتخاب شده
+                  </span>
+                </div>
+                <p className="text-[11px] text-neutral-500">
+                  انتخاب کنید این محصول برای کدام خودروها مناسب است تا در جستجو و فیلترهای خودرویی دقیقاً برای آن خودروها پیشنهاد شود:
+                </p>
+                <div className="max-h-48 overflow-y-auto p-3 border border-neutral-200 rounded-2xl bg-neutral-50/50 space-y-3">
+                  {brands.map(brand => {
+                    const brandModels = models.filter(m => m.brandId === brand.id);
+                    if (brandModels.length === 0) return null;
+                    return (
+                      <div key={brand.id} className="space-y-1.5">
+                        <div className="font-bold text-[11px] text-neutral-800 flex items-center gap-1.5">
+                          <span className="w-1.5 h-1.5 rounded-full bg-red-600"></span>
+                          <span>{brand.nameFa} ({brand.nameEn}):</span>
+                        </div>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+                          {brandModels.map(m => {
+                            const isChecked = (newProductForm.fitments || []).some(f => f.modelId === m.id);
+                            return (
+                              <label
+                                key={m.id}
+                                className={`flex items-center gap-2 p-2 rounded-xl border text-[11px] cursor-pointer transition-colors ${
+                                  isChecked
+                                    ? 'bg-blue-50 border-blue-300 text-blue-900 font-bold'
+                                    : 'bg-white border-neutral-200 hover:border-neutral-300 text-neutral-700'
+                                }`}
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={isChecked}
+                                  onChange={e => {
+                                    const currentFitments = newProductForm.fitments || [];
+                                    if (e.target.checked) {
+                                      const newFitment = {
+                                        id: `fit-${m.id}-${Date.now()}`,
+                                        brandId: brand.id,
+                                        brandName: brand.nameFa,
+                                        modelId: m.id,
+                                        modelName: m.nameFa,
+                                        yearFrom: m.yearFrom,
+                                        yearTo: m.yearTo,
+                                        engine: m.engineSummary
+                                      };
+                                      setNewProductForm({
+                                        ...newProductForm,
+                                        fitments: [...currentFitments, newFitment],
+                                        vehicleModelIds: [...(newProductForm.vehicleModelIds || []), m.id]
+                                      });
+                                    } else {
+                                      setNewProductForm({
+                                        ...newProductForm,
+                                        fitments: currentFitments.filter(f => f.modelId !== m.id),
+                                        vehicleModelIds: (newProductForm.vehicleModelIds || []).filter(id => id !== m.id)
+                                      });
+                                    }
+                                  }}
+                                  className="rounded text-red-600 focus:ring-red-500"
+                                />
+                                <span>{m.nameFa}</span>
+                              </label>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Product Gallery Images (Upload, Add, Remove) */}
+              <div className="pt-2 border-t border-neutral-100">
+                <MultiImageUploadInput
+                  label="تصاویر و گالری کالا:"
+                  images={newProductForm.images || []}
+                  onChange={imgs => setNewProductForm({ ...newProductForm, images: imgs })}
+                  helperText="می‌توانید عکس محصول را مستقیم آپلود کنید یا آدرس آن را وارد نمایید."
+                />
+              </div>
+
+              {/* Short Description */}
+              <div>
+                <label className="block text-neutral-600 mb-1 font-semibold">
+                  توضیحات کوتاه قطعه:
+                </label>
+                <textarea
+                  rows={2}
+                  value={newProductForm.shortDescription || ''}
+                  onChange={e => setNewProductForm({ ...newProductForm, shortDescription: e.target.value })}
+                  placeholder="خلاصه ۲ خطی مشخصات..."
+                  className="w-full p-2.5 border border-neutral-300 rounded-xl"
+                />
+              </div>
+
+              {/* Full Rich Description */}
+              <div>
+                <RichTextEditor
+                  label="توضیحات کامل و نقد فنی:"
+                  value={newProductForm.description || ''}
+                  onChange={val => setNewProductForm({ ...newProductForm, description: val })}
+                  rows={5}
+                  placeholder="توضیحات جامع قطعه..."
+                />
+              </div>
+
+              <div className="flex gap-2 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setIsNewProductModalOpen(false)}
+                  className="flex-1 py-2.5 bg-neutral-100 text-neutral-700 rounded-xl font-bold cursor-pointer"
+                >
+                  انصراف
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 py-2.5 bg-red-600 text-white rounded-xl font-bold shadow-md hover:bg-red-700 cursor-pointer"
+                >
+                  افزودن قطعه به انبار
                 </button>
               </div>
             </form>
@@ -1997,10 +2280,61 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore }) => {
                 />
               </div>
 
+              {/* Category Icon Picker & Custom Icon Upload */}
+              <div className="grid grid-cols-2 gap-3 pt-2 border-t border-neutral-100">
+                <div>
+                  <label className="block text-neutral-600 mb-1 font-semibold">انتخاب آیکون سیستم:</label>
+                  <select
+                    value={newCatIcon}
+                    onChange={e => setNewCatIcon(e.target.value)}
+                    className="w-full p-2.5 border border-neutral-300 rounded-xl bg-white"
+                  >
+                    <option value="Cpu">موتور و متعلقات</option>
+                    <option value="Disc">سیستم ترمز</option>
+                    <option value="Cog">گیربکس و انتقال قدرت</option>
+                    <option value="Clock">سیستم تایم</option>
+                    <option value="Shield">جلوبندی و تعلیق</option>
+                    <option value="Thermometer">رادیاتور و خنک‌کننده</option>
+                    <option value="Zap">توربوشارژر و مکش</option>
+                    <option value="Flame">سوخت‌رسانی و انژکتور</option>
+                    <option value="Layers">فیلترها و سرویس</option>
+                    <option value="Sun">روشنایی و چراغ</option>
+                    <option value="Wrench">فنی و تعمیرات</option>
+                    <option value="Package">پکیج قطعات</option>
+                  </select>
+                </div>
+                <div>
+                  <ImageUploadInput
+                    label="یا آپلود آیکون SVG/PNG اختصاصی:"
+                    value={newCatIconUrl}
+                    onChange={url => setNewCatIconUrl(url)}
+                    aspectRatio="square"
+                    presetCategory="logos"
+                    placeholder="لینک یا فایل آیکون..."
+                  />
+                </div>
+              </div>
+
+              {/* Category Image Upload / Remove */}
+              <div className="pt-2 border-t border-neutral-100">
+                <ImageUploadInput
+                  label="تصویر یا بنر دسته‌بندی (امکان آپلود مستقیم، درج لینک یا حذف):"
+                  value={newCatImage}
+                  onChange={url => setNewCatImage(url)}
+                  aspectRatio="square"
+                  presetCategory="parts"
+                  placeholder="تصویر شاخص دسته‌بندی را انتخاب یا آپلود کنید..."
+                  helperText="این تصویر در منوها، صفحه اصلی و لیست دسته‌بندی‌های قطعات نمایش داده می‌شود."
+                />
+              </div>
+
               <div className="flex gap-2 pt-4">
                 <button
                   type="button"
-                  onClick={() => setIsCategoryModalOpen(false)}
+                  onClick={() => {
+                    setIsCategoryModalOpen(false);
+                    setNewCatImage('');
+                  }}
                   className="flex-1 py-2.5 bg-neutral-100 text-neutral-700 rounded-xl font-bold"
                 >
                   انصراف
@@ -2010,6 +2344,129 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore }) => {
                   className="flex-1 py-2.5 bg-red-600 text-white rounded-xl font-bold shadow-md hover:bg-red-700"
                 >
                   ذخیره دسته
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* =========================================================================
+          MODAL: EDIT CATEGORY (Image Upload, Remove, and Edit)
+      ========================================================================= */}
+      {editingCategory && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full space-y-4 text-right shadow-2xl">
+            <div className="flex items-center justify-between pb-3 border-b border-neutral-100">
+              <h3 className="font-bold text-base text-neutral-900">ویرایش دسته‌بندی قطعات و عکس</h3>
+              <button onClick={() => setEditingCategory(null)} className="text-neutral-400 hover:text-neutral-700">✕</button>
+            </div>
+
+            <form onSubmit={handleSaveCategory} className="space-y-4 text-xs">
+              <div>
+                <label className="block text-neutral-600 mb-1 font-semibold">نام فارسی دسته‌بندی *:</label>
+                <input
+                  type="text"
+                  value={editingCategory.nameFa}
+                  onChange={e => setEditingCategory({ ...editingCategory, nameFa: e.target.value })}
+                  className="w-full p-2.5 border border-neutral-300 rounded-xl"
+                  required
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-neutral-600 mb-1 font-semibold">نام انگلیسی:</label>
+                  <input
+                    type="text"
+                    value={editingCategory.nameEn}
+                    onChange={e => setEditingCategory({ ...editingCategory, nameEn: e.target.value })}
+                    className="w-full p-2.5 border border-neutral-300 rounded-xl"
+                  />
+                </div>
+                <div>
+                  <label className="block text-neutral-600 mb-1 font-semibold">اسلاگ (Slug) *:</label>
+                  <input
+                    type="text"
+                    value={editingCategory.slug}
+                    onChange={e => setEditingCategory({ ...editingCategory, slug: e.target.value })}
+                    className="w-full p-2.5 border border-neutral-300 rounded-xl font-mono text-left"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-neutral-600 mb-1 font-semibold">توضیح کوتاه فنی:</label>
+                <textarea
+                  rows={2}
+                  value={editingCategory.description || ''}
+                  onChange={e => setEditingCategory({ ...editingCategory, description: e.target.value })}
+                  className="w-full p-2.5 border border-neutral-300 rounded-xl"
+                />
+              </div>
+
+              {/* Category Icon Picker & Custom Icon Upload */}
+              <div className="grid grid-cols-2 gap-3 pt-2 border-t border-neutral-100">
+                <div>
+                  <label className="block text-neutral-600 mb-1 font-semibold">انتخاب آیکون سیستم:</label>
+                  <select
+                    value={editingCategory.icon || 'Cpu'}
+                    onChange={e => setEditingCategory({ ...editingCategory, icon: e.target.value })}
+                    className="w-full p-2.5 border border-neutral-300 rounded-xl bg-white"
+                  >
+                    <option value="Cpu">موتور و متعلقات</option>
+                    <option value="Disc">سیستم ترمز</option>
+                    <option value="Cog">گیربکس و انتقال قدرت</option>
+                    <option value="Clock">سیستم تایم</option>
+                    <option value="Shield">جلوبندی و تعلیق</option>
+                    <option value="Thermometer">رادیاتور و خنک‌کننده</option>
+                    <option value="Zap">توربوشارژر و مکش</option>
+                    <option value="Flame">سوخت‌رسانی و انژکتور</option>
+                    <option value="Layers">فیلترها و سرویس</option>
+                    <option value="Sun">روشنایی و چراغ</option>
+                    <option value="Wrench">فنی و تعمیرات</option>
+                    <option value="Package">پکیج قطعات</option>
+                  </select>
+                </div>
+                <div>
+                  <ImageUploadInput
+                    label="یا آپلود آیکون SVG/PNG اختصاصی:"
+                    value={editingCategory.iconUrl || ''}
+                    onChange={url => setEditingCategory({ ...editingCategory, iconUrl: url })}
+                    aspectRatio="square"
+                    presetCategory="logos"
+                    placeholder="لینک یا فایل آیکون..."
+                  />
+                </div>
+              </div>
+
+              {/* Category Image Upload / Remove */}
+              <div className="pt-2 border-t border-neutral-100">
+                <ImageUploadInput
+                  label="تصویر شاخص دسته‌بندی (امکان آپلود، لینک و حذف عکس):"
+                  value={editingCategory.imageUrl || ''}
+                  onChange={url => setEditingCategory({ ...editingCategory, imageUrl: url })}
+                  aspectRatio="square"
+                  presetCategory="parts"
+                  placeholder="تصویر جدید دسته‌بندی را انتخاب یا آپلود کنید..."
+                  helperText="برای حذف کامل تصویر دسته‌بندی، از دکمه حذف قرمز رنگ استفاده کنید."
+                />
+              </div>
+
+              <div className="flex gap-2 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setEditingCategory(null)}
+                  className="flex-1 py-2.5 bg-neutral-100 text-neutral-700 rounded-xl font-bold"
+                >
+                  انصراف
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 py-2.5 bg-red-600 text-white rounded-xl font-bold shadow-md hover:bg-red-700"
+                >
+                  ذخیره تغییرات
                 </button>
               </div>
             </form>
@@ -2106,6 +2563,19 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore }) => {
             </form>
           </div>
         </div>
+      )}
+
+      {/* Official Tax Invoice Modal */}
+      {selectedOrderForInvoice && (
+        <InvoiceModal
+          order={selectedOrderForInvoice}
+          settings={settings}
+          onClose={() => setSelectedOrderForInvoice(null)}
+          onOpenDedicatedPage={(orderId) => {
+            setSelectedOrderForInvoice(null);
+            if (onNavigate) onNavigate('invoice', orderId);
+          }}
+        />
       )}
 
     </div>

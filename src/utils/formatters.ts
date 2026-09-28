@@ -1,8 +1,10 @@
 import { Product, GarageCar, QualityGrade } from '../types';
 
-export const formatToman = (amount: number): string => {
-  return new Intl.NumberFormat('fa-IR').format(amount) + ' تومان';
+export const formatRial = (amount: number): string => {
+  return new Intl.NumberFormat('fa-IR').format(amount) + ' ریال';
 };
+
+export const formatToman = formatRial;
 
 export const formatPersianDigits = (num: number | string): string => {
   const farsiDigits = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'];

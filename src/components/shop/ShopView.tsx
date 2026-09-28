@@ -34,11 +34,21 @@ export const ShopView: React.FC<ShopViewProps> = ({
   // Filters state
   const [selectedCategory, setSelectedCategory] = useState<string>(initialCategory || 'all');
   const [selectedBrand, setSelectedBrand] = useState<string>('all');
+  const [selectedManufacturer, setSelectedManufacturer] = useState<string>('all');
   const [selectedGrade, setSelectedGrade] = useState<QualityGrade | 'all'>('all');
   const [onlyInStock, setOnlyInStock] = useState<boolean>(false);
   const [onlyFitActiveVehicle, setOnlyFitActiveVehicle] = useState<boolean>(Boolean(selectedVehicle));
   const [sortBy, setSortBy] = useState<'bestseller' | 'price_asc' | 'price_desc' | 'rating'>('bestseller');
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
+
+  // Available unique manufacturer brands
+  const availableManufacturers = useMemo(() => {
+    const set = new Set<string>();
+    products.forEach(p => {
+      if (p.brandManufacturer) set.add(p.brandManufacturer);
+    });
+    return Array.from(set);
+  }, [products]);
 
   // Filtered & Sorted products
   const filteredProducts = useMemo(() => {
@@ -48,23 +58,28 @@ export const ShopView: React.FC<ShopViewProps> = ({
         return false;
       }
 
-      // 2. Brand Filter
+      // 2. Brand (Car Manufacturer) Filter
       if (selectedBrand !== 'all') {
         const hasBrandFitment = p.fitments.some(f => f.brandId === selectedBrand || f.modelId === 'all');
         if (!hasBrandFitment) return false;
       }
 
-      // 3. Quality Grade Filter
+      // 3. Part Manufacturer Company Filter
+      if (selectedManufacturer !== 'all' && p.brandManufacturer !== selectedManufacturer) {
+        return false;
+      }
+
+      // 4. Quality Grade Filter
       if (selectedGrade !== 'all' && p.grade !== selectedGrade) {
         return false;
       }
 
-      // 4. In Stock Filter
+      // 5. In Stock Filter
       if (onlyInStock && p.stockStatus === 'out_of_stock') {
         return false;
       }
 
-      // 5. Active Vehicle Filter
+      // 6. Active Vehicle Filter
       if (onlyFitActiveVehicle && selectedVehicle) {
         const fits = p.fitments.some(f => 
           f.modelId === selectedVehicle.modelId || 
@@ -88,13 +103,14 @@ export const ShopView: React.FC<ShopViewProps> = ({
       // default: bestseller
       return (b.isBestSeller ? 1 : 0) - (a.isBestSeller ? 1 : 0);
     });
-  }, [products, selectedCategory, selectedBrand, selectedGrade, onlyInStock, onlyFitActiveVehicle, selectedVehicle, sortBy]);
+  }, [products, selectedCategory, selectedBrand, selectedManufacturer, selectedGrade, onlyInStock, onlyFitActiveVehicle, selectedVehicle, sortBy]);
 
   const activeCategoryObj = categories.find(c => c.slug === selectedCategory);
 
   const resetAllFilters = () => {
     setSelectedCategory('all');
     setSelectedBrand('all');
+    setSelectedManufacturer('all');
     setSelectedGrade('all');
     setOnlyInStock(false);
   };
@@ -239,6 +255,46 @@ export const ShopView: React.FC<ShopViewProps> = ({
                   }`}
                 >
                   {b.nameFa}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Manufacturer Company / Brand Filter */}
+          <div className="space-y-2 pt-4 border-t border-neutral-100">
+            <div className="flex items-center justify-between">
+              <h4 className="font-bold text-xs text-neutral-800">شرکت / برند سازنده قطعه:</h4>
+              {selectedManufacturer !== 'all' && (
+                <button
+                  onClick={() => setSelectedManufacturer('all')}
+                  className="text-[10px] text-red-600 hover:underline font-bold"
+                >
+                  حذف فیلتر
+                </button>
+              )}
+            </div>
+            <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto p-1">
+              <button
+                onClick={() => setSelectedManufacturer('all')}
+                className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-colors cursor-pointer ${
+                  selectedManufacturer === 'all'
+                    ? 'bg-neutral-900 text-white font-bold'
+                    : 'bg-neutral-50 text-neutral-600 hover:bg-neutral-100 border border-neutral-200'
+                }`}
+              >
+                همه شرکت‌ها
+              </button>
+              {availableManufacturers.map(mfg => (
+                <button
+                  key={mfg}
+                  onClick={() => setSelectedManufacturer(mfg)}
+                  className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-colors cursor-pointer ${
+                    selectedManufacturer === mfg
+                      ? 'bg-red-600 text-white font-bold'
+                      : 'bg-neutral-50 text-neutral-600 hover:bg-neutral-100 border border-neutral-200'
+                  }`}
+                >
+                  {mfg}
                 </button>
               ))}
             </div>

@@ -13,7 +13,11 @@ import {
   Phone,
   MapPin,
   Clock,
-  Sparkles
+  Sparkles,
+  Coins,
+  Award,
+  Gift,
+  Info
 } from 'lucide-react';
 
 interface CheckoutViewProps {
@@ -22,7 +26,24 @@ interface CheckoutViewProps {
 }
 
 export const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderCompleted, onNavigate }) => {
-  const { cart, cartTotal, createOrder, showToast, currentCustomer } = useStore();
+  const { 
+    cart, 
+    cartTotal, 
+    createOrder, 
+    showToast, 
+    currentCustomer,
+    getCustomerPoints,
+    calculatePointsEarned,
+    calculatePointsValue,
+    getTierInfo,
+    settings 
+  } = useStore();
+
+  const customerPoints = getCustomerPoints(currentCustomer?.id);
+  const tierInfo = getTierInfo(customerPoints);
+  const pointValue = settings.loyaltySettings?.tomanPerPoint ?? 1000;
+  const minRedeemPoints = settings.loyaltySettings?.minimumRedeemPoints ?? 50;
+  const maxRedeemPercent = settings.loyaltySettings?.maxRedeemPercent ?? 50;
 
   // Form State
   const [firstName, setFirstName] = useState(currentCustomer?.firstName || '');
@@ -44,12 +65,38 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderCompleted, on
   const [couponCode, setCouponCode] = useState('');
   const [appliedDiscount, setAppliedDiscount] = useState<number>(0);
 
+  // Loyalty Points Redemption State
+  const [useLoyaltyPoints, setUseLoyaltyPoints] = useState(false);
+  const [redeemedPoints, setRedeemedPoints] = useState<number>(0);
+
   // Simulation of payment step
   const [isProcessing, setIsProcessing] = useState(false);
   const [paymentFailed, setPaymentFailed] = useState(false);
 
+  // Loyalty calculations
+  const remainingSubtotal = Math.max(0, cartTotal - appliedDiscount);
+  const maxDiscountAllowed = Math.floor((remainingSubtotal * maxRedeemPercent) / 100);
+  const maxPointsAllowed = Math.min(customerPoints, Math.floor(maxDiscountAllowed / pointValue));
+
+  const effectiveRedeemedPoints = useLoyaltyPoints ? Math.min(redeemedPoints, maxPointsAllowed) : 0;
+  const loyaltyDiscount = effectiveRedeemedPoints * pointValue;
+
   const shippingCost = selectedShipping === 'express' ? 120000 : selectedShipping === 'tipax' ? 110000 : 85000;
-  const finalTotal = Math.max(0, cartTotal - appliedDiscount + shippingCost);
+  const finalTotal = Math.max(0, cartTotal - appliedDiscount - loyaltyDiscount + shippingCost);
+
+  const pointsEarnedFromThisOrder = calculatePointsEarned(
+    Math.max(0, cartTotal - appliedDiscount - loyaltyDiscount),
+    currentCustomer?.id
+  );
+
+  const handleToggleLoyalty = (checked: boolean) => {
+    setUseLoyaltyPoints(checked);
+    if (checked) {
+      setRedeemedPoints(maxPointsAllowed);
+    } else {
+      setRedeemedPoints(0);
+    }
+  };
 
   const handleApplyCoupon = (e: React.FormEvent) => {
     e.preventDefault();
@@ -119,6 +166,7 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderCompleted, on
         },
         subtotal: cartTotal,
         discountAmount: appliedDiscount,
+        loyaltyPointsToRedeem: useLoyaltyPoints ? effectiveRedeemedPoints : 0,
         shippingFee: shippingCost,
         total: finalTotal
       });
@@ -452,11 +500,129 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderCompleted, on
               />
               <button
                 type="submit"
-                className="px-4 py-2.5 bg-neutral-900 hover:bg-neutral-800 text-white rounded-xl text-xs font-bold transition-colors"
+                className="px-4 py-2.5 bg-neutral-900 hover:bg-neutral-800 text-white rounded-xl text-xs font-bold transition-colors cursor-pointer"
               >
                 اعمال
               </button>
             </form>
+
+            {/* Loyalty Points Redemption Card */}
+            <div className="pt-3 border-t border-neutral-100 space-y-3">
+              {currentCustomer ? (
+                <div className={`p-4 rounded-2xl border transition-all ${
+                  useLoyaltyPoints 
+                    ? 'border-amber-400 bg-amber-50/40 ring-1 ring-amber-400/30' 
+                    : 'border-neutral-200 bg-neutral-50/60'
+                }`}>
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center font-bold shrink-0">
+                        <Sparkles className="w-4 h-4 text-amber-600" />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-1.5">
+                          <h4 className="font-bold text-xs text-neutral-900">باشگاه وفاداری چین‌پارت</h4>
+                          <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${tierInfo.badgeClass}`}>
+                            {tierInfo.title}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-neutral-500 font-medium mt-0.5">
+                          موجودی: <strong className="text-amber-700 font-mono font-bold">{customerPoints.toLocaleString('fa-IR')}</strong> امتیاز
+                          {customerPoints > 0 && ` (معادل ${formatToman(calculatePointsValue(customerPoints))})`}
+                        </p>
+                      </div>
+                    </div>
+
+                    {customerPoints >= minRedeemPoints && maxPointsAllowed > 0 && (
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={useLoyaltyPoints}
+                          onChange={(e) => handleToggleLoyalty(e.target.checked)}
+                          className="sr-only peer"
+                        />
+                        <div className="w-9 h-5 bg-neutral-300 peer-focus:outline-hidden rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:right-[2px] after:bg-white after:border-neutral-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-amber-500"></div>
+                      </label>
+                    )}
+                  </div>
+
+                  {customerPoints < minRedeemPoints ? (
+                    <div className="mt-2 text-[11px] text-neutral-500 bg-white/80 p-2 rounded-xl border border-neutral-200 flex items-center gap-1.5">
+                      <Info className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
+                      <span>حداقل موجودی مجاز برای تسویه ۵۰ امتیاز است (موجودی فعلی شما: {customerPoints} امتیاز).</span>
+                    </div>
+                  ) : useLoyaltyPoints ? (
+                    <div className="mt-3 pt-3 border-t border-amber-200/60 space-y-2.5">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="font-bold text-neutral-700">تعداد امتیاز جهت تبدیل به تخفیف:</span>
+                        <span className="font-mono font-black text-amber-700">
+                          {effectiveRedeemedPoints.toLocaleString('fa-IR')} امتیاز
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="range"
+                          min={minRedeemPoints}
+                          max={maxPointsAllowed}
+                          step={10}
+                          value={effectiveRedeemedPoints}
+                          onChange={(e) => setRedeemedPoints(Number(e.target.value))}
+                          className="flex-1 accent-amber-500 cursor-pointer"
+                        />
+                        <span className="text-[11px] font-mono text-neutral-500 font-bold">
+                          {maxPointsAllowed} حداکثر
+                        </span>
+                      </div>
+
+                      <div className="flex items-center justify-between gap-2 pt-1">
+                        <div className="flex gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => setRedeemedPoints(maxPointsAllowed)}
+                            className="px-2 py-0.5 text-[10px] font-bold bg-amber-100 hover:bg-amber-200 text-amber-900 rounded-md transition-colors cursor-pointer"
+                          >
+                            حداکثر مجاز
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setRedeemedPoints(Math.floor(maxPointsAllowed / 2))}
+                            className="px-2 py-0.5 text-[10px] font-bold bg-neutral-200/80 hover:bg-neutral-300 text-neutral-700 rounded-md transition-colors cursor-pointer"
+                          >
+                            ۵۰٪
+                          </button>
+                        </div>
+
+                        <span className="text-xs font-bold text-emerald-700 font-mono">
+                          تخفیف: {formatToman(loyaltyDiscount)}
+                        </span>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="mt-2 text-[11px] text-neutral-500">
+                      برای فعال‌سازی و کسر تخفیف تا سقف {formatToman(calculatePointsValue(maxPointsAllowed))} کلید بالا را روشن نمایید.
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <div className="p-3.5 rounded-2xl bg-amber-50/60 border border-amber-200/70 text-xs space-y-2">
+                  <div className="flex items-center gap-2 text-amber-900 font-bold">
+                    <Sparkles className="w-4 h-4 text-amber-600 shrink-0" />
+                    <span>باشگاه وفاداری و تخفیف با امتیاز</span>
+                  </div>
+                  <p className="text-[11px] text-amber-800 leading-relaxed">
+                    با ورود به حساب یا ثبت‌نام در سایت، می‌توانید از امتیازات وفاداری خود برای تخفیف این سفارش استفاده کنید.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => onNavigate('account')}
+                    className="text-[11px] font-bold text-amber-900 underline hover:text-amber-700 cursor-pointer block"
+                  >
+                    ورود به حساب کاربری
+                  </button>
+                </div>
+              )}
+            </div>
 
             {/* Price Calculations */}
             <div className="space-y-2 pt-3 border-t border-neutral-100 text-xs text-neutral-600">
@@ -467,8 +633,18 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderCompleted, on
 
               {appliedDiscount > 0 && (
                 <div className="flex justify-between text-emerald-700 font-bold">
-                  <span>تخفیف ویژه:</span>
+                  <span>تخفیف ویژه کوپن:</span>
                   <span>- {formatToman(appliedDiscount)}</span>
+                </div>
+              )}
+
+              {loyaltyDiscount > 0 && (
+                <div className="flex justify-between text-amber-700 font-bold animate-in fade-in">
+                  <span className="flex items-center gap-1">
+                    <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                    <span>تخفیف امتیاز وفاداری ({effectiveRedeemedPoints} امتیاز):</span>
+                  </span>
+                  <span>- {formatToman(loyaltyDiscount)}</span>
                 </div>
               )}
 
@@ -479,7 +655,18 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderCompleted, on
 
               <div className="pt-3 border-t border-neutral-200 flex justify-between text-base font-black text-neutral-900">
                 <span>مبلغ نهایی پرداخت:</span>
-                <span className="text-red-600">{formatToman(finalTotal)}</span>
+                <span className="text-red-600 font-mono text-lg">{formatToman(finalTotal)}</span>
+              </div>
+
+              {/* Points to be earned notification */}
+              <div className="mt-2 p-2.5 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-between text-xs text-emerald-800">
+                <span className="flex items-center gap-1.5 font-medium">
+                  <Coins className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>امتیاز وفاداری دریافتی از این خرید:</span>
+                </span>
+                <span className="font-black font-mono text-emerald-700">
+                  +{pointsEarnedFromThisOrder.toLocaleString('fa-IR')} امتیاز
+                </span>
               </div>
             </div>
 

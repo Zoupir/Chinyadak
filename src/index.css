@@ -4,13 +4,35 @@
 :root {
   --site-font: 'Vazirmatn', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --primary-color: #DC2626;
+  --primary-hover: #b91c1c;
+  --primary-light: rgba(220, 38, 38, 0.08);
+  --primary-border: rgba(220, 38, 38, 0.25);
+  --primary-dark: #991b1b;
+  --accent-glow: #DC2626;
+  --accent-glow-subtle: rgba(220, 38, 38, 0.25);
+  --accent-glow-strong: rgba(220, 38, 38, 0.45);
+  --site-bg: #0a0a0a;
+  --card-bg: #171717;
+  --header-bg: #0a0a0a;
+  --footer-bg: #0a0a0a;
+  --text-color: #ffffff;
+  --theme-radius: 12px;
 }
 
 * {
   font-family: var(--site-font) !important;
 }
 
-html,
+html {
+  font-size: 16px;
+  direction: rtl;
+  text-align: right;
+  width: 100%;
+  max-width: 100vw;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
 body {
   direction: rtl;
   text-align: right;
@@ -26,6 +48,111 @@ body {
   width: 100%;
   max-width: 100vw;
   overflow-x: hidden;
+}
+
+/* =========================================================================
+   DYNAMIC LIVE THEME CONTROLLER & CSS VARIABLES OVERRIDES
+========================================================================= */
+
+/* Primary Background Colors */
+.bg-red-600,
+.bg-red-500 {
+  background-color: var(--primary-color) !important;
+}
+
+.hover\:bg-red-700:hover,
+.hover\:bg-red-600:hover {
+  background-color: var(--primary-hover) !important;
+}
+
+/* Primary Text Colors */
+.text-red-600,
+.text-red-500 {
+  color: var(--primary-color) !important;
+}
+
+.hover\:text-red-600:hover,
+.hover\:text-red-700:hover {
+  color: var(--primary-hover) !important;
+}
+
+.hover\:text-red-500:hover {
+  color: var(--primary-hover) !important;
+}
+
+/* Border & Accent Colors */
+.border-red-600,
+.border-red-500 {
+  border-color: var(--primary-color) !important;
+}
+
+.border-red-200 {
+  border-color: var(--primary-border) !important;
+}
+
+.hover\:border-red-500:hover,
+.hover\:border-red-600:hover {
+  border-color: var(--primary-color) !important;
+}
+
+.bg-red-50 {
+  background-color: var(--primary-light) !important;
+}
+
+.text-red-700,
+.text-red-800 {
+  color: var(--primary-dark) !important;
+}
+
+/* Gradients */
+.from-red-600 {
+  --tw-gradient-from: var(--primary-color) var(--tw-gradient-from-position) !important;
+}
+
+.to-red-800 {
+  --tw-gradient-to: var(--primary-dark) var(--tw-gradient-to-position) !important;
+}
+
+::selection {
+  background-color: var(--primary-color) !important;
+  color: #ffffff !important;
+}
+
+/* Red Highlight & Glow Underneath Buttons, Cards, Hover States */
+.shadow-red-600\/30,
+.shadow-red-600\/25,
+.shadow-red-600\/20,
+.shadow-red-500\/25,
+.shadow-red-500\/20,
+.shadow-red-500\/10 {
+  box-shadow: 0 10px 25px -4px var(--accent-glow-subtle), 0 4px 6px -2px var(--accent-glow-subtle) !important;
+}
+
+.hover\:shadow-red-600\/40:hover,
+.hover\:shadow-red-600\/30:hover,
+.hover\:shadow-red-500\/30:hover {
+  box-shadow: 0 16px 32px -4px var(--accent-glow-strong) !important;
+}
+
+/* Focus and ring highlights */
+.ring-red-600,
+.ring-red-500,
+.focus\:ring-red-600:focus,
+.focus\:ring-red-500:focus {
+  --tw-ring-color: var(--accent-glow) !important;
+}
+
+/* Dynamic Border Radius */
+.rounded-xl {
+  border-radius: var(--theme-radius) !important;
+}
+
+.rounded-2xl {
+  border-radius: calc(var(--theme-radius) * 1.35) !important;
+}
+
+.rounded-3xl {
+  border-radius: calc(var(--theme-radius) * 1.7) !important;
 }
 
 /* Custom automotive UI accents */
@@ -53,12 +180,66 @@ body {
   height: 8px;
 }
 ::-webkit-scrollbar-track {
-  background: #f1f5f9;
+  background: #18181b;
 }
 ::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
+  background: #3f3f46;
   border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+  background: var(--primary-color);
+}
+
+/* =========================================================================
+   PERFECT A4 OFFICIAL INVOICE PRINT STYLES
+========================================================================= */
+@media print {
+  *, *::before, *::after {
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+
+  body {
+    background-color: #ffffff !important;
+    color: #111827 !important;
+    print-color-adjust: exact !important;
+    -webkit-print-color-adjust: exact !important;
+    overflow: visible !important;
+  }
+
+  /* Hide main site navigation & floating elements in print */
+  header, footer, nav, aside, .print\:hidden {
+    display: none !important;
+  }
+
+  /* Ensure modal and page wrappers don't clip */
+  .fixed, .overflow-y-auto, .overflow-hidden {
+    position: static !important;
+    overflow: visible !important;
+  }
+
+  #invoice-printable, .invoice-printable-container {
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    border: none !important;
+    box-shadow: none !important;
+    background: #ffffff !important;
+    page-break-after: auto;
+  }
+
+  tr {
+    page-break-inside: avoid !important;
+  }
+
+  .avoid-break {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  @page {
+    size: A4 portrait;
+    margin: 10mm 10mm 10mm 10mm;
+  }
 }

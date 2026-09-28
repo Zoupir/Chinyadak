@@ -19,10 +19,26 @@ import {
 } from 'lucide-react';
 
 export const AdminUsersTab: React.FC = () => {
-  const { adminUsers, addAdminUser, updateAdminUser, deleteAdminUser, toggleAdminStatus, adminAuth } = useStore();
+  const { 
+    adminUsers, 
+    addAdminUser, 
+    updateAdminUser, 
+    deleteAdminUser, 
+    toggleAdminStatus, 
+    adminAuth,
+    adminChangePassword,
+    showToast
+  } = useStore();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isPasswordChangeOpen, setIsPasswordChangeOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<AdminUser | null>(null);
+
+  // Super Admin Password Change Form
+  const [currentPasswordInput, setCurrentPasswordInput] = useState('');
+  const [newPasswordInput, setNewPasswordInput] = useState('');
+  const [confirmPasswordInput, setConfirmPasswordInput] = useState('');
+  const [passwordChangeError, setPasswordChangeError] = useState('');
 
   // Form State
   const [username, setUsername] = useState('');
@@ -176,6 +192,27 @@ export const AdminUsersTab: React.FC = () => {
     setIsModalOpen(false);
   };
 
+  const handleSuperAdminPasswordChange = (e: React.FormEvent) => {
+    e.preventDefault();
+    setPasswordChangeError('');
+
+    if (newPasswordInput !== confirmPasswordInput) {
+      setPasswordChangeError('رمز عبور جدید با تکرار آن یکسان نیست.');
+      return;
+    }
+
+    const res = adminChangePassword(currentPasswordInput, newPasswordInput);
+    if (!res.success) {
+      setPasswordChangeError(res.error || 'خطا در تغییر رمز عبور');
+      return;
+    }
+
+    setCurrentPasswordInput('');
+    setNewPasswordInput('');
+    setConfirmPasswordInput('');
+    setIsPasswordChangeOpen(false);
+  };
+
   return (
     <div className="bg-white rounded-3xl border border-neutral-200 p-6 sm:p-8 shadow-xs space-y-6">
       {/* Header */}
@@ -215,10 +252,96 @@ export const AdminUsersTab: React.FC = () => {
           </div>
         </div>
 
-        <span className="text-[10px] bg-neutral-800 px-3 py-1 rounded-full text-neutral-300 font-mono self-start sm:self-auto">
-          وضعیت سشن: ایمن و فعال
-        </span>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setIsPasswordChangeOpen(!isPasswordChangeOpen)}
+            className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition-colors"
+          >
+            <KeyRound className="w-3.5 h-3.5" />
+            <span>{isPasswordChangeOpen ? 'بستن فرم تغییر رمز' : 'تغییر رمز عبور مدیر کل'}</span>
+          </button>
+          <span className="text-[10px] bg-neutral-800 px-3 py-1.5 rounded-xl text-neutral-300 font-mono">
+            امنیت فعال
+          </span>
+        </div>
       </div>
+
+      {/* Super Admin Password Change Form Box */}
+      {isPasswordChangeOpen && (
+        <div className="p-5 bg-red-50/60 border border-red-200 rounded-3xl space-y-4 animate-in fade-in duration-200 text-xs">
+          <div className="flex items-start gap-3">
+            <div className="w-8 h-8 rounded-xl bg-red-600 text-white flex items-center justify-center shrink-0 mt-0.5">
+              <Lock className="w-4 h-4" />
+            </div>
+            <div>
+              <h3 className="font-bold text-sm text-neutral-900">تغییر رمز عبور مدیر ارشد (Super Admin)</h3>
+              <p className="text-xs text-red-700 mt-1 leading-relaxed">
+                <span className="font-bold">قانون امنیتی غیرقابل بازگشت:</span> رمز پیش‌فرض اولیه سیستم <span className="font-mono font-bold bg-white px-1.5 py-0.5 rounded border border-red-200">123456</span> است. به محض ذخیره رمز جدید، رمز پیش‌فرض به صورت کامل و دائمی منقضی و مسدود خواهد شد و هیچ کاربری مجاز به استفاده از آن نخواهد بود.
+              </p>
+            </div>
+          </div>
+
+          {passwordChangeError && (
+            <div className="p-3 bg-red-100 border border-red-300 rounded-xl text-red-800 font-bold">
+              {passwordChangeError}
+            </div>
+          )}
+
+          <form onSubmit={handleSuperAdminPasswordChange} className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <label className="block text-neutral-700 font-bold mb-1">رمز عبور فعلی *:</label>
+              <input
+                type="password"
+                value={currentPasswordInput}
+                onChange={e => setCurrentPasswordInput(e.target.value)}
+                placeholder="رمز فعلی (مثلاً 123456)"
+                className="w-full p-2.5 bg-white border border-neutral-300 rounded-xl font-mono text-left"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-neutral-700 font-bold mb-1">رمز عبور جدید *:</label>
+              <input
+                type="password"
+                value={newPasswordInput}
+                onChange={e => setNewPasswordInput(e.target.value)}
+                placeholder="حداقل ۶ کاراکتر"
+                className="w-full p-2.5 bg-white border border-neutral-300 rounded-xl font-mono text-left"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-neutral-700 font-bold mb-1">تکرار رمز جدید *:</label>
+              <input
+                type="password"
+                value={confirmPasswordInput}
+                onChange={e => setConfirmPasswordInput(e.target.value)}
+                placeholder="تکرار رمز جدید"
+                className="w-full p-2.5 bg-white border border-neutral-300 rounded-xl font-mono text-left"
+                required
+              />
+            </div>
+
+            <div className="sm:col-span-3 flex justify-end gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => setIsPasswordChangeOpen(false)}
+                className="px-4 py-2 bg-neutral-200 hover:bg-neutral-300 text-neutral-700 rounded-xl font-bold"
+              >
+                انصراف
+              </button>
+              <button
+                type="submit"
+                className="px-6 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl font-bold shadow-md flex items-center gap-1.5"
+              >
+                <Check className="w-4 h-4" />
+                <span>ثبت رمز جدید و ابطال همیشگی رمز 123456</span>
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
 
       {/* Admin Users Table */}
       <div className="overflow-x-auto">

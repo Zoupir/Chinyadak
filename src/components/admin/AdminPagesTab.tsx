@@ -21,10 +21,15 @@ import {
   MonitorCheck
 } from 'lucide-react';
 
-export const AdminPagesTab: React.FC = () => {
+interface AdminPagesTabProps {
+  onNavigate?: (view: string, param?: string) => void;
+}
+
+export const AdminPagesTab: React.FC<AdminPagesTabProps> = ({ onNavigate }) => {
   const { 
     pages, 
     updatePage, 
+    deletePage,
     updateSection, 
     addSection, 
     deleteSection, 
@@ -264,13 +269,51 @@ export const AdminPagesTab: React.FC = () => {
               )}
             </div>
 
-            <button
-              onClick={handleOpenNewSection}
-              className="px-3.5 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm"
-            >
-              <Plus className="w-4 h-4" />
-              <span>افزودن سکشن به این برگه</span>
-            </button>
+            <div className="flex items-center gap-2">
+              {onNavigate && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (selectedPage.slug === 'home') {
+                      onNavigate('home');
+                    } else {
+                      onNavigate('page', selectedPage.slug);
+                    }
+                  }}
+                  className="px-3 py-2 bg-neutral-200 hover:bg-neutral-300 text-neutral-800 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors"
+                  title="مشاهده ظاهر زنده برگه در فروشگاه"
+                >
+                  <ExternalLink className="w-3.5 h-3.5 text-neutral-600" />
+                  <span className="hidden sm:inline">مشاهده در سایت</span>
+                </button>
+              )}
+
+              {!selectedPage.isSystem && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (confirm(`آیا از حذف برگه «${selectedPage.title}» مطمئن هستید؟ تمام سکشن‌های آن حذف خواهند شد.`)) {
+                      deletePage(selectedPage.id);
+                      setSelectedPageId(pages[0]?.id || 'page-home');
+                    }
+                  }}
+                  className="px-3 py-2 border border-red-200 text-red-600 hover:bg-red-50 rounded-xl text-xs font-bold flex items-center gap-1 transition-colors"
+                  title="حذف کامل این برگه"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">حذف برگه</span>
+                </button>
+              )}
+
+              <button
+                type="button"
+                onClick={handleOpenNewSection}
+                className="px-3.5 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition-colors"
+              >
+                <Plus className="w-4 h-4" />
+                <span>افزودن سکشن</span>
+              </button>
+            </div>
           </div>
 
           {/* Sections List */}
@@ -429,6 +472,36 @@ export const AdminPagesTab: React.FC = () => {
                 placeholder="آدرس اینترنتی تصویر یا آپلود فایل مستقیم..."
                 helperText="تصویر با کیفیت در ابعاد استاندارد برای نمایش در این بخش"
               />
+
+              {sectionForm.imageUrl && (
+                <div className="p-3 bg-neutral-50 rounded-xl border border-neutral-200 space-y-2">
+                  <label className="block text-neutral-800 font-bold text-xs">
+                    حالت نمایش تصویر در سکشن (Display Mode):
+                  </label>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    {[
+                      { id: 'full', label: 'تمام‌عرض (فول)', desc: 'بنر کامل سراسری' },
+                      { id: 'cover', label: 'کاور پس‌زمینه', desc: 'پوشش کل سکشن با لایه تاریک' },
+                      { id: 'side', label: 'کنار متن', desc: 'ستون تصویر در کنار متن' },
+                      { id: 'contain', label: 'بدون برش (کادر)', desc: 'درون کادر بدون برش' }
+                    ].map(mode => (
+                      <button
+                        key={mode.id}
+                        type="button"
+                        onClick={() => setSectionForm({ ...sectionForm, imageMode: mode.id as any })}
+                        className={`p-2 rounded-lg border text-right transition-all cursor-pointer ${
+                          (sectionForm.imageMode || 'side') === mode.id
+                            ? 'bg-red-50 border-red-500 text-red-700 shadow-xs'
+                            : 'bg-white border-neutral-200 text-neutral-700 hover:bg-neutral-100'
+                        }`}
+                      >
+                        <strong className="block text-[11px] font-bold">{mode.label}</strong>
+                        <span className="text-[9px] text-neutral-500">{mode.desc}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Rich Content Editor */}
               <RichTextEditor

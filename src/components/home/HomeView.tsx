@@ -60,16 +60,29 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigate, onOpenVehicleMod
   const articlesSec = getSection('sec-articles');
 
   // Category Icon helper
-  const getCategoryIcon = (slug: string) => {
-    switch (slug) {
-      case 'cooling': return <Thermometer className="w-6 h-6 text-blue-600" />;
-      case 'engine': return <Cpu className="w-6 h-6 text-red-600" />;
-      case 'timing': return <Clock className="w-6 h-6 text-amber-600" />;
-      case 'brakes': return <Disc className="w-6 h-6 text-red-500" />;
-      case 'suspension': return <Wrench className="w-6 h-6 text-emerald-600" />;
-      case 'transmission': return <Cog className="w-6 h-6 text-indigo-600" />;
-      case 'turbo': return <Zap className="w-6 h-6 text-orange-500" />;
-      case 'lighting': return <Sun className="w-6 h-6 text-yellow-500" />;
+  const getCategoryIcon = (slug: string, iconName?: string, iconUrl?: string) => {
+    if (iconUrl) {
+      return <img src={iconUrl} alt="" className="w-7 h-7 object-contain" />;
+    }
+    const target = (iconName || slug).toLowerCase();
+    switch (target) {
+      case 'cooling':
+      case 'thermometer': return <Thermometer className="w-6 h-6 text-blue-600" />;
+      case 'engine':
+      case 'cpu': return <Cpu className="w-6 h-6 text-red-600" />;
+      case 'timing':
+      case 'clock': return <Clock className="w-6 h-6 text-amber-600" />;
+      case 'brakes':
+      case 'disc': return <Disc className="w-6 h-6 text-red-500" />;
+      case 'suspension':
+      case 'shield':
+      case 'wrench': return <Wrench className="w-6 h-6 text-emerald-600" />;
+      case 'transmission':
+      case 'cog': return <Cog className="w-6 h-6 text-indigo-600" />;
+      case 'turbo':
+      case 'zap': return <Zap className="w-6 h-6 text-orange-500" />;
+      case 'lighting':
+      case 'sun': return <Sun className="w-6 h-6 text-yellow-500" />;
       default: return <Layers className="w-6 h-6 text-neutral-600" />;
     }
   };
@@ -89,44 +102,7 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigate, onOpenVehicleMod
 
   return (
     <div className="space-y-16 pb-12">
-      {/* Admin Live Section Edit Bar */}
-      {adminAuth.isAuthenticated && (
-        <div className="bg-neutral-900 text-white px-4 py-2 text-xs flex flex-wrap items-center justify-between border-b border-neutral-800 shadow-inner sticky top-0 z-40">
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-            <span className="font-bold">حالت مدیریت سایت فعال است ({adminAuth.currentUser?.fullName || adminAuth.username})</span>
-          </div>
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => {
-                setIsLiveEditActive(!isLiveEditActive);
-                showToast(
-                  !isLiveEditActive
-                    ? 'حالت ویرایش زنده سکشن‌ها فعال شد. هم‌اکنون نشانگر ویرایش روی بخش‌های صفحه نمایش داده می‌شود.'
-                    : 'حالت ویرایش زنده غیرفعال شد.',
-                  'info'
-                );
-              }}
-              className={`px-3 py-1 rounded-xl font-bold flex items-center gap-1.5 transition-all text-xs ${
-                isLiveEditActive 
-                  ? 'bg-amber-500 text-neutral-950 shadow-md ring-2 ring-amber-400' 
-                  : 'bg-neutral-800 text-neutral-300 hover:text-white hover:bg-neutral-700'
-              }`}
-            >
-              <Edit3 className="w-3.5 h-3.5" />
-              <span>{isLiveEditActive ? 'حالت ویرایش زنده سکشن‌ها: فعال' : 'فعال‌سازی ویرایش سکشن‌ها در برگه'}</span>
-            </button>
-            <button
-              onClick={() => onNavigate('admin')}
-              className="text-red-400 hover:text-red-300 font-bold hover:underline"
-            >
-              پنل مدیریت کامل ←
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* 1. Hero & Instant Vehicle Finder */}
+      {/* 1. Hero & Dynamic Showcase: Integrated Vehicle Finder and Slider */}
       <div className="relative group">
         {isLiveEditActive && (
           <button
@@ -140,11 +116,9 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigate, onOpenVehicleMod
         <HeroSection 
           onFindParts={() => onNavigate('shop')}
           onSelectModel={(modelId) => onNavigate('car-model', modelId)}
+          onNavigate={onNavigate}
         />
       </div>
-
-      {/* Dynamic Promotional Sliders & Banners */}
-      <BannerSlider onNavigate={onNavigate} />
 
       <div className="max-w-7xl mx-auto px-4 space-y-16">
         
@@ -236,6 +210,25 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigate, onOpenVehicleMod
             </button>
           </div>
 
+          {/* Optional Section Banner if uploaded in admin */}
+          {categoriesSec?.imageUrl && (
+            <div className={`overflow-hidden rounded-2xl ${
+              categoriesSec.imageMode === 'cover' 
+                ? 'h-48 bg-cover bg-center flex items-end p-6 text-white' 
+                : 'w-full max-h-60 mb-4'
+            }`}
+            style={categoriesSec.imageMode === 'cover' ? { backgroundImage: `url(${categoriesSec.imageUrl})` } : undefined}
+            >
+              {categoriesSec.imageMode !== 'cover' && (
+                <img 
+                  src={categoriesSec.imageUrl} 
+                  alt={categoriesSec.title} 
+                  className={`w-full ${categoriesSec.imageMode === 'contain' ? 'max-h-56 object-contain' : 'h-44 sm:h-56 object-cover'} rounded-2xl shadow-xs`} 
+                />
+              )}
+            </div>
+          )}
+
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5">
             {categories.map((cat) => (
               <button
@@ -243,8 +236,8 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigate, onOpenVehicleMod
                 onClick={() => onNavigate('category', cat.slug)}
                 className="group p-4 bg-white rounded-2xl border border-neutral-200 hover:border-neutral-300 hover:shadow-md transition-all text-right flex flex-col justify-between"
               >
-                <div className="w-12 h-12 rounded-xl bg-neutral-100 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-                  {getCategoryIcon(cat.slug)}
+                <div className="w-12 h-12 rounded-xl bg-neutral-100 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform overflow-hidden p-1.5">
+                  {getCategoryIcon(cat.slug, cat.icon, cat.iconUrl)}
                 </div>
                 <div>
                   <h3 className="font-bold text-sm text-neutral-900 group-hover:text-red-600 transition-colors mb-1">

@@ -1,32 +1,101 @@
-import React from 'react';
-import { ARTICLES } from '../../data/mockData';
-import { Article } from '../../types';
-import { BookOpen, Clock, User, ArrowLeft, Layers, Sparkles } from 'lucide-react';
+import React, { useState } from 'react';
+import { useStore } from '../../context/StoreContext';
+import { BookOpen, Clock, User, ArrowLeft, Layers, Sparkles, Filter, Wrench, ShieldCheck } from 'lucide-react';
 
 interface BlogViewProps {
   onNavigate: (view: string, param?: string) => void;
 }
 
 export const BlogView: React.FC<BlogViewProps> = ({ onNavigate }) => {
+  const { articles, articleCategories } = useStore();
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+
+  const filteredArticles = selectedCategory === 'all'
+    ? articles
+    : articles.filter(a => a.categoryId === selectedCategory || a.category === selectedCategory);
+
+  const activeCategory = articleCategories.find(c => c.id === selectedCategory || c.name === selectedCategory);
+
   return (
-    <div className="max-w-7xl mx-auto px-4 py-10 space-y-10">
+    <div className="max-w-7xl mx-auto px-4 py-10 space-y-10 text-right">
       {/* Blog Hero */}
       <div className="text-center space-y-3 max-w-2xl mx-auto">
-        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-red-50 text-red-600 text-xs font-bold border border-red-200">
+        <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-red-50 text-red-600 text-xs font-bold border border-red-200">
           <BookOpen className="w-3.5 h-3.5" />
           <span>مرجع مقالات و راهنماهای فنی خودروهای چینی</span>
         </div>
         <h1 className="text-2xl sm:text-4xl font-black text-neutral-900">
-          دانشنامه فنی و عیب‌یابی خودروهای چینی
+          دانشنامه فنی، عیب‌یابی و مقالات تخصصی
         </h1>
         <p className="text-xs sm:text-sm text-neutral-500 leading-relaxed">
-          آموزش‌های نگهداری پیشگیرانه، انتخاب روانکارهای مناسب پیشرانه‌های توربو GDI، تشخیص علائم خرابی واترپمپ، زنجیر تایم و جلوبندی
+          آموزش‌های نگهداری پیشگیرانه، راهنمای انتخاب روغن و قطعات توربو، عیب‌یابی گیربکس DCT و سیستم تعلیق
         </p>
       </div>
 
+      {/* Category Filter Tabs */}
+      <div className="flex flex-wrap items-center justify-center gap-2 pb-2">
+        <button
+          onClick={() => setSelectedCategory('all')}
+          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+            selectedCategory === 'all'
+              ? 'bg-neutral-900 text-white shadow-md'
+              : 'bg-white text-neutral-600 border border-neutral-200 hover:border-neutral-300'
+          }`}
+        >
+          همه مقالات ({articles.length})
+        </button>
+
+        {articleCategories.map(cat => {
+          const isSelected = selectedCategory === cat.id || selectedCategory === cat.name;
+          const count = articles.filter(a => a.categoryId === cat.id || a.category === cat.name).length;
+          return (
+            <button
+              key={cat.id}
+              onClick={() => setSelectedCategory(cat.id)}
+              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
+                isSelected
+                  ? 'bg-red-600 text-white shadow-md shadow-red-600/20'
+                  : 'bg-white text-neutral-600 border border-neutral-200 hover:border-neutral-300'
+              }`}
+            >
+              <span>{cat.name}</span>
+              <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${
+                isSelected ? 'bg-white/20 text-white' : 'bg-neutral-100 text-neutral-500'
+              }`}>
+                {count}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Active Category Detail Banner (if selected) */}
+      {activeCategory && (
+        <div className="bg-gradient-to-r from-neutral-900 to-neutral-800 text-white rounded-3xl p-6 sm:p-8 flex flex-col md:flex-row items-center justify-between gap-6 shadow-xl">
+          <div className="space-y-2 max-w-2xl">
+            <span className="text-xs bg-red-600/30 text-red-300 font-bold px-2.5 py-0.5 rounded-full border border-red-500/40">
+              دسته‌بندی مقالات
+            </span>
+            <h2 className="text-xl sm:text-2xl font-black">{activeCategory.name}</h2>
+            {activeCategory.description && (
+              <p className="text-xs text-neutral-300 leading-relaxed">
+                {activeCategory.description}
+              </p>
+            )}
+          </div>
+          {activeCategory.imageUrl && (
+            <img 
+              src={activeCategory.imageUrl} 
+              alt={activeCategory.name} 
+              className="w-24 h-24 sm:w-32 sm:h-32 object-cover rounded-2xl border border-neutral-700 shadow-md shrink-0" 
+            />
+          )}
+        </div>
+      )}
+
       {/* Articles Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {ARTICLES.map((article) => (
+        {filteredArticles.map((article) => (
           <article
             key={article.id}
             onClick={() => onNavigate('article', article.id)}
@@ -75,6 +144,19 @@ export const BlogView: React.FC<BlogViewProps> = ({ onNavigate }) => {
           </article>
         ))}
       </div>
+
+      {filteredArticles.length === 0 && (
+        <div className="p-12 text-center bg-white rounded-3xl border border-neutral-200 space-y-3">
+          <BookOpen className="w-12 h-12 text-neutral-300 mx-auto" />
+          <p className="text-sm font-bold text-neutral-700">مقاله‌ای در این دسته‌بندی یافت نشد.</p>
+          <button
+            onClick={() => setSelectedCategory('all')}
+            className="text-xs text-red-600 font-bold hover:underline"
+          >
+            مشاهده تمام مقالات
+          </button>
+        </div>
+      )}
     </div>
   );
 };

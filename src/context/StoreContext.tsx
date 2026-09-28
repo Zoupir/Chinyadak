@@ -10,6 +10,7 @@ import {
   VehicleModel,
   Category,
   Article,
+  ArticleCategory,
   CustomerUser,
   SiteSettings,
   PaymentGatewayConfig,
@@ -18,7 +19,10 @@ import {
   SliderItem,
   AdminUser,
   SitePage,
-  PageSection
+  PageSection,
+  LoyaltyTier,
+  LoyaltyTransaction,
+  LoyaltySettings
 } from '../types';
 import { 
   PRODUCTS as INITIAL_PRODUCTS, 
@@ -26,9 +30,11 @@ import {
   VEHICLE_MODELS as INITIAL_MODELS, 
   CATEGORIES as INITIAL_CATEGORIES,
   ARTICLES as INITIAL_ARTICLES,
+  INITIAL_ARTICLE_CATEGORIES,
   INITIAL_GARAGE, 
   INITIAL_ORDERS,
   INITIAL_CUSTOMERS,
+  INITIAL_LOYALTY_TRANSACTIONS,
   INITIAL_SETTINGS,
   INITIAL_PAYMENT_GATEWAYS,
   INITIAL_API_CONFIG,
@@ -50,16 +56,20 @@ interface StoreContextType {
   brands: CarBrand[];
   models: VehicleModel[];
   categories: Category[];
-  articles: Article[];
   addProduct: (product: Product) => void;
   updateProduct: (updated: Product) => void;
   deleteProduct: (id: string) => void;
   bulkUpdateProducts: (updates: { id: string; price?: number; stock?: number; status?: string }[]) => void;
   
   // Articles (Blog)
+  articles: Article[];
+  articleCategories: ArticleCategory[];
   addArticle: (art: Article) => void;
   updateArticle: (art: Article) => void;
   deleteArticle: (id: string) => void;
+  addArticleCategory: (cat: ArticleCategory) => void;
+  updateArticleCategory: (cat: ArticleCategory) => void;
+  deleteArticleCategory: (id: string) => void;
 
   // Category & Taxonomy Management
   addCategory: (cat: Category) => void;
@@ -108,7 +118,7 @@ interface StoreContextType {
   
   // Orders & Checkout
   orders: Order[];
-  createOrder: (orderData: Omit<Order, 'id' | 'orderNumber' | 'date'>) => Order;
+  createOrder: (orderData: Omit<Order, 'id' | 'orderNumber' | 'date'> & { loyaltyPointsToRedeem?: number }) => Order;
   updateOrderStatus: (orderId: string, status: OrderStatus, trackingCode?: string) => void;
   deleteOrder: (orderId: string) => void;
   getOrderById: (orderId: string) => Order | undefined;
@@ -177,6 +187,7 @@ interface StoreContextType {
   // Pages & Section Builder
   pages: SitePage[];
   updatePage: (page: SitePage) => void;
+  deletePage: (pageId: string) => void;
   updateSection: (pageSlug: string, section: PageSection) => void;
   addSection: (pageSlug: string, section: PageSection) => void;
   deleteSection: (pageSlug: string, sectionId: string) => void;
@@ -193,6 +204,34 @@ interface StoreContextType {
   adminLogin: (user: string, pass: string) => { success: boolean; error?: string };
   adminChangePassword: (oldPass: string, newPass: string) => { success: boolean; error?: string };
   adminLogout: () => void;
+
+  // Loyalty Points & Rewards Club
+  loyaltyTransactions: LoyaltyTransaction[];
+  getCustomerPoints: (customerId?: string) => number;
+  getCustomerTransactions: (customerId?: string) => LoyaltyTransaction[];
+  addLoyaltyPoints: (
+    customerId: string,
+    points: number,
+    description: string,
+    orderNumber?: string,
+    type?: LoyaltyTransaction['type']
+  ) => void;
+  redeemLoyaltyPoints: (
+    customerId: string,
+    points: number,
+    orderNumber?: string
+  ) => boolean;
+  calculatePointsEarned: (amount: number, customerId?: string) => number;
+  calculatePointsValue: (points: number) => number;
+  getTierInfo: (points: number) => {
+    tier: LoyaltyTier;
+    title: string;
+    badgeClass: string;
+    discountMultiplier: number;
+    minPoints: number;
+    perks: string[];
+    nextTier?: { title: string; pointsNeeded: number; percent: number };
+  };
 
   // Notification Toast
   toast: { message: string; type: 'success' | 'info' | 'error' } | null;
@@ -228,6 +267,11 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     return saved ? JSON.parse(saved) : INITIAL_ARTICLES;
   });
 
+  const [articleCategories, setArticleCategories] = useState<ArticleCategory[]>(() => {
+    const saved = localStorage.getItem('chinpart_article_categories');
+    return saved ? JSON.parse(saved) : INITIAL_ARTICLE_CATEGORIES;
+  });
+
   // Customers
   const [customers, setCustomers] = useState<CustomerUser[]>(() => {
     const saved = localStorage.getItem('chinpart_customers');
@@ -237,6 +281,12 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [currentCustomer, setCurrentCustomer] = useState<CustomerUser | null>(() => {
     const saved = localStorage.getItem('chinpart_current_customer');
     return saved ? JSON.parse(saved) : null;
+  });
+
+  // Loyalty Transactions
+  const [loyaltyTransactions, setLoyaltyTransactions] = useState<LoyaltyTransaction[]>(() => {
+    const saved = localStorage.getItem('chinpart_loyalty_transactions');
+    return saved ? JSON.parse(saved) : INITIAL_LOYALTY_TRANSACTIONS;
   });
 
   // Settings
@@ -397,6 +447,14 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, [customers]);
 
   useEffect(() => {
+    localStorage.setItem('chinpart_current_customer', JSON.stringify(currentCustomer));
+  }, [currentCustomer]);
+
+  useEffect(() => {
+    localStorage.setItem('chinpart_loyalty_transactions', JSON.stringify(loyaltyTransactions));
+  }, [loyaltyTransactions]);
+
+  useEffect(() => {
     localStorage.setItem('chinpart_settings', JSON.stringify(settings));
   }, [settings]);
 
@@ -449,6 +507,10 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, [articles]);
 
   useEffect(() => {
+    localStorage.setItem('chinpart_article_categories', JSON.stringify(articleCategories));
+  }, [articleCategories]);
+
+  useEffect(() => {
     localStorage.setItem('chinpart_current_customer', JSON.stringify(currentCustomer));
   }, [currentCustomer]);
 
@@ -463,6 +525,167 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   useEffect(() => {
     localStorage.setItem('chinpart_admin_users', JSON.stringify(adminUsers));
   }, [adminUsers]);
+
+  // Dynamic Theme Styling Application (Colors, Glow, Typography, Border Radius, Font Scale)
+  useEffect(() => {
+    const root = document.documentElement;
+    const hex = settings.primaryColor || '#DC2626';
+    root.style.setProperty('--primary-color', hex);
+
+    // Calculate hover color (slightly darker)
+    const adjustBrightness = (h: string, delta: number) => {
+      let num = parseInt(h.replace('#', ''), 16);
+      if (isNaN(num)) return h;
+      let r = Math.min(255, Math.max(0, (num >> 16) + delta));
+      let g = Math.min(255, Math.max(0, ((num >> 8) & 0x00ff) + delta));
+      let b = Math.min(255, Math.max(0, (num & 0x0000ff) + delta));
+      return '#' + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+    };
+
+    const toRgba = (h: string, alpha: number) => {
+      let c = h.replace('#', '');
+      if (c.length === 3) c = c.split('').map(x => x + x).join('');
+      const num = parseInt(c, 16);
+      if (isNaN(num)) return `rgba(220, 38, 38, ${alpha})`;
+      const r = (num >> 16) & 255;
+      const g = (num >> 8) & 255;
+      const b = num & 255;
+      return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    };
+
+    const primaryHover = settings.primaryHover || adjustBrightness(hex, -25);
+    root.style.setProperty('--primary-hover', primaryHover);
+    root.style.setProperty('--primary-light', toRgba(hex, 0.08));
+    root.style.setProperty('--primary-border', toRgba(hex, 0.25));
+    root.style.setProperty('--primary-dark', adjustBrightness(hex, -45));
+
+    // Accent Glow (Red/Custom Highlight under buttons and hover states)
+    const accentGlow = settings.accentGlowColor || hex;
+    root.style.setProperty('--accent-glow', accentGlow);
+    root.style.setProperty('--accent-glow-subtle', toRgba(accentGlow, 0.2));
+    root.style.setProperty('--accent-glow-strong', toRgba(accentGlow, 0.5));
+
+    // Dynamic Site & Card Background Themes
+    const themeMode = settings.themeMode || 'dark';
+    let siteBg = settings.siteBgColor;
+    let cardBg = settings.cardBgColor;
+    let headerBg = settings.headerBgColor;
+    let footerBg = settings.footerBgColor;
+    let textColor = settings.textColor;
+
+    if (!siteBg) {
+      if (themeMode === 'light') siteBg = '#f8fafc';
+      else if (themeMode === 'slate') siteBg = '#0f172a';
+      else if (themeMode === 'navy') siteBg = '#020617';
+      else siteBg = '#0a0a0a';
+    }
+    if (!cardBg) {
+      if (themeMode === 'light') cardBg = '#ffffff';
+      else if (themeMode === 'slate') cardBg = '#1e293b';
+      else if (themeMode === 'navy') cardBg = '#0f172a';
+      else cardBg = '#171717';
+    }
+    if (!headerBg) headerBg = themeMode === 'light' ? '#ffffff' : siteBg;
+    if (!footerBg) footerBg = themeMode === 'light' ? '#0f172a' : siteBg;
+    if (!textColor) textColor = themeMode === 'light' ? '#0f172a' : '#f8fafc';
+
+    root.style.setProperty('--site-bg', siteBg);
+    root.style.setProperty('--card-bg', cardBg);
+    root.style.setProperty('--header-bg', headerBg);
+    root.style.setProperty('--footer-bg', footerBg);
+    root.style.setProperty('--text-color', textColor);
+
+    // Typography
+    const font = settings.fontFamily || 'Vazirmatn';
+    root.style.setProperty('--site-font', `'${font}', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif`);
+
+    // Font Scale
+    const sizeScale: Record<string, string> = {
+      compact: '14px',
+      normal: '16px',
+      large: '17.5px',
+      xlarge: '19px'
+    };
+    root.style.fontSize = sizeScale[settings.fontSize || 'normal'] || '16px';
+
+    // Border Radius
+    const radiusMap: Record<string, string> = {
+      sharp: '0px',
+      normal: '12px',
+      rounded: '20px',
+      full: '9999px'
+    };
+    const radiusVal = settings.themeRadiusPx ? `${settings.themeRadiusPx}px` : (radiusMap[settings.borderRadius || 'normal'] || '12px');
+    root.style.setProperty('--theme-radius', radiusVal);
+
+    // Global SEO Synchronization
+    const effectiveTitle = settings.metaTitle || settings.siteTitle || 'چین‌پارت | قطعات یدکی خودروهای چینی';
+    document.title = effectiveTitle;
+
+    const updateOrCreateMeta = (nameAttr: string, nameValue: string, content: string) => {
+      let el = document.querySelector(`meta[${nameAttr}="${nameValue}"]`);
+      if (!el) {
+        el = document.createElement('meta');
+        el.setAttribute(nameAttr, nameValue);
+        document.head.appendChild(el);
+      }
+      el.setAttribute('content', content);
+    };
+
+    if (settings.metaDescription || settings.siteSlogan) {
+      updateOrCreateMeta('name', 'description', settings.metaDescription || settings.siteSlogan || '');
+    }
+    if (settings.metaKeywords) {
+      updateOrCreateMeta('name', 'keywords', settings.metaKeywords);
+    }
+    if (settings.ogTitle || effectiveTitle) {
+      updateOrCreateMeta('property', 'og:title', settings.ogTitle || effectiveTitle);
+    }
+    if (settings.ogDescription || settings.metaDescription) {
+      updateOrCreateMeta('property', 'og:description', settings.ogDescription || settings.metaDescription || '');
+    }
+    if (settings.ogImageUrl || settings.logoUrl) {
+      updateOrCreateMeta('property', 'og:image', settings.ogImageUrl || settings.logoUrl || '');
+    }
+  }, [
+    settings.primaryColor, 
+    settings.primaryHover, 
+    settings.accentGlowColor, 
+    settings.themeMode, 
+    settings.siteBgColor, 
+    settings.cardBgColor, 
+    settings.headerBgColor, 
+    settings.footerBgColor, 
+    settings.textColor, 
+    settings.fontFamily, 
+    settings.fontSize, 
+    settings.borderRadius, 
+    settings.themeRadiusPx,
+    settings.metaTitle,
+    settings.metaDescription,
+    settings.metaKeywords,
+    settings.ogTitle,
+    settings.ogDescription,
+    settings.ogImageUrl,
+    settings.siteTitle,
+    settings.siteSlogan
+  ]);
+
+  // Article Categories Handlers
+  const addArticleCategory = (cat: ArticleCategory) => {
+    setArticleCategories(prev => [...prev, cat]);
+    showToast(`دسته‌بندی "${cat.name}" ایجاد شد.`);
+  };
+
+  const updateArticleCategory = (cat: ArticleCategory) => {
+    setArticleCategories(prev => prev.map(c => c.id === cat.id ? cat : c));
+    showToast('دسته‌بندی مقاله به‌روزرسانی شد.');
+  };
+
+  const deleteArticleCategory = (id: string) => {
+    setArticleCategories(prev => prev.filter(c => c.id !== id));
+    showToast('دسته‌بندی مقاله حذف شد.', 'info');
+  };
 
   // Sliders Management
   const addSlider = (slide: SliderItem) => {
@@ -527,8 +750,25 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, [pages]);
 
   const updatePage = (updatedPage: SitePage) => {
-    setPages(prev => prev.map(p => p.id === updatedPage.id ? { ...updatedPage, updatedAt: new Date().toLocaleDateString('fa-IR') } : p));
+    setPages(prev => {
+      const exists = prev.some(p => p.id === updatedPage.id);
+      if (exists) {
+        return prev.map(p => p.id === updatedPage.id ? { ...updatedPage, updatedAt: new Date().toLocaleDateString('fa-IR') } : p);
+      }
+      return [...prev, { ...updatedPage, updatedAt: new Date().toLocaleDateString('fa-IR') }];
+    });
     showToast(`برگه "${updatedPage.title}" با موفقیت ذخیره شد.`);
+  };
+
+  const deletePage = (pageId: string) => {
+    const target = pages.find(p => p.id === pageId);
+    if (!target) return;
+    if (target.isSystem) {
+      showToast('برگه‌های اصلی سیستمی غیرقابل حذف هستند.', 'error');
+      return;
+    }
+    setPages(prev => prev.filter(p => p.id !== pageId));
+    showToast(`برگه "${target.title}" با موفقیت حذف شد.`, 'info');
   };
 
   const updateSection = (pageSlug: string, updatedSection: PageSection) => {
@@ -578,7 +818,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     showToast(`اندازه فونت کل سایت به ${size === 'compact' ? 'فشرده' : size === 'large' ? 'بزرگ' : size === 'xlarge' ? 'خیلی بزرگ' : 'استاندارد'} تغییر یافت.`);
   };
 
-  // Admin Auth functions (Multi-Admin Supported)
+  // Admin Auth functions (Multi-Admin Supported with strict password invalidation)
   const adminLogin = (user: string, pass: string) => {
     const cleanUser = user.trim().toLowerCase();
     
@@ -589,6 +829,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       if (cleanUser !== 'admin') {
         return { success: false, error: 'نام کاربری در سامانه مدیریت یافت نشد.' };
       }
+      // Strict password check: ONLY current adminPassword is accepted
       if (pass !== adminPassword) {
         return { success: false, error: 'رمز عبور وارد شده اشتباه است.' };
       }
@@ -601,7 +842,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       };
       setAdminAuth(authState);
       if (isInitialDefault) {
-        showToast('ورود با رمز عبور اولیه انجام شد. جهت امنیت، تغییر فوری رمز عبور الزامی است.', 'error');
+        showToast('ورود با رمز عبور اولیه (123456) انجام شد. جهت امنیت، تغییر فوری رمز عبور الزامی است.', 'error');
       } else {
         showToast(`خوش آمدید، ${INITIAL_ADMIN_USERS[0].fullName}`);
       }
@@ -612,44 +853,69 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       return { success: false, error: 'حساب کاربری این مدیر غیرفعال گردیده است.' };
     }
 
-    // Verify password
-    const effectivePass = matchedUser.password || (matchedUser.username === 'admin' ? adminPassword : 'password123');
-    if (pass !== effectivePass && pass !== adminPassword && pass !== 'password123') {
+    // STRICT PASSWORD VERIFICATION:
+    // If username is admin, the only valid password is the active adminPassword.
+    // If admin changed their password, old default '123456' is strictly rejected.
+    let requiredPass = '';
+    if (matchedUser.username.toLowerCase() === 'admin') {
+      requiredPass = adminPassword;
+    } else {
+      requiredPass = matchedUser.password || '';
+    }
+
+    if (!requiredPass || pass !== requiredPass) {
       return { success: false, error: 'رمز عبور وارد شده اشتباه است.' };
     }
 
-    const isInitialDefault = (effectivePass === '123456' || effectivePass === 'password123');
+    const isInitialDefault = (matchedUser.username.toLowerCase() === 'admin' && adminPassword === '123456');
     const authState: AdminAuthState = {
       isAuthenticated: true,
       username: matchedUser.username,
       currentUser: matchedUser,
-      isMustChangePassword: isInitialDefault && matchedUser.username === 'admin'
+      isMustChangePassword: isInitialDefault
     };
 
     setAdminAuth(authState);
-    showToast(`خوش آمدید، ${matchedUser.fullName} (${matchedUser.roleTitle})`);
+    if (isInitialDefault) {
+      showToast('ورود با رمز عبور اولیه (123456) انجام شد. لطفاً فوراً رمز خود را تغییر دهید.', 'error');
+    } else {
+      showToast(`خوش آمدید، ${matchedUser.fullName} (${matchedUser.roleTitle})`);
+    }
     return { success: true };
   };
 
   const adminChangePassword = (oldPass: string, newPass: string) => {
     if (oldPass !== adminPassword) {
-      return { success: false, error: 'رمز عبور فعلی نامعتبر است.' };
+      return { success: false, error: 'رمز عبور فعلی وارد شده نادرست است.' };
     }
     if (!newPass || newPass.trim().length < 6) {
       return { success: false, error: 'رمز عبور جدید باید حداقل ۶ کاراکتر باشد.' };
     }
-    if (newPass === '123456') {
-      return { success: false, error: 'رمز عبور جدید نمی‌تواند رمز پیش‌فرض 123456 باشد.' };
+    if (newPass.trim() === '123456') {
+      return { success: false, error: 'رمز عبور جدید نمی‌تواند همان رمز پیش‌فرض 123456 باشد.' };
     }
 
-    setAdminPassword(newPass);
-    setAdminUsers(prev => prev.map(u => u.username === adminAuth.username ? { ...u, password: newPass } : u));
-    setAdminAuth(prev => ({
-      ...prev,
-      isMustChangePassword: false
-    }));
+    const cleanNewPass = newPass.trim();
+    setAdminPassword(cleanNewPass);
+    localStorage.setItem('chinpart_admin_pass', cleanNewPass);
 
-    showToast('رمز عبور ادمین با موفقیت تغییر یافت و دسترسی کامل فعال گردید.');
+    // Synchronize with admin user in database
+    setAdminUsers(prev => {
+      const updated = prev.map(u => u.username.toLowerCase() === 'admin' ? { ...u, password: cleanNewPass } : u);
+      localStorage.setItem('chinpart_admin_users', JSON.stringify(updated));
+      return updated;
+    });
+
+    setAdminAuth(prev => {
+      const updated = {
+        ...prev,
+        isMustChangePassword: false
+      };
+      localStorage.setItem('chinpart_admin_auth', JSON.stringify(updated));
+      return updated;
+    });
+
+    showToast('رمز عبور مدیر ارشد با موفقیت تغییر کرد. رمز پیش‌فرض 123456 برای همیشه منقضی و مسدود شد.');
     return { success: true };
   };
 
@@ -812,6 +1078,16 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       return { success: false, error: 'این شماره تماس قبلاً در سامانه ثبت شده است. لطفاً وارد شوید.' };
     }
     const typeTitle = data.type === 'wholesale' ? 'همکار / عمده‌فروش' : data.type === 'mechanic' ? 'تعمیرکار / مکانیک' : 'مشتری عادی';
+    const welcomeBonus = settings.loyaltySettings?.signupBonusPoints ?? 50;
+    const now = new Date();
+    const dateFa = new Intl.DateTimeFormat('fa-IR', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit'
+    }).format(now);
+
     const newCust: CustomerUser = {
       id: `cust-${Date.now()}`,
       firstName: data.firstName,
@@ -825,11 +1101,25 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       totalOrders: 0,
       totalSpent: 0,
       vehicle: data.vehicle || '',
-      address: ''
+      address: '',
+      loyaltyPoints: welcomeBonus,
+      loyaltyTier: 'bronze'
     };
+
+    const welcomeTx: LoyaltyTransaction = {
+      id: `tx-loyalty-${Date.now()}`,
+      customerId: newCust.id,
+      type: 'bonus',
+      points: welcomeBonus,
+      description: 'هدیه خوش‌آمدگویی باشگاه مشتریان چین‌پارت',
+      date: dateFa,
+      balanceAfter: welcomeBonus
+    };
+
     setCustomers(prev => [newCust, ...prev]);
     setCurrentCustomer(newCust);
-    showToast(`ثبت‌نام شما با موفقیت انجام شد، خوش آمدید ${newCust.firstName}!`);
+    setLoyaltyTransactions(prev => [welcomeTx, ...prev]);
+    showToast(`ثبت‌نام شما با موفقیت انجام شد! ${welcomeBonus} امتیاز هدیه عضویت به حساب شما اضافه شد.`);
     return { success: true };
   };
 
@@ -1055,8 +1345,205 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const isInCompare = (productId: string) => compareList.some(p => p.id === productId);
   const clearCompare = () => setCompareList([]);
 
+  // Loyalty Point Helpers
+  const getTierInfo = (points: number) => {
+    if (points >= 3000) {
+      return {
+        tier: 'diamond' as LoyaltyTier,
+        title: 'مشتری VIP الماس',
+        badgeClass: 'bg-gradient-to-r from-cyan-600 to-blue-700 text-white shadow-md shadow-cyan-600/30 border border-cyan-400/40',
+        discountMultiplier: 2.0,
+        minPoints: 3000,
+        perks: [
+          'کسب ۲ برابر امتیاز در تمامی خریدها (۲٪ بازگشت وجه)',
+          'ارسال اکسپرس و بیمه‌شده کاملاً رایگان بدون سقف سفارش',
+          'مشاوره فنی تلفنی اختصاصی با مهندسین ارشد خودرو',
+          'اولویت ترخیص و تامین قطعات نایاب و سفارشی از گمرک'
+        ]
+      };
+    }
+    if (points >= 1000) {
+      return {
+        tier: 'gold' as LoyaltyTier,
+        title: 'مشتری طلایی',
+        badgeClass: 'bg-gradient-to-r from-amber-500 to-yellow-600 text-white shadow-md shadow-amber-500/30 border border-amber-300/40',
+        discountMultiplier: 1.5,
+        minPoints: 1000,
+        perks: [
+          'کسب ۱.۵ برابر امتیاز در تمامی خریدها',
+          'بسته‌بندی ضربه‌گیر ویژه قطعات حساس بدون هزینه اضافی',
+          'اولویت آماده‌سازی و ارسال سفارش‌ها در انبار مرکزی'
+        ],
+        nextTier: {
+          title: 'مشتری VIP الماس',
+          pointsNeeded: 3000 - points,
+          percent: Math.min(100, Math.round(((points - 1000) / 2000) * 100))
+        }
+      };
+    }
+    if (points >= 500) {
+      return {
+        tier: 'silver' as LoyaltyTier,
+        title: 'مشتری نقره‌ای',
+        badgeClass: 'bg-gradient-to-r from-slate-400 to-neutral-600 text-white shadow-md shadow-slate-500/20 border border-slate-300/40',
+        discountMultiplier: 1.25,
+        minPoints: 500,
+        perks: [
+          'کسب ۱.۲۵ برابر امتیاز در خریدها',
+          'دسترسی زودهنگام به حراجی‌ها و جشنواره‌های فصلی'
+        ],
+        nextTier: {
+          title: 'مشتری طلایی',
+          pointsNeeded: 1000 - points,
+          percent: Math.min(100, Math.round(((points - 500) / 500) * 100))
+        }
+      };
+    }
+    return {
+      tier: 'bronze' as LoyaltyTier,
+      title: 'مشتری برنزی',
+      badgeClass: 'bg-gradient-to-r from-amber-800 to-stone-800 text-amber-100 shadow-md shadow-amber-900/20 border border-amber-700/40',
+      discountMultiplier: 1.0,
+      minPoints: 0,
+      perks: [
+        'کسب ۱ امتیاز به ازای هر ۱۰ هزار تومان خرید',
+        'امکان تبدیل امتیازات به تخفیف در سبد خرید'
+      ],
+      nextTier: {
+        title: 'مشتری نقره‌ای',
+        pointsNeeded: 500 - points,
+        percent: Math.min(100, Math.round((points / 500) * 100))
+      }
+    };
+  };
+
+  const getCustomerPoints = (customerId?: string): number => {
+    const targetId = customerId || currentCustomer?.id;
+    if (!targetId) return 0;
+    const cust = customers.find(c => c.id === targetId || c.phone === targetId);
+    if (cust && typeof cust.loyaltyPoints === 'number') {
+      return cust.loyaltyPoints;
+    }
+    const custTx = loyaltyTransactions.filter(t => t.customerId === targetId || (cust && t.customerId === cust.id));
+    if (custTx.length > 0) {
+      return custTx[0].balanceAfter;
+    }
+    return 0;
+  };
+
+  const getCustomerTransactions = (customerId?: string): LoyaltyTransaction[] => {
+    const targetId = customerId || currentCustomer?.id;
+    if (!targetId) return [];
+    const cust = customers.find(c => c.id === targetId || c.phone === targetId);
+    return loyaltyTransactions.filter(t => t.customerId === targetId || (cust && t.customerId === cust.id));
+  };
+
+  const calculatePointsEarned = (amount: number, customerId?: string): number => {
+    const rate = settings.loyaltySettings?.pointsPerToman ?? 0.0001; // 1 point per 10,000 Tomans
+    const base = Math.floor(amount * rate);
+    const pts = getCustomerPoints(customerId);
+    const tier = getTierInfo(pts);
+    return Math.max(1, Math.round(base * tier.discountMultiplier));
+  };
+
+  const calculatePointsValue = (points: number): number => {
+    const valuePerPoint = settings.loyaltySettings?.tomanPerPoint ?? 1000;
+    return Math.max(0, points * valuePerPoint);
+  };
+
+  const addLoyaltyPoints = (
+    customerId: string,
+    points: number,
+    description: string,
+    orderNumber?: string,
+    type: LoyaltyTransaction['type'] = 'bonus'
+  ) => {
+    if (points <= 0) return;
+    const currentPts = getCustomerPoints(customerId);
+    const newBalance = currentPts + points;
+    const now = new Date();
+    const dateFa = new Intl.DateTimeFormat('fa-IR', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit'
+    }).format(now);
+
+    const newTx: LoyaltyTransaction = {
+      id: `tx-loyalty-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+      customerId,
+      type,
+      points,
+      description,
+      orderNumber,
+      date: dateFa,
+      balanceAfter: newBalance
+    };
+
+    setLoyaltyTransactions(prev => [newTx, ...prev]);
+
+    setCustomers(prev => prev.map(c => {
+      if (c.id === customerId || c.phone === customerId) {
+        const tier = getTierInfo(newBalance).tier;
+        return { ...c, loyaltyPoints: newBalance, loyaltyTier: tier };
+      }
+      return c;
+    }));
+
+    if (currentCustomer && (currentCustomer.id === customerId || currentCustomer.phone === customerId)) {
+      const tier = getTierInfo(newBalance).tier;
+      setCurrentCustomer(prev => prev ? { ...prev, loyaltyPoints: newBalance, loyaltyTier: tier } : null);
+    }
+  };
+
+  const redeemLoyaltyPoints = (
+    customerId: string,
+    points: number,
+    orderNumber?: string
+  ): boolean => {
+    const currentPts = getCustomerPoints(customerId);
+    if (points <= 0 || currentPts < points) return false;
+    const newBalance = currentPts - points;
+    const now = new Date();
+    const dateFa = new Intl.DateTimeFormat('fa-IR', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit'
+    }).format(now);
+
+    const newTx: LoyaltyTransaction = {
+      id: `tx-loyalty-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+      customerId,
+      type: 'redeemed',
+      points: -points,
+      description: orderNumber ? `کسر امتیاز بابت تخفیف در سفارش ${orderNumber}` : 'کسر امتیاز بابت تخفیف خرید',
+      orderNumber,
+      date: dateFa,
+      balanceAfter: newBalance
+    };
+
+    setLoyaltyTransactions(prev => [newTx, ...prev]);
+
+    setCustomers(prev => prev.map(c => {
+      if (c.id === customerId || c.phone === customerId) {
+        const tier = getTierInfo(newBalance).tier;
+        return { ...c, loyaltyPoints: newBalance, loyaltyTier: tier };
+      }
+      return c;
+    }));
+
+    if (currentCustomer && (currentCustomer.id === customerId || currentCustomer.phone === customerId)) {
+      const tier = getTierInfo(newBalance).tier;
+      setCurrentCustomer(prev => prev ? { ...prev, loyaltyPoints: newBalance, loyaltyTier: tier } : null);
+    }
+    return true;
+  };
+
   // Orders
-  const createOrder = (orderData: Omit<Order, 'id' | 'orderNumber' | 'date'>): Order => {
+  const createOrder = (orderData: Omit<Order, 'id' | 'orderNumber' | 'date'> & { loyaltyPointsToRedeem?: number }): Order => {
     const orderNum = `CHP-${Math.floor(10000 + Math.random() * 90000)}`;
     const now = new Date();
     const dateFa = new Intl.DateTimeFormat('fa-IR', {
@@ -1067,16 +1554,79 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       minute: '2-digit'
     }).format(now);
 
+    const pointsToRedeem = orderData.loyaltyPointsToRedeem || 0;
+    const customerPhone = orderData.customer.phone;
+
+    // Identify customer ID (from current logged-in customer or existing customer matching phone)
+    let customerId = currentCustomer?.id;
+    if (!customerId) {
+      const matched = customers.find(c => c.phone === customerPhone);
+      if (matched) {
+        customerId = matched.id;
+      }
+    }
+
+    let discountFromPoints = 0;
+    if (pointsToRedeem > 0 && customerId) {
+      discountFromPoints = calculatePointsValue(pointsToRedeem);
+      redeemLoyaltyPoints(customerId, pointsToRedeem, orderNum);
+    }
+
+    // Calculate points earned from this purchase
+    const effectiveTotal = Math.max(0, orderData.subtotal - (orderData.discountAmount || 0) - discountFromPoints);
+    const pointsEarned = calculatePointsEarned(effectiveTotal, customerId);
+
+    // Credit newly earned points
+    if (pointsEarned > 0 && customerId) {
+      addLoyaltyPoints(
+        customerId,
+        pointsEarned,
+        `امتیاز خرید فاکتور ${orderNum}`,
+        orderNum,
+        'earned'
+      );
+    }
+
     const newOrder: Order = {
       ...orderData,
       id: `ord-${Date.now()}`,
       orderNumber: orderNum,
       date: dateFa,
+      loyaltyPointsEarned: pointsEarned,
+      loyaltyPointsRedeemed: pointsToRedeem,
+      loyaltyDiscountAmount: discountFromPoints,
       trackingPostCode: `POST-${Math.floor(1000000000 + Math.random() * 9000000000)}`
     };
 
+    // Update customer total orders & spent
+    if (customerId) {
+      setCustomers(prev => prev.map(c => {
+        if (c.id === customerId || c.phone === customerPhone) {
+          return {
+            ...c,
+            totalOrders: (c.totalOrders || 0) + 1,
+            totalSpent: (c.totalSpent || 0) + newOrder.total
+          };
+        }
+        return c;
+      }));
+
+      if (currentCustomer && (currentCustomer.id === customerId || currentCustomer.phone === customerPhone)) {
+        setCurrentCustomer(prev => prev ? {
+          ...prev,
+          totalOrders: (prev.totalOrders || 0) + 1,
+          totalSpent: (prev.totalSpent || 0) + newOrder.total
+        } : null);
+      }
+    }
+
     setOrders(prev => [newOrder, ...prev]);
     clearCart();
+
+    if (pointsEarned > 0) {
+      showToast(`سفارش ${orderNum} با موفقیت ثبت شد و ${pointsEarned} امتیاز وفاداری به حساب شما افزوده گردید!`);
+    }
+
     return newOrder;
   };
 
@@ -1214,9 +1764,13 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       updateProduct,
       deleteProduct,
       bulkUpdateProducts,
+      articleCategories,
       addArticle,
       updateArticle,
       deleteArticle,
+      addArticleCategory,
+      updateArticleCategory,
+      deleteArticleCategory,
       addCategory,
       updateCategory,
       deleteCategory,
@@ -1274,6 +1828,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       toggleAdminStatus,
       pages,
       updatePage,
+      deletePage,
       updateSection,
       addSection,
       deleteSection,
@@ -1299,6 +1854,14 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       adminLogin,
       adminChangePassword,
       adminLogout,
+      loyaltyTransactions,
+      getCustomerPoints,
+      getCustomerTransactions,
+      addLoyaltyPoints,
+      redeemLoyaltyPoints,
+      calculatePointsEarned,
+      calculatePointsValue,
+      getTierInfo,
       toast,
       showToast
     }}>

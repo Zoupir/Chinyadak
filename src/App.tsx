@@ -17,9 +17,13 @@ import { CompareView } from './components/compare/CompareView';
 import { PartRequestView } from './components/parts/PartRequestView';
 import { BlogView } from './components/blog/BlogView';
 import { ArticleDetailView } from './components/blog/ArticleDetailView';
+import { PageView } from './components/page/PageView';
 import { AdminView } from './components/admin/AdminView';
+import { InvoicePageView } from './components/orders/InvoicePageView';
 import { CustomerAuthModal } from './components/auth/CustomerAuthModal';
+import { AiSearchAdvisorModal } from './components/search/AiSearchAdvisorModal';
 import { CheckCircle2, AlertCircle, Info, X } from 'lucide-react';
+import { buildRouteHash, parseRouteHash, getPageShareMeta } from './utils/navigation';
 
 interface RouteState {
   view: string;
@@ -27,36 +31,51 @@ interface RouteState {
 }
 
 const AppContent: React.FC = () => {
-  const { toast } = useStore();
-  const [route, setRoute] = useState<RouteState>({ view: 'home' });
+  const { toast, products, categories, models, brands, articles, settings } = useStore();
+  const [route, setRoute] = useState<RouteState>(() => {
+    if (typeof window !== 'undefined' && window.location.hash) {
+      return parseRouteHash(window.location.hash);
+    }
+    return { view: 'home' };
+  });
   const [isVehicleModalOpen, setIsVehicleModalOpen] = useState(false);
   const [isCartDrawerOpen, setIsCartDrawerOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authModalMode, setAuthModalMode] = useState<'login' | 'register'>('login');
+  const [isAiSearchOpen, setIsAiSearchOpen] = useState(false);
 
   // Scroll to top on navigation
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [route]);
 
-  // Listen for hash navigation e.g. #admin
+  // Sync document title with current page / section
+  useEffect(() => {
+    const meta = getPageShareMeta(route.view, route.param, { products, categories, models, brands, articles });
+    const siteName = settings.siteTitle?.split('|')[0]?.trim() || 'چین‌پارت';
+    document.title = `${meta.title} | ${siteName}`;
+  }, [route, products, categories, models, brands, articles, settings]);
+
+  // Listen for browser hash navigation (back/forward, direct links, bookmarking)
   useEffect(() => {
     const handleHashChange = () => {
-      const hash = window.location.hash.replace('#', '');
-      if (hash === 'admin') {
-        setRoute({ view: 'admin' });
-      }
+      const parsed = parseRouteHash(window.location.hash);
+      setRoute(parsed);
     };
-    handleHashChange();
+
+    // If initial hash was present on mount, make sure it matches canonical route
+    if (window.location.hash) {
+      handleHashChange();
+    }
+
     window.addEventListener('hashchange', handleHashChange);
     return () => window.removeEventListener('hashchange', handleHashChange);
   }, []);
 
   const handleNavigate = (view: string, param?: string) => {
-    if (view === 'admin') {
-      window.location.hash = 'admin';
-    } else if (window.location.hash === '#admin') {
-      window.location.hash = '';
+    const targetHash = buildRouteHash(view, param);
+    if (window.location.hash !== targetHash) {
+      window.location.hash = targetHash;
     }
     setRoute({ view, param });
   };
@@ -90,10 +109,13 @@ const AppContent: React.FC = () => {
             </div>
           </div>
         )}
-        <AdminView onExitToStore={() => {
-          window.location.hash = '';
-          handleNavigate('home');
-        }} />
+        <AdminView 
+          onExitToStore={() => {
+            window.location.hash = '';
+            handleNavigate('home');
+          }} 
+          onNavigate={handleNavigate}
+        />
       </div>
     );
   }
@@ -128,7 +150,9 @@ const AppContent: React.FC = () => {
         onOpenCartDrawer={() => setIsCartDrawerOpen(true)}
         onNavigate={handleNavigate}
         currentView={route.view}
+        currentParam={route.param}
         onOpenAuthModal={handleOpenAuthModal}
+        onOpenAiSearch={() => setIsAiSearchOpen(true)}
       />
 
       {/* Main View Container */}
@@ -194,6 +218,13 @@ const AppContent: React.FC = () => {
           />
         )}
 
+        {route.view === 'invoice' && (
+          <InvoicePageView
+            orderId={route.param}
+            onNavigate={handleNavigate}
+          />
+        )}
+
         {route.view === 'account' && (
           <AccountView
             initialTab={route.param}
@@ -228,10 +259,27 @@ const AppContent: React.FC = () => {
             onNavigate={handleNavigate}
           />
         )}
+
+        {route.view === 'page' && (
+          <PageView
+            pageSlug={route.param || 'about'}
+            onNavigate={handleNavigate}
+          />
+        )}
+
+        {(route.view === 'about' || route.view === 'guarantee') && (
+          <PageView
+            pageSlug={route.view}
+            onNavigate={handleNavigate}
+          />
+        )}
       </main>
 
       {/* Footer */}
-      <Footer onNavigate={handleNavigate} />
+      <Footer 
+        onNavigate={handleNavigate} 
+        onOpenAuthModal={handleOpenAuthModal} 
+      />
 
       {/* Mobile Bottom Navigation */}
       <MobileBottomNav
@@ -239,6 +287,7 @@ const AppContent: React.FC = () => {
         onNavigate={handleNavigate}
         onOpenVehicleModal={() => setIsVehicleModalOpen(true)}
         onOpenCartDrawer={() => setIsCartDrawerOpen(true)}
+        onOpenAuthModal={handleOpenAuthModal}
       />
 
       {/* Vehicle Finder & Garage Modal */}
@@ -265,6 +314,13 @@ const AppContent: React.FC = () => {
         isOpen={isAuthModalOpen}
         onClose={() => setIsAuthModalOpen(false)}
         initialMode={authModalMode}
+      />
+
+      {/* AI & Google Search Parts Advisor Modal */}
+      <AiSearchAdvisorModal
+        isOpen={isAiSearchOpen}
+        onClose={() => setIsAiSearchOpen(false)}
+        onNavigate={handleNavigate}
       />
     </div>
   );

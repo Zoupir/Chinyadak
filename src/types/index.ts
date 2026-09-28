@@ -59,6 +59,8 @@ export interface Category {
   nameEn: string;
   slug: string;
   icon: string;
+  iconUrl?: string;
+  imageUrl?: string;
   description: string;
   parentId?: string;
   subcategories?: {
@@ -121,6 +123,8 @@ export interface Product {
   genuineVsFakeNotes: string;   // تفاوت نمونه اصلی و فیک
   
   fitments: VehicleFitment[];
+  vehicleModelIds?: string[]; // IDs of cars this product fits (e.g. ['kmc-j7', 'chery-tiggo7-pro'])
+  vehicleBrandIds?: string[]; // IDs of brands this product fits
   complementPartIds?: string[]; // Cross-sell: مثلا واترپمپ -> ترموستات، ضدیخ
   relatedPartIds?: string[];
 }
@@ -195,9 +199,22 @@ export interface Order {
   };
   subtotal: number;
   discountAmount: number;
+  loyaltyPointsEarned?: number;
+  loyaltyPointsRedeemed?: number;
+  loyaltyDiscountAmount?: number;
   shippingFee: number;
   total: number;
   trackingPostCode?: string;
+}
+
+export interface ArticleCategory {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string;
+  imageUrl?: string;
+  icon?: string;
+  articleCount?: number;
 }
 
 export interface Article {
@@ -207,6 +224,7 @@ export interface Article {
   summary: string;
   content: string;
   category: string;
+  categoryId?: string;
   readTimeMinutes: number;
   author: string;
   date: string;
@@ -243,6 +261,29 @@ export interface ActiveVehicleFilter {
 
 export type CustomerType = 'retail' | 'mechanic' | 'wholesale';
 
+export type LoyaltyTier = 'bronze' | 'silver' | 'gold' | 'diamond';
+
+export interface LoyaltyTransaction {
+  id: string;
+  customerId: string;
+  type: 'earned' | 'redeemed' | 'bonus' | 'refund';
+  points: number; // positive for earned/bonus, negative for redeemed
+  description: string;
+  orderNumber?: string;
+  date: string;
+  balanceAfter: number;
+}
+
+export interface LoyaltySettings {
+  enabled: boolean;
+  pointsPerToman: number; // e.g. 0.0001 (1 pt per 10,000 Tomans)
+  tomanPerPoint: number; // e.g. 1,000 Tomans discount per point redeemed
+  minimumRedeemPoints: number; // e.g. 50 points
+  maxRedeemPercent: number; // max percentage of order subtotal payable by points, e.g. 50%
+  signupBonusPoints: number; // e.g. 50 bonus points on registration
+  firstOrderBonusPoints: number; // e.g. 100 bonus points on first order
+}
+
 export interface CustomerUser {
   id: string;
   firstName: string;
@@ -258,6 +299,8 @@ export interface CustomerUser {
   totalSpent: number;
   vehicle?: string;
   address?: string;
+  loyaltyPoints?: number;
+  loyaltyTier?: LoyaltyTier;
 }
 
 export interface PaymentGatewayConfig {
@@ -309,6 +352,16 @@ export interface SliderItem {
   buttonText: string;
   isActive: boolean;
   order: number;
+  titleColor?: string;
+  subtitleColor?: string;
+  bgColor?: string;
+  overlayOpacity?: number; // 0 to 100
+  gradientOverlay?: boolean;
+  textAlignment?: 'right' | 'center' | 'left';
+  buttonBgColor?: string;
+  buttonTextColor?: string;
+  badgeBgColor?: string;
+  badgeTextColor?: string;
 }
 
 export type AdminRole = 'super_admin' | 'content_manager' | 'order_manager' | 'inventory_manager';
@@ -339,6 +392,42 @@ export interface AdminUser {
   permissions: AdminPermissions;
 }
 
+export interface FooterLink {
+  id: string;
+  title: string;
+  url: string;
+}
+
+export interface FooterColumn {
+  id: string;
+  title: string;
+  links: FooterLink[];
+}
+
+export interface FooterFeatureItem {
+  id: string;
+  title: string;
+  description: string;
+  desc?: string;
+  icon?: string;
+}
+
+export interface FooterBadgeItem {
+  id: string;
+  title: string;
+  imageUrl?: string;
+  linkUrl?: string;
+  htmlCode?: string;
+}
+
+export interface TrustBadgeItem {
+  id: string;
+  title: string;
+  imageUrl?: string;
+  htmlCode?: string;
+  link?: string;
+}
+
 export interface SiteSettings {
   siteTitle: string;
   siteSlogan: string;
@@ -348,8 +437,21 @@ export interface SiteSettings {
   address: string;
   announcementText: string;
   primaryColor: string; // e.g. '#DC2626'
+  primaryHover?: string;
+  accentGlowColor?: string; // red highlight/glow under buttons and hover states
+  themeMode?: 'dark' | 'light' | 'slate' | 'navy' | 'custom';
+  siteBgColor?: string;
+  cardBgColor?: string;
+  headerBgColor?: string;
+  footerBgColor?: string;
+  textColor?: string;
   fontFamily: 'Vazirmatn' | 'Noto Sans Arabic' | 'Rubik' | 'Alexandria' | 'Cairo';
   fontSize: 'compact' | 'normal' | 'large' | 'xlarge';
+  borderRadius?: 'sharp' | 'normal' | 'rounded' | 'full';
+  themeRadiusPx?: number;
+  headerStyle?: 'light' | 'dark' | 'primary';
+  containerWidth?: 'normal' | 'wide';
+  currencyUnit?: 'rial';
   freeShippingThreshold: number;
   expressShippingFee: number;
   postShippingFee: number;
@@ -370,6 +472,31 @@ export interface SiteSettings {
   sellerPostalCode?: string;
   sellerPhone?: string;
   sellerAddress?: string;
+  // Footer Customization & Trust Badges
+  footerAboutTitle?: string;
+  footerAboutText?: string;
+  footerShowFeatures?: boolean;
+  footerFeatures?: FooterFeatureItem[];
+  footerColumns?: FooterColumn[];
+  footerCopyright?: string;
+  footerCopyrightText?: string;
+  footerShowBadges?: boolean;
+  footerBadges?: FooterBadgeItem[];
+  footerCustomHtml?: string;
+  footerEnamadHtml?: string;
+  footerBankBadgesHtml?: string;
+  footerTrustBadges?: TrustBadgeItem[];
+  // Global SEO Settings
+  metaTitle?: string;
+  metaDescription?: string;
+  metaKeywords?: string;
+  ogImageUrl?: string;
+  ogTitle?: string;
+  ogDescription?: string;
+  canonicalUrl?: string;
+  enableIndexRobots?: boolean;
+  // Loyalty Points Program
+  loyaltySettings?: LoyaltySettings;
 }
 
 export interface AdminAuthState {
@@ -387,6 +514,7 @@ export interface PageSection {
   content?: string;
   badge?: string;
   imageUrl?: string;
+  imageMode?: 'full' | 'cover' | 'contain' | 'side' | 'banner';
   buttonText?: string;
   buttonLink?: string;
   isVisible: boolean;

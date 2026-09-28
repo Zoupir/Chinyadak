@@ -1,4 +1,4 @@
-import { CarBrand, VehicleModel, Category, Product, Article, SliderItem, AdminUser, SitePage, PageSection } from '../types';
+import { CarBrand, VehicleModel, Category, Product, Article, ArticleCategory, SliderItem, AdminUser, SitePage, PageSection } from '../types';
 
 export const BRANDS: CarBrand[] = [
   {
@@ -471,6 +471,7 @@ export const CATEGORIES: Category[] = [
     nameEn: 'Cooling System',
     slug: 'cooling',
     icon: 'Thermometer',
+    imageUrl: 'https://images.unsplash.com/photo-1616422285623-13ff0162193c?w=800&auto=format&fit=crop&q=80',
     description: 'واتر پمپ، رادیاتور، ترموستات، فن، منبع انبساط، شیلنگ‌های آب و اویل کولر موتورهای چینی',
     subcategories: [
       { id: 'sub-water-pump', nameFa: 'واتر پمپ (Water Pump)', nameEn: 'Water Pump', slug: 'water-pump' },
@@ -487,6 +488,7 @@ export const CATEGORIES: Category[] = [
     nameEn: 'Engine & Components',
     slug: 'engine',
     icon: 'Cpu',
+    imageUrl: 'https://images.unsplash.com/photo-1486262715619-67b85e0b08d3?w=800&auto=format&fit=crop&q=80',
     description: 'سرسیلندر، پیستون، رینگ، شاتون، میل‌لنگ، یاتاقان، واشر سرسیلندر، اویل پمپ و دسته موتور',
     subcategories: [
       { id: 'sub-cylinder-head', nameFa: 'سرسیلندر کامل و واشر سرسیلندر', nameEn: 'Cylinder Head', slug: 'cylinder-head' },
@@ -502,6 +504,7 @@ export const CATEGORIES: Category[] = [
     nameEn: 'Timing System',
     slug: 'timing',
     icon: 'Clock',
+    imageUrl: 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=800&auto=format&fit=crop&q=80',
     description: 'کیت کامل زنجیر تایم، تسمه تایم، سفت‌کن، هرزگرد و چرخ‌دنده‌های تایمینگ VVT',
     subcategories: [
       { id: 'sub-timing-chain-kit', nameFa: 'کیت کامل زنجیر تایم', nameEn: 'Timing Chain Kit', slug: 'timing-chain-kit' },
@@ -516,6 +519,7 @@ export const CATEGORIES: Category[] = [
     nameEn: 'Brake System',
     slug: 'brakes',
     icon: 'Disc',
+    imageUrl: 'https://images.unsplash.com/photo-1600793575654-910699b5e4d4?w=800&auto=format&fit=crop&q=80',
     description: 'لنت ترمز سرامیکی، دیسک چرخ، کالیپر، پمپ ترمز، بوستر ترمز و سنسورهای سرعت چرخ ABS',
     subcategories: [
       { id: 'sub-front-brake-pads', nameFa: 'لنت ترمز چرخ جلو', nameEn: 'Front Brake Pads', slug: 'front-brake-pads' },
@@ -530,6 +534,7 @@ export const CATEGORIES: Category[] = [
     nameEn: 'Suspension & Steering',
     slug: 'suspension',
     icon: 'Shield',
+    imageUrl: 'https://images.unsplash.com/photo-1486262715619-67b85e0b08d3?w=800&auto=format&fit=crop&q=80',
     description: 'کمک فنر، فنر لول، طبق بالا و پایین، سیبک طبق، میل موج‌گیر، بوش‌ها و توپی سرکمک',
     subcategories: [
       { id: 'sub-shock-absorbers', nameFa: 'کمک فنر جلو و عقب', nameEn: 'Shock Absorbers', slug: 'shock-absorbers' },
@@ -544,6 +549,7 @@ export const CATEGORIES: Category[] = [
     nameEn: 'Transmission',
     slug: 'transmission',
     icon: 'Cog',
+    imageUrl: 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=800&auto=format&fit=crop&q=80',
     description: 'ساعت گیربکس، شیرهای برقی، فیلتر روغن گیربکس CVT و DCT، کیت کلاچ و سنسورهای دور توربین',
     subcategories: [
       { id: 'sub-valve-body', nameFa: 'ساعت و شیر برقی گیربکس', nameEn: 'Valve Body & Solenoids', slug: 'valve-body' },
@@ -558,6 +564,7 @@ export const CATEGORIES: Category[] = [
     nameEn: 'Turbocharger & Intake',
     slug: 'turbo',
     icon: 'Zap',
+    imageUrl: 'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=800&auto=format&fit=crop&q=80',
     description: 'توربوشارژر کامل، کارتریج توربو، اینترکولر، دریچه گاز برقی، منیفولد هوا و لوله‌های بوست',
     subcategories: [
       { id: 'sub-turbochargers', nameFa: 'توربوشارژر کامل و کارتریج CHRA', nameEn: 'Turbochargers', slug: 'turbochargers' },
@@ -572,6 +579,7 @@ export const CATEGORIES: Category[] = [
     nameEn: 'Fuel System',
     slug: 'fuel',
     icon: 'Flame',
+    imageUrl: 'https://images.unsplash.com/photo-1517524008697-84bbe3c3fd98?w=800&auto=format&fit=crop&q=80',
     description: 'سوزن انژکتور پاشش مستقیم GDI، پمپ بنزین فشار قوی، ریل سوخت و رگلاتور',
     subcategories: [
       { id: 'sub-gdi-injectors', nameFa: 'سوزن انژکتور GDI', nameEn: 'Fuel Injectors', slug: 'injectors' },
@@ -585,6 +593,7 @@ export const CATEGORIES: Category[] = [
     nameEn: 'Filters & Periodic Service',
     slug: 'filters',
     icon: 'Layers',
+    imageUrl: 'https://images.unsplash.com/photo-1615906655593-ad0386982a0f?w=800&auto=format&fit=crop&q=80',
     description: 'فیلتر روغن اورجینال، فیلتر هوا، فیلتر کابین کربن اکتیو، شمع‌های ایریدیوم و ضدیخ استاندارد',
     subcategories: [
       { id: 'sub-oil-filter', nameFa: 'فیلتر روغن موتور', nameEn: 'Oil Filter', slug: 'oil-filter' },
@@ -599,6 +608,7 @@ export const CATEGORIES: Category[] = [
     nameEn: 'Lighting & Headlights',
     slug: 'lighting',
     icon: 'Sun',
+    imageUrl: 'https://images.unsplash.com/photo-1541899481282-d53bffe3c35d?w=800&auto=format&fit=crop&q=80',
     description: 'چراغ جلو Full LED، چراغ عقب پیوسته کریستالی، پروژکتور مه‌شکن و دیلایت',
     subcategories: [
       { id: 'sub-headlights', nameFa: 'چراغ جلو کریستالی LED', nameEn: 'Headlights', slug: 'headlights' },
@@ -626,9 +636,8 @@ export const PRODUCTS: Product[] = [
     stock: 14,
     stockStatus: 'in_stock',
     images: [
-      'https://images.unsplash.com/photo-1580273916550-e323be2ae537?w=800&auto=format&fit=crop&q=80',
-      'https://images.unsplash.com/photo-1617788138017-80ad40651399?w=800&auto=format&fit=crop&q=80',
-      'https://images.unsplash.com/photo-1502877338535-766e1452684a?w=800&auto=format&fit=crop&q=80'
+      'https://images.unsplash.com/photo-1616422285623-13ff0162193c?w=800&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1486262715619-67b85e0b08d3?w=800&auto=format&fit=crop&q=80'
     ],
     rating: 4.9,
     reviewsCount: 28,
@@ -705,7 +714,7 @@ export const PRODUCTS: Product[] = [
     stock: 22,
     stockStatus: 'in_stock',
     images: [
-      'https://images.unsplash.com/photo-1580273916550-e323be2ae537?w=800&auto=format&fit=crop&q=80'
+      'https://images.unsplash.com/photo-1486006920555-c77dce18193b?w=800&auto=format&fit=crop&q=80'
     ],
     rating: 4.8,
     reviewsCount: 15,
@@ -818,7 +827,7 @@ export const PRODUCTS: Product[] = [
     stock: 18,
     stockStatus: 'in_stock',
     images: [
-      'https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=800&auto=format&fit=crop&q=80'
+      'https://images.unsplash.com/photo-1486262715619-67b85e0b08d3?w=800&auto=format&fit=crop&q=80'
     ],
     rating: 4.8,
     reviewsCount: 34,
@@ -890,8 +899,7 @@ export const PRODUCTS: Product[] = [
     stock: 25,
     stockStatus: 'in_stock',
     images: [
-      'https://images.unsplash.com/photo-1619642751034-765dfdf7c58e?w=800&auto=format&fit=crop&q=80',
-      'https://images.unsplash.com/photo-1542282088-72c9c27ed0cd?w=800&auto=format&fit=crop&q=80'
+      'https://images.unsplash.com/photo-1600792536787-b9f848780233?w=800&auto=format&fit=crop&q=80'
     ],
     rating: 4.9,
     reviewsCount: 42,
@@ -953,7 +961,7 @@ export const PRODUCTS: Product[] = [
     stock: 65,
     stockStatus: 'in_stock',
     images: [
-      'https://images.unsplash.com/photo-1542282088-72c9c27ed0cd?w=800&auto=format&fit=crop&q=80'
+      'https://images.unsplash.com/photo-1615906655593-ad0386982a0f?w=800&auto=format&fit=crop&q=80'
     ],
     rating: 5.0,
     reviewsCount: 68,
@@ -1017,7 +1025,7 @@ export const PRODUCTS: Product[] = [
     stock: 20,
     stockStatus: 'in_stock',
     images: [
-      'https://images.unsplash.com/photo-1580273916550-e323be2ae537?w=800&auto=format&fit=crop&q=80'
+      'https://images.unsplash.com/photo-1517524008697-84bbe3c3fd98?w=800&auto=format&fit=crop&q=80'
     ],
     rating: 5.0,
     reviewsCount: 51,
@@ -1163,7 +1171,7 @@ export const PRODUCTS: Product[] = [
     stock: 4,
     stockStatus: 'low_stock',
     images: [
-      'https://images.unsplash.com/photo-1583121274602-3e2820c69888?w=800&auto=format&fit=crop&q=80'
+      'https://images.unsplash.com/photo-1617788138017-80ad40651399?w=800&auto=format&fit=crop&q=80'
     ],
     rating: 5.0,
     reviewsCount: 11,
@@ -1224,7 +1232,7 @@ export const PRODUCTS: Product[] = [
     stock: 8,
     stockStatus: 'in_stock',
     images: [
-      'https://images.unsplash.com/photo-1553440569-bcc63803a83d?w=800&auto=format&fit=crop&q=80'
+      'https://images.unsplash.com/photo-1589739900243-4b52cd9b104e?w=800&auto=format&fit=crop&q=80'
     ],
     rating: 4.7,
     reviewsCount: 14,
@@ -1272,7 +1280,7 @@ export const PRODUCTS: Product[] = [
     stock: 5,
     stockStatus: 'in_stock',
     images: [
-      'https://images.unsplash.com/photo-1542282088-72c9c27ed0cd?w=800&auto=format&fit=crop&q=80'
+      'https://images.unsplash.com/photo-1541899481282-d53bffe3c35d?w=800&auto=format&fit=crop&q=80'
     ],
     rating: 5.0,
     reviewsCount: 8,
@@ -1537,7 +1545,9 @@ export const INITIAL_CUSTOMERS = [
     totalOrders: 3,
     totalSpent: 8450000,
     vehicle: 'KMC J7 (1402)',
-    address: 'تهران، خیابان شریعتی، بالاتر از پل رومی، پلاک ۴۲، واحد ۵'
+    address: 'تهران، خیابان شریعتی، بالاتر از پل رومی، پلاک ۴۲، واحد ۵',
+    loyaltyPoints: 1250,
+    loyaltyTier: 'gold' as const
   },
   {
     id: 'cust-2',
@@ -1552,7 +1562,9 @@ export const INITIAL_CUSTOMERS = [
     totalOrders: 18,
     totalSpent: 42300000,
     vehicle: 'تخصصی KMC و Chery',
-    address: 'تهران، میدان هروی، خیابان وفامنش، پلاک ۱۱۴'
+    address: 'تهران، میدان هروی، خیابان وفامنش، پلاک ۱۱۴',
+    loyaltyPoints: 4650,
+    loyaltyTier: 'diamond' as const
   },
   {
     id: 'cust-3',
@@ -1567,7 +1579,9 @@ export const INITIAL_CUSTOMERS = [
     totalOrders: 7,
     totalSpent: 125000000,
     vehicle: 'فروشگاه عمده قطعات کرج',
-    address: 'کرج، ۴۵ متری گلشهر، نبش بهار غربی'
+    address: 'کرج، ۴۵ متری گلشهر، نبش بهار غربی',
+    loyaltyPoints: 8500,
+    loyaltyTier: 'diamond' as const
   },
   {
     id: 'cust-4',
@@ -1582,7 +1596,98 @@ export const INITIAL_CUSTOMERS = [
     totalOrders: 1,
     totalSpent: 2190000,
     vehicle: 'MVM X22 Pro',
-    address: 'اصفهان، خیابان شیخ صدوق شمالی'
+    address: 'اصفهان، خیابان شیخ صدوق شمالی',
+    loyaltyPoints: 320,
+    loyaltyTier: 'silver' as const
+  }
+];
+
+export const INITIAL_LOYALTY_TRANSACTIONS = [
+  {
+    id: 'tx-loyalty-1',
+    customerId: 'cust-1',
+    type: 'bonus' as const,
+    points: 100,
+    description: 'هدیه خوش‌آمدگویی و تکمیل مشخصات پروفایل کاربری',
+    date: '۱۴۰۳/۰۲/۱۵ - ۱۲:۰۰',
+    balanceAfter: 100
+  },
+  {
+    id: 'tx-loyalty-2',
+    customerId: 'cust-1',
+    type: 'earned' as const,
+    points: 415,
+    description: 'امتیاز خرید سفارش CHP-84920 (واترپمپ و فیلتر KMC J7)',
+    orderNumber: 'CHP-84920',
+    date: '۱۴۰۳/۰۶/۲۴ - ۱۱:۳۲',
+    balanceAfter: 515
+  },
+  {
+    id: 'tx-loyalty-3',
+    customerId: 'cust-1',
+    type: 'bonus' as const,
+    points: 150,
+    description: 'پاداش ارتقا به سطح مشتری طلایی و ثبت خودرو در گاراژ',
+    date: '۱۴۰۳/۰۶/۲۵ - ۰۹:۱۵',
+    balanceAfter: 665
+  },
+  {
+    id: 'tx-loyalty-4',
+    customerId: 'cust-1',
+    type: 'earned' as const,
+    points: 585,
+    description: 'امتیاز خرید سفارش CHP-83110 (لنت ترمز سرامیکی)',
+    orderNumber: 'CHP-83110',
+    date: '۱۴۰۳/۰۷/۰۲ - ۱۷:۴۰',
+    balanceAfter: 1250
+  },
+  {
+    id: 'tx-loyalty-5',
+    customerId: 'cust-2',
+    type: 'earned' as const,
+    points: 4650,
+    description: 'امتیاز انباشته سفارش‌های همکار مکانیک (سطح VIP)',
+    date: '۱۴۰۳/۰۶/۲۰ - ۱۰:۰۰',
+    balanceAfter: 4650
+  }
+];
+
+export const INITIAL_ARTICLE_CATEGORIES: ArticleCategory[] = [
+  {
+    id: 'cat-maintenance',
+    name: 'آموزش و نگهداری',
+    slug: 'maintenance',
+    description: 'راهنماهای دوره‌ای تعویض روغن، تسمه تایم، فیلترها و مایعات مصرفی خودروهای چینی با نکات کلیدی کارخانه',
+    imageUrl: 'https://images.unsplash.com/photo-1486006920555-c77dce18193b?w=800&auto=format&fit=crop&q=80',
+    icon: 'Wrench',
+    articleCount: 4
+  },
+  {
+    id: 'cat-buyers-guide',
+    name: 'راهنمای خرید قطعات',
+    slug: 'buyers-guide',
+    description: 'روش‌های علمی و تجربی تشخیص قطعه اصلی شرکتی از نمونه‌های متفرقه و تقلبی موجود در بازار چراغ برق',
+    imageUrl: 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=800&auto=format&fit=crop&q=80',
+    icon: 'ShieldCheck',
+    articleCount: 3
+  },
+  {
+    id: 'cat-technical-review',
+    name: 'بررسی فنی و مقایسه',
+    slug: 'technical-review',
+    description: 'تحلیل سیستم‌های موتوری توربو TGDI، گیربکس‌های دوکلاچه تر (Wet DCT) و پلتفرم‌های مدرن فونیکس و KMC',
+    imageUrl: 'https://images.unsplash.com/photo-1617788138017-80ad40651399?w=800&auto=format&fit=crop&q=80',
+    icon: 'Car',
+    articleCount: 2
+  },
+  {
+    id: 'cat-troubleshooting',
+    name: 'عیب‌یابی و تعمیرات تخصصی',
+    slug: 'troubleshooting',
+    description: 'بررسی خطاهای ECU، صداهای غیرعادی جلوبندی، لرزش دیسک ترمز و راه‌حل‌های کاربردی مکانیک‌های مجرب',
+    imageUrl: 'https://images.unsplash.com/photo-1517524008697-84bbe3c3fd98?w=800&auto=format&fit=crop&q=80',
+    icon: 'AlertTriangle',
+    articleCount: 5
   }
 ];
 
@@ -1595,8 +1700,24 @@ export const INITIAL_SETTINGS = {
   address: 'تهران، خیابان امیرکبیر (چراغ برق)، کوچه سراج، پاساژ کاشانی، طبقه همکف، پلاک ۲۸',
   announcementText: 'تضمین اصالت قطعات شرکتی با هولوگرام، ارسال فوری ۲ ساعته در تهران و ۲۴ ساعته با تیپاکس در سراسر کشور',
   primaryColor: '#DC2626', // Red-600
+  primaryHover: '#b91c1c',
+  accentGlowColor: '#DC2626', // Configurable glow/red highlight under buttons, cards, hover
+  themeMode: 'dark' as const,
+  siteBgColor: '#0a0a0a',
+  cardBgColor: '#171717',
+  headerBgColor: '#0a0a0a',
+  footerBgColor: '#0a0a0a',
+  textColor: '#ffffff',
   fontFamily: 'Vazirmatn' as const,
   fontSize: 'normal' as const,
+  borderRadius: 'normal' as const,
+  themeRadiusPx: 12,
+  metaTitle: 'چین‌پارت | فروشگاه تخصصی قطعات یدکی خودروهای چینی با سیستم فیتمنت',
+  metaDescription: 'مرجع تخصصی خرید لوازم یدکی و قطعات فابریک خودروهای کی‌ام‌سی KMC، چری، فونیکس، ام‌وی‌ام، لاماری و جک با تضمین اصالت و گارانتی بازگشت وجه.',
+  metaKeywords: 'لوازم یدکی کی ام سی, قطعات چری, قطعات فونیکس, قطعات KMC J7, لوازم جک S5, قطعات فابریک چینی',
+  ogTitle: 'چین‌پارت پرو - مرجع قطعات خودروهای چینی',
+  ogDescription: 'سیستم هوشمند فیتمنت و سازگاری ۱۰۰٪ قطعات با خودروهای مدرن چینی',
+  ogImageUrl: 'https://images.unsplash.com/photo-1617788138017-80ad40651399?w=1200&auto=format&fit=crop&q=80',
   freeShippingThreshold: 5000000,
   expressShippingFee: 120000,
   postShippingFee: 85000,
@@ -1626,7 +1747,75 @@ export const INITIAL_SETTINGS = {
   sellerRegistrationNo: '584920',
   sellerPostalCode: '1143987654',
   sellerPhone: '۰۲۱-۸۸۹۹۲۲۱۱',
-  sellerAddress: 'تهران، خیابان امیرکبیر (چراغ برق)، کوچه سراج، پاساژ کاشانی، طبقه همکف، پلاک ۲۸'
+  sellerAddress: 'تهران، خیابان امیرکبیر (چراغ برق)، کوچه سراج، پاساژ کاشانی، طبقه همکف، پلاک ۲۸',
+  
+  // Footer Customization Defaults (Editable, Deletable, Addable)
+  footerAboutTitle: 'فروشگاه اینترنتی لوازم یدکی چین‌پارت',
+  footerAboutText: 'فروشگاه اینترنتی چین‌پارت، به عنوان مرجع تخصصی تامین، واردات و توزیع قطعات یدکی خودروهای چینی در ایران، با بیش از یک دهه سابقه در بازار چراغ برق تهران فعالیت می‌کند. تمرکز ما حذف واسطه‌ها، تضمین اصالت و تامین قطعات خودروهای مدرن کی‌ام‌سی (KMC)، چری، ام‌وی‌ام، فونیکس، لاماری، جک و چانگان است.',
+  footerShowFeatures: true,
+  footerFeatures: [
+    { id: 'feat-1', title: 'ضمانت ۱۰۰٪ اصالت قطعه', description: 'تضمین قطعات اصلی شرکتی با هولوگرام لیزری', icon: 'ShieldCheck' },
+    { id: 'feat-2', title: 'ارسال اکسپرس و بیمه‌شده', description: 'تهران ۲ ساعته، شهرستان‌ها با تیپاکس و پست پیشتاز', icon: 'Truck' },
+    { id: 'feat-3', title: '۷ روز مهلت تست و مرجوعی', description: 'بازگشت بدون قید و شرط در صورت عدم تطبیق فیتمنت', icon: 'Clock' },
+    { id: 'feat-4', title: 'مشاوره تخصصی قبل از خرید', description: 'بررسی دقیق شماره شاسی VIN توسط مهندسین فنی', icon: 'Headphones' }
+  ],
+  footerColumns: [
+    {
+      id: 'fcol-1',
+      title: 'راهنمای خرید و قوانین',
+      links: [
+        { id: 'flink-1', title: 'درباره چین‌پارت پرو', url: 'page:about' },
+        { id: 'flink-2', title: 'ضمانت اصالت و شرایط بازگشت کالا', url: 'page:guarantee' },
+        { id: 'flink-3', title: 'پیگیری وضعیت سفارش و مرسوله', url: 'tracking' },
+        { id: 'flink-4', title: 'استعلام قطعات کم‌یاب و وارداتی', url: 'part-request' }
+      ]
+    },
+    {
+      id: 'fcol-2',
+      title: 'خدمات مشتریان و همکاران',
+      links: [
+        { id: 'flink-5', title: 'آموزش فنی و عیب‌یابی خودرو', url: 'blog' },
+        { id: 'flink-6', title: 'مدیریت گاراژ خودروهای من', url: 'account:garage' },
+        { id: 'flink-7', title: 'ورود به پنل مدیریت انبار', url: 'admin' },
+        { id: 'flink-8', title: 'ثبت‌نام خریداران و مکانیک‌ها', url: 'account' }
+      ]
+    }
+  ],
+  footerShowBadges: true,
+  footerBadges: [
+    {
+      id: 'badge-enamad',
+      title: 'نماد اعتماد الکترونیکی (اینماد)',
+      imageUrl: 'https://trustseal.enamad.ir/logo.aspx?id=123456',
+      linkUrl: 'https://enamad.ir',
+      htmlCode: '<div class="p-2 bg-neutral-800/80 rounded-xl text-center border border-neutral-700/60 hover:border-red-500/50 transition-colors"><div class="w-14 h-14 mx-auto flex items-center justify-center bg-white rounded-lg p-1 mb-1.5 shadow-sm"><img src="https://cdn-icons-png.flaticon.com/512/1162/1162499.png" alt="اینماد" class="w-10 h-10 object-contain" /></div><span class="text-[10px] text-neutral-300 font-bold block">اینماد ۲ ستاره</span><span class="text-[9px] text-neutral-500 block">مرکز توسعه تجارت</span></div>'
+    },
+    {
+      id: 'badge-samandehi',
+      title: 'نشان ملی ثبت رسانه‌های دیجیتال (ساماندهی)',
+      imageUrl: 'https://logo.samandehi.ir/logo.aspx?id=123456',
+      linkUrl: 'https://samandehi.ir',
+      htmlCode: '<div class="p-2 bg-neutral-800/80 rounded-xl text-center border border-neutral-700/60 hover:border-red-500/50 transition-colors"><div class="w-14 h-14 mx-auto flex items-center justify-center bg-white rounded-lg p-1 mb-1.5 shadow-sm"><img src="https://cdn-icons-png.flaticon.com/512/924/924915.png" alt="ساماندهی" class="w-10 h-10 object-contain" /></div><span class="text-[10px] text-neutral-300 font-bold block">ستاد ساماندهی</span><span class="text-[9px] text-neutral-500 block">وزارت ارشاد</span></div>'
+    },
+    {
+      id: 'badge-shaparak',
+      title: 'درگاه پرداخت امن شاپرک و عضو شتاب',
+      imageUrl: 'https://cdn-icons-png.flaticon.com/512/893/893081.png',
+      linkUrl: '#',
+      htmlCode: '<div class="p-2 bg-neutral-800/80 rounded-xl text-center border border-neutral-700/60 hover:border-red-500/50 transition-colors"><div class="w-14 h-14 mx-auto flex items-center justify-center bg-white rounded-lg p-1 mb-1.5 shadow-sm"><img src="https://cdn-icons-png.flaticon.com/512/893/893081.png" alt="شاپرک" class="w-10 h-10 object-contain" /></div><span class="text-[10px] text-emerald-400 font-bold block">پرداخت امن شاپرک</span><span class="text-[9px] text-neutral-500 block">پروتکل SSL ۲۵۶ بیتی</span></div>'
+    }
+  ],
+  footerCustomHtml: '',
+  footerCopyrightText: 'تمامی حقوق مادی و معنوی برای فروشگاه اینترنتی چین‌پارت محفوظ است. طراحی تخصصی مخصوص صنعت خودروهای چینی.',
+  loyaltySettings: {
+    enabled: true,
+    pointsPerToman: 0.0001, // 1 point per 10,000 Tomans
+    tomanPerPoint: 1000, // 1 point = 1,000 Tomans discount
+    minimumRedeemPoints: 50,
+    maxRedeemPercent: 50, // up to 50% of subtotal can be paid with points
+    signupBonusPoints: 50,
+    firstOrderBonusPoints: 100
+  }
 };
 
 export const INITIAL_SLIDERS: SliderItem[] = [
@@ -1669,7 +1858,7 @@ export const INITIAL_ADMIN_USERS: AdminUser[] = [
   {
     id: 'admin-super',
     username: 'admin',
-    password: 'password123',
+    password: '123456',
     fullName: 'مهندس رضایی (مدیر ارشد سیستم)',
     role: 'super_admin',
     roleTitle: 'مدیر کل ارشد (Super Admin)',

@@ -1,0 +1,818 @@
+import React, { useState } from 'react';
+import { useStore } from '../../context/StoreContext';
+import { SiteSettings } from '../../types';
+import { ImageUploadInput } from '../common/ImageUploadInput';
+import { 
+  Palette, 
+  Sparkles, 
+  Check, 
+  Sun, 
+  Moon, 
+  Layers, 
+  Type, 
+  Sliders, 
+  Globe, 
+  Search, 
+  Package, 
+  PhoneCall, 
+  ShieldCheck,
+  RefreshCw,
+  Eye,
+  SlidersHorizontal,
+  CheckCircle2,
+  FileText
+} from 'lucide-react';
+
+export const AdminThemeTab: React.FC = () => {
+  const { settings, updateSettings, showToast } = useStore();
+
+  const [form, setForm] = useState<SiteSettings>({ ...settings });
+  const [activeSubTab, setActiveSubTab] = useState<'theme' | 'colors' | 'typography' | 'seo' | 'loyalty'>('theme');
+
+  // Preset themes
+  const THEME_PRESETS = [
+    {
+      id: 'dark',
+      name: 'دارک اسپرت (Dark Sport)',
+      desc: 'تم تیره مسابقه‌ای با هایلایت قرمز و کنتراست بالا',
+      siteBgColor: '#0a0a0a',
+      cardBgColor: '#171717',
+      headerBgColor: '#0a0a0a',
+      footerBgColor: '#0a0a0a',
+      textColor: '#ffffff',
+      primaryColor: '#DC2626',
+      primaryHover: '#b91c1c',
+      accentGlowColor: '#DC2626',
+      themeMode: 'dark' as const
+    },
+    {
+      id: 'light',
+      name: 'لایت مدرن (Clean Light)',
+      desc: 'تم روشن و شفاف، پس‌زمینه سفید با کارت‌های ملایم',
+      siteBgColor: '#f8fafc',
+      cardBgColor: '#ffffff',
+      headerBgColor: '#ffffff',
+      footerBgColor: '#0f172a',
+      textColor: '#0f172a',
+      primaryColor: '#DC2626',
+      primaryHover: '#b91c1c',
+      accentGlowColor: '#DC2626',
+      themeMode: 'light' as const
+    },
+    {
+      id: 'slate',
+      name: 'لاکچری طوسی (Luxury Slate)',
+      desc: 'خاکستری تیره لوکس با المان‌های شیشه‌ای و شیک',
+      siteBgColor: '#0f172a',
+      cardBgColor: '#1e293b',
+      headerBgColor: '#0f172a',
+      footerBgColor: '#020617',
+      textColor: '#f8fafc',
+      primaryColor: '#059669',
+      primaryHover: '#047857',
+      accentGlowColor: '#10b981',
+      themeMode: 'slate' as const
+    },
+    {
+      id: 'navy',
+      name: 'سورمه‌ای متالیک (Cyber Navy)',
+      desc: 'آبی تیره با جلوه های‌تک، مناسب قطعات مدرن توربو',
+      siteBgColor: '#020617',
+      cardBgColor: '#0f172a',
+      headerBgColor: '#020617',
+      footerBgColor: '#020617',
+      textColor: '#ffffff',
+      primaryColor: '#2563EB',
+      primaryHover: '#1d4ed8',
+      accentGlowColor: '#3b82f6',
+      themeMode: 'navy' as const
+    }
+  ];
+
+  const applyPreset = (preset: typeof THEME_PRESETS[0]) => {
+    const updated = {
+      ...form,
+      themeMode: preset.themeMode,
+      siteBgColor: preset.siteBgColor,
+      cardBgColor: preset.cardBgColor,
+      headerBgColor: preset.headerBgColor,
+      footerBgColor: preset.footerBgColor,
+      textColor: preset.textColor,
+      primaryColor: preset.primaryColor,
+      primaryHover: preset.primaryHover,
+      accentGlowColor: preset.accentGlowColor
+    };
+    setForm(updated);
+    updateSettings(updated);
+    showToast(`تم "${preset.name}" با موفقیت بر کل وب‌سایت اعمال شد.`);
+  };
+
+  const handleSaveAll = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    updateSettings(form);
+    showToast('تنظیمات قالب، رنگ‌ها و سئو ذخیره و بر کل وب‌سایت اعمال شد.');
+  };
+
+  return (
+    <div className="space-y-6 text-right">
+      
+      {/* Top Header Card */}
+      <div className="bg-white rounded-3xl border border-neutral-200 p-6 sm:p-8 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div>
+          <div className="flex items-center gap-2 mb-1">
+            <span className="text-[11px] bg-red-100 text-red-700 font-bold px-2 py-0.5 rounded-full">
+              کنترل‌کننده متمرکز استایل و سئو
+            </span>
+          </div>
+          <h2 className="text-xl font-black text-neutral-900 flex items-center gap-2">
+            <Palette className="w-6 h-6 text-red-600" />
+            <span>مدیریت پوسته، رنگ‌ها، هایلایت دکمه‌ها و سئوی سایت</span>
+          </h2>
+          <p className="text-xs text-neutral-500 mt-1">
+            شخصی‌سازی آنی تمام رنگ‌های وب‌سایت، پس‌زمینه‌ها، رنگ درخشش زیر دکمه‌ها و متاتگ‌های رتبه‌بندی گوگل
+          </p>
+        </div>
+
+        {/* Subtab Navigation */}
+        <div className="flex items-center gap-1.5 bg-neutral-100 p-1.5 rounded-2xl flex-wrap">
+          <button
+            type="button"
+            onClick={() => setActiveSubTab('theme')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              activeSubTab === 'theme' ? 'bg-white text-neutral-900 shadow-md' : 'text-neutral-600 hover:text-neutral-900'
+            }`}
+          >
+            <span>پوسته‌ها و قالب</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveSubTab('colors')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              activeSubTab === 'colors' ? 'bg-white text-neutral-900 shadow-md' : 'text-neutral-600 hover:text-neutral-900'
+            }`}
+          >
+            <span>رنگ‌ها و هایلایت</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveSubTab('typography')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              activeSubTab === 'typography' ? 'bg-white text-neutral-900 shadow-md' : 'text-neutral-600 hover:text-neutral-900'
+            }`}
+          >
+            <span>فونت و هندسه</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveSubTab('seo')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+              activeSubTab === 'seo' ? 'bg-white text-neutral-900 shadow-md' : 'text-neutral-600 hover:text-neutral-900'
+            }`}
+          >
+            <Search className="w-3.5 h-3.5 text-blue-600" />
+            <span>تنظیمات سئو (SEO)</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveSubTab('loyalty')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+              activeSubTab === 'loyalty' ? 'bg-white text-neutral-900 shadow-md' : 'text-neutral-600 hover:text-neutral-900'
+            }`}
+          >
+            <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+            <span>باشگاه مشتریان و امتیازات</span>
+          </button>
+        </div>
+      </div>
+
+      <form onSubmit={handleSaveAll} className="space-y-6">
+        
+        {/* =========================================================================
+            SUBTAB 1: PRESET THEMES & PALETTES
+        ========================================================================= */}
+        {activeSubTab === 'theme' && (
+          <div className="bg-white rounded-3xl border border-neutral-200 p-6 sm:p-8 shadow-xs space-y-6">
+            <div>
+              <h3 className="font-black text-base text-neutral-900 flex items-center gap-2">
+                <Sun className="w-5 h-5 text-amber-500" />
+                <span>پوسته‌های آماده فروشگاه (تغییر تم از مشکی به سایر تم‌ها)</span>
+              </h3>
+              <p className="text-xs text-neutral-500 mt-0.5">
+                با یک کلیک تم کلی سایت را بین تیره اسپرت، روشن، طوسی یا سورمه‌ای سوئیچ کنید
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {THEME_PRESETS.map(preset => {
+                const isSelected = form.themeMode === preset.themeMode;
+                return (
+                  <div
+                    key={preset.id}
+                    onClick={() => applyPreset(preset)}
+                    className={`p-5 rounded-2xl border-2 transition-all cursor-pointer space-y-3 relative overflow-hidden ${
+                      isSelected
+                        ? 'border-red-600 shadow-lg ring-2 ring-red-500/20 bg-neutral-50'
+                        : 'border-neutral-200 hover:border-neutral-300 bg-white'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-sm text-neutral-900">{preset.name}</span>
+                      {isSelected && (
+                        <span className="w-5 h-5 rounded-full bg-red-600 text-white flex items-center justify-center">
+                          <Check className="w-3 h-3" />
+                        </span>
+                      )}
+                    </div>
+
+                    <p className="text-xs text-neutral-500">{preset.desc}</p>
+
+                    {/* Color Swatches */}
+                    <div className="flex items-center gap-2 pt-2 border-t border-neutral-100">
+                      <div className="w-6 h-6 rounded-lg border shadow-xs" style={{ backgroundColor: preset.siteBgColor }} title="پس‌زمینه" />
+                      <div className="w-6 h-6 rounded-lg border shadow-xs" style={{ backgroundColor: preset.cardBgColor }} title="کارت‌ها" />
+                      <div className="w-6 h-6 rounded-lg border shadow-xs" style={{ backgroundColor: preset.primaryColor }} title="رنگ اصلی" />
+                      <div className="w-6 h-6 rounded-lg border shadow-xs" style={{ backgroundColor: preset.accentGlowColor }} title="هایلایت دکمه‌ها" />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Brand Logo & Favicon in Theme tab */}
+            <div className="pt-6 border-t border-neutral-100 space-y-4">
+              <h4 className="font-bold text-sm text-neutral-900">لوگوی فروشگاه و آیکون مرورگر (Favicon):</h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <ImageUploadInput
+                  label="لوگوی اصلی سایت (Header & Invoice):"
+                  value={form.logoUrl || ''}
+                  onChange={url => setForm({ ...form, logoUrl: url })}
+                  placeholder="https://..."
+                  helperText="در هدر، فوتر، فاکتورهای رسمی و چاپ پیش‌فاکتور نمایش داده می‌شود."
+                />
+                <ImageUploadInput
+                  label="آیکون برگه مرورگر (Favicon):"
+                  value={form.faviconUrl || ''}
+                  onChange={url => setForm({ ...form, faviconUrl: url })}
+                  aspectRatio="square"
+                  placeholder="https://..."
+                  helperText="به‌صورت آنی در تب مرورگر و بوکمارک‌های کاربران اعمال می‌گردد."
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* =========================================================================
+            SUBTAB 2: GRANULAR COLOR CONTROLLER (PRIMARY, HOVER, GLOW, BACKGROUNDS)
+        ========================================================================= */}
+        {activeSubTab === 'colors' && (
+          <div className="bg-white rounded-3xl border border-neutral-200 p-6 sm:p-8 shadow-xs space-y-6">
+            <div>
+              <h3 className="font-black text-base text-neutral-900 flex items-center gap-2">
+                <Palette className="w-5 h-5 text-red-600" />
+                <span>کنترل متمرکز کلیه رنگ‌ها و هایلایت‌های وب‌سایت</span>
+              </h3>
+              <p className="text-xs text-neutral-500 mt-0.5">
+                تغییر رنگ دکمه‌ها، رنگ هاور، هایلایت درخشان زیر دکمه‌ها و پس‌زمینه بخش‌های مختلف
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              
+              {/* Primary Color */}
+              <div className="p-4 bg-neutral-50 rounded-2xl border border-neutral-200 space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="font-bold text-xs text-neutral-800">رنگ سازمانی و دکمه‌های اصلی (--primary-color):</label>
+                  <span className="font-mono text-xs">{form.primaryColor || '#DC2626'}</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="color"
+                    value={form.primaryColor || '#DC2626'}
+                    onChange={e => setForm({ ...form, primaryColor: e.target.value })}
+                    className="w-10 h-10 rounded-xl border border-neutral-300 cursor-pointer p-0.5 bg-white"
+                  />
+                  <input
+                    type="text"
+                    value={form.primaryColor || '#DC2626'}
+                    onChange={e => setForm({ ...form, primaryColor: e.target.value })}
+                    className="w-32 p-2 border border-neutral-300 rounded-xl font-mono text-center text-xs uppercase"
+                  />
+                  <span className="text-[11px] text-neutral-500">دکمه‌های خرید، آیکون‌ها و لینک‌ها</span>
+                </div>
+              </div>
+
+              {/* Button Hover Color */}
+              <div className="p-4 bg-neutral-50 rounded-2xl border border-neutral-200 space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="font-bold text-xs text-neutral-800">رنگ حالت نگه داشتن موس روی دکمه‌ها (--primary-hover):</label>
+                  <span className="font-mono text-xs">{form.primaryHover || '#b91c1c'}</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="color"
+                    value={form.primaryHover || '#b91c1c'}
+                    onChange={e => setForm({ ...form, primaryHover: e.target.value })}
+                    className="w-10 h-10 rounded-xl border border-neutral-300 cursor-pointer p-0.5 bg-white"
+                  />
+                  <input
+                    type="text"
+                    value={form.primaryHover || '#b91c1c'}
+                    onChange={e => setForm({ ...form, primaryHover: e.target.value })}
+                    className="w-32 p-2 border border-neutral-300 rounded-xl font-mono text-center text-xs uppercase"
+                  />
+                  <span className="text-[11px] text-neutral-500">حالت Mouse Hover دکمه‌ها</span>
+                </div>
+              </div>
+
+              {/* Accent Glow Color (Red highlight under buttons, cards, hover) */}
+              <div className="p-4 bg-red-50/50 rounded-2xl border border-red-200 space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="font-black text-xs text-red-900 flex items-center gap-1.5">
+                    <Sparkles className="w-4 h-4 text-red-600" />
+                    <span>رنگ هایلایت و درخشش زیر دکمه‌ها و باکس‌ها (--accent-glow):</span>
+                  </label>
+                  <span className="font-mono text-xs font-bold text-red-800">{form.accentGlowColor || '#DC2626'}</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="color"
+                    value={form.accentGlowColor || '#DC2626'}
+                    onChange={e => setForm({ ...form, accentGlowColor: e.target.value })}
+                    className="w-10 h-10 rounded-xl border border-neutral-300 cursor-pointer p-0.5 bg-white"
+                  />
+                  <input
+                    type="text"
+                    value={form.accentGlowColor || '#DC2626'}
+                    onChange={e => setForm({ ...form, accentGlowColor: e.target.value })}
+                    className="w-32 p-2 border border-neutral-300 rounded-xl font-mono text-center text-xs uppercase"
+                  />
+                  <span className="text-[11px] text-red-700 font-medium">سایه‌های قرمز زیر دکمه‌ها و فوکوس</span>
+                </div>
+              </div>
+
+              {/* Site Background Color */}
+              <div className="p-4 bg-neutral-50 rounded-2xl border border-neutral-200 space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="font-bold text-xs text-neutral-800">رنگ پس‌زمینه سراسری وب‌سایت (--site-bg):</label>
+                  <span className="font-mono text-xs">{form.siteBgColor || '#0a0a0a'}</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="color"
+                    value={form.siteBgColor || '#0a0a0a'}
+                    onChange={e => setForm({ ...form, siteBgColor: e.target.value })}
+                    className="w-10 h-10 rounded-xl border border-neutral-300 cursor-pointer p-0.5 bg-white"
+                  />
+                  <input
+                    type="text"
+                    value={form.siteBgColor || '#0a0a0a'}
+                    onChange={e => setForm({ ...form, siteBgColor: e.target.value })}
+                    className="w-32 p-2 border border-neutral-300 rounded-xl font-mono text-center text-xs uppercase"
+                  />
+                  <span className="text-[11px] text-neutral-500">پس‌زمینه اصلی صفحات</span>
+                </div>
+              </div>
+
+              {/* Card / Box Background */}
+              <div className="p-4 bg-neutral-50 rounded-2xl border border-neutral-200 space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="font-bold text-xs text-neutral-800">رنگ پس‌زمینه کارت‌های کالا و سکشن‌ها (--card-bg):</label>
+                  <span className="font-mono text-xs">{form.cardBgColor || '#171717'}</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="color"
+                    value={form.cardBgColor || '#171717'}
+                    onChange={e => setForm({ ...form, cardBgColor: e.target.value })}
+                    className="w-10 h-10 rounded-xl border border-neutral-300 cursor-pointer p-0.5 bg-white"
+                  />
+                  <input
+                    type="text"
+                    value={form.cardBgColor || '#171717'}
+                    onChange={e => setForm({ ...form, cardBgColor: e.target.value })}
+                    className="w-32 p-2 border border-neutral-300 rounded-xl font-mono text-center text-xs uppercase"
+                  />
+                  <span className="text-[11px] text-neutral-500">باکس قطعات و پنل‌ها</span>
+                </div>
+              </div>
+
+              {/* Header Background */}
+              <div className="p-4 bg-neutral-50 rounded-2xl border border-neutral-200 space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="font-bold text-xs text-neutral-800">رنگ پس‌زمینه منوی بالای سایت (--header-bg):</label>
+                  <span className="font-mono text-xs">{form.headerBgColor || '#0a0a0a'}</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="color"
+                    value={form.headerBgColor || '#0a0a0a'}
+                    onChange={e => setForm({ ...form, headerBgColor: e.target.value })}
+                    className="w-10 h-10 rounded-xl border border-neutral-300 cursor-pointer p-0.5 bg-white"
+                  />
+                  <input
+                    type="text"
+                    value={form.headerBgColor || '#0a0a0a'}
+                    onChange={e => setForm({ ...form, headerBgColor: e.target.value })}
+                    className="w-32 p-2 border border-neutral-300 rounded-xl font-mono text-center text-xs uppercase"
+                  />
+                  <span className="text-[11px] text-neutral-500">هدر اصلی و مگامنو</span>
+                </div>
+              </div>
+
+            </div>
+
+            {/* Live Interactive Preview */}
+            <div className="p-6 bg-neutral-900 text-white rounded-3xl border border-neutral-800 space-y-4 shadow-xl">
+              <div className="flex items-center justify-between pb-3 border-b border-neutral-800">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-amber-400" />
+                  <h4 className="font-bold text-xs text-white">پیش‌نمایش زنده المان‌ها و هایلایت درخشان دکمه:</h4>
+                </div>
+                <span className="text-[10px] text-neutral-400 font-mono">
+                  Primary: {form.primaryColor} | Glow: {form.accentGlowColor}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-center">
+                <button
+                  type="button"
+                  style={{
+                    backgroundColor: form.primaryColor || '#DC2626',
+                    boxShadow: `0 10px 25px -4px ${form.accentGlowColor || '#DC2626'}66`,
+                    borderRadius: `${form.themeRadiusPx || 12}px`
+                  }}
+                  className="py-3 px-4 text-white font-black text-xs transition-transform hover:scale-105 flex items-center justify-center gap-2"
+                >
+                  <Package className="w-4 h-4" />
+                  <span>دکمه خرید با هایلایت سفارشی</span>
+                </button>
+
+                <div 
+                  style={{
+                    borderRadius: `${form.themeRadiusPx || 12}px`,
+                    borderColor: form.accentGlowColor || '#DC2626'
+                  }}
+                  className="p-3 bg-neutral-800/90 border flex items-center justify-between"
+                >
+                  <span className="text-[11px] font-bold text-white">نمونه کارت کالا</span>
+                  <span style={{ color: form.primaryColor }} className="font-mono font-bold text-xs">
+                    ۱,۴۵۰,۰۰۰ تومان
+                  </span>
+                </div>
+
+                <button
+                  type="button"
+                  style={{
+                    color: form.primaryColor || '#DC2626',
+                    borderColor: form.primaryColor || '#DC2626',
+                    borderRadius: `${form.themeRadiusPx || 12}px`
+                  }}
+                  className="py-3 px-4 border font-bold text-xs bg-white/5 hover:bg-white/10 transition-colors flex items-center justify-center gap-2"
+                >
+                  <PhoneCall className="w-4 h-4" />
+                  <span>استعلام تلفنی موجودی</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* =========================================================================
+            SUBTAB 3: TYPOGRAPHY, FONT SIZE & BORDER RADIUS
+        ========================================================================= */}
+        {activeSubTab === 'typography' && (
+          <div className="bg-white rounded-3xl border border-neutral-200 p-6 sm:p-8 shadow-xs space-y-6">
+            {/* Fonts */}
+            <div className="space-y-3">
+              <h3 className="font-black text-base text-neutral-900 flex items-center gap-2">
+                <Type className="w-5 h-5 text-red-600" />
+                <span>فونت استاندارد وب‌سایت (Google Fonts CDN)</span>
+              </h3>
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+                {[
+                  { id: 'Vazirmatn', label: 'وزیرمتن (پیش‌فرض)', desc: 'خوانایی عالی و مدرن' },
+                  { id: 'Noto Sans Arabic', label: 'نوتو سنس', desc: 'فونت رسمی گوگل' },
+                  { id: 'Rubik', label: 'روبیک اسپرت', desc: 'طراحی هندسی و جذاب' },
+                  { id: 'Alexandria', label: 'الکساندریا', desc: 'خوانایی بالا در اعداد' },
+                  { id: 'Cairo', label: 'قاهره', desc: 'فونت ضخیم خودرویی' }
+                ].map(f => (
+                  <button
+                    key={f.id}
+                    type="button"
+                    onClick={() => setForm({ ...form, fontFamily: f.id as any })}
+                    className={`p-3.5 rounded-2xl border text-center transition-all cursor-pointer ${
+                      form.fontFamily === f.id
+                        ? 'bg-neutral-900 text-white font-bold border-neutral-900 shadow-md ring-2 ring-red-500/30'
+                        : 'bg-neutral-50 text-neutral-700 border-neutral-200 hover:border-neutral-300'
+                    }`}
+                  >
+                    <span className="block text-xs font-black">{f.label}</span>
+                    <span className={`block text-[10px] mt-1 ${form.fontFamily === f.id ? 'text-neutral-300' : 'text-neutral-400'}`}>
+                      {f.desc}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Border Radius */}
+            <div className="space-y-3 pt-4 border-t border-neutral-100">
+              <div className="flex items-center justify-between">
+                <h4 className="font-bold text-xs text-neutral-800">انحنای گوشه‌ها و لبه‌های قالب (--theme-radius):</h4>
+                <span className="font-mono text-xs">{form.themeRadiusPx || 12} پیکسل</span>
+              </div>
+              <div className="flex items-center gap-4">
+                <input
+                  type="range"
+                  min={0}
+                  max={32}
+                  step={2}
+                  value={form.themeRadiusPx || 12}
+                  onChange={e => setForm({ ...form, themeRadiusPx: Number(e.target.value) })}
+                  className="w-64 accent-red-600"
+                />
+                <div 
+                  style={{ borderRadius: `${form.themeRadiusPx || 12}px` }}
+                  className="w-12 h-12 bg-red-600/30 border-2 border-red-600 flex items-center justify-center font-mono text-[10px] font-bold"
+                >
+                  {form.themeRadiusPx || 12}px
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* =========================================================================
+            SUBTAB 4: GLOBAL SEO SETTINGS PANEL
+        ========================================================================= */}
+        {activeSubTab === 'seo' && (
+          <div className="bg-white rounded-3xl border border-neutral-200 p-6 sm:p-8 shadow-xs space-y-6">
+            <div>
+              <h3 className="font-black text-base text-neutral-900 flex items-center gap-2">
+                <Search className="w-5 h-5 text-blue-600" />
+                <span>تنظیمات جامع سئو، عناوین متا و کارت‌های اشتراک‌گذاری (SEO & OpenGraph)</span>
+              </h3>
+              <p className="text-xs text-neutral-500 mt-0.5">
+                بهینه‌سازی تگ‌های گوگل برای رتبه‌بندی صدر نتایج و اشتراک‌گذاری حرفه‌ای در تلگرام، واتساپ و شبکه‌های اجتماعی
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-neutral-700 font-bold mb-1">عنوان متای سراسری وب‌سایت (Meta Title):</label>
+                <input
+                  type="text"
+                  value={form.metaTitle || ''}
+                  onChange={e => setForm({ ...form, metaTitle: e.target.value })}
+                  placeholder="مثال: چین‌پارت | فروشگاه تخصصی قطعات یدکی خودروهای چینی با سیستم فیتمنت هوشمند"
+                  className="w-full p-2.5 border border-neutral-300 rounded-xl"
+                />
+                <span className="text-[11px] text-neutral-400 mt-1 block">در برگه مرورگر و تیتر اول نتایج گوگل نمایش داده می‌شود.</span>
+              </div>
+
+              <div>
+                <label className="block text-neutral-700 font-bold mb-1">توضیحات متای صفحه اصلی (Meta Description):</label>
+                <textarea
+                  rows={3}
+                  value={form.metaDescription || ''}
+                  onChange={e => setForm({ ...form, metaDescription: e.target.value })}
+                  placeholder="توضیحات ۱۶۰ کاراکتری برای ربات‌های موتور جستجوی گوگل..."
+                  className="w-full p-2.5 border border-neutral-300 rounded-xl"
+                />
+              </div>
+
+              <div>
+                <label className="block text-neutral-700 font-bold mb-1">کلمات کلیدی اصلی سئو (Meta Keywords):</label>
+                <input
+                  type="text"
+                  value={form.metaKeywords || ''}
+                  onChange={e => setForm({ ...form, metaKeywords: e.target.value })}
+                  placeholder="لوازم یدکی KMC J7, قطعات چری تیگو, قطعات فونیکس FX, لوازم جک S5"
+                  className="w-full p-2.5 border border-neutral-300 rounded-xl"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t border-neutral-100">
+                <div>
+                  <label className="block text-neutral-700 font-bold mb-1">عنوان اشتراک‌گذاری اجتماعی (og:title):</label>
+                  <input
+                    type="text"
+                    value={form.ogTitle || ''}
+                    onChange={e => setForm({ ...form, ogTitle: e.target.value })}
+                    placeholder="چین‌پارت پرو - مرجع قطعات خودروهای چینی"
+                    className="w-full p-2.5 border border-neutral-300 rounded-xl"
+                  />
+                </div>
+                <div>
+                  <label className="block text-neutral-700 font-bold mb-1">توضیحات شبکه‌های اجتماعی (og:description):</label>
+                  <input
+                    type="text"
+                    value={form.ogDescription || ''}
+                    onChange={e => setForm({ ...form, ogDescription: e.target.value })}
+                    placeholder="تامین مستقیم قطعات اورجینال با ضمانت تطبیق فیتمنت"
+                    className="w-full p-2.5 border border-neutral-300 rounded-xl"
+                  />
+                </div>
+              </div>
+
+              <ImageUploadInput
+                label="تصویر پیش‌نمایش اشتراک‌گذاری اجتماعی (OpenGraph Image - 1200x630):"
+                value={form.ogImageUrl || ''}
+                onChange={url => setForm({ ...form, ogImageUrl: url })}
+                aspectRatio="banner"
+                placeholder="https://..."
+                helperText="هنگام ارسال لینک سایت در تلگرام، واتساپ یا شبکه‌های اجتماعی، این تصویر زیبا به همراه عنوان نمایش داده می‌شود."
+              />
+            </div>
+          </div>
+        )}
+
+        {/* SUBTAB 5: LOYALTY POINT SYSTEM */}
+        {activeSubTab === 'loyalty' && (
+          <div className="bg-white rounded-3xl border border-neutral-200 p-6 sm:p-8 shadow-xs space-y-6">
+            <div className="flex items-center justify-between pb-4 border-b border-neutral-100">
+              <div>
+                <h3 className="text-base font-black text-neutral-900 flex items-center gap-2">
+                  <Sparkles className="w-5 h-5 text-amber-500" />
+                  <span>پیکربندی سیستم امتیاز وفاداری و باشگاه مشتریان</span>
+                </h3>
+                <p className="text-xs text-neutral-500 mt-1">
+                  تنظیم نرخ کسب امتیاز به ازای هر خرید، ارزش ریالی امتیازات در تسویه، پاداش عضویت و محدودیت‌های فاکتور
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-6">
+              {/* Enable / Disable Switch */}
+              <div className="p-4 rounded-2xl bg-neutral-50 border border-neutral-200 flex items-center justify-between">
+                <div>
+                  <h4 className="text-xs font-bold text-neutral-900">فعال‌سازی سیستم امتیاز باشگاه مشتریان در فروشگاه:</h4>
+                  <p className="text-[11px] text-neutral-500 mt-0.5">در صورت غیرفعال بودن، امتیازدهی و باکس کسر امتیاز در سبد خرید پنهان خواهند شد.</p>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={form.loyaltySettings?.enabled ?? true}
+                    onChange={e => setForm({
+                      ...form,
+                      loyaltySettings: {
+                        ...(form.loyaltySettings || {
+                          enabled: true,
+                          pointsPerToman: 0.0001,
+                          tomanPerPoint: 1000,
+                          minimumRedeemPoints: 50,
+                          maxRedeemPercent: 50,
+                          signupBonusPoints: 50,
+                          firstOrderBonusPoints: 100
+                        }),
+                        enabled: e.target.checked
+                      }
+                    })}
+                    className="sr-only peer"
+                  />
+                  <div className="w-11 h-6 bg-neutral-300 peer-focus:outline-hidden rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:right-[2px] after:bg-white after:border-neutral-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-500"></div>
+                </label>
+              </div>
+
+              {/* Grid Settings */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="p-4 rounded-2xl border border-neutral-200 space-y-2">
+                  <label className="block text-xs font-bold text-neutral-800">
+                    ارزش ریالی هر ۱ امتیاز در تسویه (تومان):
+                  </label>
+                  <input
+                    type="number"
+                    min="100"
+                    step="100"
+                    value={form.loyaltySettings?.tomanPerPoint ?? 1000}
+                    onChange={e => setForm({
+                      ...form,
+                      loyaltySettings: {
+                        ...(form.loyaltySettings || {
+                          enabled: true,
+                          pointsPerToman: 0.0001,
+                          tomanPerPoint: 1000,
+                          minimumRedeemPoints: 50,
+                          maxRedeemPercent: 50,
+                          signupBonusPoints: 50,
+                          firstOrderBonusPoints: 100
+                        }),
+                        tomanPerPoint: Number(e.target.value)
+                      }
+                    })}
+                    className="w-full p-2.5 border border-neutral-300 rounded-xl font-mono text-left text-xs font-bold"
+                  />
+                  <span className="text-[11px] text-neutral-400 block">مثال: ۱۰۰۰ تومان (هر ۱ امتیاز = ۱,۰۰۰ تومان کسر هزینه سفارش)</span>
+                </div>
+
+                <div className="p-4 rounded-2xl border border-neutral-200 space-y-2">
+                  <label className="block text-xs font-bold text-neutral-800">
+                    حداقل امتیاز مجاز برای استفاده در فاکتور:
+                  </label>
+                  <input
+                    type="number"
+                    min="10"
+                    value={form.loyaltySettings?.minimumRedeemPoints ?? 50}
+                    onChange={e => setForm({
+                      ...form,
+                      loyaltySettings: {
+                        ...(form.loyaltySettings || {
+                          enabled: true,
+                          pointsPerToman: 0.0001,
+                          tomanPerPoint: 1000,
+                          minimumRedeemPoints: 50,
+                          maxRedeemPercent: 50,
+                          signupBonusPoints: 50,
+                          firstOrderBonusPoints: 100
+                        }),
+                        minimumRedeemPoints: Number(e.target.value)
+                      }
+                    })}
+                    className="w-full p-2.5 border border-neutral-300 rounded-xl font-mono text-left text-xs font-bold"
+                  />
+                  <span className="text-[11px] text-neutral-400 block">مشتری تا قبل از رسیدن به این امتیاز امکان کسر در تسویه را ندارد.</span>
+                </div>
+
+                <div className="p-4 rounded-2xl border border-neutral-200 space-y-2">
+                  <label className="block text-xs font-bold text-neutral-800">
+                    امتیاز هدیه خوش‌آمدگویی ثبت‌نام:
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={form.loyaltySettings?.signupBonusPoints ?? 50}
+                    onChange={e => setForm({
+                      ...form,
+                      loyaltySettings: {
+                        ...(form.loyaltySettings || {
+                          enabled: true,
+                          pointsPerToman: 0.0001,
+                          tomanPerPoint: 1000,
+                          minimumRedeemPoints: 50,
+                          maxRedeemPercent: 50,
+                          signupBonusPoints: 50,
+                          firstOrderBonusPoints: 100
+                        }),
+                        signupBonusPoints: Number(e.target.value)
+                      }
+                    })}
+                    className="w-full p-2.5 border border-neutral-300 rounded-xl font-mono text-left text-xs font-bold"
+                  />
+                  <span className="text-[11px] text-neutral-400 block">امتیاز بلافاصله پس از ثبت‌نام به موجودی کاربر افزوده می‌شود.</span>
+                </div>
+
+                <div className="p-4 rounded-2xl border border-neutral-200 space-y-2">
+                  <label className="block text-xs font-bold text-neutral-800">
+                    حداکثر درصد پرداخت فاکتور با امتیاز:
+                  </label>
+                  <input
+                    type="number"
+                    min="10"
+                    max="100"
+                    value={form.loyaltySettings?.maxRedeemPercent ?? 50}
+                    onChange={e => setForm({
+                      ...form,
+                      loyaltySettings: {
+                        ...(form.loyaltySettings || {
+                          enabled: true,
+                          pointsPerToman: 0.0001,
+                          tomanPerPoint: 1000,
+                          minimumRedeemPoints: 50,
+                          maxRedeemPercent: 50,
+                          signupBonusPoints: 50,
+                          firstOrderBonusPoints: 100
+                        }),
+                        maxRedeemPercent: Number(e.target.value)
+                      }
+                    })}
+                    className="w-full p-2.5 border border-neutral-300 rounded-xl font-mono text-left text-xs font-bold"
+                  />
+                  <span className="text-[11px] text-neutral-400 block">سقف درصدی تخفیف با امتیاز از کل اقلام سفارش (مثلاً ۵۰٪).</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Global Save Button */}
+        <div className="flex items-center justify-between p-4 bg-neutral-900 text-white rounded-2xl shadow-xl">
+          <div className="flex items-center gap-2">
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+            <span className="text-xs font-bold">تغییرات به صورت لحظه‌ای در کل سیستم و CSS Variables ذخیره می‌شوند.</span>
+          </div>
+
+          <button
+            type="submit"
+            className="px-6 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-black shadow-lg shadow-red-600/30 flex items-center gap-2 transition-all cursor-pointer"
+          >
+            <Check className="w-4 h-4" />
+            <span>ذخیره نهایی و اعمال بر کل فروشگاه</span>
+          </button>
+        </div>
+
+      </form>
+
+    </div>
+  );
+};

@@ -1971,7 +1971,7 @@ export const INITIAL_PAYMENT_GATEWAYS = [
     name: 'زرین‌پال پرداخت واسط هوشمند (ZarinPal)',
     provider: 'zarinpal' as const,
     isActive: false,
-    merchantId: 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx',
+    merchantId: '',
     isSandbox: true,
     description: 'درگاه پرداخت سریع با قابلیت مسیردهی هوشمند بین چند سوئیچ بانکی'
   },

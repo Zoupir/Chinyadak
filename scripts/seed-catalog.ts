@@ -1,6 +1,15 @@
 import 'dotenv/config';
 import { pool } from '../src/server/db';
-import { PRODUCTS, CATEGORIES } from '../src/data/mockData';
+import {
+  PRODUCTS,
+  CATEGORIES,
+  ARTICLES,
+  INITIAL_ARTICLE_CATEGORIES,
+  INITIAL_SLIDERS,
+  INITIAL_PAGES,
+  INITIAL_SETTINGS,
+  INITIAL_PAYMENT_GATEWAYS
+} from '../src/data/mockData';
 
 const main = async () => {
   const connection = await pool.getConnection();
@@ -84,8 +93,82 @@ const main = async () => {
       );
     }
 
+    for (const category of INITIAL_ARTICLE_CATEGORIES) {
+      await connection.execute(
+        `INSERT INTO article_categories (id, slug, name, data_json)
+         VALUES (?, ?, ?, ?)
+         ON DUPLICATE KEY UPDATE
+           slug = VALUES(slug),
+           name = VALUES(name),
+           data_json = VALUES(data_json),
+           updated_at = NOW()`,
+        [category.id, category.slug, category.name, JSON.stringify(category)]
+      );
+    }
+
+    for (const article of ARTICLES) {
+      await connection.execute(
+        `INSERT INTO articles (id, slug, title, category_id, data_json, is_active)
+         VALUES (?, ?, ?, ?, ?, 1)
+         ON DUPLICATE KEY UPDATE
+           slug = VALUES(slug),
+           title = VALUES(title),
+           category_id = VALUES(category_id),
+           data_json = VALUES(data_json),
+           is_active = 1,
+           updated_at = NOW()`,
+        [article.id, article.slug, article.title, article.categoryId || null, JSON.stringify(article)]
+      );
+    }
+
+    for (const slider of INITIAL_SLIDERS) {
+      await connection.execute(
+        `INSERT INTO sliders (id, sort_order, is_active, data_json)
+         VALUES (?, ?, ?, ?)
+         ON DUPLICATE KEY UPDATE
+           sort_order = VALUES(sort_order),
+           is_active = VALUES(is_active),
+           data_json = VALUES(data_json),
+           updated_at = NOW()`,
+        [slider.id, slider.order || 0, slider.isActive === false ? 0 : 1, JSON.stringify(slider)]
+      );
+    }
+
+    for (const page of INITIAL_PAGES) {
+      await connection.execute(
+        `INSERT INTO site_pages (id, slug, title, is_system, data_json)
+         VALUES (?, ?, ?, ?, ?)
+         ON DUPLICATE KEY UPDATE
+           slug = VALUES(slug),
+           title = VALUES(title),
+           is_system = VALUES(is_system),
+           data_json = VALUES(data_json),
+           updated_at = NOW()`,
+        [page.id, page.slug, page.title, page.isSystem ? 1 : 0, JSON.stringify(page)]
+      );
+    }
+
+    const safeGateways = INITIAL_PAYMENT_GATEWAYS.map(gateway => ({
+      ...gateway,
+      merchantId: '',
+      terminalId: ''
+    }));
+
+    await connection.execute(
+      `INSERT INTO app_settings (setting_key, setting_value)
+       VALUES ('site_settings', ?)
+       ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value), updated_at = NOW()`,
+      [JSON.stringify(INITIAL_SETTINGS)]
+    );
+    await connection.execute(
+      `INSERT INTO app_settings (setting_key, setting_value)
+       VALUES ('payment_gateways', ?)
+       ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value), updated_at = NOW()`,
+      [JSON.stringify(safeGateways)]
+    );
+
     await connection.commit();
-    console.log(`Seeded ${CATEGORIES.length} categories and ${PRODUCTS.length} products.`);
+    console.log(`Seeded catalog and CMS content into MySQL.`);
   } catch (error) {
     await connection.rollback();
     throw error;

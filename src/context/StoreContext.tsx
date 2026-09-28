@@ -117,74 +117,14 @@ interface StoreContextType {
   isInCompare: (productId: string) => boolean;
   clearCompare: () => void;
   
-  // Orders
-  const createOrder = async (
-    orderData: Omit<Order, 'id' | 'orderNumber' | 'date'> & { loyaltyPointsToRedeem?: number }
-  ): Promise<Order> => {
-    const response = await apiRequest<{ order: Order }>('/api/orders', {
-      method: 'POST',
-      body: JSON.stringify({
-        customer: orderData.customer,
-        items: orderData.items.map(item => ({
-          productId: item.productId,
-          quantity: item.quantity,
-          vehicleInfo: item.vehicleInfo
-        })),
-        shippingMethodId: orderData.shippingMethod.id,
-        paymentMethodId: orderData.paymentMethod.id
-      })
-    });
-
-    setOrders(prev => [response.order, ...prev.filter(item => item.id !== response.order.id)]);
-    clearCart();
-    showToast(`سفارش ${response.order.orderNumber} در سرور ثبت شد.`);
-    return response.order;
-  };
-
-  const updateOrderStatus = (orderId: string, status: OrderStatus, trackingCode?: string) => {
-    void apiRequest<{ order: Order }>(`/api/orders/${encodeURIComponent(orderId)}/status`, {
-      method: 'PATCH',
-      body: JSON.stringify({ status, trackingCode })
-    })
-      .then(({ order }) => {
-        setOrders(prev => prev.map(item =>
-          item.id === order.id || item.orderNumber === order.orderNumber ? order : item
-        ));
-        showToast(`وضعیت سفارش ${order.orderNumber} به‌روز شد.`);
-      })
-      .catch(error => {
-        console.error(error);
-        showToast('تغییر وضعیت سفارش روی سرور انجام نشد.', 'error');
-      });
-  };
-
-  const deleteOrder = (orderId: string) => {
-    void apiRequest<{ ok: boolean }>(`/api/orders/${encodeURIComponent(orderId)}`, {
-      method: 'DELETE'
-    })
-      .then(() => {
-        setOrders(prev => prev.filter(o => o.id !== orderId && o.orderNumber !== orderId));
-        showToast('سفارش حذف شد.', 'info');
-      })
-      .catch(error => {
-        console.error(error);
-        showToast('حذف سفارش روی سرور انجام نشد.', 'error');
-      });
-  };
-
-  const getOrderById = (orderId: string) =>
-    orders.find(o => o.id === orderId || o.orderNumber === orderId);
-
-  const getOrderByTracking = (orderNumber: string, phone: string) => {
-    const cleanNum = orderNumber.trim().toUpperCase();
-    const cleanPhone = phone.trim();
-    return orders.find(o =>
-      cleanPhone.length >= 10 &&
-      (o.orderNumber.toUpperCase() === cleanNum || o.id === cleanNum) &&
-      o.customer.phone === cleanPhone
-    );
-  };
-
+  // Orders & Checkout
+  orders: Order[];
+  createOrder: (orderData: Omit<Order, 'id' | 'orderNumber' | 'date'> & { loyaltyPointsToRedeem?: number }) => Promise<Order>;
+  updateOrderStatus: (orderId: string, status: OrderStatus, trackingCode?: string) => void;
+  deleteOrder: (orderId: string) => void;
+  getOrderById: (orderId: string) => Order | undefined;
+  getOrderByTracking: (orderNumber: string, phone: string) => Promise<Order | undefined>;
+  
   // Part Requests
   partRequests: PartRequest[];
   submitPartRequest: (req: Omit<PartRequest, 'id' | 'createdAt' | 'status'>) => void;
@@ -693,134 +633,82 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   // Orders
-  const createOrder = (orderData: Omit<Order, 'id' | 'orderNumber' | 'date'> & { loyaltyPointsToRedeem?: number }): Order => {
-    const orderNum = `CHP-${Math.floor(10000 + Math.random() * 90000)}`;
-    const now = new Date();
-    const dateFa = new Intl.DateTimeFormat('fa-IR', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit'
-    }).format(now);
+  const createOrder = async (
+    orderData: Omit<Order, 'id' | 'orderNumber' | 'date'> & { loyaltyPointsToRedeem?: number }
+  ): Promise<Order> => {
+    const response = await apiRequest<{ order: Order }>('/api/orders', {
+      method: 'POST',
+      body: JSON.stringify({
+        customer: orderData.customer,
+        items: orderData.items.map(item => ({
+          productId: item.productId,
+          quantity: item.quantity,
+          vehicleInfo: item.vehicleInfo
+        })),
+        shippingMethodId: orderData.shippingMethod.id,
+        paymentMethodId: orderData.paymentMethod.id
+      })
+    });
 
-    const pointsToRedeem = orderData.loyaltyPointsToRedeem || 0;
-    const customerPhone = orderData.customer.phone;
-
-    // Identify customer ID (from current logged-in customer or existing customer matching phone)
-    let customerId = currentCustomer?.id;
-    if (!customerId) {
-      const matched = customers.find(c => c.phone === customerPhone);
-      if (matched) {
-        customerId = matched.id;
-      }
-    }
-
-    let discountFromPoints = 0;
-    if (pointsToRedeem > 0 && customerId) {
-      discountFromPoints = calculatePointsValue(pointsToRedeem);
-      redeemLoyaltyPoints(customerId, pointsToRedeem, orderNum);
-    }
-
-    // Calculate points earned from this purchase
-    const effectiveTotal = Math.max(0, orderData.subtotal - (orderData.discountAmount || 0) - discountFromPoints);
-    const pointsEarned = calculatePointsEarned(effectiveTotal, customerId);
-
-    // Credit newly earned points
-    if (pointsEarned > 0 && customerId) {
-      addLoyaltyPoints(
-        customerId,
-        pointsEarned,
-        `امتیاز خرید فاکتور ${orderNum}`,
-        orderNum,
-        'earned'
-      );
-    }
-
-    const newOrder: Order = {
-      ...orderData,
-      id: `ord-${Date.now()}`,
-      orderNumber: orderNum,
-      date: dateFa,
-      loyaltyPointsEarned: pointsEarned,
-      loyaltyPointsRedeemed: pointsToRedeem,
-      loyaltyDiscountAmount: discountFromPoints,
-      trackingPostCode: `POST-${Math.floor(1000000000 + Math.random() * 9000000000)}`
-    };
-
-    // Update customer total orders & spent
-    if (customerId) {
-      setCustomers(prev => prev.map(c => {
-        if (c.id === customerId || c.phone === customerPhone) {
-          return {
-            ...c,
-            totalOrders: (c.totalOrders || 0) + 1,
-            totalSpent: (c.totalSpent || 0) + newOrder.total
-          };
-        }
-        return c;
-      }));
-
-      if (currentCustomer && (currentCustomer.id === customerId || currentCustomer.phone === customerPhone)) {
-        setCurrentCustomer(prev => prev ? {
-          ...prev,
-          totalOrders: (prev.totalOrders || 0) + 1,
-          totalSpent: (prev.totalSpent || 0) + newOrder.total
-        } : null);
-      }
-    }
-
-    setOrders(prev => [newOrder, ...prev]);
+    setOrders(prev => [response.order, ...prev.filter(item => item.id !== response.order.id)]);
     clearCart();
-
-    if (pointsEarned > 0) {
-      showToast(`سفارش ${orderNum} با موفقیت ثبت شد و ${pointsEarned} امتیاز وفاداری به حساب شما افزوده گردید!`);
-    }
-
-    return newOrder;
+    showToast(`سفارش ${response.order.orderNumber} در سرور ثبت شد.`);
+    return response.order;
   };
 
   const updateOrderStatus = (orderId: string, status: OrderStatus, trackingCode?: string) => {
-    setOrders(prev => prev.map(o => {
-      if (o.id === orderId || o.orderNumber === orderId) {
-        let title = '';
-        switch (status) {
-          case 'pending': title = 'در انتظار پرداخت'; break;
-          case 'paid': title = 'پرداخت شده'; break;
-          case 'processing': title = 'در حال پردازش در انبار'; break;
-          case 'ready_to_ship': title = 'آماده ارسال'; break;
-          case 'shipped': title = 'ارسال شده به متصدی حمل'; break;
-          case 'delivered': title = 'تحویل داده شده'; break;
-          case 'cancelled': title = 'لغو شده'; break;
-          case 'payment_failed': title = 'خطای پرداخت'; break;
-        }
-        return {
-          ...o,
-          status,
-          statusTitle: title,
-          trackingPostCode: trackingCode || o.trackingPostCode
-        };
-      }
-      return o;
-    }));
-    showToast(`وضعیت سفارش ${orderId} به‌روز شد.`);
+    void apiRequest<{ order: Order }>(`/api/orders/${encodeURIComponent(orderId)}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status, trackingCode })
+    })
+      .then(({ order }) => {
+        setOrders(prev => prev.map(item =>
+          item.id === order.id || item.orderNumber === order.orderNumber ? order : item
+        ));
+        showToast(`وضعیت سفارش ${order.orderNumber} به‌روز شد.`);
+      })
+      .catch(error => {
+        console.error(error);
+        showToast('تغییر وضعیت سفارش روی سرور انجام نشد.', 'error');
+      });
   };
 
   const deleteOrder = (orderId: string) => {
-    setOrders(prev => prev.filter(o => o.id !== orderId && o.orderNumber !== orderId));
-    showToast('سفارش حذف شد.', 'info');
+    void apiRequest<{ ok: boolean }>(`/api/orders/${encodeURIComponent(orderId)}`, {
+      method: 'DELETE'
+    })
+      .then(() => {
+        setOrders(prev => prev.filter(o => o.id !== orderId && o.orderNumber !== orderId));
+        showToast('سفارش حذف شد.', 'info');
+      })
+      .catch(error => {
+        console.error(error);
+        showToast('حذف سفارش روی سرور انجام نشد.', 'error');
+      });
   };
 
-  const getOrderById = (orderId: string) => orders.find(o => o.id === orderId || o.orderNumber === orderId);
+  const getOrderById = (orderId: string) =>
+    orders.find(o => o.id === orderId || o.orderNumber === orderId);
 
-  const getOrderByTracking = (orderNumber: string, phone: string) => {
-    const cleanNum = orderNumber.trim().toUpperCase();
-    const cleanPhone = phone.trim();
-    return orders.find(o => 
-      cleanPhone.length >= 10 &&
-      (o.orderNumber.toUpperCase() === cleanNum || o.id === cleanNum) &&
-      o.customer.phone === cleanPhone
-    );
+  const getOrderByTracking = async (orderNumber: string, phone: string) => {
+    try {
+      const response = await apiRequest<{ order: Order }>('/api/orders/track', {
+        method: 'POST',
+        body: JSON.stringify({ orderNumber, phone })
+      });
+      setOrders(prev => [
+        response.order,
+        ...prev.filter(item => item.id !== response.order.id)
+      ]);
+      return response.order;
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 404) {
+        return undefined;
+      }
+      console.error(error);
+      showToast('ارتباط با سامانه رهگیری سفارش برقرار نشد.', 'error');
+      return undefined;
+    }
   };
 
   // Part Requests

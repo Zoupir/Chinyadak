@@ -919,7 +919,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }, 'بخش با موفقیت حذف شد.');
   };
 
-  const setFontSize =  const setFontSize = (size: 'compact' | 'normal' | 'large' | 'xlarge') => {
+  const setFontSize = (size: 'compact' | 'normal' | 'large' | 'xlarge') => {
     updateSettings({ fontSize: size });
     showToast(`اندازه فونت کل سایت به ${size === 'compact' ? 'فشرده' : size === 'large' ? 'بزرگ' : size === 'xlarge' ? 'خیلی بزرگ' : 'استاندارد'} تغییر یافت.`);
   };

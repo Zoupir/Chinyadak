@@ -521,12 +521,13 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderCompleted, on
                   type="radio"
                   name="gateway"
                   checked={selectedGateway === 'saman'}
+                  disabled={!gatewayAvailability.saman}
                   onChange={() => setSelectedGateway('saman')}
                   className="text-red-600 focus:ring-red-500 w-4 h-4"
                 />
                 <div>
                   <h4 className="font-bold text-xs text-neutral-900">درگاه پرداخت الکترونیک سامان (SEP)</h4>
-                  <p className="text-[10px] text-neutral-500">پشتیبانی از کلیه کارت‌های عضو شتاب</p>
+                  <p className="text-[10px] text-neutral-500">{gatewayAvailability.saman ? 'پشتیبانی از کلیه کارت‌های عضو شتاب' : 'هنوز روی سرور پیکربندی نشده'}</p>
                 </div>
               </label>
 
@@ -541,12 +542,13 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderCompleted, on
                   type="radio"
                   name="gateway"
                   checked={selectedGateway === 'mellat'}
+                  disabled={!gatewayAvailability.mellat}
                   onChange={() => setSelectedGateway('mellat')}
                   className="text-red-600 focus:ring-red-500 w-4 h-4"
                 />
                 <div>
                   <h4 className="font-bold text-xs text-neutral-900">به‌پرداخت ملت (BPM)</h4>
-                  <p className="text-[10px] text-neutral-500">تسویه و تایید آنی با شاپرک</p>
+                  <p className="text-[10px] text-neutral-500">{gatewayAvailability.mellat ? 'تسویه و تایید آنی با شاپرک' : 'هنوز روی سرور پیکربندی نشده'}</p>
                 </div>
               </label>
             </div>

@@ -42,6 +42,7 @@ import {
   INITIAL_ADMIN_USERS,
   INITIAL_PAGES
 } from '../data/mockData';
+import { apiRequest, ApiError } from '../api/client';
 
 interface SearchQueryLog {
   query: string;
@@ -158,9 +159,9 @@ interface StoreContextType {
 
   // Customer Session (CRM / Auth)
   currentCustomer: CustomerUser | null;
-  customerLogin: (phone: string, pass: string) => { success: boolean; error?: string };
-  customerRegister: (data: { firstName: string; lastName: string; phone: string; password: string; type: CustomerUser['type']; vehicle?: string }) => { success: boolean; error?: string };
-  customerLogout: () => void;
+  customerLogin: (phone: string, pass: string) => Promise<{ success: boolean; error?: string }>;
+  customerRegister: (data: { firstName: string; lastName: string; phone: string; password: string; type: CustomerUser['type']; vehicle?: string }) => Promise<{ success: boolean; error?: string }>;
+  customerLogout: () => Promise<void>;
 
   // Admin Sandbox Payment Simulator
   simulateAdminPayment: (
@@ -201,9 +202,9 @@ interface StoreContextType {
 
   // Admin Auth
   adminAuth: AdminAuthState;
-  adminLogin: (user: string, pass: string) => { success: boolean; error?: string };
-  adminChangePassword: (oldPass: string, newPass: string) => { success: boolean; error?: string };
-  adminLogout: () => void;
+  adminLogin: (user: string, pass: string) => Promise<{ success: boolean; error?: string }>;
+  adminChangePassword: (oldPass: string, newPass: string) => Promise<{ success: boolean; error?: string }>;
+  adminLogout: () => Promise<void>;
 
   // Loyalty Points & Rewards Club
   loyaltyTransactions: LoyaltyTransaction[];
@@ -278,10 +279,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     return saved ? JSON.parse(saved) : INITIAL_CUSTOMERS;
   });
 
-  const [currentCustomer, setCurrentCustomer] = useState<CustomerUser | null>(() => {
-    const saved = localStorage.getItem('chinpart_current_customer');
-    return saved ? JSON.parse(saved) : null;
-  });
+  const [currentCustomer, setCurrentCustomer] = useState<CustomerUser | null>(null);
 
   // Loyalty Transactions
   const [loyaltyTransactions, setLoyaltyTransactions] = useState<LoyaltyTransaction[]>(() => {
@@ -307,11 +305,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     return saved ? JSON.parse(saved) : INITIAL_API_CONFIG;
   });
 
-  // Admin Credentials & Auth
-  const [adminPassword, setAdminPassword] = useState<string>(() => {
-    return localStorage.getItem('chinpart_admin_pass') || '123456';
-  });
-
+  // Admin authentication is server-side. No password is stored in the browser.
   // Sliders Management
   const [sliders, setSliders] = useState<SliderItem[]>(() => {
     const saved = localStorage.getItem('chinpart_sliders');
@@ -332,16 +326,10 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const [isLiveEditActive, setIsLiveEditActive] = useState<boolean>(false);
 
-  const [adminAuth, setAdminAuth] = useState<AdminAuthState>(() => {
-    const saved = localStorage.getItem('chinpart_admin_auth');
-    if (saved) {
-      return JSON.parse(saved);
-    }
-    return {
-      isAuthenticated: false,
-      username: '',
-      isMustChangePassword: false
-    };
+  const [adminAuth, setAdminAuth] = useState<AdminAuthState>({
+    isAuthenticated: false,
+    username: '',
+    isMustChangePassword: false
   });
 
   // Selected Vehicle for active fitment filtering
@@ -425,6 +413,39 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }, 3800);
   };
 
+  // Restore the HttpOnly server session without exposing credentials to JavaScript.
+  useEffect(() => {
+    let cancelled = false;
+
+    apiRequest<{ role: 'customer' | 'admin'; customer?: CustomerUser; admin?: AdminUser }>('/api/auth/me')
+      .then(data => {
+        if (cancelled) return;
+        if (data.role === 'customer' && data.customer) {
+          setCurrentCustomer(data.customer);
+          setCustomers(prev => {
+            const exists = prev.some(item => item.id === data.customer!.id);
+            return exists ? prev.map(item => item.id === data.customer!.id ? data.customer! : item) : [data.customer!, ...prev];
+          });
+        } else if (data.role === 'admin' && data.admin) {
+          setAdminAuth({
+            isAuthenticated: true,
+            username: data.admin.username,
+            currentUser: data.admin,
+            isMustChangePassword: false
+          });
+        }
+      })
+      .catch(error => {
+        if (!(error instanceof ApiError) || error.status !== 401) {
+          console.error('Session restore failed:', error);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   // Sync state to local storage
   useEffect(() => {
     localStorage.setItem('chinpart_products', JSON.stringify(products));
@@ -446,9 +467,6 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     localStorage.setItem('chinpart_customers', JSON.stringify(customers));
   }, [customers]);
 
-  useEffect(() => {
-    localStorage.setItem('chinpart_current_customer', JSON.stringify(currentCustomer));
-  }, [currentCustomer]);
 
   useEffect(() => {
     localStorage.setItem('chinpart_loyalty_transactions', JSON.stringify(loyaltyTransactions));
@@ -466,13 +484,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     localStorage.setItem('chinpart_apis', JSON.stringify(apiIntegrations));
   }, [apiIntegrations]);
 
-  useEffect(() => {
-    localStorage.setItem('chinpart_admin_pass', adminPassword);
-  }, [adminPassword]);
 
-  useEffect(() => {
-    localStorage.setItem('chinpart_admin_auth', JSON.stringify(adminAuth));
-  }, [adminAuth]);
 
   useEffect(() => {
     localStorage.setItem('chinpart_selected_car', JSON.stringify(selectedVehicle));
@@ -510,9 +522,6 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     localStorage.setItem('chinpart_article_categories', JSON.stringify(articleCategories));
   }, [articleCategories]);
 
-  useEffect(() => {
-    localStorage.setItem('chinpart_current_customer', JSON.stringify(currentCustomer));
-  }, [currentCustomer]);
 
   useEffect(() => {
     localStorage.setItem('chinpart_search_logs', JSON.stringify(searchLogs));
@@ -818,108 +827,61 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     showToast(`اندازه فونت کل سایت به ${size === 'compact' ? 'فشرده' : size === 'large' ? 'بزرگ' : size === 'xlarge' ? 'خیلی بزرگ' : 'استاندارد'} تغییر یافت.`);
   };
 
-  // Admin Auth functions (Multi-Admin Supported with strict password invalidation)
-  const adminLogin = (user: string, pass: string) => {
-    const cleanUser = user.trim().toLowerCase();
-    
-    // Check against multi-admin user database
-    const matchedUser = adminUsers.find(u => u.username.toLowerCase() === cleanUser);
-
-    if (!matchedUser) {
-      if (cleanUser !== 'admin') {
-        return { success: false, error: 'نام کاربری در سامانه مدیریت یافت نشد.' };
-      }
-      // Strict password check: ONLY current adminPassword is accepted
-      if (pass !== adminPassword) {
-        return { success: false, error: 'رمز عبور وارد شده اشتباه است.' };
-      }
-      const isInitialDefault = (adminPassword === '123456');
-      const authState: AdminAuthState = {
+  // Admin authentication is handled by the server and an HttpOnly session cookie.
+  const adminLogin = async (user: string, pass: string) => {
+    try {
+      const data = await apiRequest<{ admin: AdminUser }>('/api/auth/admin/login', {
+        method: 'POST',
+        body: JSON.stringify({ username: user, password: pass })
+      });
+      setAdminAuth({
         isAuthenticated: true,
-        username: 'admin',
-        currentUser: INITIAL_ADMIN_USERS[0],
-        isMustChangePassword: isInitialDefault
-      };
-      setAdminAuth(authState);
-      if (isInitialDefault) {
-        showToast('ورود با رمز عبور اولیه (123456) انجام شد. جهت امنیت، تغییر فوری رمز عبور الزامی است.', 'error');
-      } else {
-        showToast(`خوش آمدید، ${INITIAL_ADMIN_USERS[0].fullName}`);
-      }
-      return { success: true };
-    }
-
-    if (!matchedUser.isActive) {
-      return { success: false, error: 'حساب کاربری این مدیر غیرفعال گردیده است.' };
-    }
-
-    // STRICT PASSWORD VERIFICATION:
-    // If username is admin, the only valid password is the active adminPassword.
-    // If admin changed their password, old default '123456' is strictly rejected.
-    let requiredPass = '';
-    if (matchedUser.username.toLowerCase() === 'admin') {
-      requiredPass = adminPassword;
-    } else {
-      requiredPass = matchedUser.password || '';
-    }
-
-    if (!requiredPass || pass !== requiredPass) {
-      return { success: false, error: 'رمز عبور وارد شده اشتباه است.' };
-    }
-
-    const isInitialDefault = (matchedUser.username.toLowerCase() === 'admin' && adminPassword === '123456');
-    const authState: AdminAuthState = {
-      isAuthenticated: true,
-      username: matchedUser.username,
-      currentUser: matchedUser,
-      isMustChangePassword: isInitialDefault
-    };
-
-    setAdminAuth(authState);
-    if (isInitialDefault) {
-      showToast('ورود با رمز عبور اولیه (123456) انجام شد. لطفاً فوراً رمز خود را تغییر دهید.', 'error');
-    } else {
-      showToast(`خوش آمدید، ${matchedUser.fullName} (${matchedUser.roleTitle})`);
-    }
-    return { success: true };
-  };
-
-  const adminChangePassword = (oldPass: string, newPass: string) => {
-    if (oldPass !== adminPassword) {
-      return { success: false, error: 'رمز عبور فعلی وارد شده نادرست است.' };
-    }
-    if (!newPass || newPass.trim().length < 6) {
-      return { success: false, error: 'رمز عبور جدید باید حداقل ۶ کاراکتر باشد.' };
-    }
-    if (newPass.trim() === '123456') {
-      return { success: false, error: 'رمز عبور جدید نمی‌تواند همان رمز پیش‌فرض 123456 باشد.' };
-    }
-
-    const cleanNewPass = newPass.trim();
-    setAdminPassword(cleanNewPass);
-    localStorage.setItem('chinpart_admin_pass', cleanNewPass);
-
-    // Synchronize with admin user in database
-    setAdminUsers(prev => {
-      const updated = prev.map(u => u.username.toLowerCase() === 'admin' ? { ...u, password: cleanNewPass } : u);
-      localStorage.setItem('chinpart_admin_users', JSON.stringify(updated));
-      return updated;
-    });
-
-    setAdminAuth(prev => {
-      const updated = {
-        ...prev,
+        username: data.admin.username,
+        currentUser: data.admin,
         isMustChangePassword: false
-      };
-      localStorage.setItem('chinpart_admin_auth', JSON.stringify(updated));
-      return updated;
-    });
-
-    showToast('رمز عبور مدیر ارشد با موفقیت تغییر کرد. رمز پیش‌فرض 123456 برای همیشه منقضی و مسدود شد.');
-    return { success: true };
+      });
+      showToast(`خوش آمدید، ${data.admin.fullName}`);
+      return { success: true };
+    } catch (error) {
+      const code = error instanceof ApiError ? error.code : '';
+      const message =
+        code === 'ACCOUNT_BLOCKED'
+          ? 'حساب کاربری این مدیر غیرفعال است.'
+          : code === 'TOO_MANY_LOGIN_ATTEMPTS'
+            ? 'تعداد تلاش‌های ورود بیش از حد مجاز است. کمی بعد دوباره تلاش کنید.'
+            : 'نام کاربری یا رمز عبور نادرست است.';
+      return { success: false, error: message };
+    }
   };
 
-  const adminLogout = () => {
+  const adminChangePassword = async (oldPass: string, newPass: string) => {
+    if (newPass.trim().length < 10) {
+      return { success: false, error: 'رمز عبور جدید باید حداقل ۱۰ کاراکتر باشد.' };
+    }
+    try {
+      await apiRequest<{ ok: boolean }>('/api/auth/admin/change-password', {
+        method: 'POST',
+        body: JSON.stringify({ currentPassword: oldPass, newPassword: newPass })
+      });
+      showToast('رمز عبور مدیر با موفقیت و به‌صورت امن روی سرور تغییر کرد.');
+      return { success: true };
+    } catch (error) {
+      const code = error instanceof ApiError ? error.code : '';
+      return {
+        success: false,
+        error: code === 'INVALID_CURRENT_PASSWORD'
+          ? 'رمز عبور فعلی نادرست است.'
+          : 'تغییر رمز عبور انجام نشد.'
+      };
+    }
+  };
+
+  const adminLogout = async () => {
+    try {
+      await apiRequest<{ ok: boolean }>('/api/auth/logout', { method: 'POST' });
+    } catch {
+      // Clear the local view even if the network request fails.
+    }
     setAdminAuth({
       isAuthenticated: false,
       username: '',
@@ -1050,80 +1012,73 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     showToast('مقاله از وبلاگ حذف شد.', 'info');
   };
 
-  // Customer Auth / Registration
-  const customerLogin = (phone: string, _pass: string) => {
-    const cleanPhone = phone.trim();
-    const user = customers.find(c => c.phone === cleanPhone);
-    if (!user) {
-      return { success: false, error: 'کاربری با این شماره همراه یافت نشد. لطفا ابتدا ثبت‌نام کنید.' };
+  // Customer authentication is handled by the production API.
+  const customerLogin = async (phone: string, pass: string) => {
+    if (!pass) {
+      return { success: false, error: 'رمز عبور الزامی است.' };
     }
-    if (user.status === 'blocked') {
-      return { success: false, error: 'حساب کاربری شما توسط مدیر سیستم غیرفعال شده است.' };
+    try {
+      const data = await apiRequest<{ customer: CustomerUser }>('/api/auth/customer/login', {
+        method: 'POST',
+        body: JSON.stringify({ phone, password: pass })
+      });
+      setCurrentCustomer(data.customer);
+      setCustomers(prev => {
+        const exists = prev.some(item => item.id === data.customer.id);
+        return exists ? prev.map(item => item.id === data.customer.id ? data.customer : item) : [data.customer, ...prev];
+      });
+      showToast(`خوش آمدید، ${data.customer.firstName} عزیز.`);
+      return { success: true };
+    } catch (error) {
+      const code = error instanceof ApiError ? error.code : '';
+      const message =
+        code === 'ACCOUNT_BLOCKED'
+          ? 'حساب کاربری شما غیرفعال شده است.'
+          : code === 'TOO_MANY_LOGIN_ATTEMPTS'
+            ? 'تعداد تلاش‌های ورود بیش از حد مجاز است. کمی بعد دوباره تلاش کنید.'
+            : 'شماره همراه یا رمز عبور نادرست است.';
+      return { success: false, error: message };
     }
-    setCurrentCustomer(user);
-    showToast(`خوش آمدید، ${user.firstName} عزیز.`);
-    return { success: true };
   };
 
-  const customerRegister = (data: {
+  const customerRegister = async (data: {
     firstName: string;
     lastName: string;
     phone: string;
-    password?: string;
+    password: string;
     type: CustomerUser['type'];
     vehicle?: string;
   }) => {
-    const cleanPhone = data.phone.trim();
-    if (customers.some(c => c.phone === cleanPhone)) {
-      return { success: false, error: 'این شماره تماس قبلاً در سامانه ثبت شده است. لطفاً وارد شوید.' };
+    if (!data.password || data.password.length < 8) {
+      return { success: false, error: 'رمز عبور باید حداقل ۸ کاراکتر باشد.' };
     }
-    const typeTitle = data.type === 'wholesale' ? 'همکار / عمده‌فروش' : data.type === 'mechanic' ? 'تعمیرکار / مکانیک' : 'مشتری عادی';
-    const welcomeBonus = settings.loyaltySettings?.signupBonusPoints ?? 50;
-    const now = new Date();
-    const dateFa = new Intl.DateTimeFormat('fa-IR', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit'
-    }).format(now);
-
-    const newCust: CustomerUser = {
-      id: `cust-${Date.now()}`,
-      firstName: data.firstName,
-      lastName: data.lastName,
-      phone: cleanPhone,
-      email: '',
-      type: data.type,
-      typeTitle,
-      status: 'active',
-      registeredAt: new Date().toLocaleDateString('fa-IR'),
-      totalOrders: 0,
-      totalSpent: 0,
-      vehicle: data.vehicle || '',
-      address: '',
-      loyaltyPoints: welcomeBonus,
-      loyaltyTier: 'bronze'
-    };
-
-    const welcomeTx: LoyaltyTransaction = {
-      id: `tx-loyalty-${Date.now()}`,
-      customerId: newCust.id,
-      type: 'bonus',
-      points: welcomeBonus,
-      description: 'هدیه خوش‌آمدگویی باشگاه مشتریان چین‌پارت',
-      date: dateFa,
-      balanceAfter: welcomeBonus
-    };
-
-    setCustomers(prev => [newCust, ...prev]);
-    setCurrentCustomer(newCust);
-    setLoyaltyTransactions(prev => [welcomeTx, ...prev]);
-    showToast(`ثبت‌نام شما با موفقیت انجام شد! ${welcomeBonus} امتیاز هدیه عضویت به حساب شما اضافه شد.`);
-    return { success: true };
+    try {
+      const response = await apiRequest<{ customer: CustomerUser }>('/api/auth/customer/register', {
+        method: 'POST',
+        body: JSON.stringify(data)
+      });
+      setCurrentCustomer(response.customer);
+      setCustomers(prev => [response.customer, ...prev.filter(item => item.id !== response.customer.id)]);
+      showToast('ثبت‌نام با موفقیت انجام شد.');
+      return { success: true };
+    } catch (error) {
+      const code = error instanceof ApiError ? error.code : '';
+      const message =
+        code === 'PHONE_ALREADY_REGISTERED'
+          ? 'این شماره همراه قبلاً ثبت شده است.'
+          : code === 'PASSWORD_TOO_SHORT'
+            ? 'رمز عبور باید حداقل ۸ کاراکتر باشد.'
+            : 'ثبت‌نام انجام نشد. اطلاعات را بررسی کنید.';
+      return { success: false, error: message };
+    }
   };
 
-  const customerLogout = () => {
+  const customerLogout = async () => {
+    try {
+      await apiRequest<{ ok: boolean }>('/api/auth/logout', { method: 'POST' });
+    } catch {
+      // Local logout must still complete.
+    }
     setCurrentCustomer(null);
     showToast('از حساب کاربری خود خارج شدید.', 'info');
   };
@@ -1667,8 +1622,9 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const cleanNum = orderNumber.trim().toUpperCase();
     const cleanPhone = phone.trim();
     return orders.find(o => 
+      cleanPhone.length >= 10 &&
       (o.orderNumber.toUpperCase() === cleanNum || o.id === cleanNum) &&
-      (o.customer.phone.includes(cleanPhone) || cleanPhone === '')
+      o.customer.phone === cleanPhone
     );
   };
 

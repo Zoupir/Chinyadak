@@ -241,32 +241,23 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
   };
 
   // --- Handlers ---
-  const handleLoginSubmit = (e: React.FormEvent) => {
+  const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoginError('');
-    const result = adminLogin(loginUser, loginPass);
+    const result = await adminLogin(loginUser, loginPass);
     if (!result.success) {
       setLoginError(result.error || 'خطا در ورود');
     }
   };
 
-  const handleQuickDemoLogin = (username: string, pass: string) => {
-    setLoginUser(username);
-    setLoginPass(pass);
-    const result = adminLogin(username, pass);
-    if (!result.success) {
-      setLoginError(result.error || 'خطا در ورود');
-    }
-  };
-
-  const handleForcePasswordChangeSubmit = (e: React.FormEvent) => {
+  const handleForcePasswordChangeSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setChangePassError('');
     if (newPasswordInput !== confirmPasswordInput) {
       setChangePassError('رمز عبور جدید با تکرار آن یکسان نیست.');
       return;
     }
-    const res = adminChangePassword(currentPasswordInput, newPasswordInput);
+    const res = await adminChangePassword(currentPasswordInput, newPasswordInput);
     if (!res.success) {
       setChangePassError(res.error || 'خطا در تغییر رمز عبور');
     }
@@ -491,7 +482,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
                 type="text"
                 value={loginUser}
                 onChange={e => setLoginUser(e.target.value)}
-                placeholder="admin یا content یا orders"
+                placeholder="مثال: admin"
                 className="w-full p-3 bg-neutral-950 border border-neutral-800 rounded-xl focus:border-red-600 focus:outline-hidden font-mono text-left text-white"
                 required
               />
@@ -559,7 +550,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
             </div>
 
             <div>
-              <label className="block text-neutral-700 font-bold mb-1">رمز عبور جدید (حداقل ۶ کاراکتر):</label>
+              <label className="block text-neutral-700 font-bold mb-1">رمز عبور جدید (حداقل ۱۰ کاراکتر):</label>
               <input
                 type="password"
                 value={newPasswordInput}

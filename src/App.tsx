@@ -48,11 +48,40 @@ const AppContent: React.FC = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [route]);
 
-  // Sync document title with current page / section
+  // Keep browser metadata in sync after History API navigation.
   useEffect(() => {
     const meta = getPageShareMeta(route.view, route.param, { products, categories, models, brands, articles });
     const siteName = settings.siteTitle?.split('|')[0]?.trim() || 'چین‌پارت';
-    document.title = `${meta.title} | ${siteName}`;
+    const title = `${meta.title} | ${siteName}`;
+    const description = meta.subtitle.slice(0, 170);
+    const canonical = `${window.location.origin}${buildRoutePath(route.view, route.param)}`;
+    const isPrivate = ['admin', 'account', 'checkout', 'tracking', 'invoice'].includes(route.view);
+
+    document.title = title;
+
+    const setMeta = (selector: string, attribute: 'name' | 'property', key: string, content: string) => {
+      let element = document.head.querySelector<HTMLMetaElement>(selector);
+      if (!element) {
+        element = document.createElement('meta');
+        element.setAttribute(attribute, key);
+        document.head.appendChild(element);
+      }
+      element.content = content;
+    };
+
+    setMeta('meta[name="description"]', 'name', 'description', description);
+    setMeta('meta[name="robots"]', 'name', 'robots', isPrivate ? 'noindex,nofollow' : 'index,follow,max-image-preview:large');
+    setMeta('meta[property="og:title"]', 'property', 'og:title', title);
+    setMeta('meta[property="og:description"]', 'property', 'og:description', description);
+    setMeta('meta[property="og:url"]', 'property', 'og:url', canonical);
+
+    let canonicalLink = document.head.querySelector<HTMLLinkElement>('link[rel="canonical"]');
+    if (!canonicalLink) {
+      canonicalLink = document.createElement('link');
+      canonicalLink.rel = 'canonical';
+      document.head.appendChild(canonicalLink);
+    }
+    canonicalLink.href = canonical;
   }, [route, products, categories, models, brands, articles, settings]);
 
   // Normal History API routing, with one-time migration for old hash URLs.

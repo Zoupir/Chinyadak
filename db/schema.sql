@@ -29,6 +29,7 @@ CREATE TABLE IF NOT EXISTS admin_users (
   full_name VARCHAR(190) NOT NULL,
   email VARCHAR(190) NULL,
   phone VARCHAR(20) NULL,
+  avatar_url TEXT NULL,
   role VARCHAR(50) NOT NULL DEFAULT 'manager',
   permissions_json JSON NULL,
   is_active TINYINT(1) NOT NULL DEFAULT 1,
@@ -285,37 +286,3 @@ CREATE TABLE IF NOT EXISTS audit_log (
   INDEX idx_audit_actor (actor_type, actor_id),
   INDEX idx_audit_created (created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-
--- Safe forward-compatible additions for installations initialized with older schema versions.
-ALTER TABLE products ADD COLUMN IF NOT EXISTS data_json JSON NULL AFTER fitments_json;
-UPDATE products
-SET data_json = JSON_OBJECT(
-  'id', id,
-  'sku', sku,
-  'slug', slug,
-  'nameFa', name_fa,
-  'nameEn', COALESCE(name_en, ''),
-  'oemNumber', COALESCE(oem_number, ''),
-  'partNumber', COALESCE(part_number, ''),
-  'categorySlug', category_slug,
-  'brandManufacturer', COALESCE(manufacturer, ''),
-  'grade', COALESCE(grade, 'aftermarket'),
-  'price', price,
-  'discountPrice', discount_price,
-  'stock', stock,
-  'stockStatus', CASE WHEN stock <= 0 THEN 'out_of_stock' WHEN stock <= 3 THEN 'low_stock' ELSE 'in_stock' END,
-  'images', COALESCE(images_json, JSON_ARRAY()),
-  'technicalSpecs', COALESCE(specs_json, JSON_OBJECT()),
-  'fitments', COALESCE(fitments_json, JSON_ARRAY()),
-  'shortDescription', COALESCE(short_description, ''),
-  'description', COALESCE(description, '')
-)
-WHERE data_json IS NULL;
-
-ALTER TABLE products ADD COLUMN IF NOT EXISTS reserved_stock INT NOT NULL DEFAULT 0 AFTER stock;
-ALTER TABLE orders ADD COLUMN IF NOT EXISTS reservation_expires_at DATETIME NULL AFTER paid_at;
-ALTER TABLE payment_transactions MODIFY gateway_order_id BIGINT UNSIGNED NULL;
-
-ALTER TABLE admin_users ADD COLUMN IF NOT EXISTS avatar_url TEXT NULL AFTER phone;
-ALTER TABLE customers ADD COLUMN IF NOT EXISTS password_initialized TINYINT(1) NOT NULL DEFAULT 1 AFTER password_hash;

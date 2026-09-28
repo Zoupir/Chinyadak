@@ -192,7 +192,7 @@ export const AdminUsersTab: React.FC = () => {
     setIsModalOpen(false);
   };
 
-  const handleSuperAdminPasswordChange = (e: React.FormEvent) => {
+  const handleSuperAdminPasswordChange = async (e: React.FormEvent) => {
     e.preventDefault();
     setPasswordChangeError('');
 
@@ -201,7 +201,7 @@ export const AdminUsersTab: React.FC = () => {
       return;
     }
 
-    const res = adminChangePassword(currentPasswordInput, newPasswordInput);
+    const res = await adminChangePassword(currentPasswordInput, newPasswordInput);
     if (!res.success) {
       setPasswordChangeError(res.error || 'خطا در تغییر رمز عبور');
       return;

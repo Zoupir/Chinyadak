@@ -37,6 +37,23 @@ CREATE TABLE IF NOT EXISTS admin_users (
   INDEX idx_admin_active (is_active)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS categories (
+  id CHAR(36) PRIMARY KEY,
+  slug VARCHAR(190) NOT NULL UNIQUE,
+  name_fa VARCHAR(255) NOT NULL,
+  name_en VARCHAR(255) NULL,
+  parent_id CHAR(36) NULL,
+  description TEXT NULL,
+  data_json JSON NOT NULL,
+  is_active TINYINT(1) NOT NULL DEFAULT 1,
+  sort_order INT NOT NULL DEFAULT 0,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_categories_parent (parent_id),
+  INDEX idx_categories_active (is_active),
+  INDEX idx_categories_sort (sort_order)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS products (
   id CHAR(36) PRIMARY KEY,
   sku VARCHAR(100) NOT NULL UNIQUE,
@@ -55,6 +72,7 @@ CREATE TABLE IF NOT EXISTS products (
   images_json JSON NULL,
   specs_json JSON NULL,
   fitments_json JSON NULL,
+  data_json JSON NOT NULL,
   short_description TEXT NULL,
   description LONGTEXT NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -125,3 +143,30 @@ CREATE TABLE IF NOT EXISTS audit_log (
   INDEX idx_audit_actor (actor_type, actor_id),
   INDEX idx_audit_created (created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+
+-- Safe forward-compatible additions for installations initialized with older schema versions.
+ALTER TABLE products ADD COLUMN IF NOT EXISTS data_json JSON NULL AFTER fitments_json;
+UPDATE products
+SET data_json = JSON_OBJECT(
+  'id', id,
+  'sku', sku,
+  'slug', slug,
+  'nameFa', name_fa,
+  'nameEn', COALESCE(name_en, ''),
+  'oemNumber', COALESCE(oem_number, ''),
+  'partNumber', COALESCE(part_number, ''),
+  'categorySlug', category_slug,
+  'brandManufacturer', COALESCE(manufacturer, ''),
+  'grade', COALESCE(grade, 'aftermarket'),
+  'price', price,
+  'discountPrice', discount_price,
+  'stock', stock,
+  'stockStatus', CASE WHEN stock <= 0 THEN 'out_of_stock' WHEN stock <= 3 THEN 'low_stock' ELSE 'in_stock' END,
+  'images', COALESCE(images_json, JSON_ARRAY()),
+  'technicalSpecs', COALESCE(specs_json, JSON_OBJECT()),
+  'fitments', COALESCE(fitments_json, JSON_ARRAY()),
+  'shortDescription', COALESCE(short_description, ''),
+  'description', COALESCE(description, '')
+)
+WHERE data_json IS NULL;

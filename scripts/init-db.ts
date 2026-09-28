@@ -26,8 +26,76 @@ const main = async () => {
     charset: 'utf8mb4'
   });
 
+  const ensureColumn = async (
+    tableName: string,
+    columnName: string,
+    definition: string
+  ): Promise<void> => {
+    const [rows] = await connection.query<any[]>(
+      `SELECT 1
+       FROM information_schema.COLUMNS
+       WHERE TABLE_SCHEMA = DATABASE()
+         AND TABLE_NAME = ?
+         AND COLUMN_NAME = ?
+       LIMIT 1`,
+      [tableName, columnName]
+    );
+
+    if (!rows.length) {
+      await connection.query(
+        `ALTER TABLE \`${tableName}\` ADD COLUMN \`${columnName}\` ${definition}`
+      );
+    }
+  };
+
   try {
     await connection.query(schema);
+
+    // Forward-compatible migrations for databases created by older releases.
+    await ensureColumn('products', 'data_json', 'JSON NULL');
+    await ensureColumn('products', 'reserved_stock', 'INT NOT NULL DEFAULT 0');
+    await ensureColumn('orders', 'reservation_expires_at', 'DATETIME NULL');
+    await ensureColumn('admin_users', 'avatar_url', 'TEXT NULL');
+    await ensureColumn('customers', 'password_initialized', 'TINYINT(1) NOT NULL DEFAULT 1');
+
+    await connection.query(
+      `ALTER TABLE payment_transactions
+       MODIFY gateway_order_id BIGINT UNSIGNED NULL`
+    );
+
+    await connection.query(
+      `UPDATE products
+       SET data_json = JSON_OBJECT(
+         'id', id,
+         'sku', sku,
+         'slug', slug,
+         'nameFa', name_fa,
+         'nameEn', COALESCE(name_en, ''),
+         'oemNumber', COALESCE(oem_number, ''),
+         'partNumber', COALESCE(part_number, ''),
+         'categorySlug', category_slug,
+         'brandManufacturer', COALESCE(manufacturer, ''),
+         'grade', COALESCE(grade, 'aftermarket'),
+         'price', price,
+         'discountPrice', discount_price,
+         'stock', stock,
+         'stockStatus', CASE
+           WHEN stock <= 0 THEN 'out_of_stock'
+           WHEN stock <= 3 THEN 'low_stock'
+           ELSE 'in_stock'
+         END,
+         'images', COALESCE(images_json, JSON_ARRAY()),
+         'technicalSpecs', COALESCE(specs_json, JSON_OBJECT()),
+         'fitments', COALESCE(fitments_json, JSON_ARRAY()),
+         'shortDescription', COALESCE(short_description, ''),
+         'description', COALESCE(description, '')
+       )
+       WHERE data_json IS NULL`
+    );
+
+    await connection.query(
+      `ALTER TABLE products MODIFY data_json JSON NOT NULL`
+    );
   } finally {
     await connection.end();
   }

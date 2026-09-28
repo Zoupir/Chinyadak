@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, type Request, type Response } from 'express';
 import { requireAdminPermission } from '../auth';
 import { pool, type ResultSetHeader, type RowDataPacket } from '../db';
 
@@ -19,7 +19,7 @@ const parseJson = <T>(value: unknown, fallback: T): T => {
 
 export const vehiclesRouter = Router();
 
-vehiclesRouter.get('/', async (_req, res) => {
+vehiclesRouter.get('/', async (_req: Request, res: Response) => {
   const [[brands], [models]] = await Promise.all([
     pool.query<VehicleRow[]>(
       'SELECT id, data_json FROM vehicle_brands WHERE is_active = 1 ORDER BY name_fa ASC'
@@ -35,7 +35,7 @@ vehiclesRouter.get('/', async (_req, res) => {
   });
 });
 
-vehiclesRouter.post('/brands', requireAdminPermission('canManageVehicles'), async (req, res) => {
+vehiclesRouter.post('/brands', requireAdminPermission('canManageVehicles'), async (req: Request, res: Response) => {
   const brand = { ...req.body };
   brand.id = String(brand.id || '').trim();
   brand.slug = String(brand.slug || '').trim();
@@ -62,7 +62,7 @@ vehiclesRouter.post('/brands', requireAdminPermission('canManageVehicles'), asyn
   res.status(201).json({ brand });
 });
 
-vehiclesRouter.put('/brands/:id', requireAdminPermission('canManageVehicles'), async (req, res) => {
+vehiclesRouter.put('/brands/:id', requireAdminPermission('canManageVehicles'), async (req: Request, res: Response) => {
   const brand = { ...req.body, id: String(req.params.id) };
   brand.slug = String(brand.slug || '').trim();
   brand.nameFa = String(brand.nameFa || '').trim();
@@ -84,7 +84,7 @@ vehiclesRouter.put('/brands/:id', requireAdminPermission('canManageVehicles'), a
   res.json({ brand });
 });
 
-vehiclesRouter.delete('/brands/:id', requireAdminPermission('canManageVehicles'), async (req, res) => {
+vehiclesRouter.delete('/brands/:id', requireAdminPermission('canManageVehicles'), async (req: Request, res: Response) => {
   const [result] = await pool.execute<ResultSetHeader>(
     'UPDATE vehicle_brands SET is_active = 0, updated_at = NOW() WHERE id = ?',
     [req.params.id]
@@ -96,7 +96,7 @@ vehiclesRouter.delete('/brands/:id', requireAdminPermission('canManageVehicles')
   res.json({ ok: true });
 });
 
-vehiclesRouter.post('/models', requireAdminPermission('canManageVehicles'), async (req, res) => {
+vehiclesRouter.post('/models', requireAdminPermission('canManageVehicles'), async (req: Request, res: Response) => {
   const model = { ...req.body };
   model.id = String(model.id || '').trim();
   model.brandId = String(model.brandId || '').trim();
@@ -128,7 +128,7 @@ vehiclesRouter.post('/models', requireAdminPermission('canManageVehicles'), asyn
   res.status(201).json({ model });
 });
 
-vehiclesRouter.put('/models/:id', requireAdminPermission('canManageVehicles'), async (req, res) => {
+vehiclesRouter.put('/models/:id', requireAdminPermission('canManageVehicles'), async (req: Request, res: Response) => {
   const model = { ...req.body, id: String(req.params.id) };
   model.brandId = String(model.brandId || '').trim();
   model.slug = String(model.slug || '').trim();
@@ -151,7 +151,7 @@ vehiclesRouter.put('/models/:id', requireAdminPermission('canManageVehicles'), a
   res.json({ model });
 });
 
-vehiclesRouter.delete('/models/:id', requireAdminPermission('canManageVehicles'), async (req, res) => {
+vehiclesRouter.delete('/models/:id', requireAdminPermission('canManageVehicles'), async (req: Request, res: Response) => {
   const [result] = await pool.execute<ResultSetHeader>(
     'UPDATE vehicle_models SET is_active = 0, updated_at = NOW() WHERE id = ?',
     [req.params.id]

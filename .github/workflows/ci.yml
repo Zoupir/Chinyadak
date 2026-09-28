@@ -31,3 +31,99 @@ jobs:
           DB_PASSWORD: ci
           JWT_SECRET: 01234567890123456789012345678901
         run: npm run build
+
+  integration:
+    name: integration (${{ matrix.database }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - database: mysql-8.4
+            image: mysql:8.4
+          - database: mariadb-11.4
+            image: mariadb:11.4
+
+    services:
+      database:
+        image: ${{ matrix.image }}
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: ci
+          MYSQL_USER: ci
+          MYSQL_PASSWORD: ci
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+
+    env:
+      NODE_ENV: production
+      PORT: 3000
+      APP_URL: http://127.0.0.1:3000
+      DB_HOST: 127.0.0.1
+      DB_PORT: 3306
+      DB_NAME: ci
+      DB_USER: ci
+      DB_PASSWORD: ci
+      DB_CONNECTION_LIMIT: 5
+      JWT_SECRET: 01234567890123456789012345678901
+      SESSION_COOKIE_NAME: chinpart_ci_session
+      ADMIN_BOOTSTRAP_USER: admin
+      ADMIN_BOOTSTRAP_PASSWORD: CI-Admin-Password-123!
+      ADMIN_BOOTSTRAP_NAME: CI Administrator
+      APP_ENCRYPTION_KEY: 01234567890123456789012345678901-ci-encryption-key
+      UPLOAD_DIR: uploads-ci
+      MAX_UPLOAD_MB: 2
+      TRUST_PROXY: 1
+      TEST_BASE_URL: http://127.0.0.1:3000
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Type check
+        run: npm run lint
+
+      - name: Initialize database
+        run: npm run db:init
+
+      - name: Seed database
+        run: npm run db:seed
+
+      - name: Production build
+        run: npm run build
+
+      - name: Start production server
+        run: |
+          npm start > /tmp/chinpart-server.log 2>&1 &
+          echo $! > /tmp/chinpart-server.pid
+
+      - name: Wait for health
+        run: |
+          for i in {1..30}; do
+            if curl -fsS http://127.0.0.1:3000/api/health >/dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/chinpart-server.log
+          exit 1
+
+      - name: Production smoke test
+        run: npm run test:smoke
+
+      - name: Show server log on failure
+        if: failure()
+        run: cat /tmp/chinpart-server.log || true

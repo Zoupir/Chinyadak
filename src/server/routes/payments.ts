@@ -53,7 +53,7 @@ const callbackPayload = (req: any): Record<string, unknown> => ({
 const appBase = () => config.appUrl.replace(/\/$/, '');
 
 const paymentResultUrl = (orderNumber: string, status: 'success' | 'failed' | 'review') =>
-  `${appBase()}/?payment=${status}&order=${encodeURIComponent(orderNumber)}#/tracking/${encodeURIComponent(orderNumber)}`;
+  `${appBase()}/tracking/${encodeURIComponent(orderNumber)}?payment=${status}`;
 
 const callbackUrl = (provider: string) =>
   `${appBase()}/api/payments/callback/${encodeURIComponent(provider)}`;
@@ -281,7 +281,7 @@ const handleCallback = async (req: any, res: any) => {
 
   const transaction = await findTransactionForCallback(provider, callback);
   if (!transaction) {
-    res.redirect(`${appBase()}/?payment=failed#/tracking`);
+    res.redirect(`${appBase()}/tracking?payment=failed`);
     return;
   }
 

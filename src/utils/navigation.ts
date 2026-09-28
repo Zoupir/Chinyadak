@@ -1,4 +1,4 @@
-import { Product, Category, CarModel, CarBrand, Article } from '../types';
+import { Product, Category, VehicleModel, CarBrand, Article } from '../types';
 
 export interface RouteState {
   view: string;
@@ -125,7 +125,7 @@ export const getPageShareMeta = (
   data?: {
     products?: Product[];
     categories?: Category[];
-    models?: CarModel[];
+    models?: VehicleModel[];
     brands?: CarBrand[];
     articles?: Article[];
   }
@@ -156,7 +156,7 @@ export const getPageShareMeta = (
       const title = cat ? `دسته‌بندی ${cat.nameFa}` : `دسته‌بندی ${param || ''}`;
       return {
         title,
-        subtitle: cat?.descriptionFa || 'فهرست و مقایسه تمامی قطعات این گروه',
+        subtitle: cat?.description || 'فهرست و مقایسه تمامی قطعات این گروه',
         categoryLabel: 'دسته‌بندی قطعات',
         shareText: `فهرست کامل قطعات گروه «${title}» همراه با فیلتر اصالت و سازگاری:`
       };
@@ -268,7 +268,7 @@ export const getPageShareMeta = (
       const art = data?.articles?.find(a => a.id === param);
       return {
         title: art ? art.title : 'مقاله تخصصی خودرو',
-        subtitle: art ? art.excerpt : 'راهنمای تخصصی عیب‌یابی و مراقبت از خودرو',
+        subtitle: art ? art.summary : 'راهنمای تخصصی عیب‌یابی و مراقبت از خودرو',
         categoryLabel: 'مقاله مجله',
         shareText: `مطالعه مقاله «${art ? art.title : 'تخصصی خودرو'}»:`
       };

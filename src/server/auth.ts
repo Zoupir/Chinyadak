@@ -50,6 +50,19 @@ export const clearSession = (res: Response): void => {
   });
 };
 
+export const getOptionalSession = (req: Request): SessionPayload | null => {
+  const token = req.cookies?.[config.sessionCookieName];
+  if (!token) return null;
+  try {
+    return jwt.verify(token, config.jwtSecret, {
+      issuer: 'chinpart',
+      audience: 'chinpart-web'
+    }) as SessionPayload;
+  } catch {
+    return null;
+  }
+};
+
 export const authenticate = (
   req: AuthenticatedRequest,
   res: Response,

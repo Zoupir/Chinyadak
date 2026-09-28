@@ -1576,7 +1576,6 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     });
 
     setOrders(prev => [response.order, ...prev.filter(item => item.id !== response.order.id)]);
-    clearCart();
     showToast(`سفارش ${response.order.orderNumber} در سرور ثبت شد.`);
     return response.order;
   };

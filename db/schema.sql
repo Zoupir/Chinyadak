@@ -239,6 +239,39 @@ CREATE TABLE IF NOT EXISTS app_settings (
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS part_requests (
+  id CHAR(64) PRIMARY KEY,
+  status VARCHAR(60) NOT NULL DEFAULT 'در حال بررسی',
+  data_json JSON NOT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_part_requests_status (status),
+  INDEX idx_part_requests_created (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS stock_alerts (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  product_id CHAR(36) NOT NULL,
+  phone VARCHAR(20) NOT NULL,
+  is_active TINYINT(1) NOT NULL DEFAULT 1,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  notified_at DATETIME NULL,
+  CONSTRAINT fk_stock_alert_product FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE,
+  UNIQUE KEY uq_stock_alert_product_phone (product_id, phone),
+  INDEX idx_stock_alert_active (is_active)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS search_queries (
+  query_key VARCHAR(255) PRIMARY KEY,
+  query_text VARCHAR(255) NOT NULL,
+  search_count BIGINT UNSIGNED NOT NULL DEFAULT 1,
+  last_results_count INT UNSIGNED NOT NULL DEFAULT 0,
+  last_searched_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_search_count (search_count),
+  INDEX idx_search_last (last_searched_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS audit_log (
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
   actor_type VARCHAR(30) NOT NULL,

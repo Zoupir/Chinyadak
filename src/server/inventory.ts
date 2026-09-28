@@ -209,6 +209,17 @@ export const finalizePaidInventory = async (
   }
 
   if (stockConflict) {
+    if (order.reservation_expires_at) {
+      for (const item of items) {
+        if (!item.product_id) continue;
+        await connection.execute(
+          `UPDATE products
+           SET reserved_stock = GREATEST(0, reserved_stock - ?), updated_at = NOW()
+           WHERE id = ?`,
+          [item.quantity, item.product_id]
+        );
+      }
+    }
     return { stockConflict: true };
   }
 

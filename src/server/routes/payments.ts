@@ -328,17 +328,16 @@ const handleCallback = async (req: any, res: any) => {
         transaction.id
       ]
     );
+    await releaseOrderReservation(transaction.order_id).catch(error =>
+      console.error('Reservation release after payment failure failed:', error)
+    );
     await pool.execute(
       `UPDATE orders
        SET status = 'payment_failed',
            payment_status = 'failed',
-           reservation_expires_at = NULL,
            updated_at = NOW()
        WHERE id = ? AND payment_status NOT IN ('paid', 'paid_stock_review')`,
       [transaction.order_id]
-    );
-    await releaseOrderReservation(transaction.order_id).catch(error =>
-      console.error('Reservation release after payment failure failed:', error)
     );
 
     res.redirect(paymentResultUrl(transaction.order_number, 'failed'));

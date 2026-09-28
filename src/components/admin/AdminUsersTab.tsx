@@ -168,8 +168,8 @@ export const AdminUsersTab: React.FC = () => {
         permissions
       });
     } else {
-      if (!password.trim()) {
-        alert('لطفاً یک رمز عبور اولیه برای مدیر جدید تعیین کنید.');
+      if (password.trim().length < 10) {
+        alert('رمز عبور اولیه مدیر باید حداقل ۱۰ کاراکتر باشد.');
         return;
       }
       const newUser: AdminUser = {
@@ -306,7 +306,7 @@ export const AdminUsersTab: React.FC = () => {
                 type="password"
                 value={newPasswordInput}
                 onChange={e => setNewPasswordInput(e.target.value)}
-                placeholder="حداقل ۶ کاراکتر"
+                placeholder="حداقل ۱۰ کاراکتر"
                 className="w-full p-2.5 bg-white border border-neutral-300 rounded-xl font-mono text-left"
                 required
               />

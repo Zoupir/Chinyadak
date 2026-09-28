@@ -7,6 +7,11 @@ const adapters: Record<PaymentProvider, PaymentAdapter> = {
   mellat: mellatAdapter
 };
 
+export const getPaymentProviderStatus = () => ({
+  saman: sepAdapter.isConfigured(),
+  mellat: mellatAdapter.isConfigured()
+});
+
 export const getPaymentAdapter = (provider: string): PaymentAdapter => {
   if (provider !== 'saman' && provider !== 'mellat') {
     throw new Error('PAYMENT_PROVIDER_UNSUPPORTED');

@@ -299,11 +299,9 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     return saved ? JSON.parse(saved) : INITIAL_PAYMENT_GATEWAYS;
   });
 
-  // API Integrations
-  const [apiIntegrations, setApiIntegrations] = useState<ApiIntegrationsConfig>(() => {
-    const saved = localStorage.getItem('chinpart_apis');
-    return saved ? JSON.parse(saved) : INITIAL_API_CONFIG;
-  });
+  // Integration secrets must never be persisted in localStorage.
+  // This remains an in-memory configuration until the server-side settings API is connected.
+  const [apiIntegrations, setApiIntegrations] = useState<ApiIntegrationsConfig>(INITIAL_API_CONFIG);
 
   // Admin authentication is server-side. No password is stored in the browser.
   // Sliders Management
@@ -480,9 +478,6 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     localStorage.setItem('chinpart_gateways', JSON.stringify(paymentGateways));
   }, [paymentGateways]);
 
-  useEffect(() => {
-    localStorage.setItem('chinpart_apis', JSON.stringify(apiIntegrations));
-  }, [apiIntegrations]);
 
 
 

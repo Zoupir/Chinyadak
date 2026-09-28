@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useStore } from '../../context/StoreContext';
 import { formatToman, getGradeInfo } from '../../utils/formatters';
 import { apiRequest, ApiError } from '../../api/client';
@@ -62,6 +62,11 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderCompleted, on
   
   // Payment Gateway
   const [selectedGateway, setSelectedGateway] = useState<'saman' | 'mellat'>('saman');
+  const [gatewayAvailability, setGatewayAvailability] = useState<Record<'saman' | 'mellat', boolean>>({
+    saman: false,
+    mellat: false
+  });
+  const [gatewayStatusLoaded, setGatewayStatusLoaded] = useState(false);
 
   // Coupon state
   const [couponCode, setCouponCode] = useState('');
@@ -75,6 +80,36 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderCompleted, on
   const [isProcessing, setIsProcessing] = useState(false);
   const [paymentFailed, setPaymentFailed] = useState(false);
   const [pendingOrderId, setPendingOrderId] = useState<string | null>(null);
+
+  // Gateway availability is read from server-side configuration; credentials never reach the browser.
+  useEffect(() => {
+    let cancelled = false;
+    apiRequest<{ providers: Array<{ id: 'saman' | 'mellat'; configured: boolean }> }>('/api/payments/providers')
+      .then(result => {
+        if (cancelled) return;
+        const next = { saman: false, mellat: false };
+        result.providers.forEach(provider => {
+          if (provider.id === 'saman' || provider.id === 'mellat') {
+            next[provider.id] = Boolean(provider.configured);
+          }
+        });
+        setGatewayAvailability(next);
+        if (!next[selectedGateway]) {
+          if (next.saman) setSelectedGateway('saman');
+          else if (next.mellat) setSelectedGateway('mellat');
+        }
+      })
+      .catch(error => {
+        console.error('Payment provider status load failed:', error);
+      })
+      .finally(() => {
+        if (!cancelled) setGatewayStatusLoaded(true);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // Loyalty calculations
   const remainingSubtotal = Math.max(0, cartTotal - appliedDiscount);
@@ -143,6 +178,11 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderCompleted, on
   const handleProcessPayment = async (simulateFailure = false) => {
     if (!firstName || !lastName || !phone || !address) {
       showToast('لطفاً اطلاعات هویتی و آدرس پستی را تکمیل فرمایید.', 'error');
+      return;
+    }
+
+    if (!gatewayStatusLoaded || !gatewayAvailability[selectedGateway]) {
+      showToast('درگاه انتخاب‌شده روی سرور فعال و پیکربندی نشده است.', 'error');
       return;
     }
 

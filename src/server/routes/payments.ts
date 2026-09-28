@@ -70,6 +70,7 @@ export const paymentsRouter = Router();
 
 paymentsRouter.post('/start', paymentLimiter, async (req, res) => {
   const orderId = String(req.body?.orderId || '').trim();
+  const requestedProvider = String(req.body?.provider || '').trim().toLowerCase();
   if (!orderId) {
     res.status(400).json({ error: 'ORDER_ID_REQUIRED' });
     return;
@@ -108,8 +109,18 @@ paymentsRouter.post('/start', paymentLimiter, async (req, res) => {
         throw new Error('ORDER_ALREADY_PAID');
       }
 
-      const provider = String(order.payment_method || '');
+      const provider =
+        requestedProvider === 'saman' || requestedProvider === 'mellat'
+          ? requestedProvider
+          : String(order.payment_method || '');
       getPaymentAdapter(provider);
+
+      if (provider !== order.payment_method) {
+        await connection.execute(
+          'UPDATE orders SET payment_method = ?, updated_at = NOW() WHERE id = ?',
+          [provider, order.id]
+        );
+      }
 
       await reserveOrderInventory(connection, order.id);
 
@@ -417,35 +428,6 @@ const handleCallback = async (req: any, res: any) => {
   );
 };
 
-paymentsRouter.all('/callback/:provider', paymentLimiter, (req, res, next) => {
+paymentsRouter.all('/callback/:provider', (req, res, next) => {
   void handleCallback(req, res).catch(next);
-});
-
-paymentsRouter.get('/status/:orderNumber', async (req, res) => {
-  const orderNumber = String(req.params.orderNumber || '').trim();
-  const [rows] = await pool.query<Array<RowDataPacket & {
-    order_number: string;
-    status: string;
-    payment_status: string;
-    payment_reference: string | null;
-    paid_at: Date | null;
-  }>>(
-    `SELECT order_number, status, payment_status, payment_reference, paid_at
-     FROM orders
-     WHERE order_number = ?
-     LIMIT 1`,
-    [orderNumber]
-  );
-  const order = rows[0];
-  if (!order) {
-    res.status(404).json({ error: 'ORDER_NOT_FOUND' });
-    return;
-  }
-  res.json({
-    orderNumber: order.order_number,
-    status: order.status,
-    paymentStatus: order.payment_status,
-    paymentReference: order.payment_reference,
-    paidAt: order.paid_at
-  });
 });

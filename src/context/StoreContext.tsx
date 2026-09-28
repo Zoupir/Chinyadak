@@ -320,43 +320,10 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   // Orders
   const [orders, setOrders] = useState<Order[]>([]);
 
-  // Part Requests
-  const [partRequests, setPartRequests] = useState<PartRequest[]>(() => {
-    const saved = localStorage.getItem('chinpart_part_requests');
-    return saved ? JSON.parse(saved) : [
-      {
-        id: 'req-1',
-        carBrand: 'کی‌ام‌سی (KMC)',
-        carModel: 'KMC J7',
-        year: '1402',
-        partName: 'قاب آینه بغل سمت راننده فیبر کربن فابریک',
-        oemNumber: '8202100U7001',
-        phoneNumber: '09121112233',
-        fullName: 'کامبیز پیروز',
-        notes: 'نمونه اصلی مشکی براق یا کربنی',
-        createdAt: '۱۴۰۳/۰۶/۲۲',
-        status: 'پاسخ داده شد'
-      }
-    ];
-  });
-
-  // Stock Alerts
-  const [stockAlerts, setStockAlerts] = useState<{ productId: string; phone: string; date: string }[]>(() => {
-    const saved = localStorage.getItem('chinpart_stock_alerts');
-    return saved ? JSON.parse(saved) : [];
-  });
-
-  // Search Logs
-  const [searchLogs, setSearchLogs] = useState<SearchQueryLog[]>(() => {
-    const saved = localStorage.getItem('chinpart_search_logs');
-    return saved ? JSON.parse(saved) : [
-      { query: 'واتر پمپ J7', count: 48, lastDate: 'امروز', resultsCount: 2 },
-      { query: 'لنت ترمز تیگو ۷', count: 35, lastDate: 'امروز', resultsCount: 4 },
-      { query: 'توربو شارژر لاماری', count: 29, lastDate: 'دیروز', resultsCount: 1 },
-      { query: 'روغن موتور 5W-30', count: 21, lastDate: 'دیروز', resultsCount: 3 },
-      { query: 'کمک فنر فیدلیتی', count: 18, lastDate: '۲ روز پیش', resultsCount: 1 }
-    ];
-  });
+  // Server-backed engagement data
+  const [partRequests, setPartRequests] = useState<PartRequest[]>([]);
+  const [stockAlerts, setStockAlerts] = useState<{ productId: string; phone: string; date: string }[]>([]);
+  const [searchLogs, setSearchLogs] = useState<SearchQueryLog[]>([]);
 
   // Toast
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'info' | 'error' } | null>(null);
@@ -387,7 +354,19 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           .catch(error => console.error('CRM customers load failed:', error)),
         apiRequest<{ transactions: LoyaltyTransaction[] }>('/api/admin-data/loyalty')
           .then(result => { if (!cancelled) setLoyaltyTransactions(result.transactions); })
-          .catch(error => console.error('Loyalty data load failed:', error))
+          .catch(error => console.error('Loyalty data load failed:', error)),
+        apiRequest<{
+          partRequests: PartRequest[];
+          stockAlerts: { productId: string; phone: string; date: string }[];
+          searchLogs: SearchQueryLog[];
+        }>('/api/engagement/admin')
+          .then(result => {
+            if (cancelled) return;
+            setPartRequests(result.partRequests);
+            setStockAlerts(result.stockAlerts);
+            setSearchLogs(result.searchLogs);
+          })
+          .catch(error => console.error('Engagement admin data load failed:', error))
       );
     }
 
@@ -415,7 +394,9 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       apiRequest<{ orders: Order[] }>('/api/orders/mine')
         .then(result => { if (!cancelled) setOrders(result.orders); }),
       apiRequest<{ transactions: LoyaltyTransaction[] }>('/api/auth/customer/loyalty')
-        .then(result => { if (!cancelled) setLoyaltyTransactions(result.transactions); })
+        .then(result => { if (!cancelled) setLoyaltyTransactions(result.transactions); }),
+      apiRequest<{ requests: PartRequest[] }>('/api/engagement/part-requests/mine')
+        .then(result => { if (!cancelled) setPartRequests(result.requests); })
     ]);
   };
 
@@ -531,20 +512,11 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     localStorage.setItem('chinpart_wishlist', JSON.stringify(wishlist));
   }, [wishlist]);
 
-  useEffect(() => {
-    localStorage.setItem('chinpart_part_requests', JSON.stringify(partRequests));
-  }, [partRequests]);
-
-  useEffect(() => {
-    localStorage.setItem('chinpart_stock_alerts', JSON.stringify(stockAlerts));
-  }, [stockAlerts]);
 
 
 
 
-  useEffect(() => {
-    localStorage.setItem('chinpart_search_logs', JSON.stringify(searchLogs));
-  }, [searchLogs]);
+
 
 
 
@@ -1824,48 +1796,64 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   // Part Requests
   const submitPartRequest = (req: Omit<PartRequest, 'id' | 'createdAt' | 'status'>) => {
-    const newReq: PartRequest = {
-      ...req,
-      id: `req-${Date.now()}`,
-      createdAt: new Date().toLocaleDateString('fa-IR'),
-      status: 'در حال بررسی'
-    };
-    setPartRequests(prev => [newReq, ...prev]);
-    showToast('درخواست استعلام قطعه با موفقیت ثبت شد.');
+    void apiRequest<{ request: PartRequest }>('/api/engagement/part-requests', {
+      method: 'POST',
+      body: JSON.stringify(req)
+    }).then(({ request }) => {
+      setPartRequests(prev => [request, ...prev.filter(item => item.id !== request.id)]);
+      showToast('درخواست استعلام قطعه با موفقیت ثبت شد.');
+    }).catch(error => {
+      console.error(error);
+      showToast('ثبت درخواست استعلام انجام نشد.', 'error');
+    });
   };
 
   const updatePartRequestStatus = (id: string, status: 'در حال بررسی' | 'پاسخ داده شد' | 'ناموجود در گمرک') => {
-    setPartRequests(prev => prev.map(r => r.id === id ? { ...r, status } : r));
-    showToast('وضعیت استعلام به‌روزرسانی شد.');
+    void apiRequest<{ request: PartRequest }>(`/api/engagement/part-requests/${encodeURIComponent(id)}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status })
+    }).then(({ request }) => {
+      setPartRequests(prev => prev.map(item => item.id === request.id ? request : item));
+      showToast('وضعیت استعلام به‌روزرسانی شد.');
+    }).catch(error => {
+      console.error(error);
+      showToast('به‌روزرسانی وضعیت استعلام انجام نشد.', 'error');
+    });
   };
 
   // Stock Alerts
   const subscribeToStockAlert = (productId: string, phone: string) => {
-    const item = {
-      productId,
-      phone,
-      date: new Date().toLocaleDateString('fa-IR')
-    };
-    setStockAlerts(prev => [...prev, item]);
-    showToast('درخواست اطلاع‌رسانی ثبت شد.');
+    void apiRequest<{ alert: { productId: string; phone: string; date: string } }>('/api/engagement/stock-alerts', {
+      method: 'POST',
+      body: JSON.stringify({ productId, phone })
+    }).then(({ alert }) => {
+      setStockAlerts(prev => {
+        const filtered = prev.filter(item => !(item.productId === alert.productId && item.phone === alert.phone));
+        return [alert, ...filtered];
+      });
+      showToast('درخواست اطلاع‌رسانی ثبت شد.');
+    }).catch(error => {
+      console.error(error);
+      showToast('ثبت درخواست اطلاع‌رسانی انجام نشد.', 'error');
+    });
   };
 
   // Search Logging
   const logSearch = (query: string, resultsCount: number) => {
     if (!query.trim()) return;
-    setSearchLogs(prev => {
-      const idx = prev.findIndex(item => item.query.toLowerCase() === query.trim().toLowerCase());
-      if (idx > -1) {
+    void apiRequest<{ log: SearchQueryLog }>('/api/engagement/search-log', {
+      method: 'POST',
+      body: JSON.stringify({ query, resultsCount })
+    }).then(({ log }) => {
+      setSearchLogs(prev => {
+        const idx = prev.findIndex(item => item.query.toLowerCase() === log.query.toLowerCase());
+        if (idx < 0) return [log, ...prev];
         const next = [...prev];
-        next[idx] = {
-          ...next[idx],
-          count: next[idx].count + 1,
-          resultsCount,
-          lastDate: 'اکنون'
-        };
+        next[idx] = log;
         return next;
-      }
-      return [{ query: query.trim(), count: 1, lastDate: 'اکنون', resultsCount }, ...prev];
+      });
+    }).catch(error => {
+      console.error('Search log failed:', error);
     });
   };
 

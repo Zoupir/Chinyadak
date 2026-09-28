@@ -74,6 +74,7 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderCompleted, on
   // Simulation of payment step
   const [isProcessing, setIsProcessing] = useState(false);
   const [paymentFailed, setPaymentFailed] = useState(false);
+  const [pendingOrderId, setPendingOrderId] = useState<string | null>(null);
 
   // Loyalty calculations
   const remainingSubtotal = Math.max(0, cartTotal - appliedDiscount);
@@ -166,7 +167,9 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderCompleted, on
         vehicleInfo: item.selectedVehicle?.modelName
       }));
 
-      const newOrder = await createOrder({
+      let orderId = pendingOrderId;
+      if (!orderId) {
+        const newOrder = await createOrder({
         status: 'pending',
         statusTitle: 'در انتظار پرداخت',
         items: orderItems,
@@ -201,7 +204,10 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderCompleted, on
         loyaltyPointsToRedeem: useLoyaltyPoints ? effectiveRedeemedPoints : 0,
         shippingFee: shippingCost,
         total: finalTotal
-      });
+        });
+        orderId = newOrder.id;
+        setPendingOrderId(newOrder.id);
+      }
 
       const payment = await apiRequest<{
         orderId: string;
@@ -212,9 +218,10 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderCompleted, on
         fields: Record<string, string>;
       }>('/api/payments/start', {
         method: 'POST',
-        body: JSON.stringify({ orderId: newOrder.id })
+        body: JSON.stringify({ orderId, provider: selectedGateway })
       });
 
+      setPendingOrderId(null);
       clearCart();
       redirectToGateway(payment.redirectUrl, payment.redirectMethod, payment.fields || {});
     } catch (error) {

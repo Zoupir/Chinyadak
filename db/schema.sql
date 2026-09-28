@@ -148,6 +148,63 @@ CREATE TABLE IF NOT EXISTS payment_transactions (
   INDEX idx_payment_status (status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS article_categories (
+  id CHAR(64) PRIMARY KEY,
+  slug VARCHAR(190) NOT NULL UNIQUE,
+  name VARCHAR(255) NOT NULL,
+  data_json JSON NOT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS articles (
+  id CHAR(64) PRIMARY KEY,
+  slug VARCHAR(190) NOT NULL UNIQUE,
+  title VARCHAR(255) NOT NULL,
+  category_id CHAR(64) NULL,
+  data_json JSON NOT NULL,
+  is_active TINYINT(1) NOT NULL DEFAULT 1,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_articles_category (category_id),
+  INDEX idx_articles_active (is_active),
+  FULLTEXT INDEX ft_articles_search (title)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS sliders (
+  id CHAR(64) PRIMARY KEY,
+  sort_order INT NOT NULL DEFAULT 0,
+  is_active TINYINT(1) NOT NULL DEFAULT 1,
+  data_json JSON NOT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_sliders_order (sort_order),
+  INDEX idx_sliders_active (is_active)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS site_pages (
+  id CHAR(64) PRIMARY KEY,
+  slug VARCHAR(190) NOT NULL UNIQUE,
+  title VARCHAR(255) NOT NULL,
+  is_system TINYINT(1) NOT NULL DEFAULT 0,
+  data_json JSON NOT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_pages_system (is_system)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS loyalty_transactions (
+  id CHAR(64) PRIMARY KEY,
+  customer_id CHAR(36) NOT NULL,
+  points INT NOT NULL,
+  transaction_type VARCHAR(40) NOT NULL,
+  data_json JSON NOT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT fk_loyalty_customer FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE CASCADE,
+  INDEX idx_loyalty_customer (customer_id),
+  INDEX idx_loyalty_created (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS app_settings (
   setting_key VARCHAR(190) PRIMARY KEY,
   setting_value JSON NOT NULL,
@@ -198,3 +255,5 @@ WHERE data_json IS NULL;
 ALTER TABLE products ADD COLUMN IF NOT EXISTS reserved_stock INT NOT NULL DEFAULT 0 AFTER stock;
 ALTER TABLE orders ADD COLUMN IF NOT EXISTS reservation_expires_at DATETIME NULL AFTER paid_at;
 ALTER TABLE payment_transactions MODIFY gateway_order_id BIGINT UNSIGNED NULL;
+
+ALTER TABLE admin_users ADD COLUMN IF NOT EXISTS avatar_url TEXT NULL AFTER phone;

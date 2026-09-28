@@ -32,14 +32,9 @@ import {
   ARTICLES as INITIAL_ARTICLES,
   INITIAL_ARTICLE_CATEGORIES,
   INITIAL_GARAGE, 
-  INITIAL_ORDERS,
-  INITIAL_CUSTOMERS,
-  INITIAL_LOYALTY_TRANSACTIONS,
   INITIAL_SETTINGS,
   INITIAL_PAYMENT_GATEWAYS,
-  INITIAL_API_CONFIG,
   INITIAL_SLIDERS,
-  INITIAL_ADMIN_USERS,
   INITIAL_PAGES
 } from '../data/mockData';
 import { apiRequest, ApiError } from '../api/client';
@@ -50,6 +45,20 @@ interface SearchQueryLog {
   lastDate: string;
   resultsCount: number;
 }
+
+const EMPTY_API_INTEGRATIONS: ApiIntegrationsConfig = {
+  smsProvider: 'kavenegar',
+  smsApiKey: '',
+  smsSenderNumber: '',
+  smsNotifyOnOrder: true,
+  smsNotifyOnStock: true,
+  smsTrackingPattern: '',
+  accountingSoftware: 'none',
+  accountingApiKey: '',
+  accountingAutoSyncStock: false,
+  webhookUrl: '',
+  webhookSecret: ''
+};
 
 interface StoreContextType {
   // Catalog
@@ -268,9 +277,8 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   // Payment Gateways
   const [paymentGateways, setPaymentGateways] = useState<PaymentGatewayConfig[]>([]);
 
-  // Integration secrets must never be persisted in localStorage.
-  // This remains an in-memory configuration until the server-side settings API is connected.
-  const [apiIntegrations, setApiIntegrations] = useState<ApiIntegrationsConfig>(INITIAL_API_CONFIG);
+  // Secrets are loaded only after authorized admin login; the browser default is always blank.
+  const [apiIntegrations, setApiIntegrations] = useState<ApiIntegrationsConfig>(EMPTY_API_INTEGRATIONS);
 
   // Admin authentication is server-side. No password is stored in the browser.
   // Sliders Management

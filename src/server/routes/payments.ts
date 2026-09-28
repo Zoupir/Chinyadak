@@ -8,7 +8,7 @@ import {
   releaseOrderReservation,
   reserveOrderInventory
 } from '../inventory';
-import { getPaymentAdapter } from '../payments';
+import { getPaymentAdapter, getPaymentProviderStatus } from '../payments';
 
 interface PaymentOrderRow extends RowDataPacket {
   id: string;
@@ -67,6 +67,16 @@ const paymentLimiter = rateLimit({
 });
 
 export const paymentsRouter = Router();
+
+paymentsRouter.get('/providers', (_req, res) => {
+  const status = getPaymentProviderStatus();
+  res.json({
+    providers: [
+      { id: 'saman', name: 'پرداخت الکترونیک سامان (SEP)', configured: status.saman },
+      { id: 'mellat', name: 'به‌پرداخت ملت (BPM)', configured: status.mellat }
+    ]
+  });
+});
 
 paymentsRouter.post('/start', paymentLimiter, async (req, res) => {
   const orderId = String(req.body?.orderId || '').trim();

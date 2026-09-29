@@ -332,7 +332,7 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
           <h2>{sectionConfig('manufacturers')?.title || 'برندهای خودرو'}</h2>
           <button type="button" onClick={() => onNavigate('shop')}>مشاهده همه</button>
         </div>
-        <div className="marketplace-brand-row builder-section-grid" style={sectionStyle('manufacturers')}>
+        <div className="marketplace-brand-row builder-section-grid">
           {brands.slice(0, sectionConfig('manufacturers')?.maxItems || brands.length).map(brand => (
             <button key={brand.id} type="button" onClick={() => onNavigate('car-brand', brand.slug)} style={{ borderRadius: `${sectionConfig('manufacturers')?.itemRadiusPx ?? 10}px` }}>
               <span style={{ width: 'var(--builder-image-size)', height: 'var(--builder-image-size)' }}>
@@ -475,7 +475,7 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
               <p>{sectionConfig('testimonials')?.subtitle || 'تجربه خرید از فروشگاه تخصصی قطعات'}</p>
             </div>
           </div>
-          <div className="marketplace-testimonial-grid builder-section-grid" style={sectionStyle('testimonials')}>
+          <div className="marketplace-testimonial-grid builder-section-grid">
             {sortedItems('testimonials').map(item => (
               <article key={item.id} style={{ borderRadius: `${sectionConfig('testimonials')?.itemRadiusPx ?? 12}px` }}>
                 {item.imageUrl && <img src={item.imageUrl} alt={item.title || 'نظر مشتری'} className="w-10 h-10 rounded-full object-cover mb-2" />}

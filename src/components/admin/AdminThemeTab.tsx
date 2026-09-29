@@ -795,7 +795,7 @@ export const AdminThemeTab: React.FC = () => {
                 </label>
                 <label className="p-3 rounded-xl border border-neutral-200 bg-neutral-50">
                   <span className="block text-[11px] font-bold mb-2">تعداد محصولات پیشنهادی</span>
-                  <input type="number" min={1} max={12} value={form.relatedProductsCount || 4} onChange={e => setForm({ ...form, relatedProductsCount: Math.max(1, Math.min(12, Number(e.target.value || 4))) })} className="w-full p-2 border border-neutral-300 rounded-lg text-xs bg-white text-center font-mono" />
+                  <input type="number" min={1} max={50} value={form.relatedProductsCount || 4} onChange={e => setForm({ ...form, relatedProductsCount: Math.max(1, Math.min(50, Number(e.target.value || 4))) })} className="w-full p-2 border border-neutral-300 rounded-lg text-xs bg-white text-center font-mono" />
                 </label>
               </div>
             </div>

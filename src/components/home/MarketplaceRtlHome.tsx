@@ -245,7 +245,7 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
           <h2>{sectionConfig('featured-categories')?.title || 'دسته‌بندی‌های ویژه'}</h2>
         </div>
         <div className="marketplace-round-list">
-          {categories.slice(0, 9).map(cat => (
+          {categories.slice(0, sectionConfig('featured-categories')?.maxItems || 9).map(cat => (
             <button key={cat.id} type="button" onClick={() => onNavigate('category', cat.slug)}>
               <span className="marketplace-round-icon">
                 {cat.iconUrl || cat.imageUrl ? (
@@ -362,13 +362,15 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
         <div className="marketplace-logo-tiles marketplace-logo-tiles-with-images">
           {(settings.popularPartsBrands || []).filter(item => item.isVisible !== false).slice(0, sectionConfig('parts-brands')?.maxItems || 12).map((item) => (
             <button key={item.id} type="button" onClick={() => goLink(item.link || 'shop')} style={{ borderRadius: `${sectionConfig('parts-brands')?.itemRadiusPx ?? 2}px` }}>
-              <span className="marketplace-parts-brand-logo">
-                {item.imageUrl ? <img src={item.imageUrl} alt={item.title} /> : <Wrench className="w-6 h-6" />}
-              </span>
-              <span className="marketplace-parts-brand-copy">
-                <strong>{item.title}</strong>
-                <small>{item.subtitle || 'برند منتخب قطعات'}</small>
-              </span>
+              {item.imageUrl ? (
+                <span className="marketplace-parts-brand-logo has-image">
+                  <img src={item.imageUrl} alt={item.title} />
+                </span>
+              ) : (
+                <span className="marketplace-parts-brand-copy no-image">
+                  <strong>{item.title}</strong>
+                </span>
+              )}
             </button>
           ))}
         </div>

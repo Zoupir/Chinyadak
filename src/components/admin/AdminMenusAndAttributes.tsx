@@ -1,704 +1,549 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useStore } from '../../context/StoreContext';
-import { MenuItem, ProductAttributeDefinition } from '../../types';
-import { 
-  Menu, 
-  Sliders, 
-  Plus, 
-  Trash2, 
-  Edit3, 
-  Check, 
-  X, 
-  ExternalLink, 
-  Layers,
-  Sparkles,
-  Tag,
-  ArrowUp,
-  ArrowDown,
-  LayoutTemplate,
-  Globe,
-  Columns
+import { HeaderMenuKind, MenuItem, ProductAttributeDefinition } from '../../types';
+import {
+  ArrowDown, ArrowUp, Car, Check, Edit3, Eye, EyeOff, Globe2, Layers,
+  Link2, Menu, Plus, Save, Sliders, Tag, Trash2, X
 } from 'lucide-react';
 
+const defaultHeaderMenus = (legacy: MenuItem[] = []): MenuItem[] => [
+  {
+    id: 'header-categories',
+    title: 'دسته‌بندی قطعات خودرو',
+    link: 'shop',
+    kind: 'categories',
+    isVisible: true
+  },
+  {
+    id: 'header-brands',
+    title: 'برندهای خودرو',
+    link: 'shop',
+    kind: 'brands',
+    isVisible: true
+  },
+  ...legacy.map(item => ({
+    ...item,
+    kind: item.kind || 'link' as HeaderMenuKind,
+    isVisible: item.isVisible !== false
+  }))
+];
+
+const systemOptions = [
+  { link: 'home', title: 'صفحه اصلی' },
+  { link: 'shop', title: 'فروشگاه قطعات' },
+  { link: 'shop:maintenance', title: 'قطعات مصرفی و سرویس دوره‌ای' },
+  { link: 'part-request', title: 'استعلام قطعه نایاب' },
+  { link: 'tracking', title: 'پیگیری سفارش' },
+  { link: 'blog', title: 'مقالات و آموزش' },
+  { link: 'account:garage', title: 'گاراژ خودروهای من' },
+  { link: 'account:wishlist', title: 'علاقه‌مندی‌ها' }
+];
+
 export const AdminMenusAndAttributes: React.FC = () => {
-  const { settings, updateSettings, showToast, categories, pages } = useStore();
+  const {
+    settings, updateSettings, showToast, categories, brands, pages
+  } = useStore();
 
   const [activeSection, setActiveSection] = useState<'menus' | 'attributes'>('menus');
+  const [menus, setMenus] = useState<MenuItem[]>(
+    settings.headerMenus?.length
+      ? settings.headerMenus
+      : defaultHeaderMenus(settings.navigationMenus || [])
+  );
+  const [attributes, setAttributes] = useState<ProductAttributeDefinition[]>(
+    settings.productAttributes || []
+  );
 
-  // Menus State
-  const [menus, setMenus] = useState<MenuItem[]>(settings.navigationMenus || [
-    { id: 'm1', title: 'صفحه اصلی', link: 'home' },
-    { id: 'm2', title: 'فروشگاه قطعات', link: 'shop' },
-    { id: 'm3', title: 'قطعات مصرفی و سرویس دوره‌ای', link: 'shop:maintenance', badge: 'سرویس' },
-    { id: 'm4', title: 'استعلام قطعه با شماره شاسی', link: 'part-request', badge: 'فوری' },
-    { id: 'm5', title: 'مقالات و آموزش تعمیرات', link: 'blog' },
-    { id: 'm6', title: 'گاراژ خودروهای من', link: 'account:garage' }
-  ]);
-
-  // Selected Category for Quick-Add
-  const [quickAddCatSlug, setQuickAddCatSlug] = useState<string>(categories[0]?.slug || '');
-
-  // Attributes State
-  const [attributes, setAttributes] = useState<ProductAttributeDefinition[]>(settings.productAttributes || [
-    { id: 'attr-1', nameFa: 'شماره فنی اصلی (OEM)', category: 'all', defaultValue: 'استاندارد کارخانه' },
-    { id: 'attr-2', nameFa: 'کد و حجم پیشرانه (سی‌سی)', category: 'engine', defaultValue: '1500 Turbo' },
-    { id: 'attr-3', nameFa: 'نوع گیربکس (CVT/DCT/دستی)', category: 'gearbox', defaultValue: 'اتوماتیک دوکلاچه تر' },
-    { id: 'attr-4', nameFa: 'موقعیت نصب در خودرو', category: 'body_chassis', defaultValue: 'جلوبندی و سیستم تعلیق' },
-    { id: 'attr-5', nameFa: 'درجه استاندارد کیفی', category: 'all', defaultValue: 'Genuine شرکتی پلمپ' }
-  ]);
-
-  // Modal State for Menu
   const [isMenuModalOpen, setIsMenuModalOpen] = useState(false);
   const [editingMenu, setEditingMenu] = useState<MenuItem | null>(null);
-  const [menuType, setMenuType] = useState<'category' | 'page' | 'system' | 'custom'>('system');
-  const [menuForm, setMenuForm] = useState<{ title: string; link: string; badge: string }>({
+  const [menuType, setMenuType] = useState<HeaderMenuKind>('system');
+  const [menuForm, setMenuForm] = useState<MenuItem>({
+    id: '',
     title: '',
-    link: '',
-    badge: ''
+    link: 'shop',
+    kind: 'system',
+    badge: '',
+    isVisible: true,
+    openInNewTab: false
   });
 
-  // Modal State for Attribute
   const [isAttrModalOpen, setIsAttrModalOpen] = useState(false);
   const [editingAttr, setEditingAttr] = useState<ProductAttributeDefinition | null>(null);
-  const [attrForm, setAttrForm] = useState<{ nameFa: string; category: string; defaultValue: string }>({
+  const [attrForm, setAttrForm] = useState({
     nameFa: '',
     category: 'all',
     defaultValue: ''
   });
 
-  // --- Handlers for Menus ---
-  const handleQuickAddCategory = () => {
-    if (!quickAddCatSlug) return;
-    const cat = categories.find(c => c.slug === quickAddCatSlug);
-    if (!cat) return;
-
-    // Check if already in menu
-    const targetLink = `category:${cat.slug}`;
-    if (menus.some(m => m.link === targetLink)) {
-      showToast(`دسته‌بندی «${cat.nameFa}» قبلاً در منو قرار دارد.`, 'info');
-      return;
-    }
-
-    const newItem: MenuItem = {
-      id: `m-cat-${Date.now()}`,
-      title: cat.nameFa,
-      link: targetLink,
-      badge: 'دسته'
-    };
-
-    const next = [...menus, newItem];
+  useEffect(() => {
+    const next = settings.headerMenus?.length
+      ? settings.headerMenus
+      : defaultHeaderMenus(settings.navigationMenus || []);
     setMenus(next);
-    updateSettings({ navigationMenus: next });
-    showToast(`دسته‌بندی «${cat.nameFa}» به صورت خودکار به منوی بالای سایت افزوده شد.`);
+  }, [settings.headerMenus, settings.navigationMenus]);
+
+  useEffect(() => {
+    setAttributes(settings.productAttributes || []);
+  }, [settings.productAttributes]);
+
+  const visibleCount = useMemo(
+    () => menus.filter(item => item.isVisible !== false).length,
+    [menus]
+  );
+
+  const persistMenus = (next: MenuItem[], toast?: string) => {
+    setMenus(next);
+    updateSettings({ headerMenus: next });
+    if (toast) showToast(toast);
   };
 
-  const handleMoveMenu = (index: number, direction: 'up' | 'down') => {
-    const targetIndex = direction === 'up' ? index - 1 : index + 1;
-    if (targetIndex < 0 || targetIndex >= menus.length) return;
-
+  const handleMove = (index: number, direction: 'up' | 'down') => {
+    const target = direction === 'up' ? index - 1 : index + 1;
+    if (target < 0 || target >= menus.length) return;
     const next = [...menus];
-    const [moved] = next.splice(index, 1);
-    next.splice(targetIndex, 0, moved);
-
-    setMenus(next);
-    updateSettings({ navigationMenus: next });
+    const [item] = next.splice(index, 1);
+    next.splice(target, 0, item);
+    persistMenus(next);
   };
 
-  const handleOpenAddMenu = () => {
+  const toggleVisibility = (id: string) => {
+    persistMenus(
+      menus.map(item =>
+        item.id === id ? { ...item, isVisible: item.isVisible === false } : item
+      )
+    );
+  };
+
+  const openNewMenu = () => {
     setEditingMenu(null);
     setMenuType('system');
-    setMenuForm({ title: '', link: 'shop', badge: '' });
+    setMenuForm({
+      id: '',
+      title: 'فروشگاه قطعات',
+      link: 'shop',
+      kind: 'system',
+      badge: '',
+      isVisible: true,
+      openInNewTab: false
+    });
     setIsMenuModalOpen(true);
   };
 
-  const handleEditMenu = (menu: MenuItem) => {
-    setEditingMenu(menu);
-    if (menu.link.startsWith('category:')) {
-      setMenuType('category');
-    } else if (menu.link.startsWith('page:')) {
-      setMenuType('page');
-    } else if (menu.link.startsWith('http://') || menu.link.startsWith('https://')) {
-      setMenuType('custom');
-    } else {
-      setMenuType('system');
+  const openEditMenu = (item: MenuItem) => {
+    const kind = item.kind || (
+      item.link.startsWith('category:') ? 'category' :
+      item.link.startsWith('car-brand:') ? 'brand' :
+      item.link.startsWith('page:') ? 'page' :
+      /^https?:\/\//.test(item.link) ? 'custom' : 'system'
+    );
+    setEditingMenu(item);
+    setMenuType(kind);
+    setMenuForm({
+      ...item,
+      kind,
+      isVisible: item.isVisible !== false,
+      openInNewTab: Boolean(item.openInNewTab)
+    });
+    setIsMenuModalOpen(true);
+  };
+
+  const chooseMenuType = (kind: HeaderMenuKind) => {
+    setMenuType(kind);
+    if (kind === 'categories') {
+      setMenuForm(prev => ({
+        ...prev,
+        kind,
+        title: prev.title || 'دسته‌بندی قطعات خودرو',
+        link: 'shop'
+      }));
+    } else if (kind === 'brands') {
+      setMenuForm(prev => ({
+        ...prev,
+        kind,
+        title: prev.title || 'برندهای خودرو',
+        link: 'shop'
+      }));
+    } else if (kind === 'category' && categories[0]) {
+      setMenuForm(prev => ({
+        ...prev,
+        kind,
+        title: categories[0].nameFa,
+        link: 'category:' + categories[0].slug
+      }));
+    } else if (kind === 'brand' && brands[0]) {
+      setMenuForm(prev => ({
+        ...prev,
+        kind,
+        title: brands[0].nameFa,
+        link: 'car-brand:' + brands[0].slug
+      }));
+    } else if (kind === 'page' && pages[0]) {
+      setMenuForm(prev => ({
+        ...prev,
+        kind,
+        title: pages[0].title,
+        link: 'page:' + pages[0].slug
+      }));
+    } else if (kind === 'custom') {
+      setMenuForm(prev => ({ ...prev, kind, link: 'https://' }));
+    } else if (kind === 'system') {
+      setMenuForm(prev => ({
+        ...prev,
+        kind,
+        title: 'فروشگاه قطعات',
+        link: 'shop'
+      }));
     }
-    setMenuForm({ title: menu.title, link: menu.link, badge: menu.badge || '' });
-    setIsMenuModalOpen(true);
   };
 
-  const handleSaveMenu = (e: React.FormEvent) => {
+  const saveMenu = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!menuForm.title || !menuForm.link) {
-      showToast('عنوان و لینک منو الزامی است.', 'error');
+    const title = String(menuForm.title || '').trim();
+    const link = String(menuForm.link || '').trim();
+    if (!title || !link) {
+      showToast('عنوان و مقصد منو الزامی است.', 'error');
       return;
     }
 
-    let updatedList: MenuItem[];
-    if (editingMenu) {
-      updatedList = menus.map(m => m.id === editingMenu.id ? { ...m, ...menuForm } : m);
-    } else {
-      const newItem: MenuItem = {
-        id: `m-${Date.now()}`,
-        title: menuForm.title,
-        link: menuForm.link,
-        badge: menuForm.badge || undefined
-      };
-      updatedList = [...menus, newItem];
+    if (
+      !editingMenu &&
+      (menuType === 'categories' || menuType === 'brands') &&
+      menus.some(item => item.kind === menuType)
+    ) {
+      showToast(
+        menuType === 'categories'
+          ? 'منوی اصلی دسته‌بندی‌ها از قبل وجود دارد.'
+          : 'منوی اصلی برندها از قبل وجود دارد.',
+        'error'
+      );
+      return;
     }
-    setMenus(updatedList);
-    updateSettings({ navigationMenus: updatedList });
+
+    const item: MenuItem = {
+      ...menuForm,
+      id: editingMenu?.id || 'header-' + Date.now(),
+      title,
+      link,
+      kind: menuType,
+      badge: String(menuForm.badge || '').trim() || undefined,
+      isVisible: menuForm.isVisible !== false,
+      openInNewTab: menuType === 'custom' ? Boolean(menuForm.openInNewTab) : false
+    };
+
+    const next = editingMenu
+      ? menus.map(row => row.id === editingMenu.id ? item : row)
+      : [...menus, item];
+
+    persistMenus(next, 'منوی بالای سایت ذخیره شد.');
     setIsMenuModalOpen(false);
-    showToast('منوی ناوبری با موفقیت ذخیره شد.');
   };
 
-  const handleDeleteMenu = (id: string, title: string) => {
-    if (confirm(`آیا از حذف آیتم منو "${title}" اطمینان دارید؟`)) {
-      const next = menus.filter(m => m.id !== id);
-      setMenus(next);
-      updateSettings({ navigationMenus: next });
-      showToast('آیتم منو حذف شد.', 'info');
-    }
+  const deleteMenu = (item: MenuItem) => {
+    if (!confirm(`آیتم «${item.title}» حذف شود؟`)) return;
+    persistMenus(menus.filter(row => row.id !== item.id), 'آیتم منو حذف شد.');
   };
 
-  // --- Handlers for Attributes ---
-  const handleOpenAddAttr = () => {
-    setEditingAttr(null);
-    setAttrForm({ nameFa: '', category: 'all', defaultValue: '' });
-    setIsAttrModalOpen(true);
+  const restoreDefaultMenus = () => {
+    if (!confirm('چیدمان منوی بالا به حالت استاندارد برگردد؟')) return;
+    const next: MenuItem[] = [
+      { id: 'header-categories', title: 'دسته‌بندی قطعات خودرو', link: 'shop', kind: 'categories', isVisible: true },
+      { id: 'header-brands', title: 'برندهای خودرو', link: 'shop', kind: 'brands', isVisible: true },
+      { id: 'header-maintenance', title: 'سرویس دوره‌ای', link: 'shop:maintenance', kind: 'system', badge: 'سرویس', isVisible: true },
+      { id: 'header-request', title: 'استعلام قطعه', link: 'part-request', kind: 'system', badge: 'فوری', isVisible: true },
+      { id: 'header-blog', title: 'مقالات و آموزش', link: 'blog', kind: 'system', isVisible: true }
+    ];
+    persistMenus(next, 'چیدمان استاندارد منو بازیابی شد.');
   };
 
-  const handleEditAttr = (attr: ProductAttributeDefinition) => {
-    setEditingAttr(attr);
-    setAttrForm({ nameFa: attr.nameFa, category: attr.category, defaultValue: attr.defaultValue || '' });
-    setIsAttrModalOpen(true);
-  };
-
-  const handleSaveAttr = (e: React.FormEvent) => {
+  const saveAttribute = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!attrForm.nameFa) {
-      showToast('نام ویژگی فنی الزامی است.', 'error');
+    if (!attrForm.nameFa.trim()) {
+      showToast('نام ویژگی الزامی است.', 'error');
       return;
     }
-
-    let updatedList: ProductAttributeDefinition[];
-    if (editingAttr) {
-      updatedList = attributes.map(a => a.id === editingAttr.id ? { ...a, ...attrForm } : a);
-    } else {
-      const newAttr: ProductAttributeDefinition = {
-        id: `attr-${Date.now()}`,
-        nameFa: attrForm.nameFa,
-        category: attrForm.category,
-        defaultValue: attrForm.defaultValue || undefined
-      };
-      updatedList = [...attributes, newAttr];
-    }
-    setAttributes(updatedList);
-    updateSettings({ productAttributes: updatedList });
+    const item: ProductAttributeDefinition = {
+      id: editingAttr?.id || 'attr-' + Date.now(),
+      nameFa: attrForm.nameFa.trim(),
+      category: attrForm.category,
+      defaultValue: attrForm.defaultValue.trim() || undefined
+    };
+    const next = editingAttr
+      ? attributes.map(row => row.id === editingAttr.id ? item : row)
+      : [...attributes, item];
+    setAttributes(next);
+    updateSettings({ productAttributes: next });
     setIsAttrModalOpen(false);
-    showToast('ویژگی فنی با موفقیت ذخیره گردید.');
+    showToast('ویژگی فنی ذخیره شد.');
   };
 
-  const handleDeleteAttr = (id: string, name: string) => {
-    if (confirm(`آیا از حذف ویژگی فنی "${name}" اطمینان دارید؟`)) {
-      const next = attributes.filter(a => a.id !== id);
-      setAttributes(next);
-      updateSettings({ productAttributes: next });
-      showToast('ویژگی فنی حذف گردید.', 'info');
-    }
+  const typeLabel = (item: MenuItem) => {
+    const kind = item.kind || 'link';
+    const map: Record<string, string> = {
+      categories: 'مگامنو دسته‌بندی‌ها',
+      brands: 'منوی برندها',
+      category: 'دسته‌بندی مستقیم',
+      brand: 'برند مستقیم',
+      page: 'برگه',
+      system: 'صفحه سیستمی',
+      custom: 'لینک خارجی',
+      link: 'لینک'
+    };
+    return map[kind] || kind;
   };
 
   return (
     <div className="bg-white rounded-3xl border border-neutral-200 p-6 sm:p-8 shadow-xs space-y-6">
-      
-      {/* Top Header */}
-      <div className="border-b border-neutral-100 pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="border-b border-neutral-100 pb-4 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div>
           <h3 className="text-lg font-black text-neutral-900 flex items-center gap-2">
             <Sliders className="w-5 h-5 text-red-600" />
-            <span>مدیریت منوی بالای سایت (Header) و ویژگی‌های فنی قطعات</span>
+            مدیریت کامل Header و ویژگی‌های فنی
           </h3>
           <p className="text-xs text-neutral-500 mt-1">
-            امکان افزودن خودکار دسته‌بندی‌ها به منو، حذف، تعیین ترتیب و تنظیم لینک‌های دلخواه داخلی یا اینترنتی
+            عنوان، ترتیب، نمایش و مقصد همه منوهای بالای سایت—including دسته‌بندی قطعات و برندهای خودرو—از اینجا کنترل می‌شود.
           </p>
         </div>
-
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setActiveSection('menus')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
-              activeSection === 'menus'
-                ? 'bg-neutral-900 text-white shadow-xs'
-                : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200'
-            }`}
-          >
-            <Menu className="w-4 h-4" />
-            <span>منوی بالای سایت ({menus.length})</span>
+        <div className="flex gap-2">
+          <button onClick={() => setActiveSection('menus')} className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 ${activeSection === 'menus' ? 'bg-neutral-900 text-white' : 'bg-neutral-100 text-neutral-600'}`}>
+            <Menu className="w-4 h-4" /> منوی Header ({visibleCount}/{menus.length})
           </button>
-
-          <button
-            onClick={() => setActiveSection('attributes')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
-              activeSection === 'attributes'
-                ? 'bg-neutral-900 text-white shadow-xs'
-                : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200'
-            }`}
-          >
-            <Tag className="w-4 h-4" />
-            <span>ویژگی‌های فنی قطعات ({attributes.length})</span>
+          <button onClick={() => setActiveSection('attributes')} className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 ${activeSection === 'attributes' ? 'bg-neutral-900 text-white' : 'bg-neutral-100 text-neutral-600'}`}>
+            <Tag className="w-4 h-4" /> ویژگی‌های قطعات
           </button>
         </div>
       </div>
 
-      {/* SECTION 1: MENUS */}
       {activeSection === 'menus' && (
-        <div className="space-y-6">
-          
-          {/* Quick Add From Categories Box */}
-          <div className="bg-neutral-50 p-4 rounded-2xl border border-neutral-200 flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-xl bg-red-100 text-red-600 flex items-center justify-center shrink-0">
-                <Layers className="w-5 h-5" />
-              </div>
-              <div>
-                <h4 className="font-bold text-xs sm:text-sm text-neutral-900">افزودن خودکار دسته‌بندی به منوی بالا:</h4>
-                <p className="text-[11px] text-neutral-500 mt-0.5">دسته‌بندی مورد نظر را انتخاب کنید تا با یک کلیک به عنوان آیتم ناوبری هدر افزوده شود.</p>
+        <div className="space-y-5">
+          <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4 flex flex-col md:flex-row md:items-center justify-between gap-3">
+            <div>
+              <div className="font-black text-sm text-blue-950">Header واقعاً داینامیک است</div>
+              <div className="text-[11px] text-blue-700 mt-1">
+                «دسته‌بندی قطعات» و «برندهای خودرو» دیگر هاردکد نیستند؛ می‌توانید نامشان را تغییر دهید، جابه‌جا یا مخفی کنید.
               </div>
             </div>
-
-            <div className="flex items-center gap-2 w-full sm:w-auto">
-              <select
-                value={quickAddCatSlug}
-                onChange={e => setQuickAddCatSlug(e.target.value)}
-                className="p-2 border border-neutral-300 rounded-xl text-xs bg-white flex-1 sm:w-56 cursor-pointer"
-              >
-                {categories.map(cat => (
-                  <option key={cat.id} value={cat.slug}>
-                    {cat.nameFa} ({cat.nameEn})
-                  </option>
-                ))}
-              </select>
-
-              <button
-                type="button"
-                onClick={handleQuickAddCategory}
-                className="px-4 py-2 bg-neutral-900 hover:bg-neutral-800 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shrink-0 shadow-xs cursor-pointer"
-              >
-                <Plus className="w-4 h-4 text-red-500" />
-                <span>+ افزودن به منو</span>
+            <div className="flex gap-2">
+              <button onClick={restoreDefaultMenus} className="px-3 py-2 rounded-xl bg-white border border-blue-200 text-blue-800 text-xs font-bold">
+                بازیابی استاندارد
+              </button>
+              <button onClick={openNewMenu} className="px-4 py-2 rounded-xl bg-red-600 text-white text-xs font-black flex items-center gap-1.5">
+                <Plus className="w-4 h-4" /> افزودن آیتم
               </button>
             </div>
           </div>
 
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-neutral-500 font-bold">لیست آیتم‌های فعال در نوار ناوبری بالای سایت (با امکان تغییر ترتیب):</span>
-            <button
-              onClick={handleOpenAddMenu}
-              className="px-3.5 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors shadow-md shadow-red-600/20 cursor-pointer"
-            >
-              <Plus className="w-4 h-4" />
-              <span>افزودن آیتم جدید دستی به منو</span>
-            </button>
-          </div>
-
-          {/* Menus List with Reordering */}
-          <div className="divide-y divide-neutral-100 border border-neutral-200 rounded-2xl overflow-hidden text-xs bg-white shadow-2xs">
+          <div className="border border-neutral-200 rounded-2xl divide-y divide-neutral-100 overflow-hidden">
             {menus.map((item, index) => (
-              <div key={item.id} className="p-4 flex items-center justify-between gap-4 hover:bg-neutral-50/80 transition-colors">
-                <div className="flex items-center gap-3">
-                  {/* Order Index */}
-                  <span className="w-6 h-6 rounded-full bg-neutral-100 text-neutral-700 flex items-center justify-center font-mono font-bold text-[11px]">
-                    {index + 1}
-                  </span>
-
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-bold text-neutral-900 text-sm">{item.title}</span>
-                      {item.badge && (
-                        <span className="bg-red-100 text-red-700 text-[10px] font-bold px-2 py-0.5 rounded-md">
-                          {item.badge}
-                        </span>
-                      )}
-                    </div>
-                    <span className="text-[11px] text-neutral-400 font-mono block mt-0.5">مسیر مقصد: #{item.link}</span>
-                  </div>
+              <div key={item.id} className={`p-4 flex items-center gap-3 ${item.isVisible === false ? 'bg-neutral-50 opacity-60' : 'bg-white'}`}>
+                <div className="w-7 h-7 rounded-full bg-neutral-100 flex items-center justify-center font-mono text-[10px] font-black shrink-0">
+                  {index + 1}
                 </div>
-
-                <div className="flex items-center gap-1.5">
-                  {/* Move Up */}
-                  <button
-                    onClick={() => handleMoveMenu(index, 'up')}
-                    disabled={index === 0}
-                    className="p-1.5 text-neutral-400 hover:text-neutral-800 disabled:opacity-20 rounded-lg hover:bg-neutral-200 transition-colors cursor-pointer"
-                    title="انتقال به بالا"
-                  >
-                    <ArrowUp className="w-4 h-4" />
+                <div className="flex-1 min-w-0">
+                  <div className="flex gap-2 items-center flex-wrap">
+                    <b className="text-sm text-neutral-900">{item.title}</b>
+                    <span className="px-2 py-0.5 rounded-md bg-neutral-100 text-neutral-500 text-[9px] font-bold">{typeLabel(item)}</span>
+                    {item.badge && <span className="px-2 py-0.5 rounded-md bg-red-100 text-red-700 text-[9px] font-bold">{item.badge}</span>}
+                    {item.isVisible === false && <span className="text-[9px] text-neutral-500">مخفی</span>}
+                  </div>
+                  <div className="text-[10px] text-neutral-400 font-mono ltr text-left mt-1 truncate">{item.link}</div>
+                </div>
+                <div className="flex items-center gap-1">
+                  <button onClick={() => handleMove(index, 'up')} disabled={index === 0} className="p-2 rounded-lg hover:bg-neutral-100 disabled:opacity-20"><ArrowUp className="w-4 h-4" /></button>
+                  <button onClick={() => handleMove(index, 'down')} disabled={index === menus.length - 1} className="p-2 rounded-lg hover:bg-neutral-100 disabled:opacity-20"><ArrowDown className="w-4 h-4" /></button>
+                  <button onClick={() => toggleVisibility(item.id)} className="p-2 rounded-lg hover:bg-neutral-100" title={item.isVisible === false ? 'نمایش' : 'مخفی کردن'}>
+                    {item.isVisible === false ? <EyeOff className="w-4 h-4 text-neutral-500" /> : <Eye className="w-4 h-4 text-emerald-600" />}
                   </button>
-
-                  {/* Move Down */}
-                  <button
-                    onClick={() => handleMoveMenu(index, 'down')}
-                    disabled={index === menus.length - 1}
-                    className="p-1.5 text-neutral-400 hover:text-neutral-800 disabled:opacity-20 rounded-lg hover:bg-neutral-200 transition-colors cursor-pointer"
-                    title="انتقال به پایین"
-                  >
-                    <ArrowDown className="w-4 h-4" />
-                  </button>
-
-                  <div className="w-px h-4 bg-neutral-200 mx-1"></div>
-
-                  {/* Edit */}
-                  <button
-                    onClick={() => handleEditMenu(item)}
-                    className="p-2 hover:bg-blue-50 rounded-lg text-blue-600 transition-colors cursor-pointer"
-                    title="ویرایش منو"
-                  >
-                    <Edit3 className="w-4 h-4" />
-                  </button>
-
-                  {/* Delete */}
-                  <button
-                    onClick={() => handleDeleteMenu(item.id, item.title)}
-                    className="p-2 hover:bg-red-50 rounded-lg text-red-600 transition-colors cursor-pointer"
-                    title="حذف منو"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                  <button onClick={() => openEditMenu(item)} className="p-2 rounded-lg hover:bg-blue-50"><Edit3 className="w-4 h-4 text-blue-600" /></button>
+                  <button onClick={() => deleteMenu(item)} className="p-2 rounded-lg hover:bg-red-50"><Trash2 className="w-4 h-4 text-red-600" /></button>
                 </div>
               </div>
             ))}
+            {!menus.length && <div className="p-10 text-center text-xs text-neutral-400">هیچ آیتمی در Header وجود ندارد.</div>}
           </div>
-
         </div>
       )}
 
-      {/* SECTION 2: ATTRIBUTES */}
       {activeSection === 'attributes' && (
         <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-neutral-500 font-bold">فیلدها و ویژگی‌های فنی جدول مشخصات قطعات:</span>
-            <button
-              onClick={handleOpenAddAttr}
-              className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
-            >
-              <Plus className="w-4 h-4" />
-              <span>افزودن ویژگی جدید</span>
+          <div className="flex justify-between items-center">
+            <span className="text-xs text-neutral-500">ویژگی‌هایی که برای مشخصات فنی قطعات استفاده می‌شوند.</span>
+            <button onClick={() => { setEditingAttr(null); setAttrForm({ nameFa: '', category: 'all', defaultValue: '' }); setIsAttrModalOpen(true); }} className="px-4 py-2 bg-red-600 text-white rounded-xl text-xs font-bold flex items-center gap-1">
+              <Plus className="w-4 h-4" /> ویژگی جدید
             </button>
           </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+          <div className="grid md:grid-cols-2 gap-3">
             {attributes.map(attr => (
-              <div key={attr.id} className="p-4 rounded-2xl border border-neutral-200 flex items-center justify-between gap-3 bg-neutral-50/50">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <span className="font-bold text-neutral-900 text-xs">{attr.nameFa}</span>
-                    <span className="text-[10px] bg-neutral-200 text-neutral-700 px-2 py-0.5 rounded font-mono">
-                      {attr.category}
-                    </span>
-                  </div>
-                  {attr.defaultValue && (
-                    <span className="text-[11px] text-neutral-400 block">مقدار پیش‌فرض: {attr.defaultValue}</span>
-                  )}
+              <div key={attr.id} className="p-4 rounded-2xl bg-neutral-50 border border-neutral-200 flex items-center gap-3">
+                <div className="flex-1">
+                  <b className="text-xs">{attr.nameFa}</b>
+                  <div className="text-[10px] text-neutral-400 mt-1">{attr.category} {attr.defaultValue ? '— ' + attr.defaultValue : ''}</div>
                 </div>
-
-                <div className="flex items-center gap-1.5">
-                  <button
-                    onClick={() => handleEditAttr(attr)}
-                    className="p-1.5 hover:bg-neutral-200 rounded-lg text-neutral-600 transition-colors cursor-pointer"
-                  >
-                    <Edit3 className="w-4 h-4 text-blue-600" />
-                  </button>
-                  <button
-                    onClick={() => handleDeleteAttr(attr.id, attr.nameFa)}
-                    className="p-1.5 hover:bg-red-100 rounded-lg text-red-600 transition-colors cursor-pointer"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
+                <button onClick={() => { setEditingAttr(attr); setAttrForm({ nameFa: attr.nameFa, category: attr.category, defaultValue: attr.defaultValue || '' }); setIsAttrModalOpen(true); }} className="p-2"><Edit3 className="w-4 h-4 text-blue-600" /></button>
+                <button onClick={() => { if (confirm('این ویژگی حذف شود؟')) { const next = attributes.filter(x => x.id !== attr.id); setAttributes(next); updateSettings({ productAttributes: next }); } }} className="p-2"><Trash2 className="w-4 h-4 text-red-600" /></button>
               </div>
             ))}
           </div>
         </div>
       )}
 
-      {/* ================= MODAL: MENU ITEM (SMART PICKER & CUSTOM LINK) ================= */}
       {isMenuModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl border border-neutral-200 max-w-md w-full p-6 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between border-b border-neutral-100 pb-3">
-              <h4 className="font-black text-sm text-neutral-900">
-                {editingMenu ? 'ویرایش آیتم منو' : 'افزودن آیتم حرفه‌ای به منو'}
-              </h4>
-              <button onClick={() => setIsMenuModalOpen(false)} className="w-7 h-7 rounded-full bg-neutral-100 flex items-center justify-center cursor-pointer">
-                <X className="w-4 h-4" />
-              </button>
+          <div className="bg-white rounded-3xl w-full max-w-2xl p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between pb-4 border-b">
+              <div>
+                <h4 className="font-black">{editingMenu ? 'ویرایش آیتم Header' : 'افزودن آیتم Header'}</h4>
+                <p className="text-[10px] text-neutral-500 mt-1">هر آیتم می‌تواند مگامنو، برند، دسته‌بندی، برگه، صفحه سیستمی یا لینک خارجی باشد.</p>
+              </div>
+              <button onClick={() => setIsMenuModalOpen(false)} className="p-2 rounded-full bg-neutral-100"><X className="w-4 h-4" /></button>
             </div>
 
-            <form onSubmit={handleSaveMenu} className="space-y-3.5 text-xs">
-              
-              {/* Type Switcher */}
+            <form onSubmit={saveMenu} className="space-y-4 mt-4 text-xs">
               <div>
-                <label className="block text-neutral-700 font-bold mb-1">نوع لینک منو:</label>
-                <div className="grid grid-cols-4 gap-1 p-1 bg-neutral-100 rounded-xl text-center">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setMenuType('category');
-                      if (categories[0]) {
-                        setMenuForm({ ...menuForm, title: categories[0].nameFa, link: `category:${categories[0].slug}` });
-                      }
-                    }}
-                    className={`py-1.5 rounded-lg font-bold transition-colors cursor-pointer ${menuType === 'category' ? 'bg-white shadow-xs text-neutral-900' : 'text-neutral-600'}`}
-                  >
-                    دسته‌بندی
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setMenuType('page');
-                      if (pages[0]) {
-                        setMenuForm({ ...menuForm, title: pages[0].title, link: `page:${pages[0].slug}` });
-                      }
-                    }}
-                    className={`py-1.5 rounded-lg font-bold transition-colors cursor-pointer ${menuType === 'page' ? 'bg-white shadow-xs text-neutral-900' : 'text-neutral-600'}`}
-                  >
-                    برگه‌ها
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setMenuType('system');
-                      setMenuForm({ ...menuForm, title: 'فروشگاه قطعات', link: 'shop' });
-                    }}
-                    className={`py-1.5 rounded-lg font-bold transition-colors cursor-pointer ${menuType === 'system' ? 'bg-white shadow-xs text-neutral-900' : 'text-neutral-600'}`}
-                  >
-                    سیستمی
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setMenuType('custom');
-                      setMenuForm({ ...menuForm, link: 'https://' });
-                    }}
-                    className={`py-1.5 rounded-lg font-bold transition-colors cursor-pointer ${menuType === 'custom' ? 'bg-white shadow-xs text-neutral-900' : 'text-neutral-600'}`}
-                  >
-                    دستی / وب
-                  </button>
+                <label className="font-bold text-neutral-700 block mb-2">نوع آیتم</label>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {[
+                    ['categories', 'مگامنو دسته‌ها', Layers],
+                    ['brands', 'منوی برندها', Car],
+                    ['category', 'یک دسته‌بندی', Layers],
+                    ['brand', 'یک برند', Car],
+                    ['page', 'برگه', Link2],
+                    ['system', 'سیستمی', Menu],
+                    ['custom', 'لینک خارجی', Globe2]
+                  ].map(([kind, label, Icon]: any) => (
+                    <button
+                      key={kind}
+                      type="button"
+                      onClick={() => chooseMenuType(kind)}
+                      className={`p-3 rounded-xl border text-center font-bold ${menuType === kind ? 'border-red-500 bg-red-50 text-red-700' : 'border-neutral-200'}`}
+                    >
+                      <Icon className="w-4 h-4 mx-auto mb-1" /> {label}
+                    </button>
+                  ))}
                 </div>
               </div>
 
-              {/* Dynamic Pickers */}
               {menuType === 'category' && (
-                <div>
-                  <label className="block text-neutral-700 font-bold mb-1">انتخاب دسته‌بندی قطعات:</label>
+                <label className="block">
+                  <span className="font-bold text-neutral-700 block mb-1">دسته‌بندی</span>
                   <select
-                    onChange={(e) => {
-                      const selected = categories.find(c => c.slug === e.target.value);
-                      if (selected) {
-                        setMenuForm({
-                          ...menuForm,
-                          title: selected.nameFa,
-                          link: `category:${selected.slug}`
-                        });
-                      }
+                    value={menuForm.link.replace('category:', '')}
+                    onChange={e => {
+                      const item = categories.find(x => x.slug === e.target.value);
+                      if (item) setMenuForm(prev => ({ ...prev, title: item.nameFa, link: 'category:' + item.slug }));
                     }}
-                    className="w-full p-2.5 border border-neutral-300 rounded-xl bg-white"
+                    className="w-full p-3 border rounded-xl"
                   >
-                    {categories.map(c => (
-                      <option key={c.id} value={c.slug}>
-                        {c.nameFa} ({c.nameEn})
-                      </option>
-                    ))}
+                    {categories.map(item => <option key={item.id} value={item.slug}>{item.nameFa}</option>)}
                   </select>
-                </div>
+                </label>
+              )}
+
+              {menuType === 'brand' && (
+                <label className="block">
+                  <span className="font-bold text-neutral-700 block mb-1">برند خودرو</span>
+                  <select
+                    value={menuForm.link.replace('car-brand:', '')}
+                    onChange={e => {
+                      const item = brands.find(x => x.slug === e.target.value);
+                      if (item) setMenuForm(prev => ({ ...prev, title: item.nameFa, link: 'car-brand:' + item.slug }));
+                    }}
+                    className="w-full p-3 border rounded-xl"
+                  >
+                    {brands.map(item => <option key={item.id} value={item.slug}>{item.nameFa} ({item.nameEn})</option>)}
+                  </select>
+                </label>
               )}
 
               {menuType === 'page' && (
-                <div>
-                  <label className="block text-neutral-700 font-bold mb-1">انتخاب برگه سایت:</label>
+                <label className="block">
+                  <span className="font-bold text-neutral-700 block mb-1">برگه</span>
                   <select
-                    onChange={(e) => {
-                      const selected = pages.find(p => p.slug === e.target.value);
-                      if (selected) {
-                        setMenuForm({
-                          ...menuForm,
-                          title: selected.title,
-                          link: `page:${selected.slug}`
-                        });
-                      }
+                    value={menuForm.link.replace('page:', '')}
+                    onChange={e => {
+                      const item = pages.find(x => x.slug === e.target.value);
+                      if (item) setMenuForm(prev => ({ ...prev, title: item.title, link: 'page:' + item.slug }));
                     }}
-                    className="w-full p-2.5 border border-neutral-300 rounded-xl bg-white"
+                    className="w-full p-3 border rounded-xl"
                   >
-                    {pages.map(p => (
-                      <option key={p.id} value={p.slug}>
-                        {p.title}
-                      </option>
-                    ))}
+                    {pages.map(item => <option key={item.id} value={item.slug}>{item.title}</option>)}
                   </select>
-                </div>
+                </label>
               )}
 
               {menuType === 'system' && (
-                <div>
-                  <label className="block text-neutral-700 font-bold mb-1">صفحه سیستمی پیش‌فرض:</label>
+                <label className="block">
+                  <span className="font-bold text-neutral-700 block mb-1">صفحه سیستمی</span>
                   <select
-                    onChange={(e) => {
-                      const link = e.target.value;
-                      const opt = e.target.options[e.target.selectedIndex];
-                      setMenuForm({
-                        ...menuForm,
-                        title: opt ? opt.text : menuForm.title,
-                        link
-                      });
+                    value={menuForm.link}
+                    onChange={e => {
+                      const item = systemOptions.find(x => x.link === e.target.value);
+                      if (item) setMenuForm(prev => ({ ...prev, title: item.title, link: item.link }));
                     }}
-                    className="w-full p-2.5 border border-neutral-300 rounded-xl bg-white"
+                    className="w-full p-3 border rounded-xl"
                   >
-                    <option value="shop">فروشگاه قطعات</option>
-                    <option value="shop:maintenance">قطعات مصرفی و سرویس دوره‌ای</option>
-                    <option value="part-request">استعلام قطعه نایاب با شاسی</option>
-                    <option value="tracking">پیگیری سفارش و مرسوله</option>
-                    <option value="blog">مقالات و آموزش تعمیرات</option>
-                    <option value="account:garage">گاراژ خودروهای من</option>
-                    <option value="account">ورود یا حساب کاربری</option>
-                    <option value="admin">پنل مدیریت انبار</option>
+                    {systemOptions.map(item => <option key={item.link} value={item.link}>{item.title}</option>)}
                   </select>
-                </div>
+                </label>
               )}
 
-              {/* Title Input */}
-              <div>
-                <label className="block text-neutral-700 font-bold mb-1">عنوان نمایشی منو *:</label>
-                <input
-                  type="text"
-                  value={menuForm.title}
-                  onChange={e => setMenuForm({ ...menuForm, title: e.target.value })}
-                  placeholder="مثال: قطعات مصرفی و فیلترها"
-                  className="w-full p-2.5 border border-neutral-300 rounded-xl"
-                  required
-                />
-              </div>
-
-              {/* Link Target Input */}
-              <div>
-                <label className="block text-neutral-700 font-bold mb-1">
-                  مسیر مقصد (Link Target) *:
+              <div className="grid sm:grid-cols-2 gap-3">
+                <label>
+                  <span className="font-bold text-neutral-700 block mb-1">عنوان نمایش داده‌شده</span>
+                  <input value={menuForm.title} onChange={e => setMenuForm(prev => ({ ...prev, title: e.target.value }))} className="w-full p-3 border rounded-xl" />
                 </label>
-                <input
-                  type="text"
-                  value={menuForm.link}
-                  onChange={e => setMenuForm({ ...menuForm, link: e.target.value })}
-                  placeholder="shop یا category:cooling یا https://..."
-                  className="w-full p-2.5 border border-neutral-300 rounded-xl font-mono text-left"
-                  dir="ltr"
-                  required
-                />
+                <label>
+                  <span className="font-bold text-neutral-700 block mb-1">Badge اختیاری</span>
+                  <input value={menuForm.badge || ''} onChange={e => setMenuForm(prev => ({ ...prev, badge: e.target.value }))} placeholder="مثلاً جدید / فوری" className="w-full p-3 border rounded-xl" />
+                </label>
               </div>
 
-              {/* Badge Input */}
-              <div>
-                <label className="block text-neutral-700 font-bold mb-1">نشان یا برچسب ویژه (Badge اختیاری):</label>
-                <input
-                  type="text"
-                  value={menuForm.badge}
-                  onChange={e => setMenuForm({ ...menuForm, badge: e.target.value })}
-                  placeholder="مثال: جدید، تخفیف، فوری، سرویس"
-                  className="w-full p-2.5 border border-neutral-300 rounded-xl"
-                />
+              {menuType === 'custom' && (
+                <label className="block">
+                  <span className="font-bold text-neutral-700 block mb-1">URL</span>
+                  <input dir="ltr" value={menuForm.link} onChange={e => setMenuForm(prev => ({ ...prev, link: e.target.value }))} className="w-full p-3 border rounded-xl text-left font-mono" />
+                </label>
+              )}
+
+              <div className="grid sm:grid-cols-2 gap-2">
+                <label className="p-3 rounded-xl border flex items-center gap-2">
+                  <input type="checkbox" checked={menuForm.isVisible !== false} onChange={e => setMenuForm(prev => ({ ...prev, isVisible: e.target.checked }))} />
+                  <span className="font-bold">نمایش در Header</span>
+                </label>
+                {menuType === 'custom' && (
+                  <label className="p-3 rounded-xl border flex items-center gap-2">
+                    <input type="checkbox" checked={Boolean(menuForm.openInNewTab)} onChange={e => setMenuForm(prev => ({ ...prev, openInNewTab: e.target.checked }))} />
+                    <span className="font-bold">باز شدن در تب جدید</span>
+                  </label>
+                )}
               </div>
 
-              <div className="flex gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setIsMenuModalOpen(false)}
-                  className="flex-1 py-2 bg-neutral-100 rounded-xl font-bold cursor-pointer"
-                >
-                  انصراف
-                </button>
-                <button
-                  type="submit"
-                  className="flex-1 py-2 bg-red-600 text-white rounded-xl font-bold shadow-md hover:bg-red-700 cursor-pointer"
-                >
-                  ذخیره آیتم منو
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* ================= MODAL: ATTRIBUTE ================= */}
-      {isAttrModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl border border-neutral-200 max-w-md w-full p-6 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between border-b border-neutral-100 pb-3">
-              <h4 className="font-black text-sm text-neutral-900">
-                {editingAttr ? 'ویرایش ویژگی فنی' : 'افزودن ویژگی فنی جدید'}
-              </h4>
-              <button onClick={() => setIsAttrModalOpen(false)} className="w-7 h-7 rounded-full bg-neutral-100 flex items-center justify-center cursor-pointer">
-                <X className="w-4 h-4" />
+              <button type="submit" className="w-full py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl font-black flex items-center justify-center gap-2">
+                <Save className="w-4 h-4" /> ذخیره منوی Header
               </button>
-            </div>
-
-            <form onSubmit={handleSaveAttr} className="space-y-3.5 text-xs">
-              <div>
-                <label className="block text-neutral-700 font-bold mb-1">نام ویژگی فنی *:</label>
-                <input
-                  type="text"
-                  value={attrForm.nameFa}
-                  onChange={e => setAttrForm({ ...attrForm, nameFa: e.target.value })}
-                  placeholder="مثال: نوع استاندارد آلیاژ سرسیلندر"
-                  className="w-full p-2.5 border border-neutral-300 rounded-xl"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-neutral-700 font-bold mb-1">دسته کاربرد (Category Scope):</label>
-                <select
-                  value={attrForm.category}
-                  onChange={e => setAttrForm({ ...attrForm, category: e.target.value })}
-                  className="w-full p-2.5 border border-neutral-300 rounded-xl bg-white"
-                >
-                  <option value="all">عمومی (همه قطعات)</option>
-                  <option value="engine">موتوری و متعلقات</option>
-                  <option value="gearbox">گیربکس و انتقال قدرت</option>
-                  <option value="brakes">سیستم ترمز</option>
-                  <option value="suspension">جلوبندی و تعلیق</option>
-                  <option value="cooling">سیستم خنک‌کاری</option>
-                  <option value="electrical">برق و سنسورها</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-neutral-700 font-bold mb-1">مقدار پیش‌فرض (اختیاری):</label>
-                <input
-                  type="text"
-                  value={attrForm.defaultValue}
-                  onChange={e => setAttrForm({ ...attrForm, defaultValue: e.target.value })}
-                  placeholder="مثال: استاندارد OEM کارخانه"
-                  className="w-full p-2.5 border border-neutral-300 rounded-xl"
-                />
-              </div>
-
-              <div className="flex gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setIsAttrModalOpen(false)}
-                  className="flex-1 py-2 bg-neutral-100 rounded-xl font-bold cursor-pointer"
-                >
-                  انصراف
-                </button>
-                <button
-                  type="submit"
-                  className="flex-1 py-2 bg-red-600 text-white rounded-xl font-bold shadow-md hover:bg-red-700 cursor-pointer"
-                >
-                  ذخیره ویژگی
-                </button>
-              </div>
             </form>
           </div>
         </div>
       )}
 
+      {isAttrModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-6 w-full max-w-md">
+            <div className="flex justify-between items-center border-b pb-3">
+              <b>{editingAttr ? 'ویرایش ویژگی' : 'ویژگی جدید'}</b>
+              <button onClick={() => setIsAttrModalOpen(false)}><X className="w-4 h-4" /></button>
+            </div>
+            <form onSubmit={saveAttribute} className="space-y-3 mt-4 text-xs">
+              <input value={attrForm.nameFa} onChange={e => setAttrForm({ ...attrForm, nameFa: e.target.value })} placeholder="نام ویژگی" className="w-full p-3 border rounded-xl" />
+              <select value={attrForm.category} onChange={e => setAttrForm({ ...attrForm, category: e.target.value })} className="w-full p-3 border rounded-xl">
+                <option value="all">همه دسته‌ها</option>
+                {categories.map(item => <option key={item.id} value={item.slug}>{item.nameFa}</option>)}
+              </select>
+              <input value={attrForm.defaultValue} onChange={e => setAttrForm({ ...attrForm, defaultValue: e.target.value })} placeholder="مقدار پیش‌فرض" className="w-full p-3 border rounded-xl" />
+              <button className="w-full py-3 bg-neutral-900 text-white rounded-xl font-bold flex items-center justify-center gap-2"><Check className="w-4 h-4" /> ذخیره</button>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

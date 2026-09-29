@@ -1738,7 +1738,25 @@ export const INITIAL_SETTINGS = {
     { id: 'header-brands', title: 'برندهای خودرو', link: 'shop', kind: 'brands' as const, isVisible: true },
     { id: 'header-maintenance', title: 'سرویس دوره‌ای', link: 'shop:maintenance', kind: 'system' as const, badge: 'سرویس', isVisible: true },
     { id: 'header-request', title: 'استعلام قطعه', link: 'part-request', kind: 'system' as const, badge: 'فوری', isVisible: true },
-    { id: 'header-blog', title: 'مقالات و آموزش', link: 'blog', kind: 'system' as const, isVisible: true }
+    { id: 'header-blog', title: 'مقالات و آموزش', link: 'blog', kind: 'system' as const, isVisible: true },
+    { id: 'header-cat-engine', title: 'قطعات موتور', link: 'category:engine', kind: 'category' as const, parentId: 'header-categories', isVisible: true },
+    { id: 'header-cat-brakes', title: 'سیستم ترمز', link: 'category:brakes', kind: 'category' as const, parentId: 'header-categories', isVisible: true },
+    { id: 'header-cat-filters', title: 'فیلترها و سرویس', link: 'category:filters', kind: 'category' as const, parentId: 'header-categories', isVisible: true },
+    { id: 'header-cat-suspension', title: 'جلوبندی و تعلیق', link: 'category:suspension', kind: 'category' as const, parentId: 'header-categories', isVisible: true }
+  ],
+  popularPartsBrands: [
+    { id: 'pb-bosch', title: 'BOSCH', subtitle: 'Bosch Mobility', imageUrl: 'https://www.google.com/s2/favicons?domain=bosch.com&sz=128', link: 'shop', isVisible: true },
+    { id: 'pb-mahle', title: 'MAHLE', subtitle: 'Engine Components', imageUrl: 'https://www.google.com/s2/favicons?domain=mahle.com&sz=128', link: 'shop', isVisible: true },
+    { id: 'pb-valeo', title: 'VALEO', subtitle: 'Clutch & Electrical', imageUrl: 'https://www.google.com/s2/favicons?domain=valeo.com&sz=128', link: 'shop', isVisible: true },
+    { id: 'pb-skf', title: 'SKF', subtitle: 'Bearings', imageUrl: 'https://www.google.com/s2/favicons?domain=skf.com&sz=128', link: 'shop', isVisible: true },
+    { id: 'pb-ngk', title: 'NGK', subtitle: 'Ignition', imageUrl: 'https://www.google.com/s2/favicons?domain=ngkntk.com&sz=128', link: 'shop', isVisible: true },
+    { id: 'pb-castrol', title: 'Castrol', subtitle: 'Lubricants', imageUrl: 'https://www.google.com/s2/favicons?domain=castrol.com&sz=128', link: 'shop', isVisible: true },
+    { id: 'pb-brembo', title: 'Brembo', subtitle: 'Brake Systems', imageUrl: 'https://www.google.com/s2/favicons?domain=brembo.com&sz=128', link: 'shop', isVisible: true },
+    { id: 'pb-mann', title: 'MANN-FILTER', subtitle: 'Filters', imageUrl: 'https://www.google.com/s2/favicons?domain=mann-filter.com&sz=128', link: 'shop', isVisible: true },
+    { id: 'pb-sachs', title: 'SACHS', subtitle: 'Drivetrain', imageUrl: 'https://www.google.com/s2/favicons?domain=zf.com&sz=128', link: 'shop', isVisible: true },
+    { id: 'pb-gates', title: 'Gates', subtitle: 'Belts & Cooling', imageUrl: 'https://www.google.com/s2/favicons?domain=gates.com&sz=128', link: 'shop', isVisible: true },
+    { id: 'pb-hella', title: 'HELLA', subtitle: 'Lighting & Electronics', imageUrl: 'https://www.google.com/s2/favicons?domain=hella.com&sz=128', link: 'shop', isVisible: true },
+    { id: 'pb-mobil', title: 'Mobil 1', subtitle: 'Engine Oil', imageUrl: 'https://www.google.com/s2/favicons?domain=mobil.com&sz=128', link: 'shop', isVisible: true }
   ],
   productAttributes: [
     { id: 'attr-1', nameFa: 'شماره فنی اصلی (OEM)', category: 'all', defaultValue: 'استاندارد کارخانه' },

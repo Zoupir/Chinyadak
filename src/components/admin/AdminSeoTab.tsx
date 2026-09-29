@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import {
   Activity, AlertTriangle, ArrowUpLeft, BarChart3, Bot, BrainCircuit, Check,
   CheckCircle2, ChevronLeft, CircleGauge, Code2, ExternalLink, FileSearch,
-  FileText, Gauge, GitBranch, Globe2, تاریخچه, KeyRound, Link2, ListChecks,
+  FileText, Gauge, GitBranch, Globe2, History, KeyRound, Link2, ListChecks,
   Loader2, Network, RefreshCw, Route, Save, Search, Settings2, ShieldCheck,
   Sparkles, Trash2, WandSparkles, XCircle, Zap
 } from 'lucide-react';

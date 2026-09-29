@@ -101,9 +101,9 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigate, onOpenVehicleMod
   const featuredParts = products.filter(p => p.isFeatured).slice(0, 4);
 
   return (
-    <div className="space-y-16 pb-12">
+    <div className="home-view space-y-16 pb-12">
       {/* 1. Hero & Dynamic Showcase: Integrated Vehicle Finder and Slider */}
-      <div className="relative group">
+      <div className="home-hero relative group">
         {isLiveEditActive && (
           <button
             onClick={() => setActiveEditingSectionId('sec-hero')}
@@ -123,7 +123,7 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigate, onOpenVehicleMod
       <div className="max-w-7xl mx-auto px-4 space-y-16">
         
         {/* 2. Brand Grid: "خرید بر اساس برند خودرو" */}
-        <section className={`space-y-6 relative ${isLiveEditActive ? 'ring-2 ring-dashed ring-amber-400 p-4 rounded-3xl' : ''}`}>
+        <section className={`home-brand-section space-y-6 relative ${isLiveEditActive ? 'ring-2 ring-dashed ring-amber-400 p-4 rounded-3xl' : ''}`}>
           {isLiveEditActive && (
             <button
               onClick={() => setActiveEditingSectionId('sec-brands')}
@@ -180,7 +180,7 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigate, onOpenVehicleMod
         </section>
 
         {/* 3. Main Part Categories Grid */}
-        <section className={`space-y-6 relative ${isLiveEditActive ? 'ring-2 ring-dashed ring-amber-400 p-4 rounded-3xl' : ''}`}>
+        <section className={`home-category-section space-y-6 relative ${isLiveEditActive ? 'ring-2 ring-dashed ring-amber-400 p-4 rounded-3xl' : ''}`}>
           {isLiveEditActive && (
             <button
               onClick={() => setActiveEditingSectionId('sec-categories')}

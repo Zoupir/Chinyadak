@@ -398,7 +398,7 @@ export const getSeoSettings = async (): Promise<SeoSettings> => {
   const legacy = await readAppSetting<any>('site_settings', {});
   const migrated = mergeSettings({
     global: {
-      siteTitle: String(legacy?.siteTitle || 'یدک استور').split('|')[0].trim(),
+      siteTitle: String(legacy?.siteTitle || 'فروشگاه قطعات خودرو').split('|')[0].trim(),
       siteSlogan: String(legacy?.siteSlogan || ''),
       metaTitle: String(legacy?.metaTitle || legacy?.siteTitle || ''),
       metaDescription: String(legacy?.metaDescription || ''),
@@ -410,7 +410,7 @@ export const getSeoSettings = async (): Promise<SeoSettings> => {
       indexRobots: legacy?.enableIndexRobots !== false
     },
     identity: {
-      organizationName: String(legacy?.siteTitle || 'یدک استور').split('|')[0].trim(),
+      organizationName: String(legacy?.siteTitle || 'فروشگاه قطعات خودرو').split('|')[0].trim(),
       logoUrl: String(legacy?.logoUrl || ''),
       phone: String(legacy?.contactPhone || legacy?.supportPhone || ''),
       email: String(legacy?.supportEmail || ''),

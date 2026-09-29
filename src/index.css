@@ -3398,3 +3398,75 @@ html[data-layout="marketplace-rtl"] .marketplace-ref-footer-bottom .marketplace-
     overflow: visible;
   }
 }
+
+
+/* MARKETPLACE READABILITY FINAL OVERRIDES */
+html[data-layout="marketplace-rtl"] .marketplace-hero-content p,
+html[data-layout="marketplace-rtl"] .marketplace-vehicle-finder > p,
+html[data-layout="marketplace-rtl"] .marketplace-section-heading > button,
+html[data-layout="marketplace-rtl"] .marketplace-round-list strong,
+html[data-layout="marketplace-rtl"] .marketplace-promo-card small,
+html[data-layout="marketplace-rtl"] .marketplace-product-tabs button,
+html[data-layout="marketplace-rtl"] .marketplace-ref-badges span,
+html[data-layout="marketplace-rtl"] .marketplace-ref-sku,
+html[data-layout="marketplace-rtl"] .marketplace-ref-rating,
+html[data-layout="marketplace-rtl"] .marketplace-ref-product-bottom del,
+html[data-layout="marketplace-rtl"] .marketplace-ref-add,
+html[data-layout="marketplace-rtl"] .marketplace-logo-tiles small,
+html[data-layout="marketplace-rtl"] .marketplace-testimonial-grid small,
+html[data-layout="marketplace-rtl"] .marketplace-ref-article-intro p,
+html[data-layout="marketplace-rtl"] .marketplace-ref-article-intro button,
+html[data-layout="marketplace-rtl"] .marketplace-article-grid p,
+html[data-layout="marketplace-rtl"] .marketplace-service-strip small,
+html[data-layout="marketplace-rtl"] .marketplace-parts-brand-copy small {
+  font-size: max(11px, calc(var(--site-base-font-size) * .7)) !important;
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-ref-product-title,
+html[data-layout="marketplace-rtl"] .marketplace-ref-product-bottom strong,
+html[data-layout="marketplace-rtl"] .marketplace-article-grid h3,
+html[data-layout="marketplace-rtl"] .marketplace-service-strip strong,
+html[data-layout="marketplace-rtl"] .marketplace-parts-brand-copy strong,
+html[data-layout="marketplace-rtl"] .marketplace-finder-grid button span,
+html[data-layout="marketplace-rtl"] .marketplace-finder-grid button strong {
+  font-size: max(12px, calc(var(--site-base-font-size) * .76)) !important;
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-ref-topbar,
+html[data-layout="marketplace-rtl"] .marketplace-ref-search-category,
+html[data-layout="marketplace-rtl"] .marketplace-ref-actions > button,
+html[data-layout="marketplace-rtl"] .marketplace-ref-garage,
+html[data-layout="marketplace-rtl"] .marketplace-ref-nav-links .marketplace-ref-nav-item > button,
+html[data-layout="marketplace-rtl"] .marketplace-ref-submenu > button,
+html[data-layout="marketplace-rtl"] .marketplace-ref-category-sub,
+html[data-layout="marketplace-rtl"] .marketplace-ref-category-all {
+  font-size: max(12px, calc(var(--site-base-font-size) * .78)) !important;
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-ref-search input,
+html[data-layout="marketplace-rtl"] .marketplace-search-car,
+html[data-layout="marketplace-rtl"] .marketplace-ref-category-link {
+  font-size: max(13px, calc(var(--site-base-font-size) * .82)) !important;
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-section-heading h2 {
+  font-size: max(18px, calc(var(--site-base-font-size) * 1.12)) !important;
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-promo-card h3 {
+  font-size: max(20px, calc(var(--site-base-font-size) * 1.25)) !important;
+}
+
+@media (max-width: 700px) {
+  html[data-layout="marketplace-rtl"] .marketplace-promo-card h3 {
+    font-size: max(15px, calc(var(--site-base-font-size) * .95)) !important;
+  }
+
+  html[data-layout="marketplace-rtl"] .marketplace-ref-product-title {
+    font-size: max(12px, calc(var(--site-base-font-size) * .74)) !important;
+  }
+
+  html[data-layout="marketplace-rtl"] .marketplace-ref-product-bottom strong {
+    font-size: max(12px, calc(var(--site-base-font-size) * .75)) !important;
+  }
+}

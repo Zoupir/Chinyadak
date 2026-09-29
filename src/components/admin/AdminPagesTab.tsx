@@ -638,7 +638,7 @@ export const AdminPagesTab: React.FC<AdminPagesTabProps> = ({ onNavigate }) => {
                   <label>
                     <span className="block text-[10px] font-bold mb-1">ستون دسکتاپ</span>
                     <select value={sectionForm.desktopColumns || 3} onChange={e => setSectionForm({ ...sectionForm, desktopColumns: Number(e.target.value) as any })} className="w-full p-2 border border-neutral-300 rounded-lg bg-white">
-                      {[1,2,3,4,5,6].map(n => <option key={n} value={n}>{n} ستون</option>)}
+                      {[1,2,3,4,5,6,7,8,9,10,11,12].map(n => <option key={n} value={n}>{n} ستون</option>)}
                     </select>
                   </label>
                   <label>

@@ -1621,6 +1621,7 @@ export const upsertSeoIssue = async (issue: {
 
 export const runFullSeoAudit = async (actorId?: string) => {
   const startedAt = new Date();
+  const settings = await getSeoSettings();
   const entities = await loadAllEntities(12000);
   let issueCount = 0;
   const focusOwners = new Map<string, SeoEntity[]>();

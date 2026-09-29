@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useStore } from '../../context/StoreContext';
-import { SitePage, PageSection } from '../../types';
+import { SitePage, PageSection, SeoEntityDraft } from '../../types';
+import { AdminEntitySeoPanel } from './AdminEntitySeoPanel';
 import { RichTextEditor } from '../common/RichTextEditor';
 import { ImageUploadInput } from '../common/ImageUploadInput';
 import { 
@@ -42,12 +43,14 @@ export const AdminPagesTab: React.FC<AdminPagesTabProps> = ({ onNavigate }) => {
   const [editingSection, setEditingSection] = useState<PageSection | null>(null);
   const [isSectionModalOpen, setIsSectionModalOpen] = useState<boolean>(false);
   const [isNewPageModalOpen, setIsNewPageModalOpen] = useState<boolean>(false);
+  const [pageSeoDrafts, setPageSeoDrafts] = useState<Record<string, SeoEntityDraft>>({});
 
   // New Page Form
-  const [newPageForm, setNewPageForm] = useState<{ title: string; slug: string; description: string }>({
+  const [newPageForm, setNewPageForm] = useState<{ title: string; slug: string; description: string; seo?: SeoEntityDraft }>({
     title: '',
     slug: '',
-    description: ''
+    description: '',
+    seo: undefined
   });
 
   // Section Form
@@ -77,6 +80,12 @@ export const AdminPagesTab: React.FC<AdminPagesTabProps> = ({ onNavigate }) => {
     gapPx: 16,
     minHeightPx: 0,
     contentAlign: 'right',
+    widthPercent: 100,
+    maxWidthPx: 1280,
+    maxItems: 0,
+    imageSizePx: 72,
+    backgroundImageOpacity: 100,
+    itemAspectRatio: 'auto',
     items: []
   });
 
@@ -117,6 +126,12 @@ export const AdminPagesTab: React.FC<AdminPagesTabProps> = ({ onNavigate }) => {
       gapPx: 16,
       minHeightPx: 0,
       contentAlign: 'right',
+      widthPercent: 100,
+      maxWidthPx: 1280,
+      maxItems: 0,
+      imageSizePx: 72,
+      backgroundImageOpacity: 100,
+      itemAspectRatio: 'auto',
       items: []
     };
     setEditingSection(null);
@@ -189,6 +204,7 @@ export const AdminPagesTab: React.FC<AdminPagesTabProps> = ({ onNavigate }) => {
       description: newPageForm.description,
       isSystem: false,
       updatedAt: new Date().toLocaleDateString('fa-IR'),
+      seo: newPageForm.seo,
       sections: [
         {
           id: `sec-${Date.now()}-1`,
@@ -204,7 +220,7 @@ export const AdminPagesTab: React.FC<AdminPagesTabProps> = ({ onNavigate }) => {
     updatePage(newPage);
     setSelectedPageId(newPage.id);
     setIsNewPageModalOpen(false);
-    setNewPageForm({ title: '', slug: '', description: '' });
+    setNewPageForm({ title: '', slug: '', description: '', seo: undefined });
   };
 
   return (
@@ -348,6 +364,26 @@ export const AdminPagesTab: React.FC<AdminPagesTabProps> = ({ onNavigate }) => {
             </div>
           </div>
 
+          <div className="space-y-3">
+            <AdminEntitySeoPanel
+              entityType="page"
+              entityId={selectedPage.id}
+              entityTitle={selectedPage.title}
+              value={pageSeoDrafts[selectedPage.id] || selectedPage.seo}
+              images={selectedPage.sections.map(section => section.imageUrl || '').filter(Boolean)}
+              onChange={(seo) => setPageSeoDrafts(prev => ({ ...prev, [selectedPage.id]: seo }))}
+            />
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={() => updatePage({ ...selectedPage, seo: pageSeoDrafts[selectedPage.id] || selectedPage.seo })}
+                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black cursor-pointer"
+              >
+                ذخیره سئوی برگه
+              </button>
+            </div>
+          </div>
+
           {/* Sections List */}
           <div className="space-y-3">
             {selectedPage.sections.sort((a, b) => a.order - b.order).map((section, idx) => (
@@ -449,7 +485,7 @@ export const AdminPagesTab: React.FC<AdminPagesTabProps> = ({ onNavigate }) => {
       ========================================================================= */}
       {isSectionModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
-          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto space-y-4 text-right shadow-2xl">
+          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-4xl w-full max-h-[90vh] overflow-y-auto space-y-4 text-right shadow-2xl">
             <div className="flex items-center justify-between pb-3 border-b border-neutral-100">
               <h3 className="font-bold text-base text-neutral-900 flex items-center gap-2">
                 <Edit3 className="w-4 h-4 text-red-600" />
@@ -600,6 +636,29 @@ export const AdminPagesTab: React.FC<AdminPagesTabProps> = ({ onNavigate }) => {
                   ))}
                 </div>
 
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                  <label>
+                    <span className="block text-[10px] font-bold mb-1">عرض سکشن (%)</span>
+                    <input type="number" min={20} max={100} value={sectionForm.widthPercent ?? 100} onChange={e => setSectionForm({ ...sectionForm, widthPercent: Number(e.target.value) })} className="w-full p-2 border border-neutral-300 rounded-lg bg-white font-mono" />
+                  </label>
+                  <label>
+                    <span className="block text-[10px] font-bold mb-1">حداکثر عرض (px)</span>
+                    <input type="number" min={0} max={2400} value={sectionForm.maxWidthPx ?? 1280} onChange={e => setSectionForm({ ...sectionForm, maxWidthPx: Number(e.target.value) })} className="w-full p-2 border border-neutral-300 rounded-lg bg-white font-mono" />
+                  </label>
+                  <label>
+                    <span className="block text-[10px] font-bold mb-1">حداکثر آیتم نمایشی</span>
+                    <input type="number" min={0} max={50} value={sectionForm.maxItems ?? 0} onChange={e => setSectionForm({ ...sectionForm, maxItems: Number(e.target.value) })} className="w-full p-2 border border-neutral-300 rounded-lg bg-white font-mono" />
+                  </label>
+                  <label>
+                    <span className="block text-[10px] font-bold mb-1">اندازه عکس/لوگو (px)</span>
+                    <input type="number" min={24} max={320} value={sectionForm.imageSizePx ?? 72} onChange={e => setSectionForm({ ...sectionForm, imageSizePx: Number(e.target.value) })} className="w-full p-2 border border-neutral-300 rounded-lg bg-white font-mono" />
+                  </label>
+                  <label>
+                    <span className="block text-[10px] font-bold mb-1">شفافیت پس‌زمینه (%)</span>
+                    <input type="number" min={0} max={100} value={sectionForm.backgroundImageOpacity ?? 100} onChange={e => setSectionForm({ ...sectionForm, backgroundImageOpacity: Number(e.target.value) })} className="w-full p-2 border border-neutral-300 rounded-lg bg-white font-mono" />
+                  </label>
+                </div>
+
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <label className="flex items-center justify-between gap-3 p-3 rounded-xl bg-white border border-neutral-200">
                     <span className="font-bold text-[11px]">تمام‌عرض بدون محدودیت کانتینر</span>
@@ -738,7 +797,7 @@ export const AdminPagesTab: React.FC<AdminPagesTabProps> = ({ onNavigate }) => {
       ========================================================================= */}
       {isNewPageModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
-          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full space-y-4 text-right shadow-2xl">
+          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-3xl w-full max-h-[90vh] overflow-y-auto space-y-4 text-right shadow-2xl">
             <div className="flex items-center justify-between pb-3 border-b border-neutral-100">
               <h3 className="font-bold text-base text-neutral-900">ایجاد برگه اختصاصی جدید</h3>
               <button onClick={() => setIsNewPageModalOpen(false)} className="text-neutral-400 hover:text-neutral-700">✕</button>
@@ -779,6 +838,14 @@ export const AdminPagesTab: React.FC<AdminPagesTabProps> = ({ onNavigate }) => {
                   className="w-full p-2.5 border border-neutral-300 rounded-xl"
                 />
               </div>
+
+              <AdminEntitySeoPanel
+                entityType="page"
+                entityTitle={newPageForm.title}
+                value={newPageForm.seo}
+                images={[]}
+                onChange={(seo) => setNewPageForm({ ...newPageForm, seo })}
+              />
 
               <div className="flex gap-2 pt-3">
                 <button

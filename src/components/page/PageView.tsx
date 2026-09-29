@@ -35,7 +35,8 @@ export const PageView: React.FC<PageViewProps> = ({ pageSlug, onNavigate }) => {
     isLiveEditActive, 
     setIsLiveEditActive, 
     adminAuth,
-    showToast 
+    showToast,
+    settings 
   } = useStore();
   const [editingSectionId, setEditingSectionId] = useState<string | null>(null);
 
@@ -248,7 +249,7 @@ export const PageView: React.FC<PageViewProps> = ({ pageSlug, onNavigate }) => {
           <div className="space-y-2 max-w-3xl">
             <div className="flex items-center gap-2.5">
               <span className="text-[11px] bg-red-600/30 text-red-400 border border-red-500/30 font-bold px-3 py-1 rounded-full">
-                مرکز اطلاعات چین‌پارت
+                مرکز اطلاعات {settings.siteTitle?.split('|')[0]?.trim() || 'فروشگاه'}
               </span>
               <span className="text-[11px] text-neutral-400">
                 آخرین به‌روزرسانی: {currentPage.updatedAt}

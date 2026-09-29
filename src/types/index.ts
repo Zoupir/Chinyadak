@@ -602,8 +602,8 @@ export interface PageSection {
 
   // Layout builder controls
   layout?: 'boxed' | 'full' | 'grid' | 'split' | 'cards';
-  desktopColumns?: 1 | 2 | 3 | 4 | 5 | 6;
-  mobileColumns?: 1 | 2 | 3 | 4 | 5 | 6;
+  desktopColumns?: number;
+  mobileColumns?: number;
   fullWidth?: boolean;
   backgroundColor?: string;
   textColor?: string;

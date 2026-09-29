@@ -1703,6 +1703,7 @@ export const INITIAL_SETTINGS = {
   primaryHover: '#b91c1c',
   accentGlowColor: '#DC2626', // Configurable glow/red highlight under buttons, cards, hover
   themeMode: 'dark' as const,
+  layoutPreset: 'classic' as const,
   siteBgColor: '#0a0a0a',
   cardBgColor: '#171717',
   headerBgColor: '#0a0a0a',
@@ -1731,6 +1732,13 @@ export const INITIAL_SETTINGS = {
     { id: 'm4', title: 'استعلام قطعه با شماره شاسی', link: 'part-request', badge: 'فوری' },
     { id: 'm5', title: 'مقالات و آموزش تعمیرات', link: 'blog' },
     { id: 'm6', title: 'گاراژ خودروهای من', link: 'account:garage' }
+  ],
+  headerMenus: [
+    { id: 'header-categories', title: 'دسته‌بندی قطعات خودرو', link: 'shop', kind: 'categories' as const, isVisible: true },
+    { id: 'header-brands', title: 'برندهای خودرو', link: 'shop', kind: 'brands' as const, isVisible: true },
+    { id: 'header-maintenance', title: 'سرویس دوره‌ای', link: 'shop:maintenance', kind: 'system' as const, badge: 'سرویس', isVisible: true },
+    { id: 'header-request', title: 'استعلام قطعه', link: 'part-request', kind: 'system' as const, badge: 'فوری', isVisible: true },
+    { id: 'header-blog', title: 'مقالات و آموزش', link: 'blog', kind: 'system' as const, isVisible: true }
   ],
   productAttributes: [
     { id: 'attr-1', nameFa: 'شماره فنی اصلی (OEM)', category: 'all', defaultValue: 'استاندارد کارخانه' },

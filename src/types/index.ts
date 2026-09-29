@@ -331,11 +331,24 @@ export interface ApiIntegrationsConfig {
   webhookSecret: string;
 }
 
+export type HeaderMenuKind =
+  | 'link'
+  | 'categories'
+  | 'brands'
+  | 'category'
+  | 'brand'
+  | 'page'
+  | 'system'
+  | 'custom';
+
 export interface MenuItem {
   id: string;
   title: string;
   link: string;
   badge?: string;
+  kind?: HeaderMenuKind;
+  isVisible?: boolean;
+  openInNewTab?: boolean;
 }
 
 export interface ProductAttributeDefinition {
@@ -443,6 +456,7 @@ export interface SiteSettings {
   primaryHover?: string;
   accentGlowColor?: string; // red highlight/glow under buttons and hover states
   themeMode?: 'dark' | 'light' | 'slate' | 'navy' | 'custom';
+  layoutPreset?: 'classic' | 'catalog-pro' | 'showroom';
   siteBgColor?: string;
   cardBgColor?: string;
   headerBgColor?: string;
@@ -462,6 +476,7 @@ export interface SiteSettings {
   enableGuestCheckout: boolean;
   enableStockAlerts: boolean;
   navigationMenus?: MenuItem[];
+  headerMenus?: MenuItem[];
   productAttributes?: ProductAttributeDefinition[];
   // Branding & Assets
   logoUrl?: string;

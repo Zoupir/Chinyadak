@@ -27,9 +27,9 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onViewDetails
     : 0;
 
   return (
-    <div className="group bg-white rounded-2xl border border-neutral-200 hover:border-neutral-300 hover:shadow-xl transition-all duration-300 flex flex-col justify-between overflow-hidden relative">
+    <div className="product-card group bg-white rounded-2xl border border-neutral-200 hover:border-neutral-300 hover:shadow-xl transition-all duration-300 flex flex-col justify-between overflow-hidden relative">
       {/* Top Media & Actions */}
-      <div className="relative p-4 pb-0 bg-neutral-50/40">
+      <div className="product-card-media relative p-4 pb-0 bg-neutral-50/40">
         {/* Floating Badges */}
         <div className="absolute top-3 right-3 z-10 flex flex-col gap-1.5 items-start">
           <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border shadow-2xs ${gradeInfo.bgClass}`}>
@@ -90,7 +90,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onViewDetails
       </div>
 
       {/* Card Body */}
-      <div className="p-4 flex-1 flex flex-col justify-between">
+      <div className="product-card-body p-4 flex-1 flex flex-col justify-between">
         <div>
           {/* Brand & OEM Header */}
           <div className="flex items-center justify-between text-[11px] text-neutral-500 mb-1.5">

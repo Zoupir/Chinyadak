@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useStore } from '../../context/StoreContext';
 import { HeroSection } from './HeroSection';
+import { MarketplaceRtlHome } from './MarketplaceRtlHome';
 import { BannerSlider } from './BannerSlider';
 import { ProductCard } from '../product/ProductCard';
 import { LiveSectionModal } from '../common/LiveSectionModal';
@@ -45,10 +46,15 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigate, onOpenVehicleMod
     isLiveEditActive,
     setIsLiveEditActive,
     adminAuth,
-    showToast
+    showToast,
+    settings
   } = useStore();
 
   const [activeEditingSectionId, setActiveEditingSectionId] = useState<string | null>(null);
+
+  if (settings.layoutPreset === 'marketplace-rtl') {
+    return <MarketplaceRtlHome onNavigate={onNavigate} onOpenVehicleModal={onOpenVehicleModal} />;
+  }
 
   const homePage = pages.find(p => p.slug === 'home');
   const getSection = (secId: string) => homePage?.sections.find(s => s.id === secId);

@@ -24,7 +24,9 @@ import {
   Package,
   Globe,
   CheckCircle,
-  ChevronDown
+  ChevronDown,
+  ArrowUp,
+  ArrowDown
 } from 'lucide-react';
 
 export const AdminFooterTab: React.FC = () => {
@@ -106,6 +108,7 @@ export const AdminFooterTab: React.FC = () => {
   // Link Modal
   const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
   const [targetColIdForLink, setTargetColIdForLink] = useState<string | null>(null);
+  const [editingLinkId, setEditingLinkId] = useState<string | null>(null);
   const [linkTitle, setLinkTitle] = useState('');
   const [linkType, setLinkType] = useState<'category' | 'page' | 'system' | 'custom'>('system');
   const [linkUrl, setLinkUrl] = useState('');
@@ -222,10 +225,54 @@ export const AdminFooterTab: React.FC = () => {
   // Link handlers
   const handleOpenAddLink = (colId: string) => {
     setTargetColIdForLink(colId);
+    setEditingLinkId(null);
     setLinkTitle('');
     setLinkType('system');
     setLinkUrl('shop');
     setIsLinkModalOpen(true);
+  };
+
+  const handleOpenEditLink = (colId: string, link: FooterLink) => {
+    setTargetColIdForLink(colId);
+    setEditingLinkId(link.id);
+    setLinkTitle(link.title);
+    setLinkUrl(link.url);
+    setLinkType(link.url.startsWith('page:') ? 'page' : link.url.startsWith('category:') ? 'category' : /^https?:/i.test(link.url) ? 'custom' : 'system');
+    setIsLinkModalOpen(true);
+  };
+
+  const moveColumn = (colId: string, direction: 'up' | 'down') => {
+    const index = columns.findIndex(col => col.id === colId);
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    if (index < 0 || targetIndex < 0 || targetIndex >= columns.length) return;
+    const next = [...columns];
+    [next[index], next[targetIndex]] = [next[targetIndex], next[index]];
+    setColumns(next);
+    updateSettings({ footerColumns: next });
+  };
+
+  const moveLink = (colId: string, linkId: string, direction: 'up' | 'down') => {
+    const next = columns.map(col => {
+      if (col.id !== colId) return col;
+      const links = [...col.links];
+      const index = links.findIndex(link => link.id === linkId);
+      const targetIndex = direction === 'up' ? index - 1 : index + 1;
+      if (index < 0 || targetIndex < 0 || targetIndex >= links.length) return col;
+      [links[index], links[targetIndex]] = [links[targetIndex], links[index]];
+      return { ...col, links };
+    });
+    setColumns(next);
+    updateSettings({ footerColumns: next });
+  };
+
+  const renameColumn = (colId: string) => {
+    const current = columns.find(col => col.id === colId);
+    if (!current) return;
+    const title = window.prompt('عنوان جدید ستون فوتر:', current.title)?.trim();
+    if (!title || title === current.title) return;
+    const next = columns.map(col => col.id === colId ? { ...col, title } : col);
+    setColumns(next);
+    updateSettings({ footerColumns: next });
   };
 
   const handleSaveLink = (e: React.FormEvent) => {
@@ -234,26 +281,27 @@ export const AdminFooterTab: React.FC = () => {
       showToast('عنوان و لینک الزامی هستند.', 'error');
       return;
     }
-    const newLink: FooterLink = {
-      id: `flink-${Date.now()}`,
-      title: linkTitle,
-      url: linkUrl
-    };
-
     const next = columns.map(col => {
-      if (col.id === targetColIdForLink) {
+      if (col.id !== targetColIdForLink) return col;
+      if (editingLinkId) {
         return {
           ...col,
-          links: [...col.links, newLink]
+          links: col.links.map(link => link.id === editingLinkId ? { ...link, title: linkTitle, url: linkUrl } : link)
         };
       }
-      return col;
+      const newLink: FooterLink = {
+        id: `flink-${Date.now()}`,
+        title: linkTitle,
+        url: linkUrl
+      };
+      return { ...col, links: [...col.links, newLink] };
     });
 
     setColumns(next);
     setIsLinkModalOpen(false);
     updateSettings({ footerColumns: next });
-    showToast('لینک به ستون فوتر افزوده شد.');
+    showToast(editingLinkId ? 'لینک فوتر ویرایش شد.' : 'لینک به ستون فوتر افزوده شد.');
+    setEditingLinkId(null);
   };
 
   const handleDeleteLink = (colId: string, linkId: string) => {
@@ -453,7 +501,10 @@ export const AdminFooterTab: React.FC = () => {
                     <span className="text-[11px] text-neutral-400">({col.links.length} لینک)</span>
                   </div>
 
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1">
+                    <button type="button" onClick={() => moveColumn(col.id, 'up')} className="p-1.5 text-neutral-500 hover:bg-neutral-100 rounded-lg cursor-pointer" title="انتقال ستون به بالا"><ArrowUp className="w-3.5 h-3.5" /></button>
+                    <button type="button" onClick={() => moveColumn(col.id, 'down')} className="p-1.5 text-neutral-500 hover:bg-neutral-100 rounded-lg cursor-pointer" title="انتقال ستون به پایین"><ArrowDown className="w-3.5 h-3.5" /></button>
+                    <button type="button" onClick={() => renameColumn(col.id)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg cursor-pointer" title="ویرایش عنوان ستون"><Edit3 className="w-3.5 h-3.5" /></button>
                     <button
                       onClick={() => handleOpenAddLink(col.id)}
                       className="px-2.5 py-1 bg-neutral-100 hover:bg-red-50 hover:text-red-600 rounded-lg text-xs font-bold flex items-center gap-1 transition-colors cursor-pointer"
@@ -478,19 +529,25 @@ export const AdminFooterTab: React.FC = () => {
                       لینکی در این ستون وجود ندارد. روی «افزودن لینک» کلیک کنید.
                     </div>
                   ) : (
-                    col.links.map(link => (
-                      <div key={link.id} className="flex items-center justify-between p-2.5 bg-neutral-50 rounded-xl hover:bg-neutral-100/80 transition-colors">
-                        <div>
+                    col.links.map((link, linkIndex) => (
+                      <div key={link.id} className="flex items-center justify-between gap-2 p-2.5 bg-neutral-50 rounded-xl hover:bg-neutral-100/80 transition-colors">
+                        <div className="min-w-0">
                           <span className="font-bold text-neutral-800 block">{link.title}</span>
-                          <span className="text-[10px] text-neutral-400 font-mono block mt-0.5">{link.url}</span>
+                          <span className="text-[10px] text-neutral-400 font-mono block mt-0.5 truncate">{link.url}</span>
                         </div>
-                        <button
-                          onClick={() => handleDeleteLink(col.id, link.id)}
-                          className="p-1 text-neutral-400 hover:text-red-600 rounded-md transition-colors cursor-pointer"
-                          title="حذف لینک"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
+                        <div className="flex items-center gap-1 shrink-0">
+                          <button type="button" disabled={linkIndex === 0} onClick={() => moveLink(col.id, link.id, 'up')} className="p-1 text-neutral-400 hover:text-neutral-900 disabled:opacity-25 rounded-md cursor-pointer"><ArrowUp className="w-3.5 h-3.5" /></button>
+                          <button type="button" disabled={linkIndex === col.links.length - 1} onClick={() => moveLink(col.id, link.id, 'down')} className="p-1 text-neutral-400 hover:text-neutral-900 disabled:opacity-25 rounded-md cursor-pointer"><ArrowDown className="w-3.5 h-3.5" /></button>
+                          <button type="button" onClick={() => handleOpenEditLink(col.id, link)} className="p-1 text-blue-600 hover:bg-blue-50 rounded-md cursor-pointer" title="ویرایش لینک"><Edit3 className="w-3.5 h-3.5" /></button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteLink(col.id, link.id)}
+                            className="p-1 text-neutral-400 hover:text-red-600 rounded-md transition-colors cursor-pointer"
+                            title="حذف لینک"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                       </div>
                     ))
                   )}

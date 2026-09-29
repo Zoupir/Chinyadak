@@ -103,6 +103,7 @@ export const AdminFooterTab: React.FC = () => {
 
   // Modals
   const [editingColId, setEditingColId] = useState<string | null>(null);
+  const [editingColTitle, setEditingColTitle] = useState('');
   const [newColTitle, setNewColTitle] = useState('');
 
   // Link Modal
@@ -265,14 +266,22 @@ export const AdminFooterTab: React.FC = () => {
     updateSettings({ footerColumns: next });
   };
 
-  const renameColumn = (colId: string) => {
+  const beginRenameColumn = (colId: string) => {
     const current = columns.find(col => col.id === colId);
     if (!current) return;
-    const title = window.prompt('عنوان جدید ستون فوتر:', current.title)?.trim();
-    if (!title || title === current.title) return;
+    setEditingColId(colId);
+    setEditingColTitle(current.title);
+  };
+
+  const saveRenamedColumn = (colId: string) => {
+    const title = editingColTitle.trim();
+    if (!title) return;
     const next = columns.map(col => col.id === colId ? { ...col, title } : col);
     setColumns(next);
     updateSettings({ footerColumns: next });
+    setEditingColId(null);
+    setEditingColTitle('');
+    showToast('عنوان ستون فوتر ویرایش شد.');
   };
 
   const handleSaveLink = (e: React.FormEvent) => {
@@ -495,16 +504,29 @@ export const AdminFooterTab: React.FC = () => {
             {columns.map(col => (
               <div key={col.id} className="border border-neutral-200 rounded-2xl p-5 bg-white space-y-4 shadow-2xs">
                 <div className="flex items-center justify-between pb-3 border-b border-neutral-100">
-                  <div className="flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full bg-red-600"></span>
-                    <h5 className="font-bold text-sm text-neutral-900">{col.title}</h5>
-                    <span className="text-[11px] text-neutral-400">({col.links.length} لینک)</span>
+                  <div className="flex items-center gap-2 min-w-0 flex-1">
+                    <span className="w-2.5 h-2.5 rounded-full bg-red-600 shrink-0"></span>
+                    {editingColId === col.id ? (
+                      <div className="flex items-center gap-1.5 flex-1">
+                        <input
+                          value={editingColTitle}
+                          onChange={e => setEditingColTitle(e.target.value)}
+                          className="min-w-0 flex-1 p-1.5 border border-blue-300 rounded-lg text-xs font-bold bg-white"
+                          autoFocus
+                        />
+                        <button type="button" onClick={() => saveRenamedColumn(col.id)} className="p-1.5 bg-emerald-50 text-emerald-700 rounded-lg cursor-pointer" title="ذخیره عنوان"><Check className="w-3.5 h-3.5" /></button>
+                        <button type="button" onClick={() => { setEditingColId(null); setEditingColTitle(''); }} className="p-1.5 bg-neutral-100 text-neutral-600 rounded-lg cursor-pointer" title="لغو"><X className="w-3.5 h-3.5" /></button>
+                      </div>
+                    ) : (
+                      <h5 className="font-bold text-sm text-neutral-900 truncate">{col.title}</h5>
+                    )}
+                    <span className="text-[11px] text-neutral-400 shrink-0">({col.links.length} لینک)</span>
                   </div>
 
                   <div className="flex items-center gap-1">
                     <button type="button" onClick={() => moveColumn(col.id, 'up')} className="p-1.5 text-neutral-500 hover:bg-neutral-100 rounded-lg cursor-pointer" title="انتقال ستون به بالا"><ArrowUp className="w-3.5 h-3.5" /></button>
                     <button type="button" onClick={() => moveColumn(col.id, 'down')} className="p-1.5 text-neutral-500 hover:bg-neutral-100 rounded-lg cursor-pointer" title="انتقال ستون به پایین"><ArrowDown className="w-3.5 h-3.5" /></button>
-                    <button type="button" onClick={() => renameColumn(col.id)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg cursor-pointer" title="ویرایش عنوان ستون"><Edit3 className="w-3.5 h-3.5" /></button>
+                    <button type="button" onClick={() => beginRenameColumn(col.id)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg cursor-pointer" title="ویرایش عنوان ستون"><Edit3 className="w-3.5 h-3.5" /></button>
                     <button
                       onClick={() => handleOpenAddLink(col.id)}
                       className="px-2.5 py-1 bg-neutral-100 hover:bg-red-50 hover:text-red-600 rounded-lg text-xs font-bold flex items-center gap-1 transition-colors cursor-pointer"

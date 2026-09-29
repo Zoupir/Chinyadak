@@ -38,7 +38,7 @@ export const BrandDetailView: React.FC<BrandDetailViewProps> = ({ brandSlug, onN
 
         <div className="max-w-7xl mx-auto px-4 relative z-10">
           {/* Breadcrumb */}
-          <div className="flex items-center gap-2 text-xs text-neutral-400 mb-6">
+          <div className="site-breadcrumb flex items-center gap-2 text-xs text-neutral-400 mb-6">
             <button onClick={() => onNavigate('home')} className="hover:text-white">خانه</button>
             <span>/</span>
             <button onClick={() => onNavigate('shop')} className="hover:text-white">برندهای خودرو</button>

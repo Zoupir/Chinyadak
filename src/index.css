@@ -4576,6 +4576,7 @@ html[data-layout="marketplace-rtl"] .marketplace-round-list {
   max-width: 980px;
   margin: 0 auto;
   align-items: start;
+  grid-template-columns: repeat(var(--builder-cols, 9), minmax(0,1fr)) !important;
 }
 html[data-layout="marketplace-rtl"] .marketplace-round-icon {
   width: 78px !important;
@@ -4737,7 +4738,7 @@ html[data-layout="marketplace-rtl"] .marketplace-deals-inner {
   margin-inline: auto !important;
 }
 html[data-layout="marketplace-rtl"] .marketplace-deals .marketplace-product-grid {
-  grid-template-columns: repeat(4, minmax(0,1fr)) !important;
+  grid-template-columns: repeat(var(--builder-cols, 4), minmax(0,1fr)) !important;
 }
 
 /* 10 — Mobex 2x2 promotional mosaic. */
@@ -4745,7 +4746,7 @@ html[data-layout="marketplace-rtl"] .marketplace-feature-banners {
   max-width: 1040px !important;
   margin-inline: auto !important;
   padding-top: 30px !important;
-  grid-template-columns: repeat(3, minmax(0,1fr)) !important;
+  grid-template-columns: repeat(var(--builder-cols, 3), minmax(0,1fr)) !important;
   grid-auto-rows: 205px !important;
 }
 html[data-layout="marketplace-rtl"] .marketplace-feature-banners > button:nth-child(1) { grid-column: span 2 !important; }
@@ -4753,10 +4754,8 @@ html[data-layout="marketplace-rtl"] .marketplace-feature-banners > button:nth-ch
 html[data-layout="marketplace-rtl"] .marketplace-feature-banners > button:nth-child(3) { grid-column: span 1 !important; }
 html[data-layout="marketplace-rtl"] .marketplace-feature-banners > button:nth-child(4) { grid-column: span 2 !important; }
 
-/* 11 — The reference has no extra product grid between mosaic and testimonials. */
-html[data-layout="marketplace-rtl"] [data-section-key="maintenance-products"] {
-  display: none;
-}
+/* 11 — The reference has no extra product grid here by default.
+   The section itself remains available in Page Builder and can be enabled later. */
 
 /* 12 — Testimonials: compact 4 cards inside a full light-blue band. */
 html[data-layout="marketplace-rtl"] .marketplace-testimonials {
@@ -4815,7 +4814,7 @@ html[data-layout="marketplace-rtl"] .marketplace-service-strip {
   width: 100vw !important;
   max-width: none !important;
   margin-inline: calc(50% - 50vw) !important;
-  grid-template-columns: repeat(4, minmax(0,1fr)) !important;
+  grid-template-columns: repeat(var(--builder-cols, 4), minmax(0,1fr)) !important;
   padding-inline: max(16px, calc((100vw - 1280px) / 2)) !important;
 }
 html[data-layout="marketplace-rtl"] .marketplace-service-strip > div {

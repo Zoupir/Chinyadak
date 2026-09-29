@@ -110,6 +110,7 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
   const deals = fillProducts(bestSellers, 8);
   const serviceParts = fillProducts(maintenance, 8);
   const [featuredTab, setFeaturedTab] = useState<'featured' | 'popular' | 'maintenance' | 'new'>('featured');
+  const [vinQuery, setVinQuery] = useState('');
 
   const visibleFeaturedProducts =
     featuredTab === 'popular'
@@ -214,25 +215,50 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
             <p>تا فقط قطعات سازگار نمایش داده شوند</p>
             <div className="marketplace-finder-grid">
               <button type="button" onClick={onOpenVehicleModal}>
-                <span>برند خودرو</span>
-                <strong>{selectedVehicle?.brandName || 'انتخاب برند'}</strong>
+                <span>برند</span>
+                <strong>{selectedVehicle?.brandName || 'انتخاب'}</strong>
               </button>
               <button type="button" onClick={onOpenVehicleModal}>
-                <span>مدل خودرو</span>
-                <strong>{selectedVehicle?.modelName || 'انتخاب مدل'}</strong>
+                <span>مدل</span>
+                <strong>{selectedVehicle?.modelName || 'انتخاب'}</strong>
               </button>
               <button type="button" onClick={onOpenVehicleModal}>
-                <span>سال ساخت</span>
-                <strong>{selectedVehicle?.year || 'انتخاب سال'}</strong>
+                <span>سال</span>
+                <strong>{selectedVehicle?.year || 'انتخاب'}</strong>
               </button>
               <button type="button" onClick={onOpenVehicleModal}>
-                <span>موتور / تیپ</span>
-                <strong>{selectedVehicle?.engine || 'انتخاب تیپ'}</strong>
+                <span>موتور</span>
+                <strong>{selectedVehicle?.engine || 'انتخاب'}</strong>
+              </button>
+              <button type="button" onClick={onOpenVehicleModal}>
+                <span>گیربکس</span>
+                <strong>انتخاب</strong>
+              </button>
+              <button type="button" onClick={onOpenVehicleModal}>
+                <span>تیپ</span>
+                <strong>انتخاب</strong>
               </button>
             </div>
-            <button className="marketplace-search-car" type="button" onClick={onOpenVehicleModal}>
+
+            <div className="marketplace-finder-or"><span>یا</span></div>
+
+            <div className="marketplace-finder-vin">
+              <input
+                value={vinQuery}
+                onChange={(event) => setVinQuery(event.target.value)}
+                placeholder="جستجو با VIN / شماره شاسی"
+                dir="ltr"
+                aria-label="جستجو با شماره شاسی"
+              />
+            </div>
+
+            <button
+              className="marketplace-search-car"
+              type="button"
+              onClick={() => vinQuery.trim() ? onNavigate('part-request', vinQuery.trim()) : onOpenVehicleModal()}
+            >
               <Search className="w-4 h-4" />
-              جستجوی قطعات خودرو
+              جستجو
             </button>
           </div>
         </div>

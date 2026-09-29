@@ -23,7 +23,7 @@ import { InvoicePageView } from './components/orders/InvoicePageView';
 import { CustomerAuthModal } from './components/auth/CustomerAuthModal';
 import { AiSearchAdvisorModal } from './components/search/AiSearchAdvisorModal';
 import { CheckCircle2, AlertCircle, Info, X } from 'lucide-react';
-import { buildRoutePath, parseRoutePath, parseLegacyHash, getPageShareMeta } from './utils/navigation';
+import { buildRoutePath, parseRoutePath, parseLegacyHash } from './utils/navigation';
 
 interface RouteState {
   view: string;
@@ -31,7 +31,7 @@ interface RouteState {
 }
 
 const AppContent: React.FC = () => {
-  const { toast, products, categories, models, brands, articles, settings } = useStore();
+  const { toast, products, categories, models, brands, articles } = useStore();
   const [route, setRoute] = useState<RouteState>(() => {
     if (typeof window === 'undefined') return { view: 'home' };
     const legacy = parseLegacyHash(window.location.hash);
@@ -48,41 +48,90 @@ const AppContent: React.FC = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [route]);
 
-  // Keep browser metadata in sync after History API navigation.
+  // TakRank SEO Native owns browser metadata during History API navigation.
+  // Initial page-load metadata is injected server-side for crawlers; this keeps
+  // client-side navigation consistent with the same native SEO rules.
   useEffect(() => {
-    const meta = getPageShareMeta(route.view, route.param, { products, categories, models, brands, articles });
-    const siteName = settings.siteTitle?.split('|')[0]?.trim() || 'چین‌پارت';
-    const title = `${meta.title} | ${siteName}`;
-    const description = meta.subtitle.slice(0, 170);
-    const canonical = `${window.location.origin}${buildRoutePath(route.view, route.param)}`;
-    const isPrivate = ['admin', 'account', 'checkout', 'tracking', 'invoice'].includes(route.view);
+    const controller = new AbortController();
 
-    document.title = title;
-
-    const setMeta = (selector: string, attribute: 'name' | 'property', key: string, content: string) => {
+    const setMeta = (
+      selector: string,
+      attribute: 'name' | 'property',
+      key: string,
+      content: string
+    ) => {
       let element = document.head.querySelector<HTMLMetaElement>(selector);
       if (!element) {
         element = document.createElement('meta');
         element.setAttribute(attribute, key);
         document.head.appendChild(element);
       }
-      element.content = content;
+      element.content = content || '';
     };
 
-    setMeta('meta[name="description"]', 'name', 'description', description);
-    setMeta('meta[name="robots"]', 'name', 'robots', isPrivate ? 'noindex,nofollow' : 'index,follow,max-image-preview:large');
-    setMeta('meta[property="og:title"]', 'property', 'og:title', title);
-    setMeta('meta[property="og:description"]', 'property', 'og:description', description);
-    setMeta('meta[property="og:url"]', 'property', 'og:url', canonical);
+    const applyRuntimeMeta = async () => {
+      try {
+        const routePath = buildRoutePath(route.view, route.param);
+        const response = await fetch(
+          '/api/seo/runtime?path=' + encodeURIComponent(routePath),
+          { signal: controller.signal, credentials: 'same-origin' }
+        );
+        if (!response.ok) return;
+        const payload = await response.json();
+        const meta = payload?.meta;
+        if (!meta) return;
 
-    let canonicalLink = document.head.querySelector<HTMLLinkElement>('link[rel="canonical"]');
-    if (!canonicalLink) {
-      canonicalLink = document.createElement('link');
-      canonicalLink.rel = 'canonical';
-      document.head.appendChild(canonicalLink);
-    }
-    canonicalLink.href = canonical;
-  }, [route, products, categories, models, brands, articles, settings]);
+        document.title = String(meta.title || '');
+        setMeta('meta[name="description"]', 'name', 'description', String(meta.description || ''));
+        setMeta('meta[name="robots"]', 'name', 'robots', String(meta.robots || ''));
+        setMeta('meta[property="og:title"]', 'property', 'og:title', String(meta.ogTitle || meta.title || ''));
+        setMeta('meta[property="og:description"]', 'property', 'og:description', String(meta.ogDescription || meta.description || ''));
+        setMeta('meta[property="og:type"]', 'property', 'og:type', String(meta.ogType || 'website'));
+        setMeta('meta[property="og:url"]', 'property', 'og:url', String(meta.canonical || ''));
+        setMeta('meta[name="twitter:card"]', 'name', 'twitter:card', 'summary_large_image');
+        setMeta('meta[name="twitter:title"]', 'name', 'twitter:title', String(meta.twitterTitle || meta.title || ''));
+        setMeta('meta[name="twitter:description"]', 'name', 'twitter:description', String(meta.twitterDescription || meta.description || ''));
+
+        if (meta.image) setMeta('meta[property="og:image"]', 'property', 'og:image', String(meta.image));
+        if (meta.twitterImage) setMeta('meta[name="twitter:image"]', 'name', 'twitter:image', String(meta.twitterImage));
+
+        let canonical = document.head.querySelector<HTMLLinkElement>('link[rel="canonical"]');
+        if (!canonical) {
+          canonical = document.createElement('link');
+          canonical.rel = 'canonical';
+          document.head.appendChild(canonical);
+        }
+        canonical.href = String(meta.canonical || window.location.href);
+
+        document.head.querySelectorAll('link[data-takrank-hreflang="1"]').forEach(node => node.remove());
+        for (const alternate of Array.isArray(meta.hreflang) ? meta.hreflang : []) {
+          if (!alternate?.lang || !alternate?.url) continue;
+          const link = document.createElement('link');
+          link.rel = 'alternate';
+          link.hreflang = String(alternate.lang);
+          link.href = String(alternate.url);
+          link.dataset.takrankHreflang = '1';
+          document.head.appendChild(link);
+        }
+
+        document.head.querySelectorAll('script[data-takrank-runtime-schema="1"]').forEach(node => node.remove());
+        for (const schema of Array.isArray(meta.schemas) ? meta.schemas : []) {
+          const script = document.createElement('script');
+          script.type = 'application/ld+json';
+          script.dataset.takrankRuntimeSchema = '1';
+          script.textContent = JSON.stringify(schema);
+          document.head.appendChild(script);
+        }
+      } catch (error) {
+        if ((error as Error)?.name !== 'AbortError') {
+          console.warn('TakRank SEO runtime metadata refresh failed:', error);
+        }
+      }
+    };
+
+    void applyRuntimeMeta();
+    return () => controller.abort();
+  }, [route]);
 
   // Normal History API routing, with one-time migration for old hash URLs.
   useEffect(() => {

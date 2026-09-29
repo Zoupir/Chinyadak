@@ -3,6 +3,7 @@ import { useStore } from '../../context/StoreContext';
 import { Article, ArticleCategory } from '../../types';
 import { RichTextEditor } from '../common/RichTextEditor';
 import { ImageUploadInput } from '../common/ImageUploadInput';
+import { AdminEntitySeoPanel } from './AdminEntitySeoPanel';
 import { 
   FileText, 
   Plus, 
@@ -145,7 +146,8 @@ export const AdminArticlesTab: React.FC = () => {
         imageUrl: articleForm.imageUrl || 'https://images.unsplash.com/photo-1486006920555-c77dce18193b?w=800&auto=format&fit=crop&q=80',
         relatedModelIds: articleForm.relatedModelIds || [],
         relatedProductIds: articleForm.relatedProductIds || [],
-        faq: articleForm.faq || []
+        faq: articleForm.faq || [],
+        seo: articleForm.seo
       };
       addArticle(newArticle);
     }
@@ -632,6 +634,15 @@ export const AdminArticlesTab: React.FC = () => {
                   placeholder="متن کامل مقاله همراه با زیرعنوان‌ها، نکات ایمنی و دستورالعمل‌های فنی..."
                 />
               </div>
+
+              <AdminEntitySeoPanel
+                entityType="article"
+                entityId={editingArticle?.id}
+                entityTitle={articleForm.title || ''}
+                value={articleForm.seo}
+                images={articleForm.imageUrl ? [articleForm.imageUrl] : []}
+                onChange={(seo) => setArticleForm({ ...articleForm, seo })}
+              />
 
               {/* Associated Cars and Products */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-neutral-100">

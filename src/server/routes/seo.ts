@@ -56,6 +56,13 @@ import {
 
 export const seoRouter = Router();
 
+// Public, read-only runtime metadata for History API navigation in the SPA.
+seoRouter.get('/runtime', async (req, res) => {
+  const { getSeoMeta } = await import('../seo');
+  const path = String(req.query.path || '/');
+  res.json({ meta: await getSeoMeta(path) });
+});
+
 const manageSeo = requireAdminPermission('canManageSettings');
 const aiLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,

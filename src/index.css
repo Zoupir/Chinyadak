@@ -3985,7 +3985,7 @@ html[data-layout="marketplace-rtl"] .marketplace-category-row {
   padding-top: var(--builder-padding-top, 22px) !important;
   padding-bottom: var(--builder-padding-bottom, 24px) !important;
   background: var(--builder-bg, #f4f5f6);
-  box-shadow: 0 0 0 100vmax #f4f5f6;
+  box-shadow: 0 0 0 100vmax var(--builder-bg, #f4f5f6);
   clip-path: inset(0 -100vmax);
 }
 
@@ -4051,7 +4051,7 @@ html[data-layout="marketplace-rtl"] .marketplace-section[data-section-key="featu
   padding-top: var(--builder-padding-top, 34px) !important;
   padding-bottom: var(--builder-padding-bottom, 34px) !important;
   background: var(--builder-bg, #f7f7f7);
-  box-shadow: 0 0 0 100vmax #f7f7f7;
+  box-shadow: 0 0 0 100vmax var(--builder-bg, #f7f7f7);
   clip-path: inset(0 -100vmax);
 }
 
@@ -4171,7 +4171,7 @@ html[data-layout="marketplace-rtl"] .marketplace-brand-tiles {
   padding-top: var(--builder-padding-top, 28px) !important;
   padding-bottom: var(--builder-padding-bottom, 30px) !important;
   background: var(--builder-bg, #f4f5f6);
-  box-shadow: 0 0 0 100vmax #f4f5f6;
+  box-shadow: 0 0 0 100vmax var(--builder-bg, #f4f5f6);
   clip-path: inset(0 -100vmax);
 }
 

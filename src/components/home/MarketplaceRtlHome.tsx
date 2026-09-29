@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   ArrowLeft,
   Car,
@@ -91,7 +91,21 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
       .filter(item => item.isVisible !== false)
       .sort((a, b) => a.order - b.order);
 
-  const hero = activeSlides[0];
+  const [heroIndex, setHeroIndex] = useState(0);
+
+  useEffect(() => {
+    if (activeSlides.length <= 1 || sectionConfig('hero')?.imageUrl) return;
+    const timer = window.setInterval(() => {
+      setHeroIndex(current => (current + 1) % activeSlides.length);
+    }, 6500);
+    return () => window.clearInterval(timer);
+  }, [activeSlides.length, sectionConfig('hero')?.imageUrl]);
+
+  useEffect(() => {
+    if (heroIndex >= activeSlides.length) setHeroIndex(0);
+  }, [activeSlides.length, heroIndex]);
+
+  const hero = activeSlides[heroIndex] || activeSlides[0];
   const fillProducts = (preferred: typeof products, count = 8) => {
     const seen = new Set<string>();
     return [...preferred, ...products]
@@ -209,6 +223,20 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
               <ArrowLeft className="w-4 h-4" />
             </button>
           </div>
+
+          {activeSlides.length > 1 && !sectionConfig('hero')?.imageUrl && (
+            <div className="marketplace-hero-dots" aria-label="اسلایدهای صفحه اصلی">
+              {activeSlides.map((slide, index) => (
+                <button
+                  key={slide.id}
+                  type="button"
+                  className={index === heroIndex ? 'active' : ''}
+                  onClick={() => setHeroIndex(index)}
+                  aria-label={`اسلاید ${index + 1}`}
+                />
+              ))}
+            </div>
+          )}
 
           <div className="marketplace-vehicle-finder">
             <h3>خودروی خود را انتخاب کنید</h3>

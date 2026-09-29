@@ -13,7 +13,10 @@
     "db:seed": "tsx scripts/seed-catalog.ts",
     "payments:release-expired": "tsx scripts/release-expired-reservations.ts",
     "test:smoke": "tsx scripts/smoke-test.ts",
-    "db:wait": "tsx scripts/wait-for-db.ts"
+    "db:wait": "tsx scripts/wait-for-db.ts",
+    "seo:worker": "tsx scripts/seo-worker.ts",
+    "seo:audit": "tsx -e \"import('./src/server/seo/platform.ts').then(async m=>{await m.runFullSeoAudit();process.exit(0)})\"",
+    "seo:graph": "tsx -e \"import('./src/server/seo/platform.ts').then(async m=>{await m.rebuildSeoKnowledgeGraph();process.exit(0)})\""
   },
   "dependencies": {
     "@google/genai": "^2.4.0",

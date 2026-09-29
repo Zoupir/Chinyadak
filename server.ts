@@ -18,10 +18,23 @@ import { mediaRouter } from './src/server/routes/media';
 import { integrationsRouter } from './src/server/routes/integrations';
 import { vehiclesRouter } from './src/server/routes/vehicles';
 import { engagementRouter } from './src/server/routes/engagement';
+import { seoRouter } from './src/server/routes/seo';
 import { uploadDirectory } from './src/server/media';
 import { checkDatabase } from './src/server/db';
 import { config } from './src/server/config';
-import { buildSitemapXml, renderSeoHtml, robotsText } from './src/server/seo';
+import {
+  buildHtmlSitemap,
+  buildSitemapChunkXml,
+  buildSitemapXml,
+  renderSeoHtml,
+  robotsText
+} from './src/server/seo';
+import {
+  getSeoSettings,
+  recordSeo404,
+  seoPathExists,
+  seoRedirectMiddleware
+} from './src/server/seo/platform';
 
 const app = express();
 
@@ -44,8 +57,12 @@ app.use('/uploads', express.static(uploadDirectory(), {
   fallthrough: false
 }));
 
-app.get('/robots.txt', (_req, res) => {
-  res.type('text/plain').send(robotsText());
+app.get('/robots.txt', async (_req, res, next) => {
+  try {
+    res.type('text/plain').send(await robotsText());
+  } catch (error) {
+    next(error);
+  }
 });
 
 app.get('/sitemap.xml', async (_req, res, next) => {
@@ -56,6 +73,43 @@ app.get('/sitemap.xml', async (_req, res, next) => {
     next(error);
   }
 });
+
+app.get(/^\/sitemap-(products|articles|categories|pages|brands|models)-(\d+)\.xml$/, async (req, res, next) => {
+  try {
+    const xml = await buildSitemapChunkXml(String(req.params[0]), Number(req.params[1]));
+    if (!xml) {
+      res.status(404).type('text/plain').send('Sitemap not found');
+      return;
+    }
+    res.type('application/xml').send(xml);
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.get('/sitemap.html', async (_req, res, next) => {
+  try {
+    res.type('html').send(await buildHtmlSitemap());
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.get(/^\/([a-f0-9]{16,64})\.txt$/i, async (req, res, next) => {
+  try {
+    const settings = await getSeoSettings();
+    const key = String(req.params[0] || '');
+    if (!settings.modules.indexNow || !settings.indexNow.enabled || key !== settings.indexNow.key) {
+      next();
+      return;
+    }
+    res.type('text/plain').send(settings.indexNow.key);
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.use(seoRedirectMiddleware);
 
 app.use('/api/health', healthRouter);
 
@@ -77,6 +131,7 @@ app.use('/api/media', mediaRouter);
 app.use('/api/integrations', integrationsRouter);
 app.use('/api/vehicles', vehiclesRouter);
 app.use('/api/engagement', engagementRouter);
+app.use('/api/seo', seoRouter);
 
 const aiLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
@@ -165,6 +220,15 @@ async function startServer() {
 
     app.get('*', async (req, res, next) => {
       try {
+        const exists = await seoPathExists(req.path);
+        if (!exists) {
+          await recordSeo404(req).catch(() => undefined);
+          if (/\.[a-z0-9]{2,8}$/i.test(req.path)) {
+            res.status(404).type('text/plain').send('Not Found');
+            return;
+          }
+          res.status(404);
+        }
         const html = await renderSeoHtml(indexTemplate, req.path);
         res.type('html').send(html);
       } catch (error) {

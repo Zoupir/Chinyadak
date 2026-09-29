@@ -159,3 +159,46 @@ MAX_UPLOAD_MB=8
 ```
 
 صفحات خصوصی مانند `/admin`، `/account`، `/checkout` و `/tracking` با `noindex` سرو می‌شوند.
+
+
+## TakRank SEO Native
+
+در نسخه‌ای که ماژول TakRank SEO Native فعال است، بعد از دریافت کد جدید حتماً schema را به‌روز کنید:
+
+```bash
+npm install
+npm run db:init
+RAYON_NUM_THREADS=1 npm run build
+```
+
+سپس Node.js Application را Restart کنید. اجرای `db:init` داده‌های فعلی محصولات، سفارش‌ها، کاربران و CMS را حذف نمی‌کند و فقط جداول/ساختارهای لازم را ایجاد یا تکمیل می‌کند.
+
+### Cron موتور SEO
+
+برای Queue، Audit زمان‌بندی‌شده، ادامه همگام‌سازی GSC، Knowledge Graph و IndexNow یک Cron هر 5 دقیقه ایجاد کنید:
+
+```bash
+cd /PATH/TO/APP && source /PATH/TO/NODEVENV/bin/activate && npm run seo:worker -- 10
+```
+
+روی نصب فعلی DirectAdmin مسیرها به شکل زیر هستند:
+
+```bash
+cd /home/geelgoco/Chinyadak && source /home/geelgoco/nodevenv/Chinyadak/22/bin/activate && npm run seo:worker -- 10
+```
+
+### URLهای بررسی SEO
+
+پس از Deploy این موارد باید پاسخ معتبر بدهند:
+
+```text
+/api/health
+/sitemap.xml
+/sitemap.html
+/robots.txt
+/admin
+```
+
+در پنل مدیریت، منوی «TakRank SEO» شامل Dashboard، Content SEO، Audit/Action Center، Knowledge Graph و Internal Linking، Schema، Sitemap/Robots/IndexNow، Redirect/404، Search Console، PageSpeed/Inspector، AI SEO Studio، Settings و Diagnostics است.
+
+کلیدهای AI، Google Search Console و PageSpeed در Backend و با `APP_ENCRYPTION_KEY` رمزنگاری می‌شوند و به Frontend به‌صورت متن اصلی بازگردانده نمی‌شوند.

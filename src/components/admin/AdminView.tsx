@@ -62,6 +62,7 @@ import { AdminSlidersTab } from './AdminSlidersTab';
 import { AdminUsersTab } from './AdminUsersTab';
 import { AdminPagesTab } from './AdminPagesTab';
 import { AdminThemeTab } from './AdminThemeTab';
+import { AdminSeoTab } from './AdminSeoTab';
 import { InvoiceModal } from '../orders/InvoiceModal';
 import { RichTextEditor } from '../common/RichTextEditor';
 import { ImageUploadInput } from '../common/ImageUploadInput';
@@ -115,7 +116,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
 
   // Navigation tab inside Admin
   const [activeTab, setActiveTab] = useState<
-    'overview' | 'cars' | 'products' | 'categories' | 'menus_attrs' | 'footer' | 'pages' | 'articles' | 'sliders' | 'orders' | 'customers' | 'admins' | 'gateways' | 'sandbox' | 'apis' | 'theme' | 'bulk' | 'analytics'
+    'overview' | 'cars' | 'products' | 'categories' | 'menus_attrs' | 'footer' | 'pages' | 'articles' | 'sliders' | 'orders' | 'customers' | 'admins' | 'gateways' | 'sandbox' | 'apis' | 'theme' | 'seo' | 'bulk' | 'analytics'
   >('overview');
 
   // Sidebar Layout State
@@ -232,6 +233,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
       case 'menus_attrs':
       case 'footer':
       case 'theme':
+      case 'seo':
       case 'gateways':
       case 'apis':
         return permissions.canManageSettings;
@@ -634,6 +636,12 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
         { id: 'sliders', label: 'اسلایدرها و بنرها', icon: Compass, count: sliders.length },
         { id: 'menus_attrs', label: 'منوی بالای سایت (Header)', icon: Menu },
         { id: 'footer', label: 'مدیریت فوتر و اینماد', icon: PanelsTopLeft }
+      ]
+    },
+    {
+      groupTitle: 'سئو و رشد',
+      items: [
+        { id: 'seo', label: 'TakRank SEO', icon: Sparkles }
       ]
     },
     {
@@ -1444,7 +1452,12 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
             </div>
           )}
 
-          {/* TAB 14: THEME CONTROLLER & SEO */}
+          {/* TAKRANK SEO NATIVE */}
+          {activeTab === 'seo' && (
+            <AdminSeoTab />
+          )}
+
+          {/* THEME CONTROLLER */}
           {activeTab === 'theme' && (
             <AdminThemeTab />
           )}

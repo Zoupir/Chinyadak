@@ -44,6 +44,7 @@ export const AdminPagesTab: React.FC<AdminPagesTabProps> = ({ onNavigate }) => {
   const [isSectionModalOpen, setIsSectionModalOpen] = useState<boolean>(false);
   const [isNewPageModalOpen, setIsNewPageModalOpen] = useState<boolean>(false);
   const [pageSeoDrafts, setPageSeoDrafts] = useState<Record<string, SeoEntityDraft>>({});
+  const [editingPageMeta, setEditingPageMeta] = useState<SitePage | null>(null);
 
   // New Page Form
   const [newPageForm, setNewPageForm] = useState<{ title: string; slug: string; description: string; seo?: SeoEntityDraft }>({
@@ -318,6 +319,16 @@ export const AdminPagesTab: React.FC<AdminPagesTabProps> = ({ onNavigate }) => {
             </div>
 
             <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setEditingPageMeta({ ...selectedPage })}
+                className="px-3 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+                title="ویرایش نام، توضیح و مشخصات برگه"
+              >
+                <Edit3 className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">تنظیمات برگه</span>
+              </button>
+
               {onNavigate && (
                 <button
                   type="button"
@@ -476,6 +487,36 @@ export const AdminPagesTab: React.FC<AdminPagesTabProps> = ({ onNavigate }) => {
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {editingPageMeta && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-xl w-full space-y-4 text-right shadow-2xl">
+            <div className="flex items-center justify-between border-b border-neutral-100 pb-3">
+              <h3 className="font-black text-base text-neutral-900">تنظیمات اصلی برگه</h3>
+              <button type="button" onClick={() => setEditingPageMeta(null)} className="text-neutral-400 hover:text-neutral-800 cursor-pointer">✕</button>
+            </div>
+            <div className="space-y-3 text-xs">
+              <label className="block">
+                <span className="block font-bold text-neutral-700 mb-1">عنوان برگه</span>
+                <input value={editingPageMeta.title} onChange={e => setEditingPageMeta({ ...editingPageMeta, title: e.target.value })} className="w-full p-2.5 border border-neutral-300 rounded-xl" />
+              </label>
+              <label className="block">
+                <span className="block font-bold text-neutral-700 mb-1">Slug / آدرس</span>
+                <input dir="ltr" value={editingPageMeta.slug} disabled={editingPageMeta.isSystem} onChange={e => setEditingPageMeta({ ...editingPageMeta, slug: e.target.value })} className="w-full p-2.5 border border-neutral-300 rounded-xl disabled:bg-neutral-100 font-mono text-left" />
+                {editingPageMeta.isSystem && <small className="text-[9px] text-neutral-400">آدرس برگه‌های سیستمی برای جلوگیری از خرابی مسیرها قفل است.</small>}
+              </label>
+              <label className="block">
+                <span className="block font-bold text-neutral-700 mb-1">توضیح برگه</span>
+                <textarea rows={3} value={editingPageMeta.description || ''} onChange={e => setEditingPageMeta({ ...editingPageMeta, description: e.target.value })} className="w-full p-2.5 border border-neutral-300 rounded-xl" />
+              </label>
+            </div>
+            <div className="flex gap-2 pt-2">
+              <button type="button" onClick={() => setEditingPageMeta(null)} className="flex-1 py-2.5 bg-neutral-100 rounded-xl font-bold text-xs cursor-pointer">انصراف</button>
+              <button type="button" onClick={() => { updatePage({ ...editingPageMeta, updatedAt: new Date().toLocaleDateString('fa-IR') }); setEditingPageMeta(null); }} className="flex-1 py-2.5 bg-blue-600 text-white rounded-xl font-bold text-xs cursor-pointer">ذخیره تنظیمات برگه</button>
+            </div>
           </div>
         </div>
       )}

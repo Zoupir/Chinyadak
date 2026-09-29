@@ -116,7 +116,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenAuthModal }) =
               {settings.logoUrl ? (
                 <img src={settings.logoUrl} alt={settings.siteTitle} />
               ) : (
-                <span>{settings.footerAboutTitle || settings.siteTitle || 'یدک استور'}</span>
+                <span>{settings.footerAboutTitle || settings.siteTitle || 'فروشگاه'}</span>
               )}
             </button>
             <p>{settings.footerAboutText || 'فروشگاه تخصصی قطعات یدکی خودرو با تمرکز بر اصالت، تطبیق دقیق قطعه و ارسال مطمئن.'}</p>

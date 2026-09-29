@@ -115,7 +115,7 @@ const normalizeBuilderPages = (inputPages: SitePage[]): SitePage[] => {
     }));
     const existingKeys = new Set(existing.map(section => section.sectionKey).filter(Boolean));
     const missing = HOME_SECTION_DEFAULTS
-      .filter(section => !existingKeys.has(section.sectionKey))
+      .filter(section => !section.sectionKey || !existingKeys.has(section.sectionKey))
       .map(section => ({ ...section }));
     return { ...page, sections: [...existing, ...missing].sort((a, b) => a.order - b.order) };
   });

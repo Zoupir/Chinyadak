@@ -434,7 +434,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         setArticleCategories(cmsData.articleCategories);
         setSliders(cmsData.sliders);
         setPages(cmsData.pages);
-        if (cmsData.settings) setSettings(cmsData.settings);
+        if (cmsData.settings) setSettings({ ...INITIAL_SETTINGS, ...cmsData.settings });
         setPaymentGateways(cmsData.paymentGateways);
       })
       .catch(error => {

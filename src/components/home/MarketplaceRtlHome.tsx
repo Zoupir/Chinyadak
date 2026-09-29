@@ -489,10 +489,20 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
           <div className="marketplace-testimonial-grid builder-section-grid">
             {sortedItems('testimonials').map(item => (
               <article key={item.id} style={{ borderRadius: `${sectionConfig('testimonials')?.itemRadiusPx ?? 12}px` }}>
-                {item.imageUrl && <img src={item.imageUrl} alt={item.title || 'نظر مشتری'} className="w-10 h-10 rounded-full object-cover mb-2" />}
-                <strong>★★★★★</strong>
+                <div className="marketplace-testimonial-head">
+                  {item.imageUrl ? (
+                    <img src={item.imageUrl} alt={item.title || 'نظر مشتری'} />
+                  ) : (
+                    <span className="marketplace-testimonial-avatar" aria-hidden="true">
+                      {(item.title || 'م').trim().slice(0, 1)}
+                    </span>
+                  )}
+                  <div>
+                    <small>{item.title || 'مشتری فروشگاه'}</small>
+                    <strong>★★★★★</strong>
+                  </div>
+                </div>
                 <p>{item.content || item.subtitle || ''}</p>
-                <small>{item.title || 'مشتری فروشگاه'}</small>
               </article>
             ))}
           </div>
@@ -503,11 +513,11 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
       {sectionVisible('shipping-banner') && (
       <section className="marketplace-section marketplace-shipping-banner" data-section-key="shipping-banner" style={sectionStyle('shipping-banner')}>
         <div>
-          <Truck className="w-10 h-10" />
+          {!sectionConfig('shipping-banner')?.imageUrl && <Truck className="w-10 h-10" />}
           <span>{sectionConfig('shipping-banner')?.title || 'ارسال سریع'}</span>
           <strong>{sectionConfig('shipping-banner')?.subtitle || 'برای سفارش‌های واجد شرایط'}</strong>
         </div>
-        <PackageCheck className="marketplace-shipping-art" />
+        {!sectionConfig('shipping-banner')?.imageUrl && <PackageCheck className="marketplace-shipping-art" />}
       </section>
       )}
 

@@ -391,7 +391,7 @@ export const AdminMenusAndAttributes: React.FC = () => {
               <button onClick={restoreDefaultMenus} className="px-3 py-2 rounded-xl bg-white border border-blue-200 text-blue-800 text-xs font-bold">
                 بازیابی استاندارد
               </button>
-              <button onClick={openNewMenu} className="px-4 py-2 rounded-xl bg-red-600 text-white text-xs font-black flex items-center gap-1.5">
+              <button onClick={() => openNewMenu()} className="px-4 py-2 rounded-xl bg-red-600 text-white text-xs font-black flex items-center gap-1.5">
                 <Plus className="w-4 h-4" /> افزودن آیتم
               </button>
             </div>

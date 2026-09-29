@@ -349,6 +349,16 @@ export interface MenuItem {
   kind?: HeaderMenuKind;
   isVisible?: boolean;
   openInNewTab?: boolean;
+  parentId?: string;
+}
+
+export interface PopularPartsBrandItem {
+  id: string;
+  title: string;
+  imageUrl: string;
+  link: string;
+  subtitle?: string;
+  isVisible?: boolean;
 }
 
 export interface ProductAttributeDefinition {
@@ -477,6 +487,7 @@ export interface SiteSettings {
   enableStockAlerts: boolean;
   navigationMenus?: MenuItem[];
   headerMenus?: MenuItem[];
+  popularPartsBrands?: PopularPartsBrandItem[];
   productAttributes?: ProductAttributeDefinition[];
   // Branding & Assets
   logoUrl?: string;

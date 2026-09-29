@@ -286,3 +286,283 @@ CREATE TABLE IF NOT EXISTS audit_log (
   INDEX idx_audit_actor (actor_type, actor_id),
   INDEX idx_audit_created (created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================================================
+-- TakRank SEO Native for Chinyadak
+-- Native replacement for the WordPress TakRank SEO persistence layer.
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS seo_meta (
+  entity_type VARCHAR(32) NOT NULL,
+  entity_id VARCHAR(64) NOT NULL,
+  seo_title VARCHAR(255) NULL,
+  meta_description TEXT NULL,
+  focus_keyword VARCHAR(255) NULL,
+  secondary_keywords_json JSON NULL,
+  canonical_url TEXT NULL,
+  robots_index TINYINT(1) NOT NULL DEFAULT 1,
+  robots_follow TINYINT(1) NOT NULL DEFAULT 1,
+  og_title VARCHAR(255) NULL,
+  og_description TEXT NULL,
+  og_image_url TEXT NULL,
+  twitter_title VARCHAR(255) NULL,
+  twitter_description TEXT NULL,
+  twitter_image_url TEXT NULL,
+  schema_type VARCHAR(80) NULL,
+  cornerstone TINYINT(1) NOT NULL DEFAULT 0,
+  breadcrumb_title VARCHAR(255) NULL,
+  hreflang_json JSON NULL,
+  score INT NOT NULL DEFAULT 0,
+  analysis_json JSON NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (entity_type, entity_id),
+  INDEX idx_seo_meta_score (score),
+  INDEX idx_seo_meta_focus (focus_keyword),
+  INDEX idx_seo_meta_schema (schema_type)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS seo_issues (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  issue_key VARCHAR(191) NOT NULL UNIQUE,
+  entity_type VARCHAR(32) NULL,
+  entity_id VARCHAR(64) NULL,
+  url TEXT NULL,
+  category VARCHAR(50) NOT NULL DEFAULT 'content',
+  severity VARCHAR(20) NOT NULL DEFAULT 'medium',
+  confidence VARCHAR(20) NOT NULL DEFAULT 'medium',
+  title VARCHAR(255) NOT NULL,
+  details LONGTEXT NULL,
+  evidence_json JSON NULL,
+  action_text LONGTEXT NULL,
+  status VARCHAR(20) NOT NULL DEFAULT 'open',
+  snooze_until DATETIME NULL,
+  first_seen DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  last_seen DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  resolved_at DATETIME NULL,
+  INDEX idx_seo_issues_status (status, severity),
+  INDEX idx_seo_issues_entity (entity_type, entity_id),
+  INDEX idx_seo_issues_category (category)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS seo_action_states (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  action_key VARCHAR(191) NOT NULL,
+  fingerprint CHAR(64) NOT NULL DEFAULT '',
+  status VARCHAR(20) NOT NULL DEFAULT 'open',
+  source VARCHAR(32) NOT NULL DEFAULT '',
+  label VARCHAR(255) NOT NULL DEFAULT '',
+  snooze_until DATETIME NULL,
+  last_verified_at DATETIME NULL,
+  resolved_at DATETIME NULL,
+  updated_by VARCHAR(64) NULL,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_seo_action_state (action_key, fingerprint),
+  INDEX idx_seo_action_status (status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS seo_history (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  actor_id VARCHAR(64) NULL,
+  action VARCHAR(100) NOT NULL,
+  entity_type VARCHAR(32) NULL,
+  entity_id VARCHAR(64) NULL,
+  before_json JSON NULL,
+  after_json JSON NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_seo_history_entity (entity_type, entity_id),
+  INDEX idx_seo_history_created (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS seo_knowledge_nodes (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  entity_key VARCHAR(191) NOT NULL UNIQUE,
+  entity_type VARCHAR(32) NOT NULL,
+  entity_id VARCHAR(64) NOT NULL,
+  url_hash CHAR(64) NOT NULL DEFAULT '',
+  url TEXT NOT NULL,
+  title TEXT NULL,
+  seo_title TEXT NULL,
+  meta_description TEXT NULL,
+  focus_keyword TEXT NULL,
+  secondary_keywords_json JSON NULL,
+  headings_json JSON NULL,
+  taxonomy_json JSON NULL,
+  tokens_json JSON NULL,
+  entity_phrases_json JSON NULL,
+  facts_json JSON NULL,
+  flags_json JSON NULL,
+  content_text LONGTEXT NULL,
+  content_sample TEXT NULL,
+  internal_links_json JSON NULL,
+  external_links_json JSON NULL,
+  gsc_queries_json JSON NULL,
+  content_hash CHAR(64) NOT NULL DEFAULT '',
+  build_id VARCHAR(64) NOT NULL DEFAULT '',
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_seo_node_type (entity_type),
+  INDEX idx_seo_node_url_hash (url_hash),
+  INDEX idx_seo_node_build (build_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS seo_knowledge_edges (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  source_key VARCHAR(191) NOT NULL,
+  target_key VARCHAR(191) NOT NULL,
+  relation VARCHAR(40) NOT NULL DEFAULT 'contextual',
+  score INT NOT NULL DEFAULT 0,
+  confidence VARCHAR(20) NOT NULL DEFAULT 'review',
+  reasons_json JSON NULL,
+  signals_json JSON NULL,
+  build_id VARCHAR(64) NOT NULL DEFAULT '',
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_seo_edge (source_key, target_key),
+  INDEX idx_seo_edge_source_score (source_key, score),
+  INDEX idx_seo_edge_target (target_key),
+  INDEX idx_seo_edge_build (build_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS seo_redirects (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  source VARCHAR(500) NOT NULL,
+  source_key CHAR(64) NOT NULL DEFAULT '',
+  target TEXT NULL,
+  match_type VARCHAR(20) NOT NULL DEFAULT 'exact',
+  status_code INT NOT NULL DEFAULT 301,
+  hits BIGINT UNSIGNED NOT NULL DEFAULT 0,
+  last_hit DATETIME NULL,
+  enabled TINYINT(1) NOT NULL DEFAULT 1,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_seo_redirect_source (source_key, match_type),
+  INDEX idx_seo_redirect_enabled (enabled),
+  INDEX idx_seo_redirect_hits (hits)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS seo_404 (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  url_hash CHAR(64) NOT NULL UNIQUE,
+  url TEXT NOT NULL,
+  referrer TEXT NULL,
+  user_agent VARCHAR(255) NULL,
+  hits BIGINT UNSIGNED NOT NULL DEFAULT 1,
+  first_seen DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  last_seen DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  resolved TINYINT(1) NOT NULL DEFAULT 0,
+  decision VARCHAR(24) NOT NULL DEFAULT 'open',
+  decision_note TEXT NULL,
+  classification VARCHAR(40) NULL,
+  INDEX idx_seo_404_resolved (resolved, last_seen),
+  INDEX idx_seo_404_hits (hits)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS seo_jobs (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  job_type VARCHAR(80) NOT NULL,
+  payload_json JSON NULL,
+  status VARCHAR(20) NOT NULL DEFAULT 'queued',
+  attempts INT NOT NULL DEFAULT 0,
+  available_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  locked_at DATETIME NULL,
+  last_error TEXT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_seo_jobs_queue (status, available_at),
+  INDEX idx_seo_jobs_locked (locked_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS seo_gsc_daily (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  data_date DATE NOT NULL,
+  query_hash CHAR(64) NOT NULL,
+  query_text TEXT NULL,
+  page_hash CHAR(64) NOT NULL,
+  page_url TEXT NOT NULL,
+  device VARCHAR(20) NOT NULL DEFAULT '',
+  country VARCHAR(8) NOT NULL DEFAULT '',
+  search_type VARCHAR(20) NOT NULL DEFAULT 'web',
+  clicks DOUBLE NOT NULL DEFAULT 0,
+  impressions DOUBLE NOT NULL DEFAULT 0,
+  ctr DOUBLE NOT NULL DEFAULT 0,
+  position DOUBLE NOT NULL DEFAULT 0,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_seo_gsc_daily (data_date, query_hash, page_hash, device, country, search_type),
+  INDEX idx_seo_gsc_date (data_date),
+  INDEX idx_seo_gsc_query (query_hash),
+  INDEX idx_seo_gsc_page (page_hash)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS seo_gsc_metrics (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  dataset VARCHAR(24) NOT NULL,
+  search_type VARCHAR(20) NOT NULL DEFAULT 'web',
+  dim1_hash CHAR(64) NOT NULL,
+  dim1 TEXT NULL,
+  dim2_hash CHAR(64) NOT NULL,
+  dim2 TEXT NULL,
+  clicks DOUBLE NOT NULL DEFAULT 0,
+  impressions DOUBLE NOT NULL DEFAULT 0,
+  ctr DOUBLE NOT NULL DEFAULT 0,
+  position DOUBLE NOT NULL DEFAULT 0,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_seo_gsc_metric (dataset, search_type, dim1_hash, dim2_hash)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS seo_keyword_map (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  query_hash CHAR(64) NOT NULL UNIQUE,
+  query_text TEXT NOT NULL,
+  preferred_url TEXT NOT NULL,
+  preferred_url_hash CHAR(64) NOT NULL,
+  owner_source VARCHAR(20) NOT NULL DEFAULT 'manual',
+  locked TINYINT(1) NOT NULL DEFAULT 1,
+  note TEXT NULL,
+  updated_by VARCHAR(64) NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_seo_keyword_url (preferred_url_hash)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS seo_performance_reports (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  report_key CHAR(36) NOT NULL UNIQUE,
+  run_key CHAR(36) NOT NULL DEFAULT '',
+  url_hash CHAR(64) NOT NULL,
+  url TEXT NOT NULL,
+  strategy VARCHAR(10) NOT NULL DEFAULT 'mobile',
+  average_score DECIMAL(6,2) NULL,
+  analysis_at DATETIME NULL,
+  official_url TEXT NULL,
+  result_json JSON NOT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_seo_performance_url (url_hash, strategy, created_at),
+  INDEX idx_seo_performance_run (run_key)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS seo_ai_history (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  actor_id VARCHAR(64) NULL,
+  entity_type VARCHAR(32) NULL,
+  entity_id VARCHAR(64) NULL,
+  operation VARCHAR(40) NOT NULL,
+  provider VARCHAR(30) NOT NULL,
+  model VARCHAR(100) NULL,
+  prompt_hash CHAR(64) NOT NULL,
+  result_json JSON NULL,
+  status VARCHAR(20) NOT NULL DEFAULT 'completed',
+  error_text TEXT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_seo_ai_entity (entity_type, entity_id),
+  INDEX idx_seo_ai_created (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS seo_runtime_log (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  level VARCHAR(20) NOT NULL DEFAULT 'info',
+  event_name VARCHAR(100) NOT NULL,
+  context_json JSON NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_seo_runtime_created (created_at),
+  INDEX idx_seo_runtime_event (event_name)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+

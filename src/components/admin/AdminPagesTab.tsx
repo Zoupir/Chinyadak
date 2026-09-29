@@ -755,21 +755,40 @@ export const AdminPagesTab: React.FC<AdminPagesTabProps> = ({ onNavigate }) => {
                     <div key={item.id} className="p-3 bg-white rounded-xl border border-neutral-200 space-y-3">
                       <div className="flex items-center justify-between">
                         <strong className="text-[11px]">آیتم {itemIndex + 1}</strong>
-                        <button
-                          type="button"
-                          onClick={() => setSectionForm({ ...sectionForm, items: (sectionForm.items || []).filter(x => x.id !== item.id) })}
-                          className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg"
-                          title="حذف آیتم"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
+                        <div className="flex items-center gap-1">
+                          <button type="button" disabled={itemIndex === 0} onClick={() => {
+                            const items = [...(sectionForm.items || [])];
+                            [items[itemIndex - 1], items[itemIndex]] = [items[itemIndex], items[itemIndex - 1]];
+                            setSectionForm({ ...sectionForm, items: items.map((x,i) => ({ ...x, order: i + 1 })) });
+                          }} className="p-1.5 text-neutral-500 hover:bg-neutral-100 rounded-lg disabled:opacity-30 cursor-pointer" title="انتقال بالا"><ArrowUp className="w-3.5 h-3.5" /></button>
+                          <button type="button" disabled={itemIndex === (sectionForm.items || []).length - 1} onClick={() => {
+                            const items = [...(sectionForm.items || [])];
+                            [items[itemIndex + 1], items[itemIndex]] = [items[itemIndex], items[itemIndex + 1]];
+                            setSectionForm({ ...sectionForm, items: items.map((x,i) => ({ ...x, order: i + 1 })) });
+                          }} className="p-1.5 text-neutral-500 hover:bg-neutral-100 rounded-lg disabled:opacity-30 cursor-pointer" title="انتقال پایین"><ArrowDown className="w-3.5 h-3.5" /></button>
+                          <button
+                            type="button"
+                            onClick={() => setSectionForm({ ...sectionForm, items: (sectionForm.items || []).filter(x => x.id !== item.id) })}
+                            className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg cursor-pointer"
+                            title="حذف آیتم"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                       </div>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                         <input value={item.title || ''} onChange={e => setSectionForm({ ...sectionForm, items: (sectionForm.items || []).map(x => x.id === item.id ? { ...x, title: e.target.value } : x) })} placeholder="عنوان / نام مشتری" className="p-2 border border-neutral-300 rounded-lg" />
                         <input value={item.subtitle || ''} onChange={e => setSectionForm({ ...sectionForm, items: (sectionForm.items || []).map(x => x.id === item.id ? { ...x, subtitle: e.target.value } : x) })} placeholder="زیرعنوان / نقش مشتری" className="p-2 border border-neutral-300 rounded-lg" />
-                        <input value={item.imageUrl || ''} onChange={e => setSectionForm({ ...sectionForm, items: (sectionForm.items || []).map(x => x.id === item.id ? { ...x, imageUrl: e.target.value } : x) })} placeholder="آدرس تصویر (اختیاری)" className="p-2 border border-neutral-300 rounded-lg text-left" dir="ltr" />
+                        <input value={item.buttonText || ''} onChange={e => setSectionForm({ ...sectionForm, items: (sectionForm.items || []).map(x => x.id === item.id ? { ...x, buttonText: e.target.value } : x) })} placeholder="متن دکمه آیتم" className="p-2 border border-neutral-300 rounded-lg" />
                         <input value={item.link || ''} onChange={e => setSectionForm({ ...sectionForm, items: (sectionForm.items || []).map(x => x.id === item.id ? { ...x, link: e.target.value } : x) })} placeholder="لینک مقصد (اختیاری)" className="p-2 border border-neutral-300 rounded-lg text-left" dir="ltr" />
                       </div>
+                      <ImageUploadInput
+                        label="تصویر / بنر این آیتم"
+                        value={item.imageUrl || ''}
+                        onChange={(url) => setSectionForm({ ...sectionForm, items: (sectionForm.items || []).map(x => x.id === item.id ? { ...x, imageUrl: url } : x) })}
+                        aspectRatio="banner"
+                        presetCategory="banners"
+                      />
                       <textarea value={item.content || ''} onChange={e => setSectionForm({ ...sectionForm, items: (sectionForm.items || []).map(x => x.id === item.id ? { ...x, content: e.target.value } : x) })} rows={2} placeholder="متن آیتم / متن نظر مشتری / توضیح بنر" className="w-full p-2 border border-neutral-300 rounded-lg" />
                     </div>
                   ))}

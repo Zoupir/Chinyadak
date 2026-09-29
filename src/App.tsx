@@ -31,7 +31,7 @@ interface RouteState {
 }
 
 const AppContent: React.FC = () => {
-  const { toast, products, categories, models, brands, articles } = useStore();
+  const { toast, products, categories, models, brands, articles, settings } = useStore();
   const [route, setRoute] = useState<RouteState>(() => {
     if (typeof window === 'undefined') return { view: 'home' };
     const legacy = parseLegacyHash(window.location.hash);
@@ -42,6 +42,51 @@ const AppContent: React.FC = () => {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authModalMode, setAuthModalMode] = useState<'login' | 'register'>('login');
   const [isAiSearchOpen, setIsAiSearchOpen] = useState(false);
+
+  // Apply admin-controlled identity/theme variables to the whole storefront.
+  useEffect(() => {
+    const root = document.documentElement;
+    const baseFontSize = Math.max(12, Math.min(24, Number(settings.baseFontSizePx || 16)));
+
+    root.dataset.layout = settings.layoutPreset || 'classic';
+    root.dataset.mobileProductColumns = String(settings.mobileProductColumns || 2);
+    root.dataset.mobileFooterColumns = String(settings.mobileFooterColumns || 2);
+    root.style.setProperty('--site-base-font-size', `${baseFontSize}px`);
+    root.style.setProperty('--theme-radius', `${Math.max(0, Math.min(60, Number(settings.themeRadiusPx || 12)))}px`);
+    root.style.setProperty('--primary-color', settings.primaryColor || '#DC2626');
+    root.style.setProperty('--primary-hover', settings.primaryHover || settings.primaryColor || '#b91c1c');
+    root.style.setProperty('--site-bg', settings.siteBgColor || '#f8fafc');
+    root.style.setProperty('--card-bg', settings.cardBgColor || '#ffffff');
+    root.style.setProperty('--header-bg', settings.headerBgColor || '#ffffff');
+    root.style.setProperty('--footer-bg', settings.footerBgColor || '#111827');
+    root.style.setProperty('--text-color', settings.textColor || '#111827');
+    root.style.setProperty('--site-font', `"${settings.fontFamily || 'Vazirmatn'}", system-ui, sans-serif`);
+
+    if (settings.faviconUrl) {
+      let favicon = document.head.querySelector<HTMLLinkElement>('link[rel="icon"]');
+      if (!favicon) {
+        favicon = document.createElement('link');
+        favicon.rel = 'icon';
+        document.head.appendChild(favicon);
+      }
+      favicon.href = settings.faviconUrl;
+    }
+  }, [
+    settings.layoutPreset,
+    settings.mobileProductColumns,
+    settings.mobileFooterColumns,
+    settings.baseFontSizePx,
+    settings.themeRadiusPx,
+    settings.primaryColor,
+    settings.primaryHover,
+    settings.siteBgColor,
+    settings.cardBgColor,
+    settings.headerBgColor,
+    settings.footerBgColor,
+    settings.textColor,
+    settings.fontFamily,
+    settings.faviconUrl
+  ]);
 
   // Scroll to top on navigation
   useEffect(() => {

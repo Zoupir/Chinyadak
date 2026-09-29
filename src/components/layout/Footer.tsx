@@ -126,28 +126,14 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenAuthModal }) =
             </div>
           </div>
 
-          <div className="marketplace-ref-footer-col">
-            <h4>حساب کاربری</h4>
-            <button type="button" onClick={() => onNavigate('account')}>حساب من</button>
-            <button type="button" onClick={() => onNavigate('tracking')}>پیگیری سفارش</button>
-            <button type="button" onClick={() => onNavigate('wishlist')}>علاقه‌مندی‌ها</button>
-            <button type="button" onClick={() => onNavigate('account', 'garage')}>گاراژ من</button>
-          </div>
-
-          <div className="marketplace-ref-footer-col">
-            <h4>فروشگاه</h4>
-            {categories.slice(0, 5).map(c => (
-              <button key={c.id} type="button" onClick={() => onNavigate('category', c.slug)}>{c.nameFa}</button>
-            ))}
-          </div>
-
-          <div className="marketplace-ref-footer-col">
-            <h4>راهنما</h4>
-            {(columns[0]?.links || []).slice(0, 5).map(link => (
-              <button key={link.id} type="button" onClick={() => handleLinkClick(link.url)}>{link.title}</button>
-            ))}
-            <button type="button" onClick={() => onNavigate('blog')}>مقالات و آموزش</button>
-          </div>
+          {columns.map(column => (
+            <div key={column.id} className="marketplace-ref-footer-col">
+              <h4>{column.title}</h4>
+              {column.links.map(link => (
+                <button key={link.id} type="button" onClick={() => handleLinkClick(link.url)}>{link.title}</button>
+              ))}
+            </div>
+          ))}
 
           <div className="marketplace-ref-footer-contact">
             <h4>ارتباط با ما</h4>

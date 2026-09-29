@@ -23,7 +23,9 @@ import {
   Edit3,
   ExternalLink,
   ShieldCheck,
-  Share2
+  Share2,
+  Menu as MenuIcon,
+  X
 } from 'lucide-react';
 import { formatToman } from '../../utils/formatters';
 import { ShareButton } from '../common/ShareButton';
@@ -67,6 +69,8 @@ export const Header: React.FC<HeaderProps> = ({
   const [isMegaMenuOpen, setIsMegaMenuOpen] = useState(false);
   const [isBrandsMenuOpen, setIsBrandsMenuOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const [isMarketplaceMobileOpen, setIsMarketplaceMobileOpen] = useState(false);
+  const [marketplaceOpenMenuId, setMarketplaceOpenMenuId] = useState<string | null>(null);
 
   // Hover timers to prevent menu abrupt closing
   const megaTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -135,8 +139,63 @@ export const Header: React.FC<HeaderProps> = ({
   ).filter(item => item.isVisible !== false);
 
   const isAuthenticated = Boolean(currentCustomer || adminAuth.isAuthenticated);
+  const topHeaderMenus = headerMenus.filter(item => !item.parentId);
+  const menuChildren = (parentId: string) =>
+    headerMenus.filter(item => item.parentId === parentId && item.isVisible !== false);
+  const categoriesRoot = topHeaderMenus.find(item => item.kind === 'categories');
+  const editableCategoryChildren = categoriesRoot ? menuChildren(categoriesRoot.id) : [];
 
   if (settings.layoutPreset === 'marketplace-rtl') {
+    const renderCategoryRows = () => {
+      if (editableCategoryChildren.length > 0) {
+        return editableCategoryChildren.map(item => (
+          <button
+            key={item.id}
+            type="button"
+            className="marketplace-ref-category-link"
+            onClick={() => {
+              handleMenuClick(item);
+              setIsMegaMenuOpen(false);
+              setIsMarketplaceMobileOpen(false);
+            }}
+          >
+            <span>{item.title}</span>
+            {item.badge && <small>{item.badge}</small>}
+          </button>
+        ));
+      }
+
+      return categories.slice(0, 12).map(category => (
+        <div key={category.id} className="marketplace-ref-category-column">
+          <button
+            type="button"
+            className="marketplace-ref-category-title"
+            onClick={() => {
+              onNavigate('category', category.slug);
+              setIsMegaMenuOpen(false);
+              setIsMarketplaceMobileOpen(false);
+            }}
+          >
+            {category.nameFa}
+          </button>
+          {(category.subcategories || []).slice(0, 5).map(sub => (
+            <button
+              key={sub.id}
+              type="button"
+              className="marketplace-ref-category-sub"
+              onClick={() => {
+                onNavigate('category', sub.slug);
+                setIsMegaMenuOpen(false);
+                setIsMarketplaceMobileOpen(false);
+              }}
+            >
+              {sub.nameFa}
+            </button>
+          ))}
+        </div>
+      ));
+    };
+
     return (
       <header className="marketplace-ref-header" dir="rtl">
         <div className="marketplace-ref-topbar">
@@ -156,6 +215,16 @@ export const Header: React.FC<HeaderProps> = ({
 
         <div className="marketplace-ref-mainbar">
           <div className="marketplace-ref-container marketplace-ref-mainbar-inner">
+            <button
+              type="button"
+              className="marketplace-ref-hamburger"
+              onClick={() => setIsMarketplaceMobileOpen(prev => !prev)}
+              aria-label="باز کردن منوی سایت"
+              aria-expanded={isMarketplaceMobileOpen}
+            >
+              {isMarketplaceMobileOpen ? <X className="w-5 h-5" /> : <MenuIcon className="w-5 h-5" />}
+            </button>
+
             <button type="button" className="marketplace-ref-logo" onClick={() => onNavigate('home')}>
               {settings.logoUrl ? (
                 <img src={settings.logoUrl} alt={settings.siteTitle} />
@@ -165,10 +234,15 @@ export const Header: React.FC<HeaderProps> = ({
             </button>
 
             <div className="marketplace-ref-search-wrap">
-              <div className="marketplace-ref-search-category">
-                <span>دسته‌بندی</span>
+              <button
+                type="button"
+                className={`marketplace-ref-search-category ${isMegaMenuOpen ? 'active' : ''}`}
+                onClick={() => setIsMegaMenuOpen(prev => !prev)}
+                aria-expanded={isMegaMenuOpen}
+              >
+                <span>دسته‌بندی قطعات</span>
                 <ChevronDown className="w-3.5 h-3.5" />
-              </div>
+              </button>
               <div className="marketplace-ref-search">
                 <SearchAutocomplete
                   onSelectProduct={(id) => onNavigate('product', id)}
@@ -207,19 +281,51 @@ export const Header: React.FC<HeaderProps> = ({
 
         <nav className="marketplace-ref-nav">
           <div className="marketplace-ref-container marketplace-ref-nav-inner">
-            <button type="button" className="marketplace-ref-allcat" onClick={() => onNavigate('shop')}>
+            <button
+              type="button"
+              className={`marketplace-ref-allcat ${isMegaMenuOpen ? 'active' : ''}`}
+              onClick={() => setIsMegaMenuOpen(prev => !prev)}
+              aria-expanded={isMegaMenuOpen}
+            >
               <Layers className="w-4 h-4" />
-              <span>همه دسته‌بندی‌ها</span>
+              <span>{categoriesRoot?.title || 'همه دسته‌بندی‌ها'}</span>
               <ChevronDown className="w-3.5 h-3.5" />
             </button>
 
             <div className="marketplace-ref-nav-links">
-              {headerMenus.slice(0, 7).map(item => (
-                <button key={item.id} type="button" onClick={() => handleMenuClick(item)}>
-                  {item.title}
-                  {item.badge && <small>{item.badge}</small>}
-                </button>
-              ))}
+              {topHeaderMenus
+                .filter(item => item.kind !== 'categories')
+                .slice(0, 8)
+                .map(item => {
+                  const children = menuChildren(item.id);
+                  return (
+                    <div
+                      key={item.id}
+                      className="marketplace-ref-nav-item"
+                      onMouseEnter={() => children.length && setMarketplaceOpenMenuId(item.id)}
+                      onMouseLeave={() => setMarketplaceOpenMenuId(current => current === item.id ? null : current)}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => children.length ? setMarketplaceOpenMenuId(current => current === item.id ? null : item.id) : handleMenuClick(item)}
+                      >
+                        {item.title}
+                        {children.length > 0 && <ChevronDown className="w-3 h-3" />}
+                        {item.badge && <small>{item.badge}</small>}
+                      </button>
+                      {children.length > 0 && marketplaceOpenMenuId === item.id && (
+                        <div className="marketplace-ref-submenu">
+                          {children.map(child => (
+                            <button key={child.id} type="button" onClick={() => handleMenuClick(child)}>
+                              <span>{child.title}</span>
+                              {child.badge && <small>{child.badge}</small>}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
             </div>
 
             <button type="button" className="marketplace-ref-garage" onClick={onOpenVehicleModal}>
@@ -229,6 +335,95 @@ export const Header: React.FC<HeaderProps> = ({
             </button>
           </div>
         </nav>
+
+        {isMegaMenuOpen && (
+          <div className="marketplace-ref-category-mega">
+            <div className="marketplace-ref-container marketplace-ref-category-grid">
+              {renderCategoryRows()}
+              <button
+                type="button"
+                className="marketplace-ref-category-all"
+                onClick={() => {
+                  onNavigate('shop');
+                  setIsMegaMenuOpen(false);
+                }}
+              >
+                مشاهده همه قطعات
+                <ChevronDown className="w-4 h-4 rotate-90" />
+              </button>
+            </div>
+          </div>
+        )}
+
+        {isMarketplaceMobileOpen && (
+          <div className="marketplace-ref-mobile-drawer">
+            <div className="marketplace-ref-mobile-drawer-head">
+              <strong>منوی سایت</strong>
+              <button type="button" onClick={() => setIsMarketplaceMobileOpen(false)}><X className="w-5 h-5" /></button>
+            </div>
+
+            <button
+              type="button"
+              className="marketplace-ref-mobile-category-toggle"
+              onClick={() => setIsMegaMenuOpen(prev => !prev)}
+            >
+              <span>دسته‌بندی قطعات</span>
+              <ChevronDown className={`w-4 h-4 transition-transform ${isMegaMenuOpen ? 'rotate-180' : ''}`} />
+            </button>
+
+            {isMegaMenuOpen && (
+              <div className="marketplace-ref-mobile-categories">
+                {renderCategoryRows()}
+              </div>
+            )}
+
+            <div className="marketplace-ref-mobile-links">
+              {topHeaderMenus.filter(item => item.kind !== 'categories').map(item => {
+                const children = menuChildren(item.id);
+                const open = marketplaceOpenMenuId === item.id;
+                return (
+                  <div key={item.id} className="marketplace-ref-mobile-menu-item">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (children.length) setMarketplaceOpenMenuId(open ? null : item.id);
+                        else {
+                          handleMenuClick(item);
+                          setIsMarketplaceMobileOpen(false);
+                        }
+                      }}
+                    >
+                      <span>{item.title}</span>
+                      {children.length > 0 && <ChevronDown className={`w-4 h-4 transition-transform ${open ? 'rotate-180' : ''}`} />}
+                    </button>
+                    {open && children.length > 0 && (
+                      <div className="marketplace-ref-mobile-submenu">
+                        {children.map(child => (
+                          <button
+                            key={child.id}
+                            type="button"
+                            onClick={() => {
+                              handleMenuClick(child);
+                              setIsMarketplaceMobileOpen(false);
+                            }}
+                          >
+                            {child.title}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="marketplace-ref-mobile-quick">
+              <button type="button" onClick={() => { onOpenVehicleModal(); setIsMarketplaceMobileOpen(false); }}>خودروی من</button>
+              <button type="button" onClick={() => { onNavigate('tracking'); setIsMarketplaceMobileOpen(false); }}>پیگیری سفارش</button>
+              <button type="button" onClick={() => { onNavigate('blog'); setIsMarketplaceMobileOpen(false); }}>مقالات</button>
+            </div>
+          </div>
+        )}
       </header>
     );
   }

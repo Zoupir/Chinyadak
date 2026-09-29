@@ -116,7 +116,7 @@ export const ShopView: React.FC<ShopViewProps> = ({
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8 space-y-8">
+    <div className="shop-view max-w-7xl mx-auto px-4 py-8 space-y-8">
       {/* Catalog Header Banner */}
       <div className="bg-white rounded-3xl p-6 border border-neutral-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
@@ -168,7 +168,7 @@ export const ShopView: React.FC<ShopViewProps> = ({
       </div>
 
       {/* Main Grid: Sidebar Filters + Products */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+      <div className="shop-layout grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         
         {/* Desktop Sidebar Filters */}
         <aside className="hidden lg:block lg:col-span-3 bg-white rounded-3xl border border-neutral-200 p-6 space-y-6 shadow-xs sticky top-28">
@@ -378,7 +378,7 @@ export const ShopView: React.FC<ShopViewProps> = ({
 
           {/* Products Grid */}
           {filteredProducts.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
+            <div className="product-grid grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
               {filteredProducts.map(product => (
                 <ProductCard 
                   key={product.id} 

@@ -3803,3 +3803,12 @@ html[data-layout="marketplace-rtl"] .marketplace-brand-row.builder-section-grid 
     max-width: 100% !important;
   }
 }
+
+
+/* DYNAMIC ADMIN FOOTER GRID */
+@media (min-width: 1025px) {
+  html[data-layout="marketplace-rtl"] .marketplace-ref-footer-main {
+    grid-template-columns: minmax(250px, 1.45fr) repeat(auto-fit, minmax(150px, .85fr)) !important;
+    align-items: start;
+  }
+}

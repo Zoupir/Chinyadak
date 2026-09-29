@@ -3741,3 +3741,65 @@ html[data-layout="marketplace-rtl"] .marketplace-brand-row.builder-section-grid 
     flex: 0 0 auto;
   }
 }
+
+
+/* MOBILE TWO-COLUMN PRODUCT CARD COMPACTNESS */
+@media (max-width: 700px) {
+  .product-card {
+    min-width: 0;
+    border-radius: 14px !important;
+  }
+  .product-card-media {
+    padding: 8px 8px 0 !important;
+  }
+  .product-card-body {
+    padding: 9px !important;
+  }
+  .product-card-media .absolute.top-3 {
+    top: 8px !important;
+  }
+  .product-card-media .absolute.right-3 {
+    right: 8px !important;
+  }
+  .product-card-media .absolute.left-3 {
+    left: 8px !important;
+  }
+  .product-card-media .absolute.left-3 button {
+    width: 28px !important;
+    height: 28px !important;
+    padding: 5px !important;
+    border-radius: 8px !important;
+  }
+  .product-card-media .absolute.left-3 svg {
+    width: 14px !important;
+    height: 14px !important;
+  }
+  .product-card-body > div:first-child > div:first-child {
+    gap: 4px !important;
+    align-items: flex-start !important;
+  }
+  .product-card-body h3 {
+    font-size: 12px !important;
+    line-height: 1.55 !important;
+    min-height: 37px;
+  }
+  .product-card-body .font-mono {
+    max-width: 82px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .product-card-body .text-sm.font-black {
+    font-size: 11px !important;
+    line-height: 1.35 !important;
+  }
+  .product-card-body button[title="افزودن به سبد خرید"] {
+    height: 32px !important;
+    padding-inline: 9px !important;
+    font-size: 10px !important;
+    border-radius: 9px !important;
+  }
+  .product-card-body .truncate {
+    max-width: 100% !important;
+  }
+}

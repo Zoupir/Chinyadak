@@ -82,7 +82,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onViewDetails
         >
           <img 
             src={product.images[0]} 
-            alt={product.nameFa}
+            alt={product.seo?.images?.[product.images[0]]?.alt || product.nameFa}
+          title={product.seo?.images?.[product.images[0]]?.title || product.nameFa}
             className="w-full h-full object-cover"
             loading="lazy"
           />

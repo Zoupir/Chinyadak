@@ -53,6 +53,7 @@ export const AdminPagesTab: React.FC<AdminPagesTabProps> = ({ onNavigate }) => {
   // Section Form
   const [sectionForm, setSectionForm] = useState<PageSection>({
     id: '',
+    sectionKey: '',
     title: '',
     subtitle: '',
     content: '',
@@ -61,7 +62,22 @@ export const AdminPagesTab: React.FC<AdminPagesTabProps> = ({ onNavigate }) => {
     buttonText: '',
     buttonLink: '',
     isVisible: true,
-    order: 1
+    order: 1,
+    layout: 'boxed',
+    desktopColumns: 3,
+    mobileColumns: 1,
+    fullWidth: false,
+    backgroundColor: '#ffffff',
+    textColor: '#111827',
+    borderRadiusPx: 12,
+    itemRadiusPx: 10,
+    paddingTopPx: 28,
+    paddingBottomPx: 28,
+    paddingInlinePx: 20,
+    gapPx: 16,
+    minHeightPx: 0,
+    contentAlign: 'right',
+    items: []
   });
 
   const selectedPage = pages.find(p => p.id === selectedPageId) || pages[0];
@@ -77,6 +93,7 @@ export const AdminPagesTab: React.FC<AdminPagesTabProps> = ({ onNavigate }) => {
     const nextOrder = selectedPage.sections.length + 1;
     const newSec: PageSection = {
       id: `sec-${Date.now()}`,
+      sectionKey: `custom-${Date.now()}`,
       title: '',
       subtitle: '',
       content: '',
@@ -85,7 +102,22 @@ export const AdminPagesTab: React.FC<AdminPagesTabProps> = ({ onNavigate }) => {
       buttonText: '',
       buttonLink: 'shop',
       isVisible: true,
-      order: nextOrder
+      order: nextOrder,
+      layout: 'boxed',
+      desktopColumns: 3,
+      mobileColumns: 1,
+      fullWidth: false,
+      backgroundColor: '#ffffff',
+      textColor: '#111827',
+      borderRadiusPx: 12,
+      itemRadiusPx: 10,
+      paddingTopPx: 28,
+      paddingBottomPx: 28,
+      paddingInlinePx: 20,
+      gapPx: 16,
+      minHeightPx: 0,
+      contentAlign: 'right',
+      items: []
     };
     setEditingSection(null);
     setSectionForm(newSec);
@@ -503,6 +535,89 @@ export const AdminPagesTab: React.FC<AdminPagesTabProps> = ({ onNavigate }) => {
                 </div>
               )}
 
+              {/* Layout Builder */}
+              <div className="p-4 bg-neutral-50 rounded-2xl border border-neutral-200 space-y-4">
+                <div>
+                  <h4 className="font-black text-sm text-neutral-900">چیدمان و ابعاد سکشن</h4>
+                  <p className="text-[10px] text-neutral-500 mt-1">مشابه یک Section Builder، عرض، ستون‌ها، فاصله‌ها، رنگ و گردی این بخش را مستقل تنظیم کنید.</p>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  <label>
+                    <span className="block text-[10px] font-bold mb-1">نوع چیدمان</span>
+                    <select value={sectionForm.layout || 'boxed'} onChange={e => setSectionForm({ ...sectionForm, layout: e.target.value as PageSection['layout'] })} className="w-full p-2 border border-neutral-300 rounded-lg bg-white">
+                      <option value="boxed">کادر استاندارد</option>
+                      <option value="full">تمام‌عرض</option>
+                      <option value="grid">شبکه‌ای</option>
+                      <option value="split">دو بخشی</option>
+                      <option value="cards">کارت‌ها</option>
+                    </select>
+                  </label>
+                  <label>
+                    <span className="block text-[10px] font-bold mb-1">ستون دسکتاپ</span>
+                    <select value={sectionForm.desktopColumns || 3} onChange={e => setSectionForm({ ...sectionForm, desktopColumns: Number(e.target.value) as any })} className="w-full p-2 border border-neutral-300 rounded-lg bg-white">
+                      {[1,2,3,4,5,6].map(n => <option key={n} value={n}>{n} ستون</option>)}
+                    </select>
+                  </label>
+                  <label>
+                    <span className="block text-[10px] font-bold mb-1">ستون موبایل</span>
+                    <select value={sectionForm.mobileColumns || 1} onChange={e => setSectionForm({ ...sectionForm, mobileColumns: Number(e.target.value) as 1 | 2 })} className="w-full p-2 border border-neutral-300 rounded-lg bg-white">
+                      <option value={1}>۱ ستون</option>
+                      <option value={2}>۲ ستون</option>
+                    </select>
+                  </label>
+                  <label>
+                    <span className="block text-[10px] font-bold mb-1">تراز محتوا</span>
+                    <select value={sectionForm.contentAlign || 'right'} onChange={e => setSectionForm({ ...sectionForm, contentAlign: e.target.value as any })} className="w-full p-2 border border-neutral-300 rounded-lg bg-white">
+                      <option value="right">راست</option>
+                      <option value="center">وسط</option>
+                      <option value="left">چپ</option>
+                    </select>
+                  </label>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  {[
+                    ['borderRadiusPx', 'گردی سکشن', 0, 60],
+                    ['itemRadiusPx', 'گردی آیتم‌ها', 0, 60],
+                    ['gapPx', 'فاصله آیتم‌ها', 0, 60],
+                    ['minHeightPx', 'حداقل ارتفاع', 0, 900],
+                    ['paddingTopPx', 'فاصله بالا', 0, 160],
+                    ['paddingBottomPx', 'فاصله پایین', 0, 160],
+                    ['paddingInlinePx', 'فاصله طرفین', 0, 120]
+                  ].map(([key, label, min, max]) => (
+                    <label key={String(key)}>
+                      <span className="block text-[10px] font-bold mb-1">{String(label)} (px)</span>
+                      <input
+                        type="number"
+                        min={Number(min)}
+                        max={Number(max)}
+                        value={Number((sectionForm as any)[String(key)] || 0)}
+                        onChange={e => setSectionForm({ ...sectionForm, [String(key)]: Number(e.target.value) } as PageSection)}
+                        className="w-full p-2 border border-neutral-300 rounded-lg bg-white font-mono"
+                      />
+                    </label>
+                  ))}
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <label className="flex items-center justify-between gap-3 p-3 rounded-xl bg-white border border-neutral-200">
+                    <span className="font-bold text-[11px]">تمام‌عرض بدون محدودیت کانتینر</span>
+                    <input type="checkbox" checked={sectionForm.fullWidth === true} onChange={e => setSectionForm({ ...sectionForm, fullWidth: e.target.checked })} className="w-4 h-4" />
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <label>
+                      <span className="block text-[10px] font-bold mb-1">رنگ پس‌زمینه</span>
+                      <input type="color" value={sectionForm.backgroundColor || '#ffffff'} onChange={e => setSectionForm({ ...sectionForm, backgroundColor: e.target.value })} className="w-full h-10 p-1 border border-neutral-300 rounded-lg bg-white" />
+                    </label>
+                    <label>
+                      <span className="block text-[10px] font-bold mb-1">رنگ متن</span>
+                      <input type="color" value={sectionForm.textColor || '#111827'} onChange={e => setSectionForm({ ...sectionForm, textColor: e.target.value })} className="w-full h-10 p-1 border border-neutral-300 rounded-lg bg-white" />
+                    </label>
+                  </div>
+                </div>
+              </div>
+
               {/* Rich Content Editor */}
               <RichTextEditor
                 label="متن کامل و محتوای تشریحی سکشن (ویرایشگر پیشرفته):"
@@ -511,6 +626,56 @@ export const AdminPagesTab: React.FC<AdminPagesTabProps> = ({ onNavigate }) => {
                 rows={5}
                 placeholder="توضیحات تکمیلی، مشخصات، ویژگی‌ها و راهنماها..."
               />
+
+              {/* Repeatable items */}
+              <div className="p-4 bg-neutral-50 rounded-2xl border border-neutral-200 space-y-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <h4 className="font-black text-sm text-neutral-900">آیتم‌های داخل سکشن</h4>
+                    <p className="text-[10px] text-neutral-500 mt-1">برای نظرات مشتریان، بنرهای چندتایی، مزایا، کارت‌ها و هر محتوای تکرارشونده.</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const items = [...(sectionForm.items || [])];
+                      items.push({ id: `item-${Date.now()}`, title: '', subtitle: '', content: '', imageUrl: '', link: '', buttonText: '', isVisible: true, order: items.length + 1 });
+                      setSectionForm({ ...sectionForm, items });
+                    }}
+                    className="px-3 py-2 bg-neutral-900 text-white rounded-xl font-bold text-[11px] flex items-center gap-1"
+                  >
+                    <Plus className="w-3.5 h-3.5" /> افزودن آیتم
+                  </button>
+                </div>
+
+                {(sectionForm.items || []).length === 0 && (
+                  <div className="p-4 border border-dashed border-neutral-300 rounded-xl text-center text-[10px] text-neutral-500">هنوز آیتمی اضافه نشده است.</div>
+                )}
+
+                <div className="space-y-3">
+                  {(sectionForm.items || []).map((item, itemIndex) => (
+                    <div key={item.id} className="p-3 bg-white rounded-xl border border-neutral-200 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <strong className="text-[11px]">آیتم {itemIndex + 1}</strong>
+                        <button
+                          type="button"
+                          onClick={() => setSectionForm({ ...sectionForm, items: (sectionForm.items || []).filter(x => x.id !== item.id) })}
+                          className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg"
+                          title="حذف آیتم"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <input value={item.title || ''} onChange={e => setSectionForm({ ...sectionForm, items: (sectionForm.items || []).map(x => x.id === item.id ? { ...x, title: e.target.value } : x) })} placeholder="عنوان / نام مشتری" className="p-2 border border-neutral-300 rounded-lg" />
+                        <input value={item.subtitle || ''} onChange={e => setSectionForm({ ...sectionForm, items: (sectionForm.items || []).map(x => x.id === item.id ? { ...x, subtitle: e.target.value } : x) })} placeholder="زیرعنوان / نقش مشتری" className="p-2 border border-neutral-300 rounded-lg" />
+                        <input value={item.imageUrl || ''} onChange={e => setSectionForm({ ...sectionForm, items: (sectionForm.items || []).map(x => x.id === item.id ? { ...x, imageUrl: e.target.value } : x) })} placeholder="آدرس تصویر (اختیاری)" className="p-2 border border-neutral-300 rounded-lg text-left" dir="ltr" />
+                        <input value={item.link || ''} onChange={e => setSectionForm({ ...sectionForm, items: (sectionForm.items || []).map(x => x.id === item.id ? { ...x, link: e.target.value } : x) })} placeholder="لینک مقصد (اختیاری)" className="p-2 border border-neutral-300 rounded-lg text-left" dir="ltr" />
+                      </div>
+                      <textarea value={item.content || ''} onChange={e => setSectionForm({ ...sectionForm, items: (sectionForm.items || []).map(x => x.id === item.id ? { ...x, content: e.target.value } : x) })} rows={2} placeholder="متن آیتم / متن نظر مشتری / توضیح بنر" className="w-full p-2 border border-neutral-300 rounded-lg" />
+                    </div>
+                  ))}
+                </div>
+              </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
                 <div>

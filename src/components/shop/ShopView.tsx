@@ -454,7 +454,7 @@ export const ShopView: React.FC<ShopViewProps> = ({
                 نمایش {filteredProducts.length.toLocaleString('fa-IR')} محصول
               </button>
             </div>
-          )
+          )}
 
           {/* Products Grid */}
           {filteredProducts.length > 0 ? (

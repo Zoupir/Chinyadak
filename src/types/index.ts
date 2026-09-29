@@ -474,6 +474,11 @@ export interface SiteSettings {
   textColor?: string;
   fontFamily: 'Vazirmatn' | 'Noto Sans Arabic' | 'Rubik' | 'Alexandria' | 'Cairo';
   fontSize: 'compact' | 'normal' | 'large' | 'xlarge';
+  /** Base font size applied across the storefront. Admin can tune this precisely. */
+  baseFontSizePx?: number;
+  /** Mobile catalog preferences. */
+  mobileProductColumns?: 1 | 2;
+  mobileFooterColumns?: 1 | 2;
   borderRadius?: 'sharp' | 'normal' | 'rounded' | 'full';
   themeRadiusPx?: number;
   headerStyle?: 'light' | 'dark' | 'primary';
@@ -536,8 +541,23 @@ export interface AdminAuthState {
 }
 
 // Page Builder & Editable Sections
+export interface PageSectionItem {
+  id: string;
+  title?: string;
+  subtitle?: string;
+  content?: string;
+  imageUrl?: string;
+  badge?: string;
+  link?: string;
+  buttonText?: string;
+  isVisible?: boolean;
+  order: number;
+}
+
 export interface PageSection {
   id: string;
+  /** Stable key used by system pages such as the marketplace home page. */
+  sectionKey?: string;
   title: string;
   subtitle?: string;
   content?: string;
@@ -548,6 +568,25 @@ export interface PageSection {
   buttonLink?: string;
   isVisible: boolean;
   order: number;
+
+  // Layout builder controls
+  layout?: 'boxed' | 'full' | 'grid' | 'split' | 'cards';
+  desktopColumns?: 1 | 2 | 3 | 4 | 5 | 6;
+  mobileColumns?: 1 | 2;
+  fullWidth?: boolean;
+  backgroundColor?: string;
+  textColor?: string;
+  borderRadiusPx?: number;
+  itemRadiusPx?: number;
+  paddingTopPx?: number;
+  paddingBottomPx?: number;
+  paddingInlinePx?: number;
+  gapPx?: number;
+  minHeightPx?: number;
+  contentAlign?: 'right' | 'center' | 'left';
+
+  /** Repeater content for testimonials, banners, feature cards and similar sections. */
+  items?: PageSectionItem[];
 }
 
 export interface SitePage {

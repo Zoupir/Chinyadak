@@ -75,10 +75,14 @@ RAYON_NUM_THREADS=1 UV_THREADPOOL_SIZE=1 npm run build
 echo "[5/6] Restart application"
 if [[ -n "$SELECTOR" ]]; then
   if [[ "$APP_STOPPED" == "1" ]]; then
-    "$SELECTOR" start --json --interpreter nodejs --app-root "$APP_ROOT" >/dev/null 2>&1 || {
-      echo "CloudLinux start failed; trying restart."
-      "$SELECTOR" restart --json --interpreter nodejs --app-root "$APP_ROOT" >/dev/null 2>&1 || true
-    }
+    if "$SELECTOR" start --json --interpreter nodejs --app-root "$APP_ROOT" >/dev/null 2>&1; then
+      :
+    elif "$SELECTOR" restart --json --interpreter nodejs --app-root "$APP_ROOT" >/dev/null 2>&1; then
+      :
+    else
+      echo "ERROR: build succeeded but CloudLinux could not start the Node application."
+      exit 1
+    fi
   else
     "$SELECTOR" restart --json --interpreter nodejs --app-root "$APP_ROOT" >/dev/null 2>&1 || true
   fi

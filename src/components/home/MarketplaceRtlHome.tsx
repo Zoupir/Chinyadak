@@ -74,7 +74,16 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
       ['--builder-cols' as any]: String(section.desktopColumns || 3),
       ['--builder-mobile-cols' as any]: String(section.mobileColumns || 1),
       ['--builder-item-radius' as any]: `${section.itemRadiusPx ?? 10}px`,
-      ['--builder-image-size' as any]: `${section.imageSizePx ?? 72}px`
+      ['--builder-image-size' as any]: `${section.imageSizePx ?? 72}px`,
+      ['--builder-width' as any]: section.fullWidth ? '100%' : `${Math.max(20, Math.min(100, Number(section.widthPercent ?? 100)))}%`,
+      ['--builder-max-width' as any]: section.fullWidth || section.maxWidthPx === 0 ? 'none' : `${Number(section.maxWidthPx || 1280)}px`,
+      ['--builder-padding-top' as any]: section.paddingTopPx !== undefined ? `${section.paddingTopPx}px` : undefined,
+      ['--builder-padding-bottom' as any]: section.paddingBottomPx !== undefined ? `${section.paddingBottomPx}px` : undefined,
+      ['--builder-padding-inline' as any]: section.paddingInlinePx !== undefined ? `${section.paddingInlinePx}px` : undefined,
+      ['--builder-section-radius' as any]: section.borderRadiusPx !== undefined ? `${section.borderRadiusPx}px` : undefined,
+      ['--builder-min-height' as any]: section.minHeightPx ? `${section.minHeightPx}px` : undefined,
+      ['--builder-bg' as any]: section.backgroundColor || undefined,
+      ['--builder-text' as any]: section.textColor || undefined
     };
   };
   const sortedItems = (key: string) =>
@@ -352,7 +361,7 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
         </div>
         <div className="marketplace-logo-tiles marketplace-logo-tiles-with-images">
           {(settings.popularPartsBrands || []).filter(item => item.isVisible !== false).slice(0, sectionConfig('parts-brands')?.maxItems || 12).map((item) => (
-            <button key={item.id} type="button" onClick={() => goLink(item.link || 'shop')}>
+            <button key={item.id} type="button" onClick={() => goLink(item.link || 'shop')} style={{ borderRadius: `${sectionConfig('parts-brands')?.itemRadiusPx ?? 2}px` }}>
               <span className="marketplace-parts-brand-logo">
                 {item.imageUrl ? <img src={item.imageUrl} alt={item.title} /> : <Wrench className="w-6 h-6" />}
               </span>

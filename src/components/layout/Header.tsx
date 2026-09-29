@@ -100,34 +100,41 @@ export const Header: React.FC<HeaderProps> = ({
     };
   }, []);
 
-  const handleMenuClick = (link: string) => {
+  const handleMenuClick = (item: { link: string; openInNewTab?: boolean }) => {
+    const link = String(item.link || '');
     if (!link) return;
     if (link.startsWith('http://') || link.startsWith('https://')) {
-      window.open(link, '_blank');
+      window.open(link, item.openInNewTab === false ? '_self' : '_blank', 'noopener,noreferrer');
       return;
     }
     if (link.includes(':')) {
-      const [view, param] = link.split(':');
-      onNavigate(view, param);
+      const [view, ...rest] = link.split(':');
+      onNavigate(view, rest.join(':'));
     } else {
       onNavigate(link);
     }
   };
 
-  // Default menu links fallback if none configured
-  const topNavLinks = (settings.navigationMenus && settings.navigationMenus.length > 0)
-    ? settings.navigationMenus
-    : [
-        { id: 'm1', title: 'قطعات مصرفی و سرویس دوره‌ای', link: 'shop:maintenance', badge: 'سرویس' },
-        { id: 'm2', title: 'درخواست استعلام قطعه', link: 'part-request', badge: 'سریع' },
-        { id: 'm3', title: 'وبلاگ و آموزش', link: 'blog' },
-        { id: 'm4', title: 'گاراژ من', link: 'account:garage' }
-      ];
+  const headerMenus = (
+    settings.headerMenus && settings.headerMenus.length > 0
+      ? settings.headerMenus
+      : [
+          { id: 'header-categories', title: 'دسته‌بندی قطعات خودرو', link: 'shop', kind: 'categories', isVisible: true },
+          { id: 'header-brands', title: 'برندهای خودرو', link: 'shop', kind: 'brands', isVisible: true },
+          ...((settings.navigationMenus && settings.navigationMenus.length > 0)
+            ? settings.navigationMenus
+            : [
+                { id: 'm1', title: 'قطعات مصرفی و سرویس دوره‌ای', link: 'shop:maintenance', badge: 'سرویس' },
+                { id: 'm2', title: 'درخواست استعلام قطعه', link: 'part-request', badge: 'سریع' },
+                { id: 'm3', title: 'وبلاگ و آموزش', link: 'blog' }
+              ])
+        ]
+  ).filter(item => item.isVisible !== false);
 
   const isAuthenticated = Boolean(currentCustomer || adminAuth.isAuthenticated);
 
   return (
-    <header className="sticky top-0 z-40 bg-white border-b border-neutral-200 shadow-xs">
+    <header className="site-header sticky top-0 z-40 bg-white border-b border-neutral-200 shadow-xs">
       
       {/* Top Notification Bar */}
       <div className="bg-neutral-900 text-neutral-300 text-[11px] py-1.5 px-4 hidden md:block">
@@ -373,7 +380,7 @@ export const Header: React.FC<HeaderProps> = ({
       {/* =========================================================================
           DESKTOP HEADER LAYOUT (>= md)
       ========================================================================= */}
-      <div className="hidden md:flex max-w-7xl mx-auto px-4 py-3 items-center justify-between gap-4">
+      <div className="header-main-row hidden md:flex max-w-7xl mx-auto px-4 py-3 items-center justify-between gap-4">
         {/* Brand Logo */}
         <button 
           onClick={() => onNavigate('home')}
@@ -606,172 +613,185 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
       </div>
 
+      {/* Mobile editable navigation strip */}
+      <div className="md:hidden border-b border-neutral-200 bg-white overflow-x-auto">
+        <div className="flex items-center gap-1 px-3 py-1.5 min-w-max">
+          {headerMenus.map(item => {
+            const kind = item.kind || 'link';
+            if (kind === 'categories') {
+              return (
+                <button key={item.id} onClick={() => onNavigate('shop')} className="px-3 py-2 rounded-xl bg-neutral-900 text-white text-[11px] font-bold flex items-center gap-1">
+                  <Layers className="w-3.5 h-3.5" /> {item.title}
+                </button>
+              );
+            }
+            if (kind === 'brands') {
+              return (
+                <button key={item.id} onClick={() => onNavigate('shop')} className="px-3 py-2 rounded-xl bg-neutral-100 text-neutral-800 text-[11px] font-bold flex items-center gap-1">
+                  <Car className="w-3.5 h-3.5" /> {item.title}
+                </button>
+              );
+            }
+            return (
+              <button key={item.id} onClick={() => handleMenuClick(item)} className="px-3 py-2 text-[11px] font-bold text-neutral-700 whitespace-nowrap">
+                {item.title}
+                {item.badge && <span className="mr-1 text-[8px] px-1.5 py-0.5 rounded bg-red-100 text-red-700">{item.badge}</span>}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
       {/* =========================================================================
-          SECONDARY NAVIGATION BAR (WITH HOVER BRIDGE & DYNAMIC EDITABLE MENUS)
+          SECONDARY NAVIGATION BAR — FULLY CONTROLLED FROM ADMIN
       ========================================================================= */}
-      <div className="border-t border-neutral-200/80 bg-neutral-50/50 hidden md:block">
+      <div className="header-nav-bar border-t border-neutral-200/80 bg-neutral-50/50 hidden md:block">
         <div className="max-w-7xl mx-auto px-4 flex items-center justify-between text-xs font-semibold">
-          <div className="flex items-center gap-1">
-            
-            {/* 1. Mega Menu Toggle with HOVER BRIDGE & DEBOUNCE */}
-            <div 
-              className="relative"
-              onMouseEnter={handleMegaMenuEnter}
-              onMouseLeave={handleMegaMenuLeave}
-            >
-              <button
-                onClick={() => {
-                  if (megaTimeoutRef.current) clearTimeout(megaTimeoutRef.current);
-                  setIsMegaMenuOpen(!isMegaMenuOpen);
-                }}
-                className={`py-3 px-3.5 flex items-center gap-1.5 rounded-lg transition-colors cursor-pointer ${
-                  isMegaMenuOpen ? 'text-red-600 bg-white shadow-xs font-bold' : 'text-neutral-800 hover:text-red-600'
-                }`}
-              >
-                <Layers className="w-4 h-4 text-red-600" />
-                <span>دسته‌بندی قطعات خودرو</span>
-                <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${isMegaMenuOpen ? 'rotate-180 text-red-600' : ''}`} />
-              </button>
+          <div className="flex items-center gap-1 min-w-0">
+            {headerMenus.map(item => {
+              const kind = item.kind || 'link';
 
-              {/* Mega Menu Flyout: With hover bridge so mouse never loses focus */}
-              {isMegaMenuOpen && (
-                <div 
-                  className="absolute top-full right-0 w-[820px] bg-white rounded-2xl shadow-2xl border border-neutral-200 p-6 grid grid-cols-3 gap-6 z-50 before:absolute before:-top-4 before:left-0 before:right-0 before:h-5 before:content-['']"
-                  onMouseEnter={handleMegaMenuEnter}
-                  onMouseLeave={handleMegaMenuLeave}
-                >
-                  {categories.slice(0, 9).map((cat) => (
-                    <div key={cat.id} className="space-y-2">
-                      <button
-                        onClick={() => {
-                          onNavigate('category', cat.slug);
-                          setIsMegaMenuOpen(false);
-                        }}
-                        className="font-bold text-neutral-900 hover:text-red-600 flex items-center gap-2 text-xs text-right group cursor-pointer"
-                      >
-                        {cat.iconUrl ? (
-                          <img src={cat.iconUrl} alt="" className="w-4 h-4 object-contain rounded-xs" />
-                        ) : (
-                          <span className="w-2 h-2 rounded-full bg-red-600 group-hover:scale-150 transition-transform"></span>
-                        )}
-                        <span>{cat.nameFa}</span>
-                      </button>
-                      <ul className="space-y-1 pr-3 border-r-2 border-neutral-100">
-                        {cat.subcategories?.slice(0, 4).map((sub) => (
-                          <li key={sub.id}>
-                            <button
-                              onClick={() => {
-                                onNavigate('category', `${cat.slug}?sub=${sub.slug}`);
-                                setIsMegaMenuOpen(false);
-                              }}
-                              className="text-[11px] text-neutral-500 hover:text-red-600 transition-colors text-right block py-0.5 cursor-pointer"
-                            >
-                              {sub.nameFa}
-                            </button>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  ))}
-                  <div className="col-span-3 pt-3 border-t border-neutral-100 flex items-center justify-between text-neutral-500 text-[11px]">
-                    <span className="text-emerald-700 font-medium">تضمین تطبیق ۱۰۰٪ فیتمنت با خودروی انتخاب‌شده شما</span>
-                    <button 
-                      onClick={() => { onNavigate('shop'); setIsMegaMenuOpen(false); }}
-                      className="text-red-600 hover:underline font-bold cursor-pointer"
-                    >
-                      مشاهده تمامی دسته‌ها و قطعات ←
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* 2. Brands Menu Dropdown with HOVER BRIDGE & DEBOUNCE */}
-            <div 
-              className="relative"
-              onMouseEnter={handleBrandsMenuEnter}
-              onMouseLeave={handleBrandsMenuLeave}
-            >
-              <button
-                onClick={() => {
-                  if (brandsTimeoutRef.current) clearTimeout(brandsTimeoutRef.current);
-                  setIsBrandsMenuOpen(!isBrandsMenuOpen);
-                }}
-                className={`py-3 px-3 flex items-center gap-1.5 rounded-lg transition-colors cursor-pointer ${
-                  isBrandsMenuOpen ? 'text-red-600 bg-white shadow-xs font-bold' : 'text-neutral-700 hover:text-red-600'
-                }`}
-              >
-                <span>برندهای خودرو</span>
-                <ChevronDown className="w-3.5 h-3.5" />
-              </button>
-
-              {isBrandsMenuOpen && (
-                <div 
-                  className="absolute top-full right-0 w-64 bg-white rounded-xl shadow-xl border border-neutral-200 p-2 z-50 divide-y divide-neutral-100 before:absolute before:-top-4 before:left-0 before:right-0 before:h-5 before:content-['']"
-                  onMouseEnter={handleBrandsMenuEnter}
-                  onMouseLeave={handleBrandsMenuLeave}
-                >
-                  {brands.map(brand => (
+              if (kind === 'categories') {
+                return (
+                  <div
+                    key={item.id}
+                    className="relative"
+                    onMouseEnter={handleMegaMenuEnter}
+                    onMouseLeave={handleMegaMenuLeave}
+                  >
                     <button
-                      key={brand.id}
                       onClick={() => {
-                        onNavigate('car-brand', brand.slug);
-                        setIsBrandsMenuOpen(false);
+                        if (megaTimeoutRef.current) clearTimeout(megaTimeoutRef.current);
+                        setIsMegaMenuOpen(!isMegaMenuOpen);
                       }}
-                      className="w-full flex items-center justify-between p-2 hover:bg-neutral-50 rounded-lg text-right group cursor-pointer"
+                      className={`py-3 px-3.5 flex items-center gap-1.5 rounded-lg transition-colors cursor-pointer whitespace-nowrap ${
+                        isMegaMenuOpen ? 'text-red-600 bg-white shadow-xs font-bold' : 'text-neutral-800 hover:text-red-600'
+                      }`}
                     >
-                      <span className="font-bold text-neutral-800 group-hover:text-red-600">{brand.nameFa}</span>
-                      <span className="text-[10px] text-neutral-400 font-mono">{brand.nameEn}</span>
+                      <Layers className="w-4 h-4 text-red-600" />
+                      <span>{item.title}</span>
+                      {item.badge && <span className="text-[9px] bg-red-100 text-red-700 px-1.5 py-0.5 rounded-md">{item.badge}</span>}
+                      <ChevronDown className={`w-3.5 h-3.5 transition-transform ${isMegaMenuOpen ? 'rotate-180' : ''}`} />
                     </button>
-                  ))}
-                </div>
-              )}
-            </div>
 
-            {/* 3. DYNAMIC EDITABLE NAVIGATION MENU ITEMS */}
-            {topNavLinks.map(item => (
-              <button
-                key={item.id}
-                onClick={() => handleMenuClick(item.link)}
-                className="py-3 px-3 text-neutral-700 hover:text-red-600 transition-colors flex items-center gap-1.5 cursor-pointer whitespace-nowrap"
-              >
-                <span>{item.title}</span>
-                {item.badge && (
-                  <span className="text-[9px] bg-red-100 text-red-700 px-1.5 py-0.5 rounded-md font-bold">
-                    {item.badge}
-                  </span>
-                )}
-              </button>
-            ))}
+                    {isMegaMenuOpen && (
+                      <div
+                        className="header-categories-mega absolute top-full right-0 w-[820px] bg-white rounded-2xl shadow-2xl border border-neutral-200 p-6 grid grid-cols-3 gap-6 z-50 before:absolute before:-top-4 before:left-0 before:right-0 before:h-5 before:content-['']"
+                        onMouseEnter={handleMegaMenuEnter}
+                        onMouseLeave={handleMegaMenuLeave}
+                      >
+                        {categories.slice(0, 12).map(cat => (
+                          <div key={cat.id} className="space-y-2">
+                            <button
+                              onClick={() => { onNavigate('category', cat.slug); setIsMegaMenuOpen(false); }}
+                              className="font-bold text-neutral-900 hover:text-red-600 flex items-center gap-2 text-xs text-right group"
+                            >
+                              {cat.iconUrl ? (
+                                <img src={cat.iconUrl} alt="" className="w-5 h-5 object-contain rounded" />
+                              ) : (
+                                <span className="w-2 h-2 rounded-full bg-red-600" />
+                              )}
+                              {cat.nameFa}
+                            </button>
+                            {!!cat.subcategories?.length && (
+                              <ul className="space-y-1 pr-3 border-r-2 border-neutral-100">
+                                {cat.subcategories.slice(0, 5).map(sub => (
+                                  <li key={sub.id}>
+                                    <button onClick={() => { onNavigate('category', `${cat.slug}?sub=${sub.slug}`); setIsMegaMenuOpen(false); }} className="text-[11px] text-neutral-500 hover:text-red-600">
+                                      {sub.nameFa}
+                                    </button>
+                                  </li>
+                                ))}
+                              </ul>
+                            )}
+                          </div>
+                        ))}
+                        <div className="col-span-3 pt-3 border-t flex items-center justify-between text-[11px]">
+                          <span className="text-emerald-700 font-medium">انتخاب دسته و تطبیق دقیق با خودرو</span>
+                          <button onClick={() => { onNavigate('shop'); setIsMegaMenuOpen(false); }} className="text-red-600 font-bold">همه دسته‌ها ←</button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              }
 
+              if (kind === 'brands') {
+                return (
+                  <div
+                    key={item.id}
+                    className="relative"
+                    onMouseEnter={handleBrandsMenuEnter}
+                    onMouseLeave={handleBrandsMenuLeave}
+                  >
+                    <button
+                      onClick={() => {
+                        if (brandsTimeoutRef.current) clearTimeout(brandsTimeoutRef.current);
+                        setIsBrandsMenuOpen(!isBrandsMenuOpen);
+                      }}
+                      className={`py-3 px-3 flex items-center gap-1.5 rounded-lg transition-colors cursor-pointer whitespace-nowrap ${
+                        isBrandsMenuOpen ? 'text-red-600 bg-white shadow-xs font-bold' : 'text-neutral-700 hover:text-red-600'
+                      }`}
+                    >
+                      <Car className="w-3.5 h-3.5" />
+                      <span>{item.title}</span>
+                      {item.badge && <span className="text-[9px] bg-red-100 text-red-700 px-1.5 py-0.5 rounded-md">{item.badge}</span>}
+                      <ChevronDown className="w-3.5 h-3.5" />
+                    </button>
+
+                    {isBrandsMenuOpen && (
+                      <div
+                        className="header-brands-menu absolute top-full right-0 w-72 bg-white rounded-xl shadow-xl border border-neutral-200 p-2 z-50 before:absolute before:-top-4 before:left-0 before:right-0 before:h-5 before:content-['']"
+                        onMouseEnter={handleBrandsMenuEnter}
+                        onMouseLeave={handleBrandsMenuLeave}
+                      >
+                        <div className="max-h-[430px] overflow-y-auto">
+                          {brands.map(brand => (
+                            <button
+                              key={brand.id}
+                              onClick={() => { onNavigate('car-brand', brand.slug); setIsBrandsMenuOpen(false); }}
+                              className="w-full flex items-center gap-3 p-2.5 hover:bg-neutral-50 rounded-lg text-right group"
+                            >
+                              <img src={brand.logo} alt="" className="w-8 h-8 object-cover rounded-lg bg-neutral-100" />
+                              <div className="flex-1">
+                                <div className="font-bold text-neutral-800 group-hover:text-red-600">{brand.nameFa}</div>
+                                <div className="text-[9px] text-neutral-400 font-mono">{brand.nameEn}</div>
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              }
+
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => handleMenuClick(item)}
+                  className="py-3 px-3 text-neutral-700 hover:text-red-600 transition-colors flex items-center gap-1.5 cursor-pointer whitespace-nowrap"
+                >
+                  <span>{item.title}</span>
+                  {item.badge && (
+                    <span className="text-[9px] bg-red-100 text-red-700 px-1.5 py-0.5 rounded-md font-bold">{item.badge}</span>
+                  )}
+                </button>
+              );
+            })}
           </div>
 
-          {/* Left Controls & Admin Shortcut */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
             {adminAuth.isAuthenticated && (
               <button
                 onClick={() => onNavigate('admin')}
-                className="py-1 px-2 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 rounded-lg text-[11px] font-bold flex items-center gap-1 transition-colors cursor-pointer"
-                title="ویرایش منوهای هدر و اضافه کردن دسته‌بندی"
+                className="py-1 px-2 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 rounded-lg text-[11px] font-bold flex items-center gap-1"
+                title="ویرایش Header از پنل مدیریت"
               >
-                <Edit3 className="w-3 h-3 text-amber-600" />
-                <span>ویرایش منوی بالا</span>
+                <Edit3 className="w-3 h-3" /> ویرایش Header
               </button>
             )}
-
-            <button
-              onClick={() => onNavigate('admin')}
-              className={`py-1.5 px-3 rounded-lg border text-xs font-bold transition-colors flex items-center gap-1.5 cursor-pointer ${
-                currentView === 'admin'
-                  ? 'bg-neutral-900 text-white border-neutral-900'
-                  : 'bg-white hover:bg-neutral-100 text-neutral-700 border-neutral-300'
-              }`}
-            >
-              <Settings className="w-3.5 h-3.5 text-red-600" />
-              <span>پنل مدیریت و انبار</span>
-            </button>
           </div>
-
         </div>
       </div>
 

@@ -5,6 +5,7 @@ import { pool, type RowDataPacket } from '../db';
 import {
   analyzeSeoEntity,
   applyInternalLink,
+  buildEntityToc,
   clearRuntimeLogs,
   deleteSeoRedirect,
   getActionCenter,
@@ -24,6 +25,7 @@ import {
   listSeoRedirects,
   loadAllEntities,
   loadEntity,
+  optimizeEntityImageAlt,
   rebuildSeoKnowledgeGraph,
   runFullSeoAudit,
   saveKeywordOwner,
@@ -176,6 +178,34 @@ seoRouter.post('/entities/:type/:id/analyze', manageSeo, async (req: Authenticat
   const workspace = await getSeoWorkspace(params.type, params.id);
   const analysis = await analyzeSeoEntity(entity, workspace?.meta || null);
   res.json({ analysis });
+});
+
+seoRouter.post('/entities/:type/:id/image-seo', manageSeo, async (req: AuthenticatedRequest, res) => {
+  const params = entityParams(req);
+  if (!params) {
+    res.status(400).json({ error: 'SEO_ENTITY_INVALID' });
+    return;
+  }
+  try {
+    res.json(await optimizeEntityImageAlt(params.type, params.id, actorId(req)));
+  } catch (error) {
+    const code = String((error as Error)?.message || 'IMAGE_SEO_FAILED');
+    res.status(code.includes('NOT_FOUND') ? 404 : 400).json({ error: code });
+  }
+});
+
+seoRouter.post('/entities/:type/:id/toc', manageSeo, async (req: AuthenticatedRequest, res) => {
+  const params = entityParams(req);
+  if (!params) {
+    res.status(400).json({ error: 'SEO_ENTITY_INVALID' });
+    return;
+  }
+  try {
+    res.json(await buildEntityToc(params.type, params.id, req.body?.apply === true, actorId(req)));
+  } catch (error) {
+    const code = String((error as Error)?.message || 'TOC_FAILED');
+    res.status(code.includes('NOT_FOUND') ? 404 : 400).json({ error: code });
+  }
 });
 
 seoRouter.post('/audit/run', manageSeo, async (req: AuthenticatedRequest, res) => {

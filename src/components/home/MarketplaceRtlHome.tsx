@@ -470,7 +470,7 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
                 <p>{sectionConfig('weekly-deals')?.subtitle || 'فرصت محدود برای خرید قطعات منتخب'}</p>
               </div>
               <div className="marketplace-deal-timer" aria-label="زمان باقی‌مانده پیشنهاد">
-                <span>۰۶</span><b>:</b><span>۲۳</span><b>:</b><span>۲۹</span>
+                <span>۰۶</span><b>:</b><span>۲۳</span><b>:</b><span>۲۹</span><b>:</b><span>۴۹</span>
               </div>
             </div>
             <button type="button" onClick={() => onNavigate('shop')}>مشاهده همه</button>

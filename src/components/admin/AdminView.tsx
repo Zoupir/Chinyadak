@@ -2326,7 +2326,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
                 </div>
                 <div className="space-y-2">
                   {newCatSubcategories.map((sub, index) => (
-                    <div key={sub.id} className="grid grid-cols-[1fr_1fr_1fr_auto] gap-2 items-center p-2 bg-neutral-50 rounded-xl border border-neutral-200">
+                    <div key={sub.id} className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_1fr_auto] gap-2 items-center p-2 bg-neutral-50 rounded-xl border border-neutral-200">
                       <input value={sub.nameFa} onChange={e => setNewCatSubcategories(prev => prev.map((x,i) => i === index ? { ...x, nameFa: e.target.value } : x))} placeholder="نام فارسی" className="p-2 border rounded-lg" />
                       <input value={sub.nameEn} onChange={e => setNewCatSubcategories(prev => prev.map((x,i) => i === index ? { ...x, nameEn: e.target.value } : x))} placeholder="نام انگلیسی" className="p-2 border rounded-lg" />
                       <input dir="ltr" value={sub.slug} onChange={e => setNewCatSubcategories(prev => prev.map((x,i) => i === index ? { ...x, slug: e.target.value } : x))} placeholder="slug" className="p-2 border rounded-lg text-left" />

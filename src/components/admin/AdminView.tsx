@@ -180,6 +180,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
   const [newCatIconUrl, setNewCatIconUrl] = useState('');
   const [newCatImage, setNewCatImage] = useState('');
   const [newCatDesc, setNewCatDesc] = useState('');
+  const [newCatSubcategories, setNewCatSubcategories] = useState<NonNullable<Category['subcategories']>>([]);
 
   // Customer Modal
   const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
@@ -371,7 +372,8 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
       icon: newCatIcon || 'Cpu',
       iconUrl: newCatIconUrl.trim() || undefined,
       imageUrl: newCatImage.trim() || undefined,
-      description: newCatDesc || 'دسته‌بندی تخصصی قطعات خودرو'
+      description: newCatDesc || 'دسته‌بندی تخصصی قطعات خودرو',
+      subcategories: newCatSubcategories
     };
     addCategory(newCategory);
     setNewCatFa('');
@@ -381,6 +383,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
     setNewCatIconUrl('');
     setNewCatImage('');
     setNewCatDesc('');
+    setNewCatSubcategories([]);
     setIsCategoryModalOpen(false);
   };
 
@@ -2307,6 +2310,32 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
                 />
               </div>
 
+              <div className="pt-3 border-t border-neutral-100 space-y-3">
+                <div className="flex items-center justify-between gap-2">
+                  <div>
+                    <label className="block text-neutral-700 font-bold">زیرمنوهای این دسته‌بندی</label>
+                    <p className="text-[10px] text-neutral-500 mt-0.5">هر موردی که اینجا ثبت شود در زیرمنوی «دسته‌بندی قطعات» نمایش داده می‌شود.</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setNewCatSubcategories(prev => [...prev, { id: `sub-${Date.now()}`, nameFa: '', nameEn: '', slug: '' }])}
+                    className="px-3 py-1.5 bg-neutral-900 text-white rounded-lg text-[10px] font-bold cursor-pointer"
+                  >
+                    + افزودن زیرمنو
+                  </button>
+                </div>
+                <div className="space-y-2">
+                  {newCatSubcategories.map((sub, index) => (
+                    <div key={sub.id} className="grid grid-cols-[1fr_1fr_1fr_auto] gap-2 items-center p-2 bg-neutral-50 rounded-xl border border-neutral-200">
+                      <input value={sub.nameFa} onChange={e => setNewCatSubcategories(prev => prev.map((x,i) => i === index ? { ...x, nameFa: e.target.value } : x))} placeholder="نام فارسی" className="p-2 border rounded-lg" />
+                      <input value={sub.nameEn} onChange={e => setNewCatSubcategories(prev => prev.map((x,i) => i === index ? { ...x, nameEn: e.target.value } : x))} placeholder="نام انگلیسی" className="p-2 border rounded-lg" />
+                      <input dir="ltr" value={sub.slug} onChange={e => setNewCatSubcategories(prev => prev.map((x,i) => i === index ? { ...x, slug: e.target.value } : x))} placeholder="slug" className="p-2 border rounded-lg text-left" />
+                      <button type="button" onClick={() => setNewCatSubcategories(prev => prev.filter((_,i) => i !== index))} className="p-2 text-red-600 hover:bg-red-50 rounded-lg cursor-pointer"><Trash2 className="w-4 h-4" /></button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
               {/* Category Icon Picker & Custom Icon Upload */}
               <div className="grid grid-cols-2 gap-3 pt-2 border-t border-neutral-100">
                 <div>
@@ -2383,7 +2412,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
       ========================================================================= */}
       {editingCategory && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
-          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full space-y-4 text-right shadow-2xl">
+          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-3xl w-full max-h-[90vh] overflow-y-auto space-y-4 text-right shadow-2xl">
             <div className="flex items-center justify-between pb-3 border-b border-neutral-100">
               <h3 className="font-bold text-base text-neutral-900">ویرایش دسته‌بندی قطعات و عکس</h3>
               <button onClick={() => setEditingCategory(null)} className="text-neutral-400 hover:text-neutral-700">✕</button>
@@ -2431,6 +2460,35 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
                   onChange={e => setEditingCategory({ ...editingCategory, description: e.target.value })}
                   className="w-full p-2.5 border border-neutral-300 rounded-xl"
                 />
+              </div>
+
+              <div className="pt-3 border-t border-neutral-100 space-y-3">
+                <div className="flex items-center justify-between gap-2">
+                  <div>
+                    <label className="block text-neutral-700 font-bold">زیرمنوهای دسته‌بندی</label>
+                    <p className="text-[10px] text-neutral-500 mt-0.5">نام، آدرس و ترتیب زیرمنوها را مستقیم مدیریت کنید.</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setEditingCategory({
+                      ...editingCategory,
+                      subcategories: [...(editingCategory.subcategories || []), { id: `sub-${Date.now()}`, nameFa: '', nameEn: '', slug: '' }]
+                    })}
+                    className="px-3 py-1.5 bg-neutral-900 text-white rounded-lg text-[10px] font-bold cursor-pointer"
+                  >
+                    + افزودن زیرمنو
+                  </button>
+                </div>
+                <div className="space-y-2">
+                  {(editingCategory.subcategories || []).map((sub, index) => (
+                    <div key={sub.id} className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_1fr_auto] gap-2 items-center p-2 bg-neutral-50 rounded-xl border border-neutral-200">
+                      <input value={sub.nameFa} onChange={e => setEditingCategory({ ...editingCategory, subcategories: (editingCategory.subcategories || []).map((x,i) => i === index ? { ...x, nameFa: e.target.value } : x) })} placeholder="نام فارسی" className="p-2 border rounded-lg" />
+                      <input value={sub.nameEn} onChange={e => setEditingCategory({ ...editingCategory, subcategories: (editingCategory.subcategories || []).map((x,i) => i === index ? { ...x, nameEn: e.target.value } : x) })} placeholder="نام انگلیسی" className="p-2 border rounded-lg" />
+                      <input dir="ltr" value={sub.slug} onChange={e => setEditingCategory({ ...editingCategory, subcategories: (editingCategory.subcategories || []).map((x,i) => i === index ? { ...x, slug: e.target.value } : x) })} placeholder="slug" className="p-2 border rounded-lg text-left" />
+                      <button type="button" onClick={() => setEditingCategory({ ...editingCategory, subcategories: (editingCategory.subcategories || []).filter((_,i) => i !== index) })} className="p-2 text-red-600 hover:bg-red-50 rounded-lg cursor-pointer"><Trash2 className="w-4 h-4" /></button>
+                    </div>
+                  ))}
+                </div>
               </div>
 
               {/* Category Icon Picker & Custom Icon Upload */}

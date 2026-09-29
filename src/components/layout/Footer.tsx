@@ -82,28 +82,54 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenAuthModal }) =
     { id: 'f4', title: 'مشاوره تخصصی قبل از خرید', description: 'بررسی دقیق شماره شاسی VIN توسط مهندسین فنی', icon: 'Headphones' }
   ];
 
-  const columns = settings.footerColumns || [
+  const baseColumns = settings.footerColumns || [
     {
       id: 'fcol-1',
-      title: 'راهنمای خرید و قوانین',
+      title: 'حساب کاربری',
       links: [
-        { id: 'l1', title: 'درباره ما', url: 'page:about' },
-        { id: 'l2', title: 'ضمانت اصالت و شرایط بازگشت کالا', url: 'page:guarantee' },
-        { id: 'l3', title: 'پیگیری وضعیت سفارش و مرسوله', url: 'tracking' },
-        { id: 'l4', title: 'استعلام قطعات کم‌یاب و وارداتی', url: 'part-request' }
+        { id: 'l1', title: 'داشبورد حساب من', url: 'account' },
+        { id: 'l2', title: 'سفارش‌های من', url: 'account:orders' },
+        { id: 'l3', title: 'گاراژ خودروهای من', url: 'account:garage' },
+        { id: 'l4', title: 'پیگیری سفارش', url: 'tracking' }
       ]
     },
     {
       id: 'fcol-2',
-      title: 'خدمات مشتریان و همکاران',
+      title: 'کاتالوگ',
       links: [
-        { id: 'l5', title: 'آموزش فنی و عیب‌یابی خودرو', url: 'blog' },
-        { id: 'l6', title: 'مدیریت گاراژ خودروهای من', url: 'account:garage' },
-        { id: 'l7', title: 'ورود به پنل مدیریت انبار', url: 'admin' },
-        { id: 'l8', title: 'ثبت‌نام خریداران و مکانیک‌ها', url: 'account' }
+        { id: 'l5', title: 'فروشگاه قطعات', url: 'shop' },
+        { id: 'l6', title: 'خرید بر اساس خودرو', url: 'shop' },
+        { id: 'l7', title: 'محصولات پرفروش', url: 'shop:bestseller' },
+        { id: 'l8', title: 'سرویس دوره‌ای', url: 'shop:maintenance' }
+      ]
+    },
+    {
+      id: 'fcol-3',
+      title: 'راهنما',
+      links: [
+        { id: 'l9', title: 'درباره ما', url: 'page:about' },
+        { id: 'l10', title: 'مقالات و آموزش‌ها', url: 'blog' },
+        { id: 'l11', title: 'ضمانت و بازگشت کالا', url: 'page:guarantee' },
+        { id: 'l12', title: 'استعلام قطعه', url: 'part-request' }
       ]
     }
   ];
+
+  const columns = baseColumns.length >= 3
+    ? baseColumns
+    : [
+        ...baseColumns,
+        {
+          id: 'fcol-mobex-help',
+          title: 'راهنما',
+          links: [
+            { id: 'l-mobex-1', title: 'درباره ما', url: 'page:about' },
+            { id: 'l-mobex-2', title: 'مقالات و آموزش‌ها', url: 'blog' },
+            { id: 'l-mobex-3', title: 'ضمانت و بازگشت کالا', url: 'page:guarantee' },
+            { id: 'l-mobex-4', title: 'استعلام قطعه', url: 'part-request' }
+          ]
+        }
+      ];
 
   const badges: FooterBadgeItem[] = settings.footerBadges || [];
 

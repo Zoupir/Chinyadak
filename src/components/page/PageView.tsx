@@ -80,11 +80,81 @@ export const PageView: React.FC<PageViewProps> = ({ pageSlug, onNavigate }) => {
 
   const handleActionClick = (link?: string) => {
     if (!link) return;
-    if (link.startsWith('http://') || link.startsWith('https://')) {
-      window.open(link, '_blank');
+    if (link.startsWith('http://') || link.startsWith('https://') || link.startsWith('tel:') || link.startsWith('mailto:')) {
+      if (link.startsWith('http')) window.open(link, '_blank', 'noopener,noreferrer');
+      else window.location.href = link;
+    } else if (link.includes(':')) {
+      const [view, ...rest] = link.split(':');
+      onNavigate(view, rest.join(':'));
     } else {
       onNavigate(link);
     }
+  };
+
+  const getSectionStyle = (section: PageSection): React.CSSProperties => {
+    const imageOpacity = Math.max(0, Math.min(100, Number(section.backgroundImageOpacity ?? 100))) / 100;
+    const overlayAlpha = Math.max(0, Math.min(1, 1 - imageOpacity));
+    return {
+      backgroundColor: section.backgroundColor || undefined,
+      color: section.textColor || undefined,
+      borderRadius: section.borderRadiusPx != null ? `${section.borderRadiusPx}px` : undefined,
+      paddingTop: section.paddingTopPx != null ? `${section.paddingTopPx}px` : undefined,
+      paddingBottom: section.paddingBottomPx != null ? `${section.paddingBottomPx}px` : undefined,
+      paddingInline: section.paddingInlinePx != null ? `${section.paddingInlinePx}px` : undefined,
+      minHeight: section.minHeightPx ? `${section.minHeightPx}px` : undefined,
+      textAlign: section.contentAlign || undefined,
+      width: section.fullWidth ? '100%' : `${Math.max(20, Math.min(100, Number(section.widthPercent ?? 100)))}%`,
+      maxWidth: section.fullWidth || section.maxWidthPx === 0 ? 'none' : `${Number(section.maxWidthPx || 1280)}px`,
+      marginInline: 'auto',
+      ['--builder-cols' as any]: String(section.desktopColumns || 3),
+      ['--builder-mobile-cols' as any]: String(section.mobileColumns || 1),
+      ['--builder-gap' as any]: `${section.gapPx ?? 16}px`,
+      ['--builder-item-radius' as any]: `${section.itemRadiusPx ?? 10}px`,
+      ['--builder-image-size' as any]: `${section.imageSizePx ?? 72}px`,
+      ...(section.imageUrl && section.imageMode !== 'full' && section.imageMode !== 'side' && section.imageMode !== 'contain'
+        ? {
+            backgroundImage: `linear-gradient(rgba(0,0,0,${overlayAlpha}), rgba(0,0,0,${overlayAlpha})), url(${section.imageUrl})`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center'
+          }
+        : {})
+    };
+  };
+
+  const renderSectionItems = (section: PageSection) => {
+    const items = [...(section.items || [])]
+      .filter(item => item.isVisible !== false)
+      .sort((a, b) => a.order - b.order)
+      .slice(0, section.maxItems && section.maxItems > 0 ? section.maxItems : undefined);
+    if (!items.length) return null;
+    return (
+      <div className="builder-section-grid mt-5">
+        {items.map(item => (
+          <article
+            key={item.id}
+            className="p-4 border border-neutral-200 bg-white/90 shadow-xs"
+            style={{ borderRadius: `${section.itemRadiusPx ?? 10}px` }}
+          >
+            {item.imageUrl && (
+              <img
+                src={item.imageUrl}
+                alt={item.title || section.title}
+                className="object-contain mb-3"
+                style={{ width: 'var(--builder-image-size)', height: 'var(--builder-image-size)' }}
+              />
+            )}
+            {item.subtitle && <span className="text-[10px] text-neutral-500">{item.subtitle}</span>}
+            {item.title && <h3 className="font-black text-sm text-neutral-900 mt-1">{item.title}</h3>}
+            {item.content && <p className="text-xs text-neutral-600 leading-relaxed mt-2 whitespace-pre-line">{item.content}</p>}
+            {(item.buttonText || item.link) && (
+              <button type="button" onClick={() => handleActionClick(item.link)} className="mt-3 px-3 py-2 bg-neutral-900 text-white rounded-lg text-[10px] font-bold cursor-pointer">
+                {item.buttonText || 'مشاهده'}
+              </button>
+            )}
+          </article>
+        ))}
+      </div>
+    );
   };
 
   const handleAddNewSection = () => {
@@ -197,7 +267,7 @@ export const PageView: React.FC<PageViewProps> = ({ pageSlug, onNavigate }) => {
       </section>
 
       {/* Page Sections Container */}
-      <div className="max-w-7xl mx-auto px-4 py-10 space-y-12">
+      <div className="page-sections-container w-full px-4 py-10 space-y-12">
         {sectionsToRender.length === 0 ? (
           <div className="p-12 text-center bg-white rounded-3xl border border-neutral-200 space-y-3">
             <FileText className="w-10 h-10 text-neutral-400 mx-auto" />
@@ -221,7 +291,8 @@ export const PageView: React.FC<PageViewProps> = ({ pageSlug, onNavigate }) => {
                         : 'border-neutral-800'
                     }`}
                     style={{
-                      backgroundImage: `url(${section.imageUrl})`,
+                      ...getSectionStyle(section),
+                      backgroundImage: `linear-gradient(rgba(0,0,0,.35), rgba(0,0,0,.35)), url(${section.imageUrl})`,
                       backgroundSize: 'cover',
                       backgroundPosition: 'center'
                     }}
@@ -284,6 +355,7 @@ export const PageView: React.FC<PageViewProps> = ({ pageSlug, onNavigate }) => {
                           </button>
                         </div>
                       )}
+                      {renderSectionItems(section)}
                     </div>
                   </div>
                 );
@@ -299,6 +371,7 @@ export const PageView: React.FC<PageViewProps> = ({ pageSlug, onNavigate }) => {
                         ? 'border-amber-400/80 shadow-md ring-2 ring-amber-400/20' 
                         : 'border-neutral-200/80 shadow-xs hover:shadow-md'
                     }`}
+                    style={getSectionStyle(section)}
                   >
                     {/* Live Toolbar */}
                     {isLiveEditActive && (
@@ -366,6 +439,7 @@ export const PageView: React.FC<PageViewProps> = ({ pageSlug, onNavigate }) => {
                           </button>
                         </div>
                       )}
+                      {renderSectionItems(section)}
                     </div>
                   </div>
                 );
@@ -380,6 +454,7 @@ export const PageView: React.FC<PageViewProps> = ({ pageSlug, onNavigate }) => {
                       ? 'border-amber-400/80 shadow-md ring-2 ring-amber-400/20' 
                       : 'border-neutral-200/80 shadow-xs hover:shadow-md'
                   }`}
+                  style={getSectionStyle(section)}
                 >
                   {/* Live Section Action Toolbar (Float overlay) */}
                   {isLiveEditActive && (
@@ -477,6 +552,7 @@ export const PageView: React.FC<PageViewProps> = ({ pageSlug, onNavigate }) => {
                             </button>
                           </div>
                         )}
+                        {renderSectionItems(section)}
                       </div>
 
                       {/* Image Column */}
@@ -521,32 +597,6 @@ export const PageView: React.FC<PageViewProps> = ({ pageSlug, onNavigate }) => {
           </div>
         )}
 
-        {/* Bottom Trust & Contact Banner */}
-        <div className="p-8 rounded-3xl bg-neutral-900 text-white flex flex-col md:flex-row items-center justify-between gap-6 shadow-xl">
-          <div className="space-y-2 text-center md:text-right">
-            <h3 className="font-black text-base text-white flex items-center justify-center md:justify-start gap-2">
-              <ShieldCheck className="w-5 h-5 text-red-500" />
-              <span>نیاز به راهنمایی بیشتر یا استعلام قطعه خاصی دارید؟</span>
-            </h3>
-            <p className="text-xs text-neutral-400">
-              کارشناسان مهندسی فروش چین‌پارت آماده بررسی شماره شاسی و راهنمایی خرید قطعه متناسب با خودروی شما هستند.
-            </p>
-          </div>
-          <div className="flex items-center gap-3 shrink-0">
-            <button
-              onClick={() => onNavigate('part-request')}
-              className="px-5 py-3 bg-red-600 hover:bg-red-700 text-white font-bold text-xs rounded-xl transition-all shadow-md shadow-red-600/30"
-            >
-              ثبت استعلام شماره فنی
-            </button>
-            <button
-              onClick={() => onNavigate('shop')}
-              className="px-5 py-3 bg-neutral-800 hover:bg-neutral-700 text-neutral-200 font-bold text-xs rounded-xl transition-colors border border-neutral-700"
-            >
-              مشاهده فروشگاه
-            </button>
-          </div>
-        </div>
       </div>
 
       {/* Live Section Editor Modal */}

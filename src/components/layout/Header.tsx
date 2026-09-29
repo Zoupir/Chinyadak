@@ -178,7 +178,7 @@ export const Header: React.FC<HeaderProps> = ({
           >
             {category.nameFa}
           </button>
-          {(category.subcategories || []).slice(0, 5).map(sub => (
+          {(category.subcategories || []).map(sub => (
             <button
               key={sub.id}
               type="button"

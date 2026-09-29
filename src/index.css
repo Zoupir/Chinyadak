@@ -3812,3 +3812,693 @@ html[data-layout="marketplace-rtl"] .marketplace-brand-row.builder-section-grid 
     align-items: start;
   }
 }
+
+
+/* MOBEX VISUAL PARITY V1 */
+/* Final homepage geometry based on the supplied Mobex reference.
+   Kept as an override layer so Page Builder values still remain editable. */
+html[data-layout="marketplace-rtl"] .marketplace-rtl-home {
+  background: #fff !important;
+  color: #1f2937;
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-section {
+  width: min(1280px, calc(100% - 32px)) !important;
+  margin-inline: auto !important;
+  padding-top: 32px !important;
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-section-heading {
+  margin-bottom: 16px !important;
+  align-items: center !important;
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-section-heading h2 {
+  font-size: max(18px, calc(var(--site-base-font-size) * 1.15)) !important;
+  line-height: 1.35 !important;
+  letter-spacing: -.01em;
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-section-heading p {
+  margin-top: 5px !important;
+  color: #87909a !important;
+  line-height: 1.7;
+}
+
+/* Header density closer to the reference template. */
+@media (min-width: 1001px) {
+  html[data-layout="marketplace-rtl"] .marketplace-ref-topbar,
+  html[data-layout="marketplace-rtl"] .marketplace-ref-topbar .marketplace-ref-container {
+    min-height: 28px !important;
+  }
+
+  html[data-layout="marketplace-rtl"] .marketplace-ref-mainbar-inner {
+    min-height: 64px !important;
+    gap: 14px !important;
+  }
+
+  html[data-layout="marketplace-rtl"] .marketplace-ref-logo {
+    width: 156px !important;
+    min-width: 156px !important;
+    min-height: 42px !important;
+    height: 42px !important;
+    padding: 4px 8px !important;
+    border-radius: 4px !important;
+    box-shadow: 0 1px 5px rgba(0,0,0,.10) !important;
+  }
+
+  html[data-layout="marketplace-rtl"] .marketplace-ref-logo img {
+    max-width: 140px !important;
+    max-height: 33px !important;
+  }
+
+  html[data-layout="marketplace-rtl"] .marketplace-ref-search-wrap,
+  html[data-layout="marketplace-rtl"] .marketplace-ref-search,
+  html[data-layout="marketplace-rtl"] .marketplace-ref-search form,
+  html[data-layout="marketplace-rtl"] .marketplace-ref-search input {
+    height: 38px !important;
+  }
+
+  html[data-layout="marketplace-rtl"] .marketplace-ref-actions {
+    min-width: 245px !important;
+  }
+
+  html[data-layout="marketplace-rtl"] .marketplace-ref-actions > button {
+    min-height: 38px !important;
+    padding-inline: 8px !important;
+  }
+
+  html[data-layout="marketplace-rtl"] .marketplace-ref-nav-inner,
+  html[data-layout="marketplace-rtl"] .marketplace-ref-allcat,
+  html[data-layout="marketplace-rtl"] .marketplace-ref-garage,
+  html[data-layout="marketplace-rtl"] .marketplace-ref-nav-links button {
+    height: 40px !important;
+    min-height: 40px !important;
+  }
+}
+
+/* Hero: full-bleed image, compact car selector and large marketing copy. */
+html[data-layout="marketplace-rtl"] .marketplace-hero-shell {
+  width: 100% !important;
+  max-width: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-hero-banner {
+  min-height: 455px !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  background-position: center center !important;
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-hero-overlay {
+  background: linear-gradient(90deg, rgba(5,12,20,.08) 0%, rgba(5,12,20,.04) 40%, rgba(5,12,20,.48) 100%) !important;
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-hero-content {
+  right: auto !important;
+  left: max(34px, calc((100vw - 1280px) / 2 + 305px)) !important;
+  width: min(560px, 44vw) !important;
+  text-align: right !important;
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-hero-content h1 {
+  font-size: clamp(34px, 3.4vw, 54px) !important;
+  line-height: 1.12 !important;
+  margin-bottom: 12px !important;
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-hero-content p {
+  max-width: 520px !important;
+  line-height: 1.85 !important;
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-vehicle-finder {
+  right: max(24px, calc((100vw - 1280px) / 2 + 10px)) !important;
+  top: 50% !important;
+  bottom: auto !important;
+  transform: translateY(-50%) !important;
+  width: 278px !important;
+  padding: 18px !important;
+  border-radius: 4px !important;
+  background: rgba(255,255,255,.98) !important;
+  box-shadow: 0 12px 34px rgba(15,23,42,.20) !important;
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-vehicle-finder h3 {
+  font-size: 14px !important;
+  margin-bottom: 2px;
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-finder-grid {
+  gap: 7px !important;
+  margin-top: 11px;
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-finder-grid button {
+  min-height: 48px !important;
+  padding: 7px 9px !important;
+  border: 1px solid #e5e7eb !important;
+  border-radius: 2px !important;
+  background: #fafafa !important;
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-search-car {
+  min-height: 38px !important;
+  margin-top: 8px !important;
+  background: #f5a000 !important;
+  color: #111827 !important;
+  border-radius: 2px !important;
+}
+
+/* Featured categories: light full-width band with round icon tiles. */
+html[data-layout="marketplace-rtl"] .marketplace-category-row {
+  padding-top: 22px !important;
+  padding-bottom: 24px !important;
+  background: #f4f5f6 !important;
+  box-shadow: 0 0 0 100vmax #f4f5f6;
+  clip-path: inset(0 -100vmax);
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-category-row .marketplace-section-heading {
+  justify-content: center !important;
+  text-align: center !important;
+  margin-bottom: 14px !important;
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-round-list {
+  grid-template-columns: repeat(9, minmax(0, 1fr)) !important;
+  gap: 16px !important;
+  padding: 0 10px !important;
+  border: 0 !important;
+  background: transparent !important;
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-round-list button {
+  min-width: 0;
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-round-icon {
+  width: 82px !important;
+  height: 82px !important;
+  margin-bottom: 8px !important;
+  background: #fff !important;
+  border: 1px solid #e2e5e8 !important;
+  box-shadow: 0 2px 7px rgba(15,23,42,.04);
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-round-icon img {
+  width: 54px !important;
+  height: 54px !important;
+}
+
+/* First promotional row. */
+html[data-layout="marketplace-rtl"] .marketplace-promo-grid.three {
+  grid-template-columns: repeat(3, minmax(0,1fr)) !important;
+  gap: 14px !important;
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-promo-grid.three .marketplace-promo-card {
+  min-height: 188px !important;
+  padding: 23px !important;
+  border-radius: 3px !important;
+  box-shadow: inset 0 0 0 999px rgba(0,0,0,.24) !important;
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-promo-card h3 {
+  max-width: 68% !important;
+  width: auto !important;
+  line-height: 1.28 !important;
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-promo-card small {
+  margin-top: 18px !important;
+  padding: 7px 10px !important;
+  border-radius: 2px !important;
+}
+
+/* Featured product area mirrors the compact 4x2 reference grid. */
+html[data-layout="marketplace-rtl"] .marketplace-section[data-section-key="featured-products"] {
+  padding-top: 34px !important;
+  padding-bottom: 34px !important;
+  background: #f7f7f7 !important;
+  box-shadow: 0 0 0 100vmax #f7f7f7;
+  clip-path: inset(0 -100vmax);
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-section[data-section-key="featured-products"] .marketplace-section-heading {
+  justify-content: center !important;
+  text-align: center !important;
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-section[data-section-key="featured-products"] .marketplace-section-heading > button {
+  position: absolute;
+  left: max(16px, calc((100vw - 1280px) / 2));
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-product-tabs {
+  margin: -3px auto 16px !important;
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-product-grid {
+  grid-template-columns: repeat(4, minmax(0,1fr)) !important;
+  gap: 9px !important;
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-ref-product-card {
+  min-height: 174px !important;
+  grid-template-columns: 42% 58% !important;
+  border: 1px solid #e1e4e8 !important;
+  border-radius: 3px !important;
+  background: #fff !important;
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-ref-product-image {
+  min-height: 172px !important;
+  padding: 11px 8px !important;
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-ref-product-image img {
+  height: 114px !important;
+  width: 100% !important;
+  object-fit: contain !important;
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-ref-product-info {
+  padding: 11px 10px 9px !important;
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-ref-product-title {
+  margin-top: 6px !important;
+  line-height: 1.55 !important;
+  -webkit-line-clamp: 3 !important;
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-ref-product-bottom {
+  padding-top: 7px;
+}
+
+/* Full-width brake/system banner. */
+html[data-layout="marketplace-rtl"] .marketplace-wide-banner {
+  width: 100% !important;
+  max-width: none !important;
+  min-height: 330px !important;
+  margin-top: 0 !important;
+  padding: 48px max(24px, calc((100vw - 1280px) / 2 + 20px)) !important;
+  background-position: center !important;
+  border-radius: 0 !important;
+  box-shadow: inset 0 0 0 999px rgba(0,0,0,.30) !important;
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-wide-banner > div {
+  max-width: 560px !important;
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-wide-banner h2 {
+  font-size: clamp(32px, 3.8vw, 52px) !important;
+}
+
+/* Manufacturers: dense logo rows like the source template. */
+html[data-layout="marketplace-rtl"] .marketplace-brands {
+  padding-top: 26px !important;
+  padding-bottom: 28px !important;
+  background: #fff !important;
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-brand-row {
+  grid-template-columns: repeat(var(--builder-cols, 12), minmax(0,1fr)) !important;
+  gap: 11px 8px !important;
+  padding: 4px 0 0 !important;
+  border: 0 !important;
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-brand-row button {
+  min-height: 78px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-brand-row button > span {
+  width: var(--builder-image-size, 58px) !important;
+  height: var(--builder-image-size, 58px) !important;
+  border-radius: 999px !important;
+  background: #fff !important;
+  border: 1px solid #e4e7ea !important;
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-brand-row img {
+  max-width: 72% !important;
+  max-height: 72% !important;
+}
+
+/* Parts brands: colourful, compact rectangular tiles. */
+html[data-layout="marketplace-rtl"] .marketplace-brand-tiles {
+  padding-top: 28px !important;
+  padding-bottom: 30px !important;
+  background: #f4f5f6 !important;
+  box-shadow: 0 0 0 100vmax #f4f5f6;
+  clip-path: inset(0 -100vmax);
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-logo-tiles {
+  grid-template-columns: repeat(var(--builder-cols, 8), minmax(0,1fr)) !important;
+  gap: 7px !important;
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-logo-tiles button {
+  min-height: 76px !important;
+  padding: 10px 12px !important;
+  border: 0 !important;
+  border-radius: 2px !important;
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-parts-brand-logo {
+  width: 44px !important;
+  height: 44px !important;
+  flex: 0 0 auto;
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-parts-brand-logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+/* Two large promotional banners. */
+html[data-layout="marketplace-rtl"] .marketplace-promo-grid.two {
+  grid-template-columns: repeat(2, minmax(0,1fr)) !important;
+  gap: 14px !important;
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-promo-medium {
+  min-height: 224px !important;
+  padding: 28px !important;
+}
+
+/* Weekly deals orange strip. */
+html[data-layout="marketplace-rtl"] .marketplace-deals {
+  margin-top: 34px !important;
+  padding: 26px 0 32px !important;
+  background: linear-gradient(100deg, #f4a000 0%, #e84e16 100%) !important;
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-deals .marketplace-section {
+  padding-top: 0 !important;
+}
+
+/* 2x2 Mobex promotional mosaic: wide/narrow then narrow/wide. */
+html[data-layout="marketplace-rtl"] .marketplace-feature-banners {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0,1fr)) !important;
+  grid-auto-rows: 220px !important;
+  gap: 12px !important;
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-feature-banners > button {
+  min-width: 0;
+  padding: 28px !important;
+  border-radius: 3px !important;
+  background-position: center !important;
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-feature-banners > button:nth-child(1),
+html[data-layout="marketplace-rtl"] .marketplace-feature-banners > button:nth-child(4) {
+  grid-column: span 2 !important;
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-feature-banners > button:nth-child(2),
+html[data-layout="marketplace-rtl"] .marketplace-feature-banners > button:nth-child(3) {
+  grid-column: span 1 !important;
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-feature-banners h3 {
+  font-size: clamp(20px, 2vw, 28px) !important;
+  max-width: 70% !important;
+}
+
+/* Maintenance products keep same card geometry as featured products. */
+html[data-layout="marketplace-rtl"] .marketplace-section[data-section-key="maintenance-products"] {
+  padding-bottom: 32px !important;
+}
+
+/* Testimonials. */
+html[data-layout="marketplace-rtl"] .marketplace-testimonials {
+  margin-top: 34px !important;
+  padding: 30px 0 34px !important;
+  background: #eaf4fb !important;
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-testimonials .marketplace-section {
+  padding-top: 0 !important;
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-testimonial-grid {
+  gap: 10px !important;
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-testimonial-grid article {
+  min-height: 132px !important;
+  padding: 15px !important;
+  border-radius: 3px !important;
+  box-shadow: 0 2px 8px rgba(15,23,42,.03);
+}
+
+/* Shipping band. */
+html[data-layout="marketplace-rtl"] .marketplace-shipping-banner {
+  width: min(1040px, calc(100% - 32px)) !important;
+  min-height: 128px !important;
+  margin: 28px auto 0 !important;
+  padding: 20px 42px !important;
+  border-radius: 3px !important;
+}
+
+/* Articles: intro plus three equal image cards. */
+html[data-layout="marketplace-rtl"] .marketplace-articles {
+  padding-bottom: 34px !important;
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-ref-article-grid {
+  grid-template-columns: .9fr repeat(3, minmax(0,1fr)) !important;
+  gap: 10px !important;
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-article-grid > button {
+  border-radius: 2px !important;
+  overflow: hidden;
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-article-grid img {
+  height: 150px !important;
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-article-grid > button > div {
+  padding: 12px !important;
+}
+
+/* Green benefits strip and footer. */
+html[data-layout="marketplace-rtl"] .marketplace-service-strip {
+  width: 100% !important;
+  max-width: none !important;
+  margin-top: 0 !important;
+  padding-inline: max(16px, calc((100vw - 1280px) / 2)) !important;
+  background: #08b934 !important;
+  border-radius: 0 !important;
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-service-strip > div {
+  min-height: 74px !important;
+  padding: 12px 14px !important;
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-ref-footer-main {
+  padding-top: 42px !important;
+  padding-bottom: 34px !important;
+  gap: 30px !important;
+}
+
+/* Tablet */
+@media (min-width: 701px) and (max-width: 1000px) {
+  html[data-layout="marketplace-rtl"] .marketplace-round-list {
+    grid-template-columns: repeat(6, minmax(0,1fr)) !important;
+  }
+
+  html[data-layout="marketplace-rtl"] .marketplace-product-grid {
+    grid-template-columns: repeat(2, minmax(0,1fr)) !important;
+  }
+
+  html[data-layout="marketplace-rtl"] .marketplace-brand-row {
+    grid-template-columns: repeat(min(var(--builder-cols, 6), 6), minmax(0,1fr)) !important;
+  }
+
+  html[data-layout="marketplace-rtl"] .marketplace-logo-tiles {
+    grid-template-columns: repeat(4, minmax(0,1fr)) !important;
+  }
+}
+
+/* Mobile visual parity while preserving the two-column commerce UX. */
+@media (max-width: 700px) {
+  html[data-layout="marketplace-rtl"] .marketplace-section {
+    width: 100% !important;
+    padding: 24px 12px 0 !important;
+  }
+
+  html[data-layout="marketplace-rtl"] .marketplace-hero-banner {
+    min-height: 540px !important;
+  }
+
+  html[data-layout="marketplace-rtl"] .marketplace-hero-content {
+    top: 30px !important;
+    right: 18px !important;
+    left: 18px !important;
+    width: auto !important;
+    transform: none !important;
+  }
+
+  html[data-layout="marketplace-rtl"] .marketplace-hero-content h1 {
+    font-size: 29px !important;
+    max-width: 95%;
+  }
+
+  html[data-layout="marketplace-rtl"] .marketplace-vehicle-finder {
+    right: 12px !important;
+    left: 12px !important;
+    bottom: 12px !important;
+    top: auto !important;
+    width: auto !important;
+    transform: none !important;
+    padding: 13px !important;
+  }
+
+  html[data-layout="marketplace-rtl"] .marketplace-finder-grid button {
+    min-height: 43px !important;
+  }
+
+  html[data-layout="marketplace-rtl"] .marketplace-category-row {
+    padding-bottom: 22px !important;
+  }
+
+  html[data-layout="marketplace-rtl"] .marketplace-round-list {
+    grid-template-columns: repeat(3, minmax(0,1fr)) !important;
+    gap: 14px 8px !important;
+  }
+
+  html[data-layout="marketplace-rtl"] .marketplace-round-icon {
+    width: 64px !important;
+    height: 64px !important;
+  }
+
+  html[data-layout="marketplace-rtl"] .marketplace-round-icon img {
+    width: 43px !important;
+    height: 43px !important;
+  }
+
+  html[data-layout="marketplace-rtl"] .marketplace-promo-grid.three,
+  html[data-layout="marketplace-rtl"] .marketplace-promo-grid.two {
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+  }
+
+  html[data-layout="marketplace-rtl"] .marketplace-promo-grid.three .marketplace-promo-card,
+  html[data-layout="marketplace-rtl"] .marketplace-promo-medium {
+    min-height: 170px !important;
+  }
+
+  html[data-layout="marketplace-rtl"] .marketplace-section[data-section-key="featured-products"] {
+    padding: 26px 10px 30px !important;
+  }
+
+  html[data-layout="marketplace-rtl"] .marketplace-section[data-section-key="featured-products"] .marketplace-section-heading > button {
+    position: static !important;
+  }
+
+  html[data-layout="marketplace-rtl"] .marketplace-product-grid {
+    grid-template-columns: repeat(2, minmax(0,1fr)) !important;
+    gap: 8px !important;
+  }
+
+  html[data-layout="marketplace-rtl"] .marketplace-ref-product-card {
+    min-height: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+  }
+
+  html[data-layout="marketplace-rtl"] .marketplace-ref-product-image {
+    width: 100% !important;
+    min-height: 132px !important;
+    border-left: 0 !important;
+    border-bottom: 1px solid #eef1f4;
+  }
+
+  html[data-layout="marketplace-rtl"] .marketplace-ref-product-image img {
+    height: 105px !important;
+  }
+
+  html[data-layout="marketplace-rtl"] .marketplace-wide-banner {
+    min-height: 250px !important;
+    padding: 28px 18px !important;
+  }
+
+  html[data-layout="marketplace-rtl"] .marketplace-wide-banner h2 {
+    font-size: 28px !important;
+  }
+
+  html[data-layout="marketplace-rtl"] .marketplace-brand-row {
+    grid-template-columns: repeat(var(--builder-mobile-cols, 3), minmax(0,1fr)) !important;
+    gap: 12px 8px !important;
+  }
+
+  html[data-layout="marketplace-rtl"] .marketplace-logo-tiles {
+    grid-template-columns: repeat(var(--builder-mobile-cols, 2), minmax(0,1fr)) !important;
+  }
+
+  html[data-layout="marketplace-rtl"] .marketplace-feature-banners {
+    grid-template-columns: 1fr !important;
+    grid-auto-rows: 176px !important;
+  }
+
+  html[data-layout="marketplace-rtl"] .marketplace-feature-banners > button {
+    grid-column: auto !important;
+    min-height: 176px;
+    padding: 20px !important;
+  }
+
+  html[data-layout="marketplace-rtl"] .marketplace-testimonial-grid {
+    grid-template-columns: repeat(2, minmax(0,1fr)) !important;
+  }
+
+  html[data-layout="marketplace-rtl"] .marketplace-shipping-banner {
+    width: calc(100% - 24px) !important;
+    min-height: 105px !important;
+    padding: 16px !important;
+  }
+
+  html[data-layout="marketplace-rtl"] .marketplace-shipping-banner span {
+    font-size: 18px !important;
+  }
+
+  html[data-layout="marketplace-rtl"] .marketplace-shipping-art {
+    width: 78px !important;
+    height: 78px !important;
+  }
+
+  html[data-layout="marketplace-rtl"] .marketplace-ref-article-grid {
+    grid-template-columns: repeat(2, minmax(0,1fr)) !important;
+    gap: 9px !important;
+  }
+
+  html[data-layout="marketplace-rtl"] .marketplace-ref-article-intro {
+    grid-column: 1 / -1 !important;
+  }
+
+  html[data-layout="marketplace-rtl"] .marketplace-article-grid img {
+    height: 112px !important;
+  }
+
+  html[data-layout="marketplace-rtl"] .marketplace-service-strip {
+    grid-template-columns: repeat(2, minmax(0,1fr)) !important;
+    padding-inline: 8px !important;
+  }
+}

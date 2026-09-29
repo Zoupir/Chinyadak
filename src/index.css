@@ -3988,7 +3988,7 @@ html[data-layout="marketplace-rtl"] .marketplace-category-row .marketplace-secti
 }
 
 html[data-layout="marketplace-rtl"] .marketplace-round-list {
-  grid-template-columns: repeat(9, minmax(0, 1fr)) !important;
+  grid-template-columns: repeat(var(--builder-cols, 9), minmax(0, 1fr)) !important;
   gap: 16px !important;
   padding: 0 10px !important;
   border: 0 !important;
@@ -4015,8 +4015,8 @@ html[data-layout="marketplace-rtl"] .marketplace-round-icon img {
 
 /* First promotional row. */
 html[data-layout="marketplace-rtl"] .marketplace-promo-grid.three {
-  grid-template-columns: repeat(3, minmax(0,1fr)) !important;
-  gap: 14px !important;
+  grid-template-columns: repeat(var(--builder-cols, 3), minmax(0,1fr)) !important;
+  gap: var(--builder-gap, 14px) !important;
 }
 
 html[data-layout="marketplace-rtl"] .marketplace-promo-grid.three .marketplace-promo-card {
@@ -4064,8 +4064,8 @@ html[data-layout="marketplace-rtl"] .marketplace-product-tabs {
 }
 
 html[data-layout="marketplace-rtl"] .marketplace-product-grid {
-  grid-template-columns: repeat(4, minmax(0,1fr)) !important;
-  gap: 9px !important;
+  grid-template-columns: repeat(var(--builder-cols, 4), minmax(0,1fr)) !important;
+  gap: var(--builder-gap, 9px) !important;
 }
 
 html[data-layout="marketplace-rtl"] .marketplace-ref-product-card {
@@ -4191,8 +4191,8 @@ html[data-layout="marketplace-rtl"] .marketplace-parts-brand-logo img {
 
 /* Two large promotional banners. */
 html[data-layout="marketplace-rtl"] .marketplace-promo-grid.two {
-  grid-template-columns: repeat(2, minmax(0,1fr)) !important;
-  gap: 14px !important;
+  grid-template-columns: repeat(var(--builder-cols, 2), minmax(0,1fr)) !important;
+  gap: var(--builder-gap, 14px) !important;
 }
 
 html[data-layout="marketplace-rtl"] .marketplace-promo-medium {
@@ -4214,7 +4214,7 @@ html[data-layout="marketplace-rtl"] .marketplace-deals .marketplace-section {
 /* 2x2 Mobex promotional mosaic: wide/narrow then narrow/wide. */
 html[data-layout="marketplace-rtl"] .marketplace-feature-banners {
   display: grid !important;
-  grid-template-columns: repeat(3, minmax(0,1fr)) !important;
+  grid-template-columns: repeat(var(--builder-cols, 3), minmax(0,1fr)) !important;
   grid-auto-rows: 220px !important;
   gap: 12px !important;
 }
@@ -4258,7 +4258,8 @@ html[data-layout="marketplace-rtl"] .marketplace-testimonials .marketplace-secti
 }
 
 html[data-layout="marketplace-rtl"] .marketplace-testimonial-grid {
-  gap: 10px !important;
+  grid-template-columns: repeat(var(--builder-cols, 4), minmax(0,1fr)) !important;
+  gap: var(--builder-gap, 10px) !important;
 }
 
 html[data-layout="marketplace-rtl"] .marketplace-testimonial-grid article {
@@ -4283,7 +4284,7 @@ html[data-layout="marketplace-rtl"] .marketplace-articles {
 }
 
 html[data-layout="marketplace-rtl"] .marketplace-ref-article-grid {
-  grid-template-columns: .9fr repeat(3, minmax(0,1fr)) !important;
+  grid-template-columns: .9fr repeat(var(--builder-cols, 3), minmax(0,1fr)) !important;
   gap: 10px !important;
 }
 
@@ -4383,7 +4384,7 @@ html[data-layout="marketplace-rtl"] .marketplace-ref-footer-main {
   }
 
   html[data-layout="marketplace-rtl"] .marketplace-round-list {
-    grid-template-columns: repeat(3, minmax(0,1fr)) !important;
+    grid-template-columns: repeat(var(--builder-mobile-cols, 3), minmax(0,1fr)) !important;
     gap: 14px 8px !important;
   }
 
@@ -4417,7 +4418,7 @@ html[data-layout="marketplace-rtl"] .marketplace-ref-footer-main {
   }
 
   html[data-layout="marketplace-rtl"] .marketplace-product-grid {
-    grid-template-columns: repeat(2, minmax(0,1fr)) !important;
+    grid-template-columns: repeat(var(--builder-mobile-cols, 2), minmax(0,1fr)) !important;
     gap: 8px !important;
   }
 

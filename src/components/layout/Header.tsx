@@ -116,20 +116,22 @@ export const Header: React.FC<HeaderProps> = ({
     }
   };
 
+  const fallbackHeaderMenus: MenuItem[] = [
+    { id: 'header-categories', title: 'دسته‌بندی قطعات خودرو', link: 'shop', kind: 'categories', isVisible: true },
+    { id: 'header-brands', title: 'برندهای خودرو', link: 'shop', kind: 'brands', isVisible: true },
+    ...((settings.navigationMenus && settings.navigationMenus.length > 0)
+      ? settings.navigationMenus
+      : [
+          { id: 'm1', title: 'قطعات مصرفی و سرویس دوره‌ای', link: 'shop:maintenance', badge: 'سرویس', kind: 'system' as const },
+          { id: 'm2', title: 'درخواست استعلام قطعه', link: 'part-request', badge: 'سریع', kind: 'system' as const },
+          { id: 'm3', title: 'وبلاگ و آموزش', link: 'blog', kind: 'system' as const }
+        ])
+  ];
+
   const headerMenus: MenuItem[] = (
     settings.headerMenus && settings.headerMenus.length > 0
       ? settings.headerMenus
-      : [
-          { id: 'header-categories', title: 'دسته‌بندی قطعات خودرو', link: 'shop', kind: 'categories', isVisible: true },
-          { id: 'header-brands', title: 'برندهای خودرو', link: 'shop', kind: 'brands', isVisible: true },
-          ...((settings.navigationMenus && settings.navigationMenus.length > 0)
-            ? settings.navigationMenus
-            : [
-                { id: 'm1', title: 'قطعات مصرفی و سرویس دوره‌ای', link: 'shop:maintenance', badge: 'سرویس' },
-                { id: 'm2', title: 'درخواست استعلام قطعه', link: 'part-request', badge: 'سریع' },
-                { id: 'm3', title: 'وبلاگ و آموزش', link: 'blog' }
-              ])
-        ]
+      : fallbackHeaderMenus
   ).filter(item => item.isVisible !== false);
 
   const isAuthenticated = Boolean(currentCustomer || adminAuth.isAuthenticated);

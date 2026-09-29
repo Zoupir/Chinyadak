@@ -64,9 +64,22 @@ const run = async () => {
   assert(productHtml.includes('"@type":"Product"'), 'Product JSON-LD was not server-rendered.');
 
   const sitemap = await (await request('/sitemap.xml')).text();
-  assert(sitemap.includes('/product/'), 'Sitemap is missing products.');
-  assert(sitemap.includes('/category/'), 'Sitemap is missing categories.');
-  assert(sitemap.includes('/article/'), 'Sitemap is missing articles.');
+  assert(sitemap.includes('/sitemap-products-1.xml'), 'Sitemap index is missing product sitemap.');
+  assert(sitemap.includes('/sitemap-categories-1.xml'), 'Sitemap index is missing category sitemap.');
+  assert(sitemap.includes('/sitemap-articles-1.xml'), 'Sitemap index is missing article sitemap.');
+
+  const productSitemap = await (await request('/sitemap-products-1.xml')).text();
+  const categorySitemap = await (await request('/sitemap-categories-1.xml')).text();
+  const articleSitemap = await (await request('/sitemap-articles-1.xml')).text();
+  assert(productSitemap.includes('/product/'), 'Product sitemap is missing product URLs.');
+  assert(categorySitemap.includes('/category/'), 'Category sitemap is missing category URLs.');
+  assert(articleSitemap.includes('/article/'), 'Article sitemap is missing article URLs.');
+
+  const runtimeSeo = await json<{ meta: any }>(
+    '/api/seo/runtime?path=' + encodeURIComponent('/product/' + product.slug)
+  );
+  assert(runtimeSeo.data.meta?.canonical?.includes('/product/'), 'Runtime SEO canonical is invalid.');
+  assert.equal(runtimeSeo.data.meta?.ogType, 'product');
 
   const robots = await (await request('/robots.txt')).text();
   assert(robots.includes('Sitemap:'), 'robots.txt is missing sitemap declaration.');
@@ -83,6 +96,19 @@ const run = async () => {
   });
   const adminCookie = cookieFrom(adminLogin.response);
   assert.equal(adminLogin.data.admin.role, 'super_admin');
+
+  const seoSummary = await json<{ summary: any; settings: any }>('/api/seo/summary', {
+    headers: cookieHeaders(adminCookie)
+  });
+  assert(seoSummary.data.settings?.modules?.meta, 'TakRank SEO meta module is not enabled.');
+  assert.equal(typeof seoSummary.data.summary?.openIssues, 'number');
+
+  const seoWorkspace = await json<{ entity: any; analysis: any }>(
+    '/api/seo/entities/product/' + encodeURIComponent(product.id),
+    { headers: cookieHeaders(adminCookie) }
+  );
+  assert.equal(seoWorkspace.data.entity?.id, product.id);
+  assert.equal(typeof seoWorkspace.data.analysis?.score, 'number');
 
   const admins = await json<{ admins: any[] }>('/api/admin-data/admins', {
     headers: cookieHeaders(adminCookie)

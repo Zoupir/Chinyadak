@@ -11,6 +11,7 @@
     "clean": "rm -rf dist server.js",
     "lint": "tsc --noEmit",
     "db:seed": "tsx scripts/seed-catalog.ts",
+    "db:seed-demo": "tsx scripts/seed-demo-data.ts",
     "payments:release-expired": "tsx scripts/release-expired-reservations.ts",
     "test:smoke": "tsx scripts/smoke-test.ts",
     "db:wait": "tsx scripts/wait-for-db.ts",

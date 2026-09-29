@@ -85,6 +85,34 @@ export interface VehicleFitment {
   notes?: string;
 }
 
+export interface ImageSeoMeta {
+  alt: string;
+  title?: string;
+  caption?: string;
+  description?: string;
+}
+
+export interface SeoEntityDraft {
+  seoTitle?: string;
+  metaDescription?: string;
+  focusKeyword?: string;
+  secondaryKeywords?: string[];
+  canonicalUrl?: string;
+  robotsIndex?: boolean;
+  robotsFollow?: boolean;
+  ogTitle?: string;
+  ogDescription?: string;
+  ogImageUrl?: string;
+  twitterTitle?: string;
+  twitterDescription?: string;
+  twitterImageUrl?: string;
+  schemaType?: string;
+  cornerstone?: boolean;
+  breadcrumbTitle?: string;
+  hreflang?: Array<{ lang: string; url: string }>;
+  images?: Record<string, ImageSeoMeta>;
+}
+
 export interface Product {
   id: string;
   slug: string;
@@ -127,6 +155,7 @@ export interface Product {
   vehicleBrandIds?: string[]; // IDs of brands this product fits
   complementPartIds?: string[]; // Cross-sell: مثلا واترپمپ -> ترموستات، ضدیخ
   relatedPartIds?: string[];
+  seo?: SeoEntityDraft;
 }
 
 export interface GarageCar {
@@ -235,6 +264,7 @@ export interface Article {
   relatedModelIds: string[];
   relatedProductIds: string[];
   faq: { q: string; a: string }[];
+  seo?: SeoEntityDraft;
 }
 
 export interface PartRequest {
@@ -479,6 +509,7 @@ export interface SiteSettings {
   /** Mobile catalog preferences. */
   mobileProductColumns?: 1 | 2;
   mobileFooterColumns?: 1 | 2;
+  relatedProductsCount?: number;
   borderRadius?: 'sharp' | 'normal' | 'rounded' | 'full';
   themeRadiusPx?: number;
   headerStyle?: 'light' | 'dark' | 'primary';
@@ -584,6 +615,12 @@ export interface PageSection {
   gapPx?: number;
   minHeightPx?: number;
   contentAlign?: 'right' | 'center' | 'left';
+  widthPercent?: number;
+  maxWidthPx?: number;
+  maxItems?: number;
+  imageSizePx?: number;
+  backgroundImageOpacity?: number;
+  itemAspectRatio?: 'square' | 'landscape' | 'portrait' | 'auto';
 
   /** Repeater content for testimonials, banners, feature cards and similar sections. */
   items?: PageSectionItem[];
@@ -597,4 +634,5 @@ export interface SitePage {
   sections: PageSection[];
   isSystem?: boolean;
   updatedAt: string;
+  seo?: SeoEntityDraft;
 }

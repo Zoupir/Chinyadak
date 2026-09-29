@@ -388,8 +388,37 @@ export const writeAppSetting = async (key: string, value: unknown): Promise<void
   );
 };
 
-export const getSeoSettings = async (): Promise<SeoSettings> =>
-  mergeSettings(await readAppSetting<any>('takrank_seo_settings', {}));
+export const getSeoSettings = async (): Promise<SeoSettings> => {
+  const stored = await readAppSetting<any>('takrank_seo_settings', null);
+  if (stored && typeof stored === 'object') return mergeSettings(stored);
+
+  // One-time native migration from the simple SEO/site identity fields that
+  // existed in Chinyadak before TakRank SEO Native was introduced.
+  const legacy = await readAppSetting<any>('site_settings', {});
+  const migrated = mergeSettings({
+    global: {
+      siteTitle: String(legacy?.siteTitle || 'یدک استور').split('|')[0].trim(),
+      siteSlogan: String(legacy?.siteSlogan || ''),
+      metaTitle: String(legacy?.metaTitle || legacy?.siteTitle || ''),
+      metaDescription: String(legacy?.metaDescription || ''),
+      metaKeywords: String(legacy?.metaKeywords || ''),
+      ogTitle: String(legacy?.ogTitle || ''),
+      ogDescription: String(legacy?.ogDescription || ''),
+      ogImageUrl: String(legacy?.ogImageUrl || ''),
+      canonicalUrl: String(legacy?.canonicalUrl || ''),
+      indexRobots: legacy?.enableIndexRobots !== false
+    },
+    identity: {
+      organizationName: String(legacy?.siteTitle || 'یدک استور').split('|')[0].trim(),
+      logoUrl: String(legacy?.logoUrl || ''),
+      phone: String(legacy?.contactPhone || legacy?.supportPhone || ''),
+      email: String(legacy?.supportEmail || ''),
+      address: String(legacy?.address || '')
+    }
+  });
+  await writeAppSetting('takrank_seo_settings', migrated);
+  return migrated;
+};
 
 const safeStringArray = (value: unknown, max = 100): string[] =>
   (Array.isArray(value) ? value : [])

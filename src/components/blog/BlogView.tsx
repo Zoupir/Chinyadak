@@ -94,7 +94,7 @@ export const BlogView: React.FC<BlogViewProps> = ({ onNavigate }) => {
       )}
 
       {/* Articles Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="article-mobile-grid grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-6">
         {filteredArticles.map((article) => (
           <article
             key={article.id}
@@ -104,8 +104,9 @@ export const BlogView: React.FC<BlogViewProps> = ({ onNavigate }) => {
             <div>
               <div className="aspect-16/10 overflow-hidden bg-neutral-100 relative">
                 <img 
-                  src={article.imageUrl} 
-                  alt={article.title} 
+                  src={article.imageUrl}
+                  alt={article.seo?.images?.[article.imageUrl]?.alt || article.title}
+                  title={article.seo?.images?.[article.imageUrl]?.title || article.title}
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" 
                 />
                 <span className="absolute bottom-3 right-3 text-[10px] font-bold bg-neutral-900/90 text-white px-2.5 py-1 rounded-md backdrop-blur-xs">
@@ -113,7 +114,7 @@ export const BlogView: React.FC<BlogViewProps> = ({ onNavigate }) => {
                 </span>
               </div>
 
-              <div className="p-6 space-y-3 text-right">
+              <div className="p-3 sm:p-6 space-y-2 sm:space-y-3 text-right">
                 <div className="flex items-center gap-2 text-xs text-neutral-400">
                   <Clock className="w-3.5 h-3.5" />
                   <span>{article.readTimeMinutes} دقیقه مطالعه</span>
@@ -121,17 +122,17 @@ export const BlogView: React.FC<BlogViewProps> = ({ onNavigate }) => {
                   <span>{article.date}</span>
                 </div>
 
-                <h2 className="font-bold text-base text-neutral-900 group-hover:text-red-600 transition-colors line-clamp-2 leading-snug">
+                <h2 className="font-bold text-sm sm:text-base text-neutral-900 group-hover:text-red-600 transition-colors line-clamp-2 leading-snug">
                   {article.title}
                 </h2>
 
-                <p className="text-xs text-neutral-500 line-clamp-3 leading-relaxed">
+                <p className="hidden sm:block text-xs text-neutral-500 line-clamp-3 leading-relaxed">
                   {article.summary}
                 </p>
               </div>
             </div>
 
-            <div className="p-6 pt-0 border-t border-neutral-100 flex items-center justify-between text-xs font-bold text-red-600">
+            <div className="p-3 sm:p-6 pt-2 sm:pt-0 border-t border-neutral-100 flex items-center justify-between text-xs font-bold text-red-600">
               <span className="flex items-center gap-1.5 text-neutral-400 font-normal">
                 <User className="w-3.5 h-3.5" />
                 <span>{article.author}</span>

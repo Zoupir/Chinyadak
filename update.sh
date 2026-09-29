@@ -84,7 +84,14 @@ if [[ -n "$SELECTOR" ]]; then
       exit 1
     fi
   else
-    "$SELECTOR" restart --json --interpreter nodejs --app-root "$APP_ROOT" >/dev/null 2>&1 || true
+    if "$SELECTOR" restart --json --interpreter nodejs --app-root "$APP_ROOT" >/dev/null 2>&1; then
+      :
+    elif "$SELECTOR" start --json --interpreter nodejs --app-root "$APP_ROOT" >/dev/null 2>&1; then
+      :
+    else
+      echo "ERROR: build succeeded but CloudLinux could not start or restart the Node application."
+      exit 1
+    fi
   fi
 fi
 

@@ -4898,3 +4898,50 @@ html[data-layout="marketplace-rtl"] .marketplace-ref-footer-main {
     grid-template-columns: repeat(2, minmax(0,1fr)) !important;
   }
 }
+
+
+/* MOBEX DETAIL PASS V3 */
+html[data-layout="marketplace-rtl"] .marketplace-testimonial-head {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 8px;
+}
+html[data-layout="marketplace-rtl"] .marketplace-testimonial-head img,
+html[data-layout="marketplace-rtl"] .marketplace-testimonial-avatar {
+  width: 34px !important;
+  height: 34px !important;
+  flex: 0 0 34px;
+  border-radius: 999px;
+  object-fit: cover;
+}
+html[data-layout="marketplace-rtl"] .marketplace-testimonial-avatar {
+  display: grid;
+  place-items: center;
+  background: #eef2f7;
+  color: #334155;
+  font-size: 12px;
+  font-weight: 950;
+}
+html[data-layout="marketplace-rtl"] .marketplace-testimonial-head > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+html[data-layout="marketplace-rtl"] .marketplace-testimonial-head strong {
+  order: 2;
+  font-size: 9px !important;
+}
+html[data-layout="marketplace-rtl"] .marketplace-testimonial-head small {
+  order: 1;
+  font-size: 9px !important;
+  font-weight: 900;
+}
+@media (min-width: 701px) {
+  html[data-layout="marketplace-rtl"] .marketplace-ref-article-grid {
+    direction: ltr;
+  }
+  html[data-layout="marketplace-rtl"] .marketplace-ref-article-grid > * {
+    direction: rtl;
+  }
+}

@@ -84,7 +84,7 @@ const HOME_SECTION_DEFAULTS: PageSection[] = [
     { id: 'promo-large-3', title: 'قطعات تخصصی انتقال قدرت', subtitle: 'گیربکس و روغن', link: 'shop', isVisible: true, order: 3 },
     { id: 'promo-large-4', title: 'محصولات نگهداری و لوازم جانبی', subtitle: 'مراقبت خودرو', buttonText: 'مشاهده محصولات', link: 'shop', isVisible: true, order: 4 }
   ]},
-  { id: 'home-maintenance-products', sectionKey: 'maintenance-products', title: 'قطعات مصرفی و سرویس دوره‌ای', subtitle: 'انتخاب‌های سریع برای نگهداری اصولی خودرو', isVisible: true, order: 11, layout: 'grid', desktopColumns: 4, mobileColumns: 2, borderRadiusPx: 0, itemRadiusPx: 3, gapPx: 10, maxItems: 8, widthPercent: 100, maxWidthPx: 1280 },
+  { id: 'home-maintenance-products', sectionKey: 'maintenance-products', title: 'قطعات مصرفی و سرویس دوره‌ای', subtitle: 'انتخاب‌های سریع برای نگهداری اصولی خودرو', isVisible: false, order: 11, layout: 'grid', desktopColumns: 4, mobileColumns: 2, borderRadiusPx: 0, itemRadiusPx: 3, gapPx: 10, maxItems: 8, widthPercent: 100, maxWidthPx: 1280 },
   { id: 'home-testimonials', sectionKey: 'testimonials', title: 'نظر مشتریان ما', subtitle: 'تجربه خرید از فروشگاه تخصصی قطعات', isVisible: true, order: 12, layout: 'cards', desktopColumns: 4, mobileColumns: 2, borderRadiusPx: 0, itemRadiusPx: 3, gapPx: 10, fullWidth: true, widthPercent: 100, maxWidthPx: 0, items: [
     { id: 'testimonial-1', title: 'خریدار قطعات موتور', content: 'اصالت قطعه دقیق بود و خیلی سریع به دستم رسید.', isVisible: true, order: 1 },
     { id: 'testimonial-2', title: 'مشتری فروشگاه', content: 'قبل از خرید شماره فنی را بررسی کردند و قطعه کاملاً مناسب بود.', isVisible: true, order: 2 },
@@ -114,6 +114,25 @@ const PART_REQUEST_SECTION_DEFAULTS: PageSection[] = [
 
 const upgradeLegacyHomeSection = (section: PageSection): PageSection => {
   const key = section.sectionKey;
+  if (key === 'hero' && (!section.fullWidth || section.maxWidthPx !== 0)) {
+    return {
+      ...section,
+      fullWidth: true,
+      widthPercent: 100,
+      maxWidthPx: 0,
+      borderRadiusPx: 0,
+      paddingInlinePx: 0
+    };
+  }
+  if (
+    key === 'maintenance-products' &&
+    section.id === 'home-maintenance-products' &&
+    section.title === 'قطعات مصرفی و سرویس دوره‌ای' &&
+    section.order === 11 &&
+    section.imageUrl == null
+  ) {
+    return { ...section, isVisible: false };
+  }
   if (key === 'manufacturers' && (section.desktopColumns == null || section.desktopColumns === 6)) {
     return {
       ...section,

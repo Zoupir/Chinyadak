@@ -78,7 +78,7 @@ const HOME_SECTION_DEFAULTS: PageSection[] = [
     { id: 'promo-medium-2', title: 'قطعات موتور و سرویس تخصصی', subtitle: 'قطعات حیاتی موتور', buttonText: 'خرید کنید', link: 'shop', isVisible: true, order: 2 }
   ]},
   { id: 'home-weekly-deals', sectionKey: 'weekly-deals', title: 'بهترین پیشنهادهای این هفته', subtitle: 'فرصت محدود برای خرید قطعات منتخب', isVisible: true, order: 9, layout: 'grid', desktopColumns: 4, mobileColumns: 2, borderRadiusPx: 0, itemRadiusPx: 3, gapPx: 10, maxItems: 8, widthPercent: 100, maxWidthPx: 1280 },
-  { id: 'home-promo-large', sectionKey: 'promo-large', title: 'بنرهای اصلی', isVisible: true, order: 10, layout: 'grid', desktopColumns: 2, mobileColumns: 1, borderRadiusPx: 12, itemRadiusPx: 12, gapPx: 12, items: [
+  { id: 'home-promo-large', sectionKey: 'promo-large', title: 'بنرهای اصلی', isVisible: true, order: 10, layout: 'grid', desktopColumns: 3, mobileColumns: 1, borderRadiusPx: 0, itemRadiusPx: 3, gapPx: 12, widthPercent: 100, maxWidthPx: 1280, items: [
     { id: 'promo-large-1', title: 'چراغ‌ها و قطعات بدنه با تنوع کامل', subtitle: 'روشنایی و بدنه', buttonText: 'مشاهده محصولات', link: 'shop', isVisible: true, order: 1 },
     { id: 'promo-large-2', title: 'سرویس دوره‌ای مطمئن', subtitle: 'فیلترها', link: 'shop:maintenance', isVisible: true, order: 2 },
     { id: 'promo-large-3', title: 'قطعات تخصصی انتقال قدرت', subtitle: 'گیربکس و روغن', link: 'shop', isVisible: true, order: 3 },
@@ -143,6 +143,9 @@ const upgradeLegacyHomeSection = (section: PageSection): PageSection => {
       imageSizePx: section.imageSizePx || 68,
       gapPx: section.gapPx ?? 14
     };
+  }
+  if (key === 'promo-large' && (section.desktopColumns == null || section.desktopColumns === 2)) {
+    return { ...section, desktopColumns: 3, mobileColumns: section.mobileColumns || 1, itemRadiusPx: section.itemRadiusPx ?? 3 };
   }
   if (key === 'articles' && section.mobileColumns === 1) {
     return { ...section, mobileColumns: 2, maxItems: section.maxItems || 3 };

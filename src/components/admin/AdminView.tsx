@@ -67,6 +67,7 @@ import { InvoiceModal } from '../orders/InvoiceModal';
 import { RichTextEditor } from '../common/RichTextEditor';
 import { ImageUploadInput } from '../common/ImageUploadInput';
 import { MultiImageUploadInput } from '../common/MultiImageUploadInput';
+import { AdminEntitySeoPanel } from './AdminEntitySeoPanel';
 
 interface AdminViewProps {
   onExitToStore?: () => void;
@@ -344,7 +345,8 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
       genuineVsFakeNotes: 'هولوگرام شرکتی و بارکد ردیابی',
       fitments: newProductForm.fitments || [
         { id: 'fit-gen', brandId: 'kmc', brandName: 'KMC', modelId: 'kmc-j7', modelName: 'KMC J7', yearFrom: 1401, yearTo: 1404, engine: '1.5 Turbo' }
-      ]
+      ],
+      seo: newProductForm.seo
     };
 
     addProduct(newProd);
@@ -1591,7 +1593,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
       ========================================================================= */}
       {isNewProductModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
-          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto space-y-4 text-right shadow-2xl">
+          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-4xl w-full max-h-[90vh] overflow-y-auto space-y-4 text-right shadow-2xl">
             <div className="flex items-center justify-between pb-3 border-b border-neutral-100">
               <h3 className="font-bold text-base text-neutral-900">تعریف قطعه جدید در انبار</h3>
               <button onClick={() => setIsNewProductModalOpen(false)} className="text-neutral-400 hover:text-neutral-700">✕</button>
@@ -1720,6 +1722,14 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
                 />
               </div>
 
+              <AdminEntitySeoPanel
+                entityType="product"
+                entityTitle={newProductForm.nameFa || ''}
+                value={newProductForm.seo}
+                images={newProductForm.images || []}
+                onChange={(seo) => setNewProductForm({ ...newProductForm, seo })}
+              />
+
               <div className="flex gap-2 pt-4">
                 <button
                   type="button"
@@ -1745,7 +1755,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
       ========================================================================= */}
       {editingProduct && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
-          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto space-y-4 text-right shadow-2xl">
+          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-4xl w-full max-h-[90vh] overflow-y-auto space-y-4 text-right shadow-2xl">
             <div className="flex items-center justify-between pb-3 border-b border-neutral-100">
               <h3 className="font-bold text-base text-neutral-900">ویرایش قطعه: {editingProduct.nameFa}</h3>
               <button onClick={() => setEditingProduct(null)} className="text-neutral-400 hover:text-neutral-700">✕</button>
@@ -1961,6 +1971,15 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
                 />
               </div>
 
+              <AdminEntitySeoPanel
+                entityType="product"
+                entityId={editingProduct.id}
+                entityTitle={editingProduct.nameFa}
+                value={editingProduct.seo}
+                images={editingProduct.images || []}
+                onChange={(seo) => setEditingProduct({ ...editingProduct, seo })}
+              />
+
               <div className="flex gap-2 pt-4">
                 <button
                   type="button"
@@ -1986,7 +2005,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
       ========================================================================= */}
       {isNewProductModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
-          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto space-y-4 text-right shadow-2xl">
+          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-4xl w-full max-h-[90vh] overflow-y-auto space-y-4 text-right shadow-2xl">
             <div className="flex items-center justify-between pb-3 border-b border-neutral-100">
               <h3 className="font-bold text-base text-neutral-900 flex items-center gap-2">
                 <Package className="w-5 h-5 text-red-600" />

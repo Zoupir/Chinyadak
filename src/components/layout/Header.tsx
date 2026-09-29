@@ -229,7 +229,7 @@ export const Header: React.FC<HeaderProps> = ({
               {settings.logoUrl ? (
                 <img src={settings.logoUrl} alt={settings.siteTitle} />
               ) : (
-                <span>{settings.siteTitle?.split('|')[0]?.trim() || 'یدک استور'}</span>
+                <span>{settings.siteTitle?.split('|')[0]?.trim() || 'فروشگاه'}</span>
               )}
             </button>
 
@@ -582,7 +582,7 @@ export const Header: React.FC<HeaderProps> = ({
                 </div>
                 <div>
                   <span className="font-black text-base tracking-tight text-neutral-900 leading-none">
-                    {settings.siteTitle?.split('|')[0]?.trim() || 'چین‌پارت'}
+                    {settings.siteTitle?.split('|')[0]?.trim() || 'فروشگاه'}
                   </span>
                   <span className="text-[9px] bg-red-600 text-white font-bold px-1 rounded-sm mr-1">
                     PRO
@@ -691,7 +691,7 @@ export const Header: React.FC<HeaderProps> = ({
               <div>
                 <div className="flex items-center gap-1.5">
                   <span className="font-black text-xl tracking-tight text-neutral-900 group-hover:text-red-600 transition-colors">
-                    {settings.siteTitle?.split('|')[0]?.trim() || 'چین‌پارت'}
+                    {settings.siteTitle?.split('|')[0]?.trim() || 'فروشگاه'}
                   </span>
                   <span className="text-[10px] bg-red-600 text-white font-black px-1.5 py-0.2 rounded-sm uppercase tracking-wider">
                     PRO

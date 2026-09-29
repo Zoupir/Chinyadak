@@ -383,7 +383,10 @@ export const AdminPagesTab: React.FC<AdminPagesTabProps> = ({ onNavigate }) => {
               entityId={selectedPage.id}
               entityTitle={selectedPage.title}
               value={pageSeoDrafts[selectedPage.id] || selectedPage.seo}
-              images={selectedPage.sections.map(section => section.imageUrl || '').filter(Boolean)}
+              images={selectedPage.sections.flatMap(section => [
+                section.imageUrl || '',
+                ...(section.items || []).map(item => item.imageUrl || '')
+              ]).filter(Boolean)}
               onChange={(seo) => setPageSeoDrafts(prev => ({ ...prev, [selectedPage.id]: seo }))}
             />
             <div className="flex justify-end">

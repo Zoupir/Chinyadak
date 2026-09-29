@@ -136,6 +136,8 @@ export const AdminSeoTab: React.FC = () => {
   const [workspace, setWorkspace] = useState<any>(null);
   const [metaForm, setMetaForm] = useState<any>(null);
   const [linkSuggestions, setLinkSuggestions] = useState<any[]>([]);
+  const [keywordMap, setKeywordMap] = useState<any[]>([]);
+  const [keywordOwnerForm, setKeywordOwnerForm] = useState({ query: '', preferredUrl: '', note: '' });
   const [aiPackage, setAiPackage] = useState<any>(null);
   const [aiInstructions, setAiInstructions] = useState('');
 
@@ -320,6 +322,10 @@ export const AdminSeoTab: React.FC = () => {
     setTab(nextTab);
     try {
       if (nextTab === 'audit') await loadAudit();
+      if (nextTab === 'links') {
+        const data = await api<any>('/api/seo/keywords');
+        setKeywordMap(data.items || []);
+      }
       if (nextTab === 'schema') {
         const data = await api<any>('/api/seo/schema/audit');
         setSchemaIssues(data.issues || []);
@@ -652,6 +658,66 @@ export const AdminSeoTab: React.FC = () => {
                   ))}
                   {!linkSuggestions.length && <Card><div className="text-xs text-neutral-500">پیشنهاد معتبر وجود ندارد؛ Graph را بازسازی کنید یا Focus Keyword/محتوا را دقیق‌تر کنید.</div></Card>}
                 </div>
+
+                <Card title="Keyword → URL Map">
+                  <p className="text-[10px] text-neutral-500 mb-3">
+                    مالک اصلی یک عبارت را مشخص کنید تا Cannibalization و پیشنهاد لینک داخلی URL اشتباه نسازند.
+                  </p>
+                  <div className="grid md:grid-cols-[1fr_1.3fr_1fr_auto] gap-2">
+                    <input
+                      value={keywordOwnerForm.query}
+                      onChange={e => setKeywordOwnerForm({ ...keywordOwnerForm, query: e.target.value })}
+                      placeholder="کلمه کلیدی"
+                      className="p-2.5 border border-neutral-300 rounded-xl text-xs"
+                    />
+                    <input
+                      dir="ltr"
+                      value={keywordOwnerForm.preferredUrl}
+                      onChange={e => setKeywordOwnerForm({ ...keywordOwnerForm, preferredUrl: e.target.value })}
+                      placeholder="/product/..."
+                      className="p-2.5 border border-neutral-300 rounded-xl text-xs"
+                    />
+                    <input
+                      value={keywordOwnerForm.note}
+                      onChange={e => setKeywordOwnerForm({ ...keywordOwnerForm, note: e.target.value })}
+                      placeholder="یادداشت"
+                      className="p-2.5 border border-neutral-300 rounded-xl text-xs"
+                    />
+                    <button
+                      onClick={() => void run('keyword-owner', () => api('/api/seo/keywords/owner', {
+                        method: 'PUT',
+                        body: JSON.stringify(keywordOwnerForm)
+                      }), 'مالک عبارت ذخیره شد.').then(async () => {
+                        const data = await api<any>('/api/seo/keywords');
+                        setKeywordMap(data.items || []);
+                      })}
+                      className="px-4 py-2.5 bg-neutral-900 text-white rounded-xl text-xs font-bold"
+                    >
+                      ذخیره
+                    </button>
+                  </div>
+                  {workspace?.meta?.focusKeyword && (
+                    <button
+                      onClick={() => setKeywordOwnerForm({
+                        query: workspace.meta.focusKeyword,
+                        preferredUrl: workspace.entity.url,
+                        note: 'مالک URL از Workspace'
+                      })}
+                      className="mt-2 text-[10px] text-blue-700 font-bold"
+                    >
+                      استفاده از Focus Keyword همین صفحه
+                    </button>
+                  )}
+                  <div className="mt-4 max-h-60 overflow-y-auto divide-y divide-neutral-100">
+                    {keywordMap.map(row => (
+                      <div key={row.id} className="grid md:grid-cols-[1fr_1.5fr_1fr] gap-2 py-2 text-[10px]">
+                        <b>{row.query}</b>
+                        <span className="font-mono ltr text-left truncate">{row.preferredUrl}</span>
+                        <span className="text-neutral-500">{row.note || row.ownerSource}</span>
+                      </div>
+                    ))}
+                  </div>
+                </Card>
               </>
             )}
 

@@ -64,6 +64,7 @@ export interface SeoAnalysis {
   externalLinks: number;
   headings: number;
   imageCount: number;
+  missingImageAlt: number;
 }
 
 export interface SeoSettings {
@@ -829,13 +830,25 @@ const headingCount = (html: string): number => {
   return matches?.length || 0;
 };
 
-const imageCount = (entity: SeoEntity): number => {
-  const htmlCount = (String(entity.content || '').match(/<img\b/gi) || []).length;
-  if (entity.type === 'product') {
-    return Math.max(htmlCount, Array.isArray(entity.data.images) ? entity.data.images.length : 0);
-  }
-  return htmlCount + (entity.image ? 1 : 0);
+const imageAltStats = (entity: SeoEntity): { total: number; missingAlt: number } => {
+  const html = String(entity.content || '');
+  const tags = html.match(/<img\b[^>]*>/gi) || [];
+  const missingAlt = tags.filter(tag => {
+    const match = tag.match(/\balt\s*=\s*(["'])(.*?)\1/i);
+    return !match || !normalizeSeoText(match[2]);
+  }).length;
+  const structuredImages = entity.type === 'product' && Array.isArray(entity.data.images)
+    ? entity.data.images.length
+    : entity.image ? 1 : 0;
+  return {
+    total: Math.max(tags.length, structuredImages),
+    // Product/gallery components generate alt from the entity title at render
+    // time. Missing-alt here therefore refers only to raw HTML images.
+    missingAlt
+  };
 };
+
+const imageCount = (entity: SeoEntity): number => imageAltStats(entity).total;
 
 const analysisCheck = (
   key: string,
@@ -872,7 +885,8 @@ export const analyzeSeoEntity = async (
     : 0;
   const links = extractLinks(entity.content);
   const headings = headingCount(entity.content);
-  const images = imageCount(entity);
+  const imageStats = imageAltStats(entity);
+  const images = imageStats.total;
   const minimumWords = entity.type === 'product'
     ? settings.scoring.productMinimumWords
     : entity.type === 'article'
@@ -950,10 +964,10 @@ export const analyzeSeoEntity = async (
   ));
   checks.push(analysisCheck(
     'images',
-    'تصاویر و رسانه',
-    images > 0 ? 5 : 0,
+    'تصاویر و ALT',
+    images <= 0 ? 0 : imageStats.missingAlt > 0 ? 3 : 5,
     5,
-    images + ' تصویر شناسایی شد'
+    images + ' تصویر شناسایی شد' + (imageStats.missingAlt ? '؛ ' + imageStats.missingAlt + ' تصویر HTML بدون ALT' : '؛ ALT قابل قبول')
   ));
   checks.push(analysisCheck(
     'indexability',
@@ -972,7 +986,8 @@ export const analyzeSeoEntity = async (
     internalLinks: links.internal.length,
     externalLinks: links.external.length,
     headings,
-    imageCount: images
+    imageCount: images,
+    missingImageAlt: imageStats.missingAlt
   };
 };
 
@@ -1364,6 +1379,128 @@ const updateEntityMainContent = async (entity: SeoEntity, html: string): Promise
     return;
   }
   throw new Error('SEO_LINK_APPLY_UNSUPPORTED_ENTITY');
+};
+
+const escapeHtmlAttribute = (value: string): string =>
+  String(value || '')
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+
+export const optimizeEntityImageAlt = async (
+  type: SeoEntityType,
+  id: string,
+  actorId?: string
+) => {
+  const entity = await loadEntity(type, id);
+  if (!entity) throw new Error('SEO_ENTITY_NOT_FOUND');
+  if (!['article', 'product'].includes(entity.type)) throw new Error('IMAGE_SEO_ENTITY_UNSUPPORTED');
+
+  const meta = (await getSeoMetaRecord(entity.type, entity.id)) || deriveSeoMeta(entity);
+  const baseAlt = normalizeSeoText(meta.focusKeyword || entity.title).slice(0, 180) || 'تصویر';
+  const before = String(entity.content || '');
+  let changed = 0;
+  let sequence = 0;
+
+  const after = before.replace(/<img\b[^>]*>/gi, tag => {
+    sequence += 1;
+    const current = tag.match(/\balt\s*=\s*(["'])(.*?)\1/i);
+    if (current && normalizeSeoText(current[2])) return tag;
+    const alt = escapeHtmlAttribute(baseAlt + (sequence > 1 ? ' - ' + sequence : ''));
+    changed += 1;
+    if (current) {
+      return tag.replace(/\balt\s*=\s*(["'])(.*?)\1/i, 'alt="' + alt + '"');
+    }
+    return tag.replace(/\s*\/>$/, ' alt="' + alt + '" />').replace(/\s*>$/, ' alt="' + alt + '">');
+  });
+
+  if (changed > 0) {
+    await updateEntityMainContent(entity, after);
+    await writeSeoHistory(actorId, 'image_alt_optimize', entity.type, entity.id, { content: before }, { content: after, changed });
+    await markSeoGraphStale('image_alt_optimize');
+  }
+  return { ok: true, changed, content: after };
+};
+
+const headingSlug = (text: string, index: number): string => {
+  const normalized = normalizeSeoText(text)
+    .toLocaleLowerCase('fa-IR')
+    .replace(/[^\p{L}\p{N}]+/gu, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 80);
+  return normalized || 'section-' + (index + 1);
+};
+
+export const buildEntityToc = async (
+  type: SeoEntityType,
+  id: string,
+  apply = false,
+  actorId?: string
+) => {
+  const entity = await loadEntity(type, id);
+  if (!entity) throw new Error('SEO_ENTITY_NOT_FOUND');
+  if (!['article', 'product'].includes(entity.type)) throw new Error('TOC_ENTITY_UNSUPPORTED');
+
+  const settings = await getSeoSettings();
+  if (!settings.modules.toc || !settings.toc.enabled) throw new Error('TOC_DISABLED');
+
+  const before = String(entity.content || '');
+  const withoutOldToc = before.replace(/<nav\b[^>]*data-takrank-toc=["']1["'][^>]*>[\s\S]*?<\/nav>\s*/gi, '');
+  const headingMatches = Array.from(withoutOldToc.matchAll(/<h([2-4])\b([^>]*)>([\s\S]*?)<\/h\1>/gi));
+  const wordCount = words(withoutOldToc).length;
+
+  if (headingMatches.length < Number(settings.toc.minimumHeadings || 3)) {
+    throw new Error('TOC_NOT_ENOUGH_HEADINGS');
+  }
+  if (wordCount < Number(settings.toc.minimumWords || 700)) {
+    throw new Error('TOC_CONTENT_TOO_SHORT');
+  }
+
+  const used = new Set<string>();
+  const items: Array<{ level: number; id: string; title: string }> = [];
+  let rebuilt = '';
+  let cursor = 0;
+
+  headingMatches.forEach((match, index) => {
+    const start = match.index ?? 0;
+    rebuilt += withoutOldToc.slice(cursor, start);
+    const level = Number(match[1]);
+    const attrs = String(match[2] || '');
+    const title = normalizeSeoText(match[3]);
+    const existingId = attrs.match(/\bid\s*=\s*(["'])(.*?)\1/i)?.[2];
+    let headingId = existingId || headingSlug(title, index);
+    let suffix = 2;
+    while (used.has(headingId)) headingId = headingSlug(title, index) + '-' + suffix++;
+    used.add(headingId);
+    const nextAttrs = existingId ? attrs : attrs + ' id="' + escapeHtmlAttribute(headingId) + '"';
+    rebuilt += '<h' + level + nextAttrs + '>' + match[3] + '</h' + level + '>';
+    cursor = start + match[0].length;
+    items.push({ level, id: headingId, title });
+  });
+  rebuilt += withoutOldToc.slice(cursor);
+
+  const links = items.map(item =>
+    '<li data-level="' + item.level + '" style="margin-right:' + Math.max(0, item.level - 2) * 14 + 'px">' +
+      '<a href="#' + escapeHtmlAttribute(item.id) + '">' + escapeHtmlAttribute(item.title) + '</a></li>'
+  ).join('');
+
+  const body = settings.toc.collapsed
+    ? '<details><summary>فهرست مطالب</summary><ol>' + links + '</ol></details>'
+    : '<div><strong>فهرست مطالب</strong><ol>' + links + '</ol></div>';
+  const tocHtml = '<nav data-takrank-toc="1" aria-label="فهرست مطالب">' + body + '</nav>';
+  const firstHeadingIndex = rebuilt.search(/<h[2-4]\b/i);
+  const finalHtml = firstHeadingIndex >= 0
+    ? rebuilt.slice(0, firstHeadingIndex) + tocHtml + rebuilt.slice(firstHeadingIndex)
+    : tocHtml + rebuilt;
+
+  if (apply) {
+    await updateEntityMainContent(entity, finalHtml);
+    await writeSeoHistory(actorId, 'toc_apply', entity.type, entity.id, { content: before }, { content: finalHtml, items });
+    await markSeoGraphStale('toc_apply');
+  }
+
+  return { ok: true, applied: apply, items, tocHtml, content: finalHtml };
 };
 
 const sanitizeAnchor = (value: string): string =>

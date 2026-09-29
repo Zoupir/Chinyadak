@@ -136,6 +136,103 @@ export const Header: React.FC<HeaderProps> = ({
 
   const isAuthenticated = Boolean(currentCustomer || adminAuth.isAuthenticated);
 
+  if (settings.layoutPreset === 'marketplace-rtl') {
+    return (
+      <header className="marketplace-ref-header" dir="rtl">
+        <div className="marketplace-ref-topbar">
+          <div className="marketplace-ref-container">
+            <div className="marketplace-ref-top-message">
+              <span>{settings.announcementText || 'ارسال سریع، تضمین اصالت و پشتیبانی تخصصی قطعات خودرو'}</span>
+            </div>
+            <div className="marketplace-ref-top-links">
+              <button type="button" onClick={() => onNavigate('tracking')}>پیگیری سفارش</button>
+              <span>•</span>
+              <button type="button" onClick={() => onNavigate('blog')}>راهنما و مقالات</button>
+              <span>•</span>
+              <a href={`tel:${settings.contactPhone || ''}`}>{settings.contactPhone || 'تماس با ما'}</a>
+            </div>
+          </div>
+        </div>
+
+        <div className="marketplace-ref-mainbar">
+          <div className="marketplace-ref-container marketplace-ref-mainbar-inner">
+            <button type="button" className="marketplace-ref-logo" onClick={() => onNavigate('home')}>
+              {settings.logoUrl ? (
+                <img src={settings.logoUrl} alt={settings.siteTitle} />
+              ) : (
+                <span>{settings.siteTitle?.split('|')[0]?.trim() || 'یدک استور'}</span>
+              )}
+            </button>
+
+            <div className="marketplace-ref-search-wrap">
+              <div className="marketplace-ref-search-category">
+                <span>دسته‌بندی</span>
+                <ChevronDown className="w-3.5 h-3.5" />
+              </div>
+              <div className="marketplace-ref-search">
+                <SearchAutocomplete
+                  onSelectProduct={(id) => onNavigate('product', id)}
+                  onSelectModel={(id) => onNavigate('car-model', id)}
+                  onSelectCategory={(slug) => onNavigate('category', slug)}
+                  onSelectArticle={(id) => onNavigate('article', id)}
+                  onRequestPart={(q) => onNavigate('part-request', q)}
+                />
+              </div>
+            </div>
+
+            <div className="marketplace-ref-actions">
+              <button type="button" onClick={onOpenVehicleModal} title="خودروی من">
+                <Car className="w-4 h-4" />
+                <span>{selectedVehicle?.modelName || 'خودروی من'}</span>
+              </button>
+              <button type="button" onClick={() => onNavigate('wishlist')} title="علاقه‌مندی‌ها">
+                <Heart className="w-4 h-4" />
+                <span>{wishlist.length}</span>
+              </button>
+              <button type="button" onClick={onOpenCartDrawer} className="marketplace-ref-cart" title="سبد خرید">
+                <ShoppingBag className="w-4 h-4" />
+                <span className="marketplace-ref-cart-label">سبد خرید</span>
+                <b>{cartCount}</b>
+              </button>
+              <button
+                type="button"
+                onClick={() => currentCustomer ? onNavigate('account') : adminAuth.isAuthenticated ? onNavigate('admin') : onOpenAuthModal?.('login')}
+                title="حساب کاربری"
+              >
+                <User className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <nav className="marketplace-ref-nav">
+          <div className="marketplace-ref-container marketplace-ref-nav-inner">
+            <button type="button" className="marketplace-ref-allcat" onClick={() => onNavigate('shop')}>
+              <Layers className="w-4 h-4" />
+              <span>همه دسته‌بندی‌ها</span>
+              <ChevronDown className="w-3.5 h-3.5" />
+            </button>
+
+            <div className="marketplace-ref-nav-links">
+              {headerMenus.slice(0, 7).map(item => (
+                <button key={item.id} type="button" onClick={() => handleMenuClick(item)}>
+                  {item.title}
+                  {item.badge && <small>{item.badge}</small>}
+                </button>
+              ))}
+            </div>
+
+            <button type="button" className="marketplace-ref-garage" onClick={onOpenVehicleModal}>
+              <Car className="w-4 h-4" />
+              <span>گاراژ من</span>
+              <ChevronDown className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </nav>
+      </header>
+    );
+  }
+
   return (
     <header className="site-header sticky top-0 z-40 bg-white border-b border-neutral-200 shadow-xs">
       

@@ -27,6 +27,7 @@ import {
 } from 'lucide-react';
 import { formatToman } from '../../utils/formatters';
 import { ShareButton } from '../common/ShareButton';
+import { MenuItem } from '../../types';
 
 interface HeaderProps {
   onOpenVehicleModal: () => void;
@@ -115,7 +116,7 @@ export const Header: React.FC<HeaderProps> = ({
     }
   };
 
-  const headerMenus = (
+  const headerMenus: MenuItem[] = (
     settings.headerMenus && settings.headerMenus.length > 0
       ? settings.headerMenus
       : [

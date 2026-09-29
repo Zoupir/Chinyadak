@@ -312,7 +312,11 @@ export const AdminMenusAndAttributes: React.FC = () => {
       { id: 'header-brands', title: 'برندهای خودرو', link: 'shop', kind: 'brands', isVisible: true },
       { id: 'header-maintenance', title: 'سرویس دوره‌ای', link: 'shop:maintenance', kind: 'system', badge: 'سرویس', isVisible: true },
       { id: 'header-request', title: 'استعلام قطعه', link: 'part-request', kind: 'system', badge: 'فوری', isVisible: true },
-      { id: 'header-blog', title: 'مقالات و آموزش', link: 'blog', kind: 'system', isVisible: true }
+      { id: 'header-blog', title: 'مقالات و آموزش', link: 'blog', kind: 'system', isVisible: true },
+      { id: 'header-cat-engine', title: 'قطعات موتور', link: 'category:engine', kind: 'category', parentId: 'header-categories', isVisible: true },
+      { id: 'header-cat-brakes', title: 'سیستم ترمز', link: 'category:brakes', kind: 'category', parentId: 'header-categories', isVisible: true },
+      { id: 'header-cat-filters', title: 'فیلترها و سرویس', link: 'category:filters', kind: 'category', parentId: 'header-categories', isVisible: true },
+      { id: 'header-cat-suspension', title: 'جلوبندی و تعلیق', link: 'category:suspension', kind: 'category', parentId: 'header-categories', isVisible: true }
     ];
     persistMenus(next, 'چیدمان استاندارد منو بازیابی شد.');
   };

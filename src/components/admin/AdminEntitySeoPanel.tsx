@@ -59,6 +59,7 @@ export const AdminEntitySeoPanel: React.FC<AdminEntitySeoPanelProps> = ({
   const [expanded, setExpanded] = useState(true);
   const [busy, setBusy] = useState('');
   const [score, setScore] = useState<number | null>(null);
+  const [analysis, setAnalysis] = useState<any>(null);
   const [notice, setNotice] = useState('');
   const seo = useMemo(() => ({ ...defaultSeo(entityType, entityTitle), ...(value || {}), images: value?.images || {} }), [entityType, entityTitle, value]);
 
@@ -84,6 +85,7 @@ export const AdminEntitySeoPanel: React.FC<AdminEntitySeoPanelProps> = ({
         const loaded = workspace?.meta || {};
         onChange({ ...seo, ...loaded, images: currentImages });
         setScore(Number(workspace?.analysis?.score ?? workspace?.meta?.score ?? 0));
+        setAnalysis(workspace?.analysis || workspace?.meta?.analysis || null);
       })
       .catch(() => {
         if (!cancelled) setNotice('اطلاعات سئوی ذخیره‌شده قابل دریافت نبود؛ مقادیر داخل همین فرم همچنان قابل ویرایش است.');
@@ -129,6 +131,7 @@ export const AdminEntitySeoPanel: React.FC<AdminEntitySeoPanelProps> = ({
         body: '{}'
       });
       setScore(Number(result?.analysis?.score || 0));
+      setAnalysis(result?.analysis || null);
       setNotice(`تحلیل انجام شد؛ امتیاز فعلی ${Number(result?.analysis?.score || 0).toLocaleString('fa-IR')} از ۱۰۰ است.`);
     } catch {
       setNotice('تحلیل سئو انجام نشد.');
@@ -290,6 +293,33 @@ export const AdminEntitySeoPanel: React.FC<AdminEntitySeoPanelProps> = ({
                     </div>
                   );
                 })}
+              </div>
+            </div>
+          )}
+
+          {analysis?.checks?.length > 0 && (
+            <div className="p-3 bg-white rounded-xl border border-neutral-200 space-y-3">
+              <div className="flex items-center justify-between gap-2">
+                <div>
+                  <strong className="block text-xs text-neutral-900">تحلیل کامل TakRank SEO</strong>
+                  <span className="text-[9px] text-neutral-500">
+                    {Number(analysis.wordCount || 0).toLocaleString('fa-IR')} کلمه • تراکم {Number(analysis.keywordDensity || 0).toLocaleString('fa-IR')}٪ • {Number(analysis.internalLinks || 0).toLocaleString('fa-IR')} لینک داخلی
+                  </span>
+                </div>
+                <span className={`px-3 py-1.5 rounded-full text-xs font-black ${Number(analysis.score || 0) >= 80 ? 'bg-emerald-100 text-emerald-700' : Number(analysis.score || 0) >= 55 ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'}`}>
+                  {Number(analysis.score || 0).toLocaleString('fa-IR')}/۱۰۰
+                </span>
+              </div>
+              <div className="grid sm:grid-cols-2 gap-2">
+                {analysis.checks.map((check: any) => (
+                  <div key={check.key} className={`p-2.5 rounded-xl border ${check.status === 'good' ? 'bg-emerald-50 border-emerald-100' : check.status === 'warning' ? 'bg-amber-50 border-amber-100' : 'bg-red-50 border-red-100'}`}>
+                    <div className="flex items-center justify-between gap-2">
+                      <strong className="text-[10px] text-neutral-800">{check.label}</strong>
+                      <span className="text-[9px] font-black">{Number(check.score || 0).toLocaleString('fa-IR')}/{Number(check.max || 0).toLocaleString('fa-IR')}</span>
+                    </div>
+                    <p className="text-[9px] text-neutral-500 mt-1 leading-relaxed">{check.detail}</p>
+                  </div>
+                ))}
               </div>
             </div>
           )}

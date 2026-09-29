@@ -1691,6 +1691,46 @@ export const runFullSeoAudit = async (actorId?: string) => {
       issueCount += 1;
     }
 
+    if (analysis.missingImageAlt > 0 && (entity.type === 'product' || entity.type === 'article')) {
+      await upsertSeoIssue({
+        issueKey: 'image_alt_missing:' + entity.type + ':' + entity.id,
+        entityType: entity.type,
+        entityId: entity.id,
+        url: entity.url,
+        category: 'image',
+        severity: 'medium',
+        confidence: 'high',
+        title: 'تصاویر HTML بدون ALT توصیفی',
+        details: analysis.missingImageAlt + ' تصویر داخل محتوا ALT مناسب ندارد.',
+        evidence: { missingAlt: analysis.missingImageAlt, imageCount: analysis.imageCount },
+        action: 'از ابزار Image SEO برای تکمیل فقط ALTهای خالی استفاده کنید؛ ALTهای موجود بازنویسی نمی‌شوند.'
+      });
+      issueCount += 1;
+    }
+
+    if (
+      settings.modules.toc &&
+      settings.toc.enabled &&
+      entity.type === 'article' &&
+      analysis.wordCount >= settings.toc.minimumWords &&
+      analysis.headings >= settings.toc.minimumHeadings &&
+      !/data-takrank-toc=["']1["']/i.test(String(entity.content || ''))
+    ) {
+      await upsertSeoIssue({
+        issueKey: 'toc_missing:' + entity.type + ':' + entity.id,
+        entityType: entity.type,
+        entityId: entity.id,
+        url: entity.url,
+        category: 'content',
+        severity: 'low',
+        confidence: 'high',
+        title: 'مقاله طولانی بدون فهرست مطالب',
+        details: analysis.wordCount + ' کلمه و ' + analysis.headings + ' تیتر شناسایی شد.',
+        action: 'TOC هوشمند را از Workspace همین مقاله ایجاد کنید.'
+      });
+      issueCount += 1;
+    }
+
     if (!meta.robotsIndex) {
       await upsertSeoIssue({
         issueKey: 'noindex:' + entity.type + ':' + entity.id,
@@ -1843,8 +1883,10 @@ export const verifySeoIssue = async (id: number) => {
   const stillLow = String(issue.issue_key).startsWith('score:') && workspace.analysis.score < 55;
   const focusMissing = String(issue.issue_key).startsWith('focus_missing:') && !workspace.meta.focusKeyword;
   const imageMissing = String(issue.issue_key).startsWith('image_missing:') && workspace.analysis.imageCount === 0;
+  const imageAltMissing = String(issue.issue_key).startsWith('image_alt_missing:') && workspace.analysis.missingImageAlt > 0;
+  const tocMissing = String(issue.issue_key).startsWith('toc_missing:') && !/data-takrank-toc=["']1["']/i.test(String(workspace.entity.content || ''));
   const noindex = String(issue.issue_key).startsWith('noindex:') && !workspace.meta.robotsIndex;
-  const stillOpen = stillLow || focusMissing || imageMissing || noindex;
+  const stillOpen = stillLow || focusMissing || imageMissing || imageAltMissing || tocMissing || noindex;
   if (!stillOpen) await setSeoIssueState(id, 'resolved');
   return { resolved: !stillOpen, analysis: workspace.analysis };
 };

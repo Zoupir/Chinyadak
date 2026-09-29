@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   ArrowLeft,
   Car,
@@ -40,13 +40,33 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
   );
 
   const hero = activeSlides[0];
-  const featured = products.filter(p => p.isFeatured).slice(0, 8);
-  const bestSellers = products.filter(p => p.isBestSeller).slice(0, 8);
-  const maintenance = products.filter(p => p.isMaintenancePart).slice(0, 8);
-  const fallbackProducts = products.slice(0, 8);
-  const productStrip = featured.length ? featured : fallbackProducts;
-  const deals = bestSellers.length ? bestSellers : fallbackProducts;
-  const serviceParts = maintenance.length ? maintenance : fallbackProducts;
+  const fillProducts = (preferred: typeof products, count = 8) => {
+    const seen = new Set<string>();
+    return [...preferred, ...products]
+      .filter(product => {
+        if (seen.has(product.id)) return false;
+        seen.add(product.id);
+        return true;
+      })
+      .slice(0, count);
+  };
+
+  const featured = products.filter(p => p.isFeatured);
+  const bestSellers = products.filter(p => p.isBestSeller);
+  const maintenance = products.filter(p => p.isMaintenancePart);
+  const productStrip = fillProducts(featured, 8);
+  const deals = fillProducts(bestSellers, 8);
+  const serviceParts = fillProducts(maintenance, 8);
+  const [featuredTab, setFeaturedTab] = useState<'featured' | 'popular' | 'maintenance' | 'new'>('featured');
+
+  const visibleFeaturedProducts =
+    featuredTab === 'popular'
+      ? fillProducts(bestSellers, 8)
+      : featuredTab === 'maintenance'
+      ? fillProducts(maintenance, 8)
+      : featuredTab === 'new'
+      ? products.slice().reverse().slice(0, 8)
+      : productStrip;
 
   const promoImage = (index: number) =>
     activeSlides[index]?.imageUrl ||
@@ -166,8 +186,14 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
             <ChevronLeft className="w-4 h-4" />
           </button>
         </div>
+        <div className="marketplace-product-tabs" role="tablist" aria-label="فیلتر محصولات ویژه">
+          <button type="button" className={featuredTab === 'featured' ? 'active' : ''} onClick={() => setFeaturedTab('featured')}>محصولات ویژه</button>
+          <button type="button" className={featuredTab === 'popular' ? 'active' : ''} onClick={() => setFeaturedTab('popular')}>پرفروش‌ترین‌ها</button>
+          <button type="button" className={featuredTab === 'maintenance' ? 'active' : ''} onClick={() => setFeaturedTab('maintenance')}>سرویس دوره‌ای</button>
+          <button type="button" className={featuredTab === 'new' ? 'active' : ''} onClick={() => setFeaturedTab('new')}>جدیدترین‌ها</button>
+        </div>
         <div className="marketplace-product-grid">
-          {productStrip.map(product => (
+          {visibleFeaturedProducts.map(product => (
             <ProductCard
               key={product.id}
               product={product}
@@ -237,9 +263,14 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
       <section className="marketplace-deals" data-section-key="weekly-deals">
         <div className="marketplace-section marketplace-deals-inner">
           <div className="marketplace-section-heading inverse">
-            <div>
-              <h2>بهترین پیشنهادهای این هفته</h2>
-              <p>فرصت محدود برای خرید قطعات منتخب</p>
+            <div className="marketplace-deal-heading">
+              <div>
+                <h2>بهترین پیشنهادهای این هفته</h2>
+                <p>فرصت محدود برای خرید قطعات منتخب</p>
+              </div>
+              <div className="marketplace-deal-timer" aria-label="زمان باقی‌مانده پیشنهاد">
+                <span>۰۶</span><b>:</b><span>۲۳</span><b>:</b><span>۲۹</span>
+              </div>
             </div>
             <button type="button" onClick={() => onNavigate('shop')}>مشاهده همه</button>
           </div>
@@ -256,26 +287,26 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
       </section>
 
       <section className="marketplace-section marketplace-feature-banners" data-section-key="promo-large">
-        <button type="button" className="large first" onClick={() => onNavigate('shop')}>
+        <button type="button" className="large first" style={promoImage(0) ? { backgroundImage: `linear-gradient(90deg, rgba(0,0,0,.18), rgba(0,0,0,.72)), url(${promoImage(0)})` } : undefined} onClick={() => onNavigate('shop')}>
           <div>
             <span>روشنایی و بدنه</span>
             <h3>چراغ‌ها و قطعات بدنه با تنوع کامل</h3>
             <small>مشاهده محصولات</small>
           </div>
         </button>
-        <button type="button" className="small" onClick={() => onNavigate('shop', 'maintenance')}>
+        <button type="button" className="small" style={promoImage(2) ? { backgroundImage: `linear-gradient(90deg, rgba(245,158,11,.25), rgba(0,0,0,.35)), url(${promoImage(2)})` } : undefined} onClick={() => onNavigate('shop', 'maintenance')}>
           <div>
             <span>فیلترها</span>
             <h3>سرویس دوره‌ای مطمئن</h3>
           </div>
         </button>
-        <button type="button" className="small second" onClick={() => onNavigate('shop')}>
+        <button type="button" className="small second" style={products[1]?.images?.[0] ? { backgroundImage: `linear-gradient(90deg, rgba(194,65,12,.45), rgba(0,0,0,.36)), url(${products[1].images[0]})` } : undefined} onClick={() => onNavigate('shop')}>
           <div>
             <span>گیربکس و روغن</span>
             <h3>قطعات تخصصی انتقال قدرت</h3>
           </div>
         </button>
-        <button type="button" className="large second" onClick={() => onNavigate('shop')}>
+        <button type="button" className="large second" style={products[2]?.images?.[0] ? { backgroundImage: `linear-gradient(90deg, rgba(7,85,143,.42), rgba(0,0,0,.35)), url(${products[2].images[0]})` } : undefined} onClick={() => onNavigate('shop')}>
           <div>
             <span>مراقبت خودرو</span>
             <h3>محصولات نگهداری و لوازم جانبی</h3>

@@ -4785,8 +4785,8 @@ html[data-layout="marketplace-rtl"] .marketplace-testimonial-grid article > img 
 
 /* 13 — Narrow shipping banner. */
 html[data-layout="marketplace-rtl"] .marketplace-shipping-banner {
-  width: min(900px, calc(100% - 32px)) !important;
-  max-width: 900px !important;
+  width: min(1040px, calc(100% - 32px)) !important;
+  max-width: 1040px !important;
   min-height: 115px !important;
   margin: 28px auto 0 !important;
   padding: 16px 34px !important;

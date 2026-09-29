@@ -1714,6 +1714,7 @@ export const INITIAL_SETTINGS = {
   baseFontSizePx: 16,
   mobileProductColumns: 2 as const,
   mobileFooterColumns: 2 as const,
+  relatedProductsCount: 4,
   borderRadius: 'normal' as const,
   themeRadiusPx: 12,
   metaTitle: 'فروشگاه | فروشگاه تخصصی قطعات یدکی خودروهای چینی با سیستم فیتمنت',

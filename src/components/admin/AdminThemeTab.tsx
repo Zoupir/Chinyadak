@@ -778,7 +778,7 @@ export const AdminThemeTab: React.FC = () => {
             {/* Mobile columns */}
             <div className="space-y-3 pt-4 border-t border-neutral-100">
               <h4 className="font-bold text-xs text-neutral-800">چیدمان موبایل</h4>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <label className="p-3 rounded-xl border border-neutral-200 bg-neutral-50">
                   <span className="block text-[11px] font-bold mb-2">تعداد ستون محصولات</span>
                   <select value={form.mobileProductColumns || 2} onChange={e => setForm({ ...form, mobileProductColumns: Number(e.target.value) as 1 | 2 })} className="w-full p-2 border border-neutral-300 rounded-lg text-xs bg-white">
@@ -792,6 +792,10 @@ export const AdminThemeTab: React.FC = () => {
                     <option value={1}>۱ ستون</option>
                     <option value={2}>۲ ستون</option>
                   </select>
+                </label>
+                <label className="p-3 rounded-xl border border-neutral-200 bg-neutral-50">
+                  <span className="block text-[11px] font-bold mb-2">تعداد محصولات پیشنهادی</span>
+                  <input type="number" min={1} max={12} value={form.relatedProductsCount || 4} onChange={e => setForm({ ...form, relatedProductsCount: Math.max(1, Math.min(12, Number(e.target.value || 4))) })} className="w-full p-2 border border-neutral-300 rounded-lg text-xs bg-white text-center font-mono" />
                 </label>
               </div>
             </div>

@@ -922,7 +922,7 @@ export const AdminFooterTab: React.FC = () => {
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl border border-neutral-200 max-w-md w-full p-6 shadow-2xl space-y-4">
             <div className="flex items-center justify-between border-b border-neutral-100 pb-3">
-              <h4 className="font-black text-sm text-neutral-900">افزودن لینک به ستون فوتر</h4>
+              <h4 className="font-black text-sm text-neutral-900">{editingLinkId ? 'ویرایش لینک فوتر' : 'افزودن لینک به ستون فوتر'}</h4>
               <button onClick={() => setIsLinkModalOpen(false)} className="w-7 h-7 rounded-full bg-neutral-100 flex items-center justify-center">
                 <X className="w-4 h-4" />
               </button>
@@ -1068,7 +1068,7 @@ export const AdminFooterTab: React.FC = () => {
                   type="submit"
                   className="flex-1 py-2 bg-red-600 text-white rounded-xl font-bold shadow-md hover:bg-red-700 cursor-pointer"
                 >
-                  افزودن لینک
+                  {editingLinkId ? 'ذخیره تغییرات لینک' : 'افزودن لینک'}
                 </button>
               </div>
             </form>

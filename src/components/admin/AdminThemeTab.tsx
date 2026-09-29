@@ -20,7 +20,8 @@ import {
   Eye,
   SlidersHorizontal,
   CheckCircle2,
-  FileText
+  FileText,
+  LayoutTemplate
 } from 'lucide-react';
 
 export const AdminThemeTab: React.FC = () => {

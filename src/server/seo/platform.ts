@@ -67,6 +67,22 @@ export interface SeoAnalysis {
 }
 
 export interface SeoSettings {
+  global: {
+    siteTitle: string;
+    siteSlogan: string;
+    metaTitle: string;
+    metaDescription: string;
+    metaKeywords: string;
+    ogTitle: string;
+    ogDescription: string;
+    ogImageUrl: string;
+    canonicalUrl: string;
+    indexRobots: boolean;
+    separator: string;
+    productTitleTemplate: string;
+    articleTitleTemplate: string;
+    categoryTitleTemplate: string;
+  };
   modules: {
     meta: boolean;
     schema: boolean;
@@ -235,6 +251,22 @@ export const absoluteSiteUrl = (path: string): string => {
 };
 
 const defaultSettings = (): SeoSettings => ({
+  global: {
+    siteTitle: 'یدک استور',
+    siteSlogan: 'فروشگاه تخصصی قطعات خودروهای چینی',
+    metaTitle: 'یدک استور | فروشگاه تخصصی قطعات یدکی خودروهای چینی',
+    metaDescription: 'فروشگاه تخصصی قطعات یدکی خودروهای چینی با جستجوی شماره فنی، تطبیق خودرو، مشخصات فنی و رهگیری سفارش.',
+    metaKeywords: '',
+    ogTitle: '',
+    ogDescription: '',
+    ogImageUrl: '',
+    canonicalUrl: '',
+    indexRobots: true,
+    separator: '|',
+    productTitleTemplate: '%title% | خرید و مشخصات | %site%',
+    articleTitleTemplate: '%title% | مجله %site%',
+    categoryTitleTemplate: '%title% | قطعات یدکی | %site%'
+  },
   modules: {
     meta: true,
     schema: true,
@@ -326,6 +358,7 @@ const mergeSettings = (stored: any): SeoSettings => {
   return {
     ...base,
     ...input,
+    global: { ...base.global, ...(input.global || {}) },
     modules: { ...base.modules, ...(input.modules || {}) },
     scoring: { ...base.scoring, ...(input.scoring || {}) },
     ai: { ...base.ai, ...(input.ai || {}) },
@@ -369,6 +402,7 @@ export const updateSeoSettings = async (patch: any): Promise<SeoSettings> => {
   const next = mergeSettings({
     ...current,
     ...patch,
+    global: { ...current.global, ...(patch?.global || {}) },
     modules: { ...current.modules, ...(patch?.modules || {}) },
     scoring: { ...current.scoring, ...(patch?.scoring || {}) },
     ai: { ...current.ai, ...(patch?.ai || {}) },
@@ -387,6 +421,20 @@ export const updateSeoSettings = async (patch: any): Promise<SeoSettings> => {
     },
     automation: { ...current.automation, ...(patch?.automation || {}) }
   });
+
+  next.global.siteTitle = String(next.global.siteTitle || '').trim().slice(0, 190);
+  next.global.siteSlogan = String(next.global.siteSlogan || '').trim().slice(0, 255);
+  next.global.metaTitle = String(next.global.metaTitle || '').trim().slice(0, 255);
+  next.global.metaDescription = String(next.global.metaDescription || '').trim().slice(0, 1000);
+  next.global.metaKeywords = String(next.global.metaKeywords || '').trim().slice(0, 2000);
+  next.global.ogTitle = String(next.global.ogTitle || '').trim().slice(0, 255);
+  next.global.ogDescription = String(next.global.ogDescription || '').trim().slice(0, 1000);
+  next.global.ogImageUrl = String(next.global.ogImageUrl || '').trim().slice(0, 2000);
+  next.global.canonicalUrl = String(next.global.canonicalUrl || '').trim().slice(0, 2000);
+  next.global.separator = String(next.global.separator || '|').trim().slice(0, 5) || '|';
+  next.global.productTitleTemplate = String(next.global.productTitleTemplate || '%title% | %site%').slice(0, 255);
+  next.global.articleTitleTemplate = String(next.global.articleTitleTemplate || '%title% | %site%').slice(0, 255);
+  next.global.categoryTitleTemplate = String(next.global.categoryTitleTemplate || '%title% | %site%').slice(0, 255);
 
   next.scoring.articleMinimumWords = Math.max(100, Math.min(10000, Number(next.scoring.articleMinimumWords || 1500)));
   next.scoring.productMinimumWords = Math.max(80, Math.min(5000, Number(next.scoring.productMinimumWords || 300)));

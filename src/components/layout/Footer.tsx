@@ -107,6 +107,71 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenAuthModal }) =
 
   const badges: FooterBadgeItem[] = settings.footerBadges || [];
 
+  if (settings.layoutPreset === 'marketplace-rtl') {
+    return (
+      <footer className="marketplace-ref-footer" dir="rtl">
+        <div className="marketplace-ref-footer-main marketplace-ref-container">
+          <div className="marketplace-ref-footer-about">
+            <button type="button" className="marketplace-ref-footer-logo" onClick={() => onNavigate('home')}>
+              {settings.logoUrl ? (
+                <img src={settings.logoUrl} alt={settings.siteTitle} />
+              ) : (
+                <span>{settings.footerAboutTitle || settings.siteTitle || 'یدک استور'}</span>
+              )}
+            </button>
+            <p>{settings.footerAboutText || 'فروشگاه تخصصی قطعات یدکی خودرو با تمرکز بر اصالت، تطبیق دقیق قطعه و ارسال مطمئن.'}</p>
+            <div className="marketplace-ref-newsletter">
+              <input type="email" placeholder="ایمیل خود را وارد کنید" aria-label="ایمیل خبرنامه" />
+              <button type="button" aria-label="عضویت در خبرنامه">←</button>
+            </div>
+          </div>
+
+          <div className="marketplace-ref-footer-col">
+            <h4>حساب کاربری</h4>
+            <button type="button" onClick={() => onNavigate('account')}>حساب من</button>
+            <button type="button" onClick={() => onNavigate('tracking')}>پیگیری سفارش</button>
+            <button type="button" onClick={() => onNavigate('wishlist')}>علاقه‌مندی‌ها</button>
+            <button type="button" onClick={() => onNavigate('account', 'garage')}>گاراژ من</button>
+          </div>
+
+          <div className="marketplace-ref-footer-col">
+            <h4>فروشگاه</h4>
+            {categories.slice(0, 5).map(c => (
+              <button key={c.id} type="button" onClick={() => onNavigate('category', c.slug)}>{c.nameFa}</button>
+            ))}
+          </div>
+
+          <div className="marketplace-ref-footer-col">
+            <h4>راهنما</h4>
+            {(columns[0]?.links || []).slice(0, 5).map(link => (
+              <button key={link.id} type="button" onClick={() => handleLinkClick(link.url)}>{link.title}</button>
+            ))}
+            <button type="button" onClick={() => onNavigate('blog')}>مقالات و آموزش</button>
+          </div>
+
+          <div className="marketplace-ref-footer-contact">
+            <h4>ارتباط با ما</h4>
+            {settings.address && <p><MapPin className="w-4 h-4" /><span>{settings.address}</span></p>}
+            {settings.contactPhone && <a href={`tel:${settings.contactPhone}`}><Phone className="w-4 h-4" /><span>{settings.contactPhone}</span></a>}
+            {settings.supportEmail && <a href={`mailto:${settings.supportEmail}`}><Mail className="w-4 h-4" /><span>{settings.supportEmail}</span></a>}
+            <small>پشتیبانی و مشاوره تخصصی پیش از خرید</small>
+          </div>
+        </div>
+
+        <div className="marketplace-ref-footer-bottom">
+          <div className="marketplace-ref-container">
+            <span>{settings.footerCopyrightText || `© ${new Date().getFullYear()} تمامی حقوق محفوظ است.`}</span>
+            <div>
+              <button type="button" onClick={() => onNavigate('page', 'terms')}>قوانین</button>
+              <button type="button" onClick={() => onNavigate('page', 'privacy')}>حریم خصوصی</button>
+              <span>پرداخت امن</span>
+            </div>
+          </div>
+        </div>
+      </footer>
+    );
+  }
+
   return (
     <footer className="bg-neutral-900 text-neutral-300 mt-20 pt-16 pb-24 md:pb-12 border-t-4 border-red-600 relative">
       

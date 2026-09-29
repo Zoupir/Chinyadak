@@ -27,6 +27,7 @@ import {
   loadEntity,
   optimizeEntityImageAlt,
   rebuildSeoKnowledgeGraph,
+  readAppSetting,
   runFullSeoAudit,
   saveKeywordOwner,
   saveSeoMeta,
@@ -36,6 +37,7 @@ import {
   updateSeoRedirectState,
   updateSeoSettings,
   verifySeoIssue,
+  writeAppSetting,
   writeSeoHistory,
   type SeoEntityType
 } from '../seo/platform';
@@ -106,6 +108,19 @@ seoRouter.get('/settings', manageSeo, async (_req, res) => {
 seoRouter.put('/settings', manageSeo, async (req: AuthenticatedRequest, res) => {
   const before = await getSeoSettings();
   const settings = await updateSeoSettings(req.body || {});
+
+  // The SEO wizard and the general site identity editor share one visible identity.
+  const siteSettings = await readAppSetting<any>('site_settings', {});
+  await writeAppSetting('site_settings', {
+    ...siteSettings,
+    siteTitle: settings.global.siteTitle || siteSettings.siteTitle || '',
+    siteSlogan: settings.global.siteSlogan || siteSettings.siteSlogan || '',
+    logoUrl: settings.identity.logoUrl || siteSettings.logoUrl || '',
+    contactPhone: settings.identity.phone || siteSettings.contactPhone || '',
+    supportEmail: settings.identity.email || siteSettings.supportEmail || '',
+    address: settings.identity.address || siteSettings.address || ''
+  });
+
   await writeSeoHistory(actorId(req), 'settings_update', undefined, undefined, before, settings);
   res.json({ settings });
 });

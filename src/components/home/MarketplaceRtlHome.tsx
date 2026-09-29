@@ -32,7 +32,8 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
     sliders,
     articles,
     selectedVehicle,
-    addToCart
+    addToCart,
+    settings
   } = useStore();
 
   const activeSlides = useMemo(
@@ -277,11 +278,16 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
         <div className="marketplace-section-heading compact">
           <h2>برندهای محبوب قطعات</h2>
         </div>
-        <div className="marketplace-logo-tiles">
-          {Array.from(new Set(products.map(p => p.brandManufacturer).filter(Boolean))).slice(0, 12).map((name, index) => (
-            <button key={name} type="button" onClick={() => onNavigate('shop')}>
-              <span>{name}</span>
-              <small>{index % 3 === 0 ? 'پرفروش' : index % 3 === 1 ? 'اصلی' : 'منتخب'}</small>
+        <div className="marketplace-logo-tiles marketplace-logo-tiles-with-images">
+          {(settings.popularPartsBrands || []).filter(item => item.isVisible !== false).slice(0, 12).map((item) => (
+            <button key={item.id} type="button" onClick={() => goLink(item.link || 'shop')}>
+              <span className="marketplace-parts-brand-logo">
+                {item.imageUrl ? <img src={item.imageUrl} alt={item.title} /> : <Wrench className="w-6 h-6" />}
+              </span>
+              <span className="marketplace-parts-brand-copy">
+                <strong>{item.title}</strong>
+                <small>{item.subtitle || 'برند منتخب قطعات'}</small>
+              </span>
             </button>
           ))}
         </div>

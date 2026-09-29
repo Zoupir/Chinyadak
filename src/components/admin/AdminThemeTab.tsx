@@ -321,7 +321,7 @@ export const AdminThemeTab: React.FC = () => {
                 label="لوگوی سایت"
                 value={form.logoUrl || ''}
                 onChange={(url) => setForm({ ...form, logoUrl: url })}
-                aspectRatio="logo"
+                aspectRatio="auto"
                 presetCategory="logos"
                 placeholder="آپلود لوگو یا آدرس تصویر"
                 helperText="در هدر، فوتر و هویت ساختاریافته سایت استفاده می‌شود."
@@ -332,7 +332,7 @@ export const AdminThemeTab: React.FC = () => {
                 value={form.faviconUrl || ''}
                 onChange={(url) => setForm({ ...form, faviconUrl: url })}
                 aspectRatio="square"
-                presetCategory="logos"
+                presetCategory="favicons"
                 placeholder="آیکن مرورگر"
                 helperText="ترجیحاً تصویر مربعی PNG یا SVG"
               />

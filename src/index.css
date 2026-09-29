@@ -3238,3 +3238,163 @@ html[data-layout="marketplace-rtl"] .marketplace-ref-mobile-drawer {
     grid-template-columns: repeat(2, minmax(0,1fr));
   }
 }
+
+
+/* =========================================================================
+   ADMIN-CONTROLLED TYPOGRAPHY + SECTION BUILDER + MOBILE CATALOG
+   ========================================================================= */
+:root {
+  --site-base-font-size: 16px;
+  --builder-gap: 12px;
+  --builder-cols: 3;
+  --builder-mobile-cols: 1;
+  --builder-item-radius: 10px;
+}
+
+/* Make the numeric font-size setting meaningful without changing the admin UI scale. */
+html[data-layout] .site-header .text-xs,
+html[data-layout] .site-header .text-\[10px\],
+html[data-layout] .marketplace-rtl-home .text-xs,
+html[data-layout] .marketplace-rtl-home .text-\[10px\],
+html[data-layout] .shop-view .text-xs,
+html[data-layout] .shop-view .text-\[10px\],
+html[data-layout] footer .text-xs,
+html[data-layout] footer .text-\[10px\] {
+  font-size: max(11px, calc(var(--site-base-font-size) * .72)) !important;
+}
+
+html[data-layout] .site-header .text-sm,
+html[data-layout] .marketplace-rtl-home .text-sm,
+html[data-layout] .shop-view .text-sm,
+html[data-layout] footer .text-sm {
+  font-size: max(13px, calc(var(--site-base-font-size) * .86)) !important;
+}
+
+html[data-layout] .marketplace-section-heading h2,
+html[data-layout] .shop-view h1 {
+  font-size: max(18px, calc(var(--site-base-font-size) * 1.18)) !important;
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-ref-topbar,
+html[data-layout="marketplace-rtl"] .marketplace-ref-mainbar,
+html[data-layout="marketplace-rtl"] .marketplace-ref-mobile-drawer,
+html[data-layout="marketplace-rtl"] .marketplace-ref-product-info,
+html[data-layout="marketplace-rtl"] .marketplace-testimonials,
+html[data-layout="marketplace-rtl"] .marketplace-service-strip {
+  font-size: var(--site-base-font-size);
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-ref-footer-about p,
+html[data-layout="marketplace-rtl"] .marketplace-ref-footer-col button,
+html[data-layout="marketplace-rtl"] .marketplace-ref-footer-contact p,
+html[data-layout="marketplace-rtl"] .marketplace-ref-footer-contact a {
+  font-size: max(11px, calc(var(--site-base-font-size) * .72)) !important;
+  line-height: 1.8;
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-ref-footer h4 {
+  font-size: max(13px, calc(var(--site-base-font-size) * .82)) !important;
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-ref-footer-contact small,
+html[data-layout="marketplace-rtl"] .marketplace-ref-footer-bottom .marketplace-ref-container {
+  font-size: max(10px, calc(var(--site-base-font-size) * .64)) !important;
+}
+
+/* Generic grid emitted by the page builder. */
+.builder-section-grid {
+  display: grid !important;
+  grid-template-columns: repeat(var(--builder-cols, 3), minmax(0, 1fr)) !important;
+  gap: var(--builder-gap, 12px) !important;
+}
+
+.builder-section-grid > * {
+  border-radius: var(--builder-item-radius, 10px);
+}
+
+/* Functional, stable mobile catalog toolbar. */
+.shop-mobile-toolbar select,
+.mobile-filter-panel select,
+.mobile-filter-panel input {
+  min-width: 0;
+}
+
+.mobile-filter-panel {
+  position: relative;
+  z-index: 5;
+}
+
+/* Respect admin mobile column preferences. */
+@media (max-width: 700px) {
+  .builder-section-grid {
+    grid-template-columns: repeat(var(--builder-mobile-cols, 1), minmax(0, 1fr)) !important;
+  }
+
+  html[data-mobile-product-columns="2"] .shop-view .product-grid,
+  html[data-layout="marketplace-rtl"][data-mobile-product-columns="2"] .marketplace-product-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  html[data-mobile-product-columns="1"] .shop-view .product-grid,
+  html[data-layout="marketplace-rtl"][data-mobile-product-columns="1"] .marketplace-product-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  html[data-layout="marketplace-rtl"][data-mobile-product-columns="2"] .marketplace-ref-product-card {
+    display: flex !important;
+    flex-direction: column !important;
+    min-width: 0;
+  }
+
+  html[data-layout="marketplace-rtl"][data-mobile-product-columns="2"] .marketplace-ref-product-image {
+    width: 100% !important;
+    min-height: 128px;
+  }
+
+  html[data-layout="marketplace-rtl"][data-mobile-product-columns="2"] .marketplace-ref-product-info {
+    min-width: 0;
+    padding: 9px !important;
+  }
+
+  html[data-layout="marketplace-rtl"][data-mobile-product-columns="2"] .marketplace-ref-product-title {
+    font-size: max(11px, calc(var(--site-base-font-size) * .7)) !important;
+    line-height: 1.55 !important;
+  }
+
+  html[data-layout="marketplace-rtl"] .marketplace-ref-footer-main {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 20px 14px !important;
+    padding-inline: 14px;
+  }
+
+  html[data-mobile-footer-columns="1"] .marketplace-ref-footer-main {
+    grid-template-columns: 1fr !important;
+  }
+
+  html[data-layout="marketplace-rtl"] .marketplace-ref-footer-about,
+  html[data-layout="marketplace-rtl"] .marketplace-ref-footer-contact {
+    grid-column: auto !important;
+    min-width: 0;
+  }
+
+  html[data-layout="marketplace-rtl"] .marketplace-ref-newsletter {
+    max-width: 100%;
+  }
+
+  .shop-view {
+    padding-inline: 10px !important;
+  }
+
+  .shop-view .product-grid {
+    gap: 10px !important;
+  }
+
+  .shop-view .product-card {
+    min-width: 0;
+  }
+
+  .shop-mobile-toolbar {
+    position: relative;
+    overflow: visible;
+  }
+}

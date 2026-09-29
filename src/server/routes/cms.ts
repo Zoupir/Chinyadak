@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { updateSeoSettings } from '../seo/platform';
 import { requireAdminPermission } from '../auth';
 import { pool, type ResultSetHeader, type RowDataPacket } from '../db';
 
@@ -327,6 +328,33 @@ cmsRouter.patch('/settings', requireAdminPermission('canManageSettings'), async 
      ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value), updated_at = NOW()`,
     [asJson(settings)]
   );
+
+  // Keep the site's visible identity and native TakRank SEO identity synchronized.
+  // SEO-specific titles/descriptions remain independently editable in the SEO center.
+  const identityPatch: any = {};
+  if ('siteTitle' in req.body || 'siteSlogan' in req.body) {
+    identityPatch.global = {
+      ...(req.body.siteTitle !== undefined ? { siteTitle: String(settings.siteTitle || '').trim() } : {}),
+      ...(req.body.siteSlogan !== undefined ? { siteSlogan: String(settings.siteSlogan || '').trim() } : {})
+    };
+  }
+  if (
+    'siteTitle' in req.body || 'logoUrl' in req.body || 'contactPhone' in req.body ||
+    'supportPhone' in req.body || 'supportEmail' in req.body || 'address' in req.body
+  ) {
+    identityPatch.identity = {
+      ...(req.body.siteTitle !== undefined ? { organizationName: String(settings.siteTitle || '').split('|')[0].trim() } : {}),
+      ...(req.body.logoUrl !== undefined ? { logoUrl: String(settings.logoUrl || '') } : {}),
+      ...(('contactPhone' in req.body || 'supportPhone' in req.body)
+        ? { phone: String(settings.contactPhone || settings.supportPhone || '') } : {}),
+      ...(req.body.supportEmail !== undefined ? { email: String(settings.supportEmail || '') } : {}),
+      ...(req.body.address !== undefined ? { address: String(settings.address || '') } : {})
+    };
+  }
+  if (Object.keys(identityPatch).length) {
+    await updateSeoSettings(identityPatch);
+  }
+
   res.json({ settings });
 });
 

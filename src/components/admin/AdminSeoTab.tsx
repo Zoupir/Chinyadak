@@ -158,8 +158,8 @@ export const AdminSeoTab: React.FC = () => {
   const [inspectResult, setInspectResult] = useState<any>(null);
   const [jobs, setJobs] = useState<any[]>([]);
   const [logs, setLogs] = useState<any[]>([]);
-  const [history, setتاریخچه] = useState<any[]>([]);
-  const [health, setسلامت سیستم] = useState<any>(null);
+  const [history, setHistory] = useState<any[]>([]);
+  const [health, setHealth] = useState<any>(null);
   const [selfTest, setSelfTest] = useState<any>(null);
 
   const flash = (text: string, type: 'ok' | 'error' = 'ok') => {
@@ -356,7 +356,7 @@ export const AdminSeoTab: React.FC = () => {
           api<any>('/api/seo/diagnostics/logs?limit=300'),
           api<any>('/api/seo/history?limit=200')
         ]);
-        setسلامت سیستم(h); setJobs(j.items || []); setLogs(l.items || []); setتاریخچه(hist.items || []);
+        setHealth(h); setJobs(j.items || []); setLogs(l.items || []); setHistory(hist.items || []);
       }
     } catch (error) {
       flash(errorFa(error), 'error');

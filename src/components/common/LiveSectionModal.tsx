@@ -3,7 +3,7 @@ import { useStore } from '../../context/StoreContext';
 import { PageSection } from '../../types';
 import { RichTextEditor } from './RichTextEditor';
 import { ImageUploadInput } from './ImageUploadInput';
-import { Edit3, X, Save, Trash2, Eye, EyeOff, Plus } from 'lucide-react';
+import { Edit3, X, Save, Trash2, Eye, EyeOff, Plus, ArrowUp, ArrowDown } from 'lucide-react';
 
 interface LiveSectionModalProps {
   pageSlug: string;
@@ -231,16 +231,36 @@ export const LiveSectionModal: React.FC<LiveSectionModalProps> = ({
             <div className="space-y-2">
               {(form.items || []).map((item, index) => (
                 <div key={item.id} className="p-3 bg-white border border-neutral-200 rounded-xl space-y-2">
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  <div className="flex items-center justify-between">
+                    <strong className="text-[10px] text-neutral-600">آیتم {index + 1}</strong>
+                    <div className="flex items-center gap-1">
+                      <button type="button" disabled={index === 0} onClick={() => {
+                        const items = [...(form.items || [])];
+                        [items[index - 1], items[index]] = [items[index], items[index - 1]];
+                        setForm({ ...form, items: items.map((x,i) => ({ ...x, order: i + 1 })) });
+                      }} className="p-1.5 text-neutral-500 hover:bg-neutral-100 rounded-lg disabled:opacity-30 cursor-pointer"><ArrowUp className="w-3.5 h-3.5" /></button>
+                      <button type="button" disabled={index === (form.items || []).length - 1} onClick={() => {
+                        const items = [...(form.items || [])];
+                        [items[index + 1], items[index]] = [items[index], items[index + 1]];
+                        setForm({ ...form, items: items.map((x,i) => ({ ...x, order: i + 1 })) });
+                      }} className="p-1.5 text-neutral-500 hover:bg-neutral-100 rounded-lg disabled:opacity-30 cursor-pointer"><ArrowDown className="w-3.5 h-3.5" /></button>
+                      <button type="button" onClick={() => setForm({ ...form, items: (form.items || []).filter((_,i) => i !== index) })} className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg cursor-pointer"><Trash2 className="w-4 h-4" /></button>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     <input value={item.title || ''} onChange={e => setForm({ ...form, items: (form.items || []).map((x,i) => i === index ? { ...x, title: e.target.value } : x) })} placeholder="عنوان" className="p-2 border rounded-lg" />
                     <input value={item.subtitle || ''} onChange={e => setForm({ ...form, items: (form.items || []).map((x,i) => i === index ? { ...x, subtitle: e.target.value } : x) })} placeholder="زیرعنوان" className="p-2 border rounded-lg" />
+                    <input value={item.buttonText || ''} onChange={e => setForm({ ...form, items: (form.items || []).map((x,i) => i === index ? { ...x, buttonText: e.target.value } : x) })} placeholder="متن دکمه" className="p-2 border rounded-lg" />
                     <input dir="ltr" value={item.link || ''} onChange={e => setForm({ ...form, items: (form.items || []).map((x,i) => i === index ? { ...x, link: e.target.value } : x) })} placeholder="لینک" className="p-2 border rounded-lg text-left" />
                   </div>
-                  <div className="grid grid-cols-[1fr_auto] gap-2">
-                    <textarea rows={2} value={item.content || ''} onChange={e => setForm({ ...form, items: (form.items || []).map((x,i) => i === index ? { ...x, content: e.target.value } : x) })} placeholder="متن آیتم" className="p-2 border rounded-lg" />
-                    <button type="button" onClick={() => setForm({ ...form, items: (form.items || []).filter((_,i) => i !== index) })} className="p-2 text-red-600 hover:bg-red-50 rounded-lg cursor-pointer"><Trash2 className="w-4 h-4" /></button>
-                  </div>
-                  <input dir="ltr" value={item.imageUrl || ''} onChange={e => setForm({ ...form, items: (form.items || []).map((x,i) => i === index ? { ...x, imageUrl: e.target.value } : x) })} placeholder="آدرس تصویر آیتم" className="w-full p-2 border rounded-lg text-left" />
+                  <ImageUploadInput
+                    label="تصویر / بنر آیتم"
+                    value={item.imageUrl || ''}
+                    onChange={(url) => setForm({ ...form, items: (form.items || []).map((x,i) => i === index ? { ...x, imageUrl: url } : x) })}
+                    aspectRatio="banner"
+                    presetCategory="banners"
+                  />
+                  <textarea rows={2} value={item.content || ''} onChange={e => setForm({ ...form, items: (form.items || []).map((x,i) => i === index ? { ...x, content: e.target.value } : x) })} placeholder="متن آیتم" className="w-full p-2 border rounded-lg" />
                 </div>
               ))}
             </div>

@@ -88,7 +88,7 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
     ? products.filter(p => product.complementPartIds?.includes(p.id)) 
     : [];
 
-  const relatedProductsCount = Math.max(1, Math.min(12, Number(settings.relatedProductsCount || 4)));
+  const relatedProductsCount = Math.max(1, Math.min(50, Number(settings.relatedProductsCount || 4)));
   const relatedProducts = products.filter(p => 
     p.id !== product.id && 
     (p.categorySlug === product.categorySlug || p.fitments.some(f => product.fitments.some(pf => pf.modelId === f.modelId)))

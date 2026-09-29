@@ -51,8 +51,15 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
   const sectionStyle = (key: string): React.CSSProperties => {
     const section = sectionConfig(key);
     if (!section) return {};
+    const imageOpacity = Math.max(0, Math.min(100, Number(section.backgroundImageOpacity ?? 100))) / 100;
+    const overlayAlpha = Math.max(0, Math.min(1, 1 - imageOpacity));
     return {
       backgroundColor: section.backgroundColor || undefined,
+      backgroundImage: section.imageUrl
+        ? `linear-gradient(rgba(0,0,0,${overlayAlpha}), rgba(0,0,0,${overlayAlpha})), url(${section.imageUrl})`
+        : undefined,
+      backgroundSize: section.imageUrl ? 'cover' : undefined,
+      backgroundPosition: section.imageUrl ? 'center' : undefined,
       color: section.textColor || undefined,
       borderRadius: section.borderRadiusPx !== undefined ? `${section.borderRadiusPx}px` : undefined,
       paddingTop: section.paddingTopPx !== undefined ? `${section.paddingTopPx}px` : undefined,
@@ -60,11 +67,14 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
       paddingInline: section.paddingInlinePx !== undefined ? `${section.paddingInlinePx}px` : undefined,
       minHeight: section.minHeightPx ? `${section.minHeightPx}px` : undefined,
       textAlign: section.contentAlign || undefined,
-      width: section.fullWidth ? '100%' : undefined,
+      width: section.fullWidth ? '100%' : `${Math.max(20, Math.min(100, Number(section.widthPercent ?? 100)))}%`,
+      maxWidth: section.fullWidth || section.maxWidthPx === 0 ? 'none' : `${Number(section.maxWidthPx || 1280)}px`,
+      marginInline: 'auto',
       ['--builder-gap' as any]: `${section.gapPx ?? 12}px`,
       ['--builder-cols' as any]: String(section.desktopColumns || 3),
       ['--builder-mobile-cols' as any]: String(section.mobileColumns || 1),
-      ['--builder-item-radius' as any]: `${section.itemRadiusPx ?? 10}px`
+      ['--builder-item-radius' as any]: `${section.itemRadiusPx ?? 10}px`,
+      ['--builder-image-size' as any]: `${section.imageSizePx ?? 72}px`
     };
   };
   const sortedItems = (key: string) =>
@@ -170,18 +180,22 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
 
   return (
     <div className="marketplace-rtl-home" dir="rtl">
-      <section className="marketplace-hero-shell">
+      {sectionVisible('hero') && (
+      <section className="marketplace-hero-shell" data-section-key="hero" style={sectionStyle('hero')}>
         <div
           className="marketplace-hero-banner"
-          style={hero?.imageUrl ? { backgroundImage: `url(${hero.imageUrl})` } : undefined}
+          style={{
+            ...(sectionConfig('hero')?.imageUrl || hero?.imageUrl ? { backgroundImage: `url(${sectionConfig('hero')?.imageUrl || hero?.imageUrl})` } : {}),
+            borderRadius: `${sectionConfig('hero')?.borderRadiusPx ?? 0}px`
+          }}
         >
           <div className="marketplace-hero-overlay" />
           <div className="marketplace-hero-content">
-            <span className="marketplace-kicker">{hero?.tag || 'پیشنهاد ویژه قطعات خودرو'}</span>
-            <h1>{hero?.title || 'قطعات مطمئن برای خودروی شما'}</h1>
-            <p>{hero?.subtitle || 'خرید تخصصی قطعات خودروهای چینی با تضمین اصالت، فیتمنت دقیق و ارسال سریع.'}</p>
-            <button type="button" onClick={() => goLink(hero?.link || 'shop')}>
-              {hero?.buttonText || 'مشاهده محصولات'}
+            <span className="marketplace-kicker">{sectionConfig('hero')?.badge || hero?.tag || 'پیشنهاد ویژه قطعات خودرو'}</span>
+            <h1>{sectionConfig('hero')?.title || hero?.title || 'قطعات مطمئن برای خودروی شما'}</h1>
+            <p>{sectionConfig('hero')?.subtitle || hero?.subtitle || 'خرید تخصصی قطعات خودروهای چینی با تضمین اصالت، فیتمنت دقیق و ارسال سریع.'}</p>
+            <button type="button" onClick={() => goLink(sectionConfig('hero')?.buttonLink || hero?.link || 'shop')}>
+              {sectionConfig('hero')?.buttonText || hero?.buttonText || 'مشاهده محصولات'}
               <ArrowLeft className="w-4 h-4" />
             </button>
           </div>
@@ -214,6 +228,7 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
           </div>
         </div>
       </section>
+      )}
 
       {sectionVisible('featured-categories') && (
       <section className="marketplace-section marketplace-category-row" data-section-key="featured-categories" style={sectionStyle('featured-categories')}>
@@ -285,7 +300,7 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
           <button type="button" className={featuredTab === 'new' ? 'active' : ''} onClick={() => setFeaturedTab('new')}>جدیدترین‌ها</button>
         </div>
         <div className="marketplace-product-grid">
-          {visibleFeaturedProducts.map(product => (
+          {visibleFeaturedProducts.slice(0, sectionConfig('featured-products')?.maxItems || visibleFeaturedProducts.length).map(product => (
             <ReferenceProductCard key={product.id} product={product} />
           ))}
         </div>
@@ -317,10 +332,12 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
           <h2>{sectionConfig('manufacturers')?.title || 'برندهای خودرو'}</h2>
           <button type="button" onClick={() => onNavigate('shop')}>مشاهده همه</button>
         </div>
-        <div className="marketplace-brand-row">
-          {brands.slice(0, 14).map(brand => (
-            <button key={brand.id} type="button" onClick={() => onNavigate('car-brand', brand.slug)}>
-              <span><img src={brand.logo} alt={brand.nameFa} /></span>
+        <div className="marketplace-brand-row builder-section-grid" style={sectionStyle('manufacturers')}>
+          {brands.slice(0, sectionConfig('manufacturers')?.maxItems || brands.length).map(brand => (
+            <button key={brand.id} type="button" onClick={() => onNavigate('car-brand', brand.slug)} style={{ borderRadius: `${sectionConfig('manufacturers')?.itemRadiusPx ?? 10}px` }}>
+              <span style={{ width: 'var(--builder-image-size)', height: 'var(--builder-image-size)' }}>
+                <img src={brand.logo} alt={brand.nameFa} style={{ maxWidth: '100%', maxHeight: '100%' }} />
+              </span>
               <small>{brand.nameFa}</small>
             </button>
           ))}
@@ -334,7 +351,7 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
           <h2>{sectionConfig('parts-brands')?.title || 'برندهای محبوب قطعات'}</h2>
         </div>
         <div className="marketplace-logo-tiles marketplace-logo-tiles-with-images">
-          {(settings.popularPartsBrands || []).filter(item => item.isVisible !== false).slice(0, 12).map((item) => (
+          {(settings.popularPartsBrands || []).filter(item => item.isVisible !== false).slice(0, sectionConfig('parts-brands')?.maxItems || 12).map((item) => (
             <button key={item.id} type="button" onClick={() => goLink(item.link || 'shop')}>
               <span className="marketplace-parts-brand-logo">
                 {item.imageUrl ? <img src={item.imageUrl} alt={item.title} /> : <Wrench className="w-6 h-6" />}
@@ -378,13 +395,14 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
       </section>
       )}
 
-      <section className="marketplace-deals" data-section-key="weekly-deals">
+      {sectionVisible('weekly-deals') && (
+      <section className="marketplace-deals" data-section-key="weekly-deals" style={sectionStyle('weekly-deals')}>
         <div className="marketplace-section marketplace-deals-inner">
           <div className="marketplace-section-heading inverse">
             <div className="marketplace-deal-heading">
               <div>
-                <h2>بهترین پیشنهادهای این هفته</h2>
-                <p>فرصت محدود برای خرید قطعات منتخب</p>
+                <h2>{sectionConfig('weekly-deals')?.title || 'بهترین پیشنهادهای این هفته'}</h2>
+                <p>{sectionConfig('weekly-deals')?.subtitle || 'فرصت محدود برای خرید قطعات منتخب'}</p>
               </div>
               <div className="marketplace-deal-timer" aria-label="زمان باقی‌مانده پیشنهاد">
                 <span>۰۶</span><b>:</b><span>۲۳</span><b>:</b><span>۲۹</span>
@@ -393,12 +411,13 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
             <button type="button" onClick={() => onNavigate('shop')}>مشاهده همه</button>
           </div>
           <div className="marketplace-product-grid">
-            {deals.map(product => (
+            {deals.slice(0, sectionConfig('weekly-deals')?.maxItems || deals.length).map(product => (
               <ReferenceProductCard key={product.id} product={product} />
             ))}
           </div>
         </div>
       </section>
+      )}
 
       {sectionVisible('promo-large') && (
       <section className="marketplace-section marketplace-feature-banners builder-section-grid" data-section-key="promo-large" style={sectionStyle('promo-large')}>
@@ -427,11 +446,12 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
       </section>
       )}
 
-      <section className="marketplace-section" data-section-key="maintenance-products">
+      {sectionVisible('maintenance-products') && (
+      <section className="marketplace-section" data-section-key="maintenance-products" style={sectionStyle('maintenance-products')}>
         <div className="marketplace-section-heading">
           <div>
-            <h2>قطعات مصرفی و سرویس دوره‌ای</h2>
-            <p>انتخاب‌های سریع برای نگهداری اصولی خودرو</p>
+            <h2>{sectionConfig('maintenance-products')?.title || 'قطعات مصرفی و سرویس دوره‌ای'}</h2>
+            <p>{sectionConfig('maintenance-products')?.subtitle || 'انتخاب‌های سریع برای نگهداری اصولی خودرو'}</p>
           </div>
           <button type="button" onClick={() => onNavigate('shop', 'maintenance')}>
             مشاهده همه
@@ -439,11 +459,12 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
           </button>
         </div>
         <div className="marketplace-product-grid">
-          {serviceParts.map(product => (
+          {serviceParts.slice(0, sectionConfig('maintenance-products')?.maxItems || serviceParts.length).map(product => (
             <ReferenceProductCard key={product.id} product={product} />
           ))}
         </div>
       </section>
+      )}
 
       {sectionVisible('testimonials') && (
       <section className="marketplace-testimonials" data-section-key="testimonials" style={sectionStyle('testimonials')}>
@@ -479,11 +500,12 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
       </section>
       )}
 
-      <section className="marketplace-section marketplace-articles" data-section-key="articles">
+      {sectionVisible('articles') && (
+      <section className="marketplace-section marketplace-articles" data-section-key="articles" style={sectionStyle('articles')}>
         <div className="marketplace-section-heading">
           <div>
-            <h2>راهنما و مقالات</h2>
-            <p>آموزش، نگهداری و انتخاب صحیح قطعات خودرو</p>
+            <h2>{sectionConfig('articles')?.title || 'راهنما و مقالات'}</h2>
+            <p>{sectionConfig('articles')?.subtitle || 'آموزش، نگهداری و انتخاب صحیح قطعات خودرو'}</p>
           </div>
           <button type="button" onClick={() => onNavigate('blog')}>
             مشاهده همه
@@ -496,9 +518,9 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
             <p>مطالب کاربردی برای انتخاب قطعه، نگهداری خودرو و شناخت بهتر سیستم‌های فنی.</p>
             <button type="button" onClick={() => onNavigate('blog')}>مشاهده همه مقالات</button>
           </div>
-          {articles.slice(0, 3).map(article => (
+          {articles.slice(0, sectionConfig('articles')?.maxItems || 3).map(article => (
             <button key={article.id} type="button" onClick={() => onNavigate('article', article.slug || article.id)}>
-              <img src={article.imageUrl} alt={article.title} />
+              <img src={article.imageUrl} alt={article.seo?.images?.[article.imageUrl]?.alt || article.title} title={article.seo?.images?.[article.imageUrl]?.title || article.title} />
               <div>
                 <span>{article.category}</span>
                 <h3>{article.title}</h3>
@@ -509,6 +531,7 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
           ))}
         </div>
       </section>
+      )}
 
       {sectionVisible('service-strip') && (
       <section className="marketplace-service-strip builder-section-grid" data-section-key="service-strip" style={sectionStyle('service-strip')}>

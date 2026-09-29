@@ -123,17 +123,15 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
   const productStrip = fillProducts(featured, 8);
   const deals = fillProducts(bestSellers, 8);
   const serviceParts = fillProducts(maintenance, 8);
-  const [featuredTab, setFeaturedTab] = useState<'featured' | 'popular' | 'maintenance' | 'new'>('featured');
+  const [featuredTab, setFeaturedTab] = useState<'engine' | 'service' | 'suspension'>('engine');
   const [vinQuery, setVinQuery] = useState('');
 
   const visibleFeaturedProducts =
-    featuredTab === 'popular'
-      ? fillProducts(bestSellers, 8)
-      : featuredTab === 'maintenance'
-      ? fillProducts(maintenance, 8)
-      : featuredTab === 'new'
-      ? products.slice().reverse().slice(0, 8)
-      : productStrip;
+    featuredTab === 'service'
+      ? fillProducts(products.filter(product => ['filters', 'oils', 'maintenance'].includes(product.categorySlug || '') || product.isMaintenancePart), 8)
+      : featuredTab === 'suspension'
+      ? fillProducts(products.filter(product => ['suspension', 'brakes', 'steering'].includes(product.categorySlug || '')), 8)
+      : fillProducts(products.filter(product => ['engine', 'turbo', 'cooling'].includes(product.categorySlug || '') || product.isFeatured), 8);
 
   const promoImage = (index: number) =>
     activeSlides[index]?.imageUrl ||
@@ -357,10 +355,9 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
           </button>
         </div>
         <div className="marketplace-product-tabs" role="tablist" aria-label="فیلتر محصولات ویژه">
-          <button type="button" className={featuredTab === 'featured' ? 'active' : ''} onClick={() => setFeaturedTab('featured')}>محصولات ویژه</button>
-          <button type="button" className={featuredTab === 'popular' ? 'active' : ''} onClick={() => setFeaturedTab('popular')}>پرفروش‌ترین‌ها</button>
-          <button type="button" className={featuredTab === 'maintenance' ? 'active' : ''} onClick={() => setFeaturedTab('maintenance')}>سرویس دوره‌ای</button>
-          <button type="button" className={featuredTab === 'new' ? 'active' : ''} onClick={() => setFeaturedTab('new')}>جدیدترین‌ها</button>
+          <button type="button" className={featuredTab === 'engine' ? 'active' : ''} onClick={() => setFeaturedTab('engine')}>قطعات موتور</button>
+          <button type="button" className={featuredTab === 'service' ? 'active' : ''} onClick={() => setFeaturedTab('service')}>روغن و فیلترها</button>
+          <button type="button" className={featuredTab === 'suspension' ? 'active' : ''} onClick={() => setFeaturedTab('suspension')}>جلوبندی و تعلیق</button>
         </div>
         <div className="marketplace-product-grid">
           {visibleFeaturedProducts.slice(0, sectionConfig('featured-products')?.maxItems || visibleFeaturedProducts.length).map(product => (

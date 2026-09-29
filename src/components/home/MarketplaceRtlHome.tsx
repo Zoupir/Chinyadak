@@ -264,7 +264,7 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
           </button>
         ))}
       </section>
-      )
+      )}
 
       {sectionVisible('featured-products') && (
       <section className="marketplace-section" data-section-key="featured-products" style={sectionStyle('featured-products')}>
@@ -309,7 +309,7 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
           <button type="button" onClick={() => goLink(sectionConfig('wide-banner-1')?.buttonLink || 'shop')}>{sectionConfig('wide-banner-1')?.buttonText || 'مشاهده محصولات'}</button>
         </div>
       </section>
-      )
+      )}
 
       {sectionVisible('manufacturers') && (
       <section className="marketplace-section marketplace-brands" data-section-key="manufacturers" style={sectionStyle('manufacturers')}>
@@ -376,7 +376,7 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
           </button>
         ))}
       </section>
-      )
+      )}
 
       <section className="marketplace-deals" data-section-key="weekly-deals">
         <div className="marketplace-section marketplace-deals-inner">
@@ -400,34 +400,32 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
         </div>
       </section>
 
-      <section className="marketplace-section marketplace-feature-banners" data-section-key="promo-large">
-        <button type="button" className="large first" style={promoImage(0) ? { backgroundImage: `linear-gradient(90deg, rgba(0,0,0,.18), rgba(0,0,0,.72)), url(${promoImage(0)})` } : undefined} onClick={() => onNavigate('shop')}>
-          <div>
-            <span>روشنایی و بدنه</span>
-            <h3>چراغ‌ها و قطعات بدنه با تنوع کامل</h3>
-            <small>مشاهده محصولات</small>
-          </div>
-        </button>
-        <button type="button" className="small" style={promoImage(2) ? { backgroundImage: `linear-gradient(90deg, rgba(245,158,11,.25), rgba(0,0,0,.35)), url(${promoImage(2)})` } : undefined} onClick={() => onNavigate('shop', 'maintenance')}>
-          <div>
-            <span>فیلترها</span>
-            <h3>سرویس دوره‌ای مطمئن</h3>
-          </div>
-        </button>
-        <button type="button" className="small second" style={products[1]?.images?.[0] ? { backgroundImage: `linear-gradient(90deg, rgba(194,65,12,.45), rgba(0,0,0,.36)), url(${products[1].images[0]})` } : undefined} onClick={() => onNavigate('shop')}>
-          <div>
-            <span>گیربکس و روغن</span>
-            <h3>قطعات تخصصی انتقال قدرت</h3>
-          </div>
-        </button>
-        <button type="button" className="large second" style={products[2]?.images?.[0] ? { backgroundImage: `linear-gradient(90deg, rgba(7,85,143,.42), rgba(0,0,0,.35)), url(${products[2].images[0]})` } : undefined} onClick={() => onNavigate('shop')}>
-          <div>
-            <span>مراقبت خودرو</span>
-            <h3>محصولات نگهداری و لوازم جانبی</h3>
-            <small>مشاهده محصولات</small>
-          </div>
-        </button>
+      {sectionVisible('promo-large') && (
+      <section className="marketplace-section marketplace-feature-banners builder-section-grid" data-section-key="promo-large" style={sectionStyle('promo-large')}>
+        {sortedItems('promo-large').map((item, index) => {
+          const fallbackImages = [promoImage(0), promoImage(2), products[1]?.images?.[0] || '', products[2]?.images?.[0] || ''];
+          const image = item.imageUrl || fallbackImages[index] || '';
+          return (
+            <button
+              key={item.id}
+              type="button"
+              className={index % 3 === 0 ? 'large' : 'small'}
+              style={{
+                ...(image ? { backgroundImage: `linear-gradient(90deg, rgba(0,0,0,.24), rgba(0,0,0,.62)), url(${image})` } : {}),
+                borderRadius: `${sectionConfig('promo-large')?.itemRadiusPx ?? 12}px`
+              }}
+              onClick={() => goLink(item.link || 'shop')}
+            >
+              <div>
+                <span>{item.subtitle || 'پیشنهاد فروشگاه'}</span>
+                <h3>{item.title || 'بنر فروشگاه'}</h3>
+                {item.buttonText && <small>{item.buttonText}</small>}
+              </div>
+            </button>
+          );
+        })}
       </section>
+      )}
 
       <section className="marketplace-section" data-section-key="maintenance-products">
         <div className="marketplace-section-heading">
@@ -468,7 +466,7 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
           </div>
         </div>
       </section>
-      )
+      )}
 
       {sectionVisible('shipping-banner') && (
       <section className="marketplace-section marketplace-shipping-banner" data-section-key="shipping-banner" style={sectionStyle('shipping-banner')}>
@@ -479,7 +477,7 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
         </div>
         <PackageCheck className="marketplace-shipping-art" />
       </section>
-      )
+      )}
 
       <section className="marketplace-section marketplace-articles" data-section-key="articles">
         <div className="marketplace-section-heading">
@@ -528,7 +526,7 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
           );
         })}
       </section>
-      )
+      )}
     </div>
   );
 };

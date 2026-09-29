@@ -75,6 +75,21 @@ export const AdminThemeTab: React.FC = () => {
       primaryColor: '#B45309',
       primaryHover: '#92400E',
       accentGlowColor: '#D97706'
+    },
+    {
+      id: 'marketplace-rtl',
+      name: 'Marketplace RTL Pro',
+      desc: 'قالب فروشگاهی کامل مطابق مرجع ارسالی: هدر چندلایه، اسلایدر عریض، انتخاب خودرو، دسته‌بندی دایره‌ای، بنرهای متعدد، ردیف‌های محصول، برندها، مقالات و فوتر فروشگاهی؛ کاملاً راست‌چین.',
+      layoutPreset: 'marketplace-rtl' as const,
+      themeMode: 'light' as const,
+      siteBgColor: '#f5f6f7',
+      cardBgColor: '#ffffff',
+      headerBgColor: '#07558f',
+      footerBgColor: '#111111',
+      textColor: '#111827',
+      primaryColor: '#f59e0b',
+      primaryHover: '#d97706',
+      accentGlowColor: '#f59e0b'
     }
   ];
 

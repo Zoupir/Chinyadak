@@ -143,7 +143,7 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
           onClick={() => onNavigate('product', product.id)}
           aria-label={product.nameFa}
         >
-          {product.images?.[0] ? <img src={product.images[0]} alt={product.nameFa} /> : <Wrench className="w-7 h-7" />}
+          {product.images?.[0] ? <img src={product.images[0]} alt={product.seo?.images?.[product.images[0]]?.alt || product.nameFa} title={product.seo?.images?.[product.images[0]]?.title || product.nameFa} /> : <Wrench className="w-7 h-7" />}
           {hasDiscount && <span className="marketplace-ref-sale">فروش ویژه</span>}
         </button>
         <div className="marketplace-ref-product-info">

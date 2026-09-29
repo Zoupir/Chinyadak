@@ -28,7 +28,7 @@ export const ArticleDetailView: React.FC<ArticleDetailViewProps> = ({ articleId,
   return (
     <div className="max-w-4xl mx-auto px-4 py-8 space-y-8">
       {/* Breadcrumb */}
-      <div className="flex items-center gap-2 text-xs text-neutral-400">
+      <div className="site-breadcrumb flex items-center gap-2 text-xs text-neutral-400">
         <button onClick={() => onNavigate('home')} className="hover:text-red-600">خانه</button>
         <span>/</span>
         <button onClick={() => onNavigate('blog')} className="hover:text-red-600">وبلاگ فنی</button>
@@ -62,7 +62,7 @@ export const ArticleDetailView: React.FC<ArticleDetailViewProps> = ({ articleId,
 
       {/* Featured Banner */}
       <div className="rounded-3xl overflow-hidden aspect-16/9 border border-neutral-200 shadow-md">
-        <img src={article.imageUrl} alt={article.title} className="w-full h-full object-cover" />
+        <img src={article.imageUrl} alt={article.seo?.images?.[article.imageUrl]?.alt || article.title} title={article.seo?.images?.[article.imageUrl]?.title || article.title} className="w-full h-full object-cover" />
       </div>
 
       {/* Article Content */}

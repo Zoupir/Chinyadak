@@ -2,13 +2,13 @@ import React, { useEffect, useMemo, useState } from 'react';
 import {
   Activity, AlertTriangle, ArrowUpLeft, BarChart3, Bot, BrainCircuit, Check,
   CheckCircle2, ChevronLeft, CircleGauge, Code2, ExternalLink, FileSearch,
-  FileText, Gauge, GitBranch, Globe2, History, KeyRound, Link2, ListChecks,
+  FileText, Gauge, GitBranch, Globe2, تاریخچه, KeyRound, Link2, ListChecks,
   Loader2, Network, RefreshCw, Route, Save, Search, Settings2, ShieldCheck,
   Sparkles, Trash2, WandSparkles, XCircle, Zap
 } from 'lucide-react';
 
 type SeoTab =
-  | 'dashboard' | 'content' | 'audit' | 'links' | 'schema'
+  | 'wizard' | 'dashboard' | 'content' | 'audit' | 'links' | 'schema'
   | 'indexing' | 'redirects' | 'gsc' | 'performance' | 'ai'
   | 'settings' | 'diagnostics';
 
@@ -118,7 +118,8 @@ const errorFa = (error: unknown): string => {
 };
 
 export const AdminSeoTab: React.FC = () => {
-  const [tab, setTab] = useState<SeoTab>('dashboard');
+  const [tab, setTab] = useState<SeoTab>('wizard');
+  const [wizardStep, setWizardStep] = useState(1);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState('');
   const [notice, setNotice] = useState<{ type: 'ok' | 'error'; text: string } | null>(null);
@@ -157,8 +158,8 @@ export const AdminSeoTab: React.FC = () => {
   const [inspectResult, setInspectResult] = useState<any>(null);
   const [jobs, setJobs] = useState<any[]>([]);
   const [logs, setLogs] = useState<any[]>([]);
-  const [history, setHistory] = useState<any[]>([]);
-  const [health, setHealth] = useState<any>(null);
+  const [history, setتاریخچه] = useState<any[]>([]);
+  const [health, setسلامت سیستم] = useState<any>(null);
   const [selfTest, setSelfTest] = useState<any>(null);
 
   const flash = (text: string, type: 'ok' | 'error' = 'ok') => {
@@ -217,18 +218,19 @@ export const AdminSeoTab: React.FC = () => {
   }, [tab, entityType]);
 
   const tabs = [
+    { id: 'wizard', label: 'ویزارد راه‌اندازی', icon: WandSparkles },
     { id: 'dashboard', label: 'داشبورد', icon: BarChart3 },
     { id: 'content', label: 'سئوی محتوا', icon: FileText },
-    { id: 'audit', label: 'Audit و Action Center', icon: ListChecks },
+    { id: 'audit', label: 'پایش و مرکز اقدامات', icon: ListChecks },
     { id: 'links', label: 'لینک‌سازی داخلی', icon: Network },
-    { id: 'schema', label: 'Schema', icon: Code2 },
-    { id: 'indexing', label: 'Sitemap / Robots / IndexNow', icon: Globe2 },
-    { id: 'redirects', label: 'Redirect و 404', icon: Route },
-    { id: 'gsc', label: 'Search Console', icon: Search },
-    { id: 'performance', label: 'PageSpeed و Inspector', icon: Gauge },
-    { id: 'ai', label: 'AI SEO Studio', icon: Bot },
-    { id: 'settings', label: 'تنظیمات', icon: Settings2 },
-    { id: 'diagnostics', label: 'Diagnostics', icon: Activity }
+    { id: 'schema', label: 'داده‌های ساختاریافته', icon: Code2 },
+    { id: 'indexing', label: 'ایندکس و نقشه سایت', icon: Globe2 },
+    { id: 'redirects', label: 'ریدایرکت و خطاهای ۴۰۴', icon: Route },
+    { id: 'gsc', label: 'سرچ کنسول گوگل', icon: Search },
+    { id: 'performance', label: 'سرعت و بررسی فنی', icon: Gauge },
+    { id: 'ai', label: 'استودیوی هوش مصنوعی', icon: Bot },
+    { id: 'settings', label: 'تنظیمات پیشرفته', icon: Settings2 },
+    { id: 'diagnostics', label: 'عیب‌یابی و لاگ‌ها', icon: Activity }
   ] as const;
 
   const saveSettings = async () => {
@@ -278,8 +280,8 @@ export const AdminSeoTab: React.FC = () => {
   };
 
   const buildGraph = async () => {
-    const data = await run('graph', () => api<any>('/api/seo/graph/rebuild', { method: 'POST', body: '{}' }), 'Knowledge Graph بازسازی شد.');
-    if (data) setSummary((prev: any) => ({ ...prev, graph: data.graph, graphNodes: data.graph.nodes }));
+    const data = await run('graph', () => api<any>('/api/seo/graph/rebuild', { method: 'POST', body: '{}' }), 'گراف معنایی بازسازی شد.');
+    if (data) setSummary((prev: any) => ({ ...prev, graph: data.graph, graphگرهs: data.graph.nodes }));
     if (selectedEntity) await openEntity(selectedEntity);
   };
 
@@ -344,7 +346,7 @@ export const AdminSeoTab: React.FC = () => {
           api<any>('/api/seo/diagnostics/logs?limit=300'),
           api<any>('/api/seo/history?limit=200')
         ]);
-        setHealth(h); setJobs(j.items || []); setLogs(l.items || []); setHistory(hist.items || []);
+        setسلامت سیستم(h); setJobs(j.items || []); setLogs(l.items || []); setتاریخچه(hist.items || []);
       }
     } catch (error) {
       flash(errorFa(error), 'error');
@@ -371,21 +373,21 @@ export const AdminSeoTab: React.FC = () => {
           <div>
             <div className="flex items-center gap-2 text-red-400 text-xs font-black mb-2">
               <Sparkles className="w-4 h-4" />
-              TAKRANK SEO NATIVE
+              تک‌رنک سئو — موتور بومی سایت
             </div>
             <h2 className="text-xl sm:text-2xl font-black">مرکز سئو و رشد ارگانیک</h2>
             <p className="text-xs text-neutral-400 mt-2 max-w-2xl">
-              موتور اختصاصی Chinyadak: محتوا، گراف معنایی، لینک‌سازی، Schema، Search Console، PageSpeed، AI و ایندکسینگ.
+              مدیریت یکپارچه سئوی محتوا، گراف معنایی، لینک‌سازی، داده‌های ساختاریافته، سرچ کنسول، سرعت، هوش مصنوعی و ایندکسینگ.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
             <button onClick={() => void doAudit()} disabled={!!busy} className="px-4 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-xs font-black flex items-center gap-2 disabled:opacity-50">
               {busy === 'audit' ? <Loader2 className="w-4 h-4 animate-spin" /> : <ListChecks className="w-4 h-4" />}
-              Audit کامل
+              پایش کامل سئو
             </button>
             <button onClick={() => void buildGraph()} disabled={!!busy} className="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 text-xs font-bold flex items-center gap-2 disabled:opacity-50">
               <Network className="w-4 h-4" />
-              بازسازی Graph
+              بازسازی گراف معنایی
             </button>
           </div>
         </div>
@@ -413,13 +415,199 @@ export const AdminSeoTab: React.FC = () => {
         })}
       </div>
 
+      {tab === 'wizard' && (
+        <div className="space-y-4">
+          <Card>
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+              <div>
+                <h3 className="font-black text-base text-neutral-900">ویزارد حرفه‌ای راه‌اندازی تک‌رنک سئو</h3>
+                <p className="text-[11px] text-neutral-500 mt-1">پنج مرحله اصلی برای هویت، ایندکس، محتوای سئو، اتصال‌های گوگل و اتوماسیون.</p>
+              </div>
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
+                {['هویت سایت', 'ایندکس و ساختار', 'محتوا و اسکیما', 'اتصال‌های گوگل', 'هوش مصنوعی و اتوماسیون'].map((label, index) => {
+                  const step = index + 1;
+                  return (
+                    <button
+                      key={label}
+                      type="button"
+                      onClick={() => setWizardStep(step)}
+                      className={`shrink-0 px-3 py-2 rounded-xl text-[10px] font-black border ${wizardStep === step ? 'bg-red-600 border-red-600 text-white' : step < wizardStep ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-neutral-50 border-neutral-200 text-neutral-500'}`}
+                    >
+                      {step.toLocaleString('fa-IR')}. {label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </Card>
+
+          {wizardStep === 1 && (
+            <Card title="مرحله ۱ — هویت سایت و کسب‌وکار">
+              <div className="grid md:grid-cols-2 gap-4">
+                <Field label="نام سایت" value={settings.global.siteTitle} onChange={v => setSettings({ ...settings, global: { ...settings.global, siteTitle: v }, identity: { ...settings.identity, organizationName: v } })} />
+                <Field label="شعار سایت" value={settings.global.siteSlogan} onChange={v => setSettings({ ...settings, global: { ...settings.global, siteSlogan: v } })} />
+                <Field label="نام کسب‌وکار / سازمان" value={settings.identity.organizationName} onChange={v => setSettings({ ...settings, identity: { ...settings.identity, organizationName: v } })} />
+                <label className="block space-y-1.5">
+                  <span className="text-[11px] font-bold text-neutral-600">نوع کسب‌وکار برای اسکیما</span>
+                  <select value={settings.identity.organizationType} onChange={e => setSettings({ ...settings, identity: { ...settings.identity, organizationType: e.target.value } })} className="w-full p-3 border border-neutral-300 rounded-xl text-xs bg-white">
+                    <option value="AutoPartsStore">فروشگاه قطعات خودرو</option>
+                    <option value="AutomotiveBusiness">کسب‌وکار خودرویی</option>
+                    <option value="Store">فروشگاه</option>
+                    <option value="LocalBusiness">کسب‌وکار محلی</option>
+                    <option value="Organization">سازمان</option>
+                  </select>
+                </label>
+                <Field label="آدرس لوگو" dir="ltr" value={settings.identity.logoUrl} onChange={v => setSettings({ ...settings, identity: { ...settings.identity, logoUrl: v } })} />
+                <Field label="تلفن" dir="ltr" value={settings.identity.phone} onChange={v => setSettings({ ...settings, identity: { ...settings.identity, phone: v } })} />
+                <Field label="ایمیل" dir="ltr" value={settings.identity.email} onChange={v => setSettings({ ...settings, identity: { ...settings.identity, email: v } })} />
+                <Field label="شهر" value={settings.identity.city} onChange={v => setSettings({ ...settings, identity: { ...settings.identity, city: v } })} />
+                <Field label="استان" value={settings.identity.region} onChange={v => setSettings({ ...settings, identity: { ...settings.identity, region: v } })} />
+                <Field label="کشور" value={settings.identity.country} onChange={v => setSettings({ ...settings, identity: { ...settings.identity, country: v } })} />
+                <div className="md:col-span-2"><Field textarea label="آدرس کامل" value={settings.identity.address} onChange={v => setSettings({ ...settings, identity: { ...settings.identity, address: v } })} /></div>
+              </div>
+            </Card>
+          )}
+
+          {wizardStep === 2 && (
+            <div className="grid lg:grid-cols-2 gap-4">
+              <Card title="مرحله ۲ — ایندکس و نقشه سایت">
+                <div className="space-y-2">
+                  <Toggle label="اجازه ایندکس سایت" checked={Boolean(settings.global.indexRobots)} onChange={v => setSettings({ ...settings, global: { ...settings.global, indexRobots: v } })} />
+                  <Toggle label="نقشه سایت XML" checked={Boolean(settings.modules.sitemap)} onChange={v => setSettings({ ...settings, modules: { ...settings.modules, sitemap: v } })} />
+                  <Toggle label="درج تصاویر در نقشه سایت" checked={Boolean(settings.sitemap.includeImages)} onChange={v => setSettings({ ...settings, sitemap: { ...settings.sitemap, includeImages: v } })} />
+                  <Toggle label="نقشه سایت HTML" checked={Boolean(settings.sitemap.htmlEnabled)} onChange={v => setSettings({ ...settings, sitemap: { ...settings.sitemap, htmlEnabled: v } })} />
+                  <Toggle label="IndexNow" checked={Boolean(settings.indexNow.enabled)} onChange={v => setSettings({ ...settings, modules: { ...settings.modules, indexNow: v }, indexNow: { ...settings.indexNow, enabled: v } })} desc="برای اطلاع سریع موتورهای جستجو پس از تغییر صفحات." />
+                </div>
+              </Card>
+              <Card title="ساختار و لینک‌سازی">
+                <div className="space-y-2">
+                  <Toggle label="مدیریت متا" checked={Boolean(settings.modules.meta)} onChange={v => setSettings({ ...settings, modules: { ...settings.modules, meta: v } })} />
+                  <Toggle label="بردکرامب" checked={Boolean(settings.modules.breadcrumbs)} onChange={v => setSettings({ ...settings, modules: { ...settings.modules, breadcrumbs: v } })} />
+                  <Toggle label="لینک‌سازی داخلی معنایی" checked={Boolean(settings.modules.internalLinks)} onChange={v => setSettings({ ...settings, modules: { ...settings.modules, internalLinks: v } })} />
+                  <Toggle label="پایش خطاهای ۴۰۴" checked={Boolean(settings.modules.monitor404)} onChange={v => setSettings({ ...settings, modules: { ...settings.modules, monitor404: v } })} />
+                  <Toggle label="مدیریت ریدایرکت‌ها" checked={Boolean(settings.modules.redirects)} onChange={v => setSettings({ ...settings, modules: { ...settings.modules, redirects: v } })} />
+                </div>
+              </Card>
+            </div>
+          )}
+
+          {wizardStep === 3 && (
+            <div className="grid lg:grid-cols-2 gap-4">
+              <Card title="مرحله ۳ — محتوا و امتیازدهی">
+                <div className="grid grid-cols-2 gap-3">
+                  <Field label="حداقل کلمات مقاله" type="number" value={settings.scoring.articleMinimumWords} onChange={v => setSettings({ ...settings, scoring: { ...settings.scoring, articleMinimumWords: Number(v) } })} />
+                  <Field label="حداقل کلمات محصول" type="number" value={settings.scoring.productMinimumWords} onChange={v => setSettings({ ...settings, scoring: { ...settings.scoring, productMinimumWords: Number(v) } })} />
+                  <Field label="حداقل کلمات برگه" type="number" value={settings.scoring.pageMinimumWords} onChange={v => setSettings({ ...settings, scoring: { ...settings.scoring, pageMinimumWords: Number(v) } })} />
+                  <Field label="حداقل تراکم کلمه کلیدی ٪" type="number" value={settings.scoring.densityMin} onChange={v => setSettings({ ...settings, scoring: { ...settings.scoring, densityMin: Number(v) } })} />
+                </div>
+                <div className="space-y-2 mt-4">
+                  <Toggle label="فهرست مطالب خودکار" checked={Boolean(settings.toc.enabled)} onChange={v => setSettings({ ...settings, modules: { ...settings.modules, toc: v }, toc: { ...settings.toc, enabled: v } })} />
+                  <Toggle label="سئوی تصاویر" checked={Boolean(settings.modules.imageSeo)} onChange={v => setSettings({ ...settings, modules: { ...settings.modules, imageSeo: v } })} />
+                </div>
+              </Card>
+              <Card title="داده‌های ساختاریافته">
+                <div className="space-y-2">
+                  <Toggle label="اسکیما فعال باشد" checked={Boolean(settings.modules.schema)} onChange={v => setSettings({ ...settings, modules: { ...settings.modules, schema: v } })} desc="محصول، مقاله، FAQ، بردکرامب، سازمان و صفحات سایت." />
+                  <Toggle label="hreflang" checked={Boolean(settings.modules.hreflang)} onChange={v => setSettings({ ...settings, modules: { ...settings.modules, hreflang: v } })} />
+                  <Toggle label="پایش خودکار سئو" checked={Boolean(settings.modules.auditor)} onChange={v => setSettings({ ...settings, modules: { ...settings.modules, auditor: v } })} />
+                  <Field label="عنوان متای صفحه اصلی" value={settings.global.metaTitle} onChange={v => setSettings({ ...settings, global: { ...settings.global, metaTitle: v } })} />
+                  <Field textarea label="توضیحات متای صفحه اصلی" value={settings.global.metaDescription} onChange={v => setSettings({ ...settings, global: { ...settings.global, metaDescription: v } })} />
+                </div>
+              </Card>
+            </div>
+          )}
+
+          {wizardStep === 4 && (
+            <div className="grid lg:grid-cols-2 gap-4">
+              <Card title="مرحله ۴ — سرچ کنسول گوگل">
+                <div className="space-y-3">
+                  <Field label="شناسه کاربری OAuth گوگل" dir="ltr" value={integrations.gscClientId} onChange={v => setIntegrations({ ...integrations, gscClientId: v })} />
+                  <Field label="کلید محرمانه OAuth گوگل" type="password" dir="ltr" value={integrations.gscClientSecret} onChange={v => setIntegrations({ ...integrations, gscClientSecret: v })} />
+                  <Field label="Property سرچ کنسول" dir="ltr" value={integrations.gscProperty} onChange={v => setIntegrations({ ...integrations, gscProperty: v })} placeholder="sc-domain:example.com" />
+                  <div className={`p-3 rounded-xl text-xs font-bold ${integrations.gscConnected ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>
+                    {integrations.gscConnected ? 'اتصال سرچ کنسول فعال است.' : 'پس از ذخیره اطلاعات OAuth، از تب سرچ کنسول اتصال را تکمیل کنید.'}
+                  </div>
+                </div>
+              </Card>
+              <Card title="بررسی سرعت و سلامت فنی">
+                <div className="space-y-3">
+                  <Field label="کلید API سرویس PageSpeed" type="password" dir="ltr" value={integrations.pageSpeedApiKey} onChange={v => setIntegrations({ ...integrations, pageSpeedApiKey: v })} />
+                  <Toggle label="ماژول سرعت فعال باشد" checked={Boolean(settings.modules.performance)} onChange={v => setSettings({ ...settings, modules: { ...settings.modules, performance: v } })} />
+                  <Toggle label="بازرسی فنی URL فعال باشد" checked={Boolean(settings.modules.inspector)} onChange={v => setSettings({ ...settings, modules: { ...settings.modules, inspector: v } })} />
+                </div>
+              </Card>
+            </div>
+          )}
+
+          {wizardStep === 5 && (
+            <div className="grid lg:grid-cols-2 gap-4">
+              <Card title="مرحله ۵ — هوش مصنوعی سئو">
+                <div className="space-y-3">
+                  <label className="block space-y-1.5">
+                    <span className="text-[11px] font-bold text-neutral-600">ارائه‌دهنده هوش مصنوعی</span>
+                    <select value={integrations.aiProvider} onChange={e => setIntegrations({ ...integrations, aiProvider: e.target.value })} className="w-full p-3 border rounded-xl text-xs">
+                      <option value="gemini">Gemini</option>
+                      <option value="openai">OpenAI</option>
+                      <option value="anthropic">Anthropic</option>
+                    </select>
+                  </label>
+                  <Field label="مدل هوش مصنوعی" dir="ltr" value={integrations.aiModel} onChange={v => setIntegrations({ ...integrations, aiModel: v })} />
+                  <Field label="کلید API هوش مصنوعی" type="password" dir="ltr" value={integrations.aiApiKey} onChange={v => setIntegrations({ ...integrations, aiApiKey: v })} />
+                  <Field label="تعداد کلمات هدف" type="number" value={settings.ai.requestedWords} onChange={v => setSettings({ ...settings, ai: { ...settings.ai, requestedWords: Number(v) } })} />
+                </div>
+              </Card>
+              <Card title="اتوماسیون و پایش">
+                <div className="space-y-3">
+                  <Toggle label="اتوماسیون سئو فعال باشد" checked={Boolean(settings.modules.automation)} onChange={v => setSettings({ ...settings, modules: { ...settings.modules, automation: v } })} />
+                  <Field label="فاصله پایش کامل (ساعت)" type="number" value={settings.automation.auditCadenceHours} onChange={v => setSettings({ ...settings, automation: { ...settings.automation, auditCadenceHours: Number(v) } })} />
+                  <Field label="فاصله همگام‌سازی سرچ کنسول (ساعت)" type="number" value={settings.automation.gscSyncCadenceHours} onChange={v => setSettings({ ...settings, automation: { ...settings.automation, gscSyncCadenceHours: Number(v) } })} />
+                  <Toggle label="ثبت لاگ زمان اجرا" checked={Boolean(settings.runtimeLogging)} onChange={v => setSettings({ ...settings, runtimeLogging: v })} />
+                </div>
+              </Card>
+            </div>
+          )}
+
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+            <button
+              type="button"
+              disabled={wizardStep === 1}
+              onClick={() => setWizardStep(step => Math.max(1, step - 1))}
+              className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-neutral-100 text-neutral-700 text-xs font-black disabled:opacity-40"
+            >
+              مرحله قبل
+            </button>
+            <div className="flex gap-2 w-full sm:w-auto">
+              <button
+                type="button"
+                onClick={() => { void saveSettings(); void saveIntegrations(); }}
+                className="flex-1 sm:flex-none px-5 py-2.5 rounded-xl border border-neutral-300 bg-white text-neutral-800 text-xs font-black"
+              >
+                ذخیره
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  void saveSettings();
+                  void saveIntegrations();
+                  if (wizardStep < 5) setWizardStep(step => Math.min(5, step + 1));
+                  else flash('ویزارد سئو ذخیره شد. اکنون می‌توانید پایش کامل را اجرا کنید.');
+                }}
+                className="flex-1 sm:flex-none px-6 py-2.5 rounded-xl bg-red-600 text-white text-xs font-black"
+              >
+                {wizardStep < 5 ? 'ذخیره و ادامه' : 'پایان و ذخیره'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {tab === 'dashboard' && (
         <div className="space-y-5">
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
             {[
               ['میانگین امتیاز', summary?.averageScore || 0, CircleGauge, 'text-blue-600'],
               ['مشکلات باز', summary?.openIssues || 0, AlertTriangle, 'text-red-600'],
-              ['نودهای Graph', summary?.graphNodes || 0, Network, 'text-violet-600'],
+              ['نودهای Graph', summary?.graphگرهs || 0, Network, 'text-violet-600'],
               ['404 حل‌نشده', summary?.unresolved404 || 0, FileSearch, 'text-amber-600']
             ].map(([label, value, Icon, tone]: any) => (
               <Card key={label} className="!p-4">
@@ -433,17 +621,17 @@ export const AdminSeoTab: React.FC = () => {
           </div>
 
           <div className="grid lg:grid-cols-3 gap-4">
-            <Card title="وضعیت Knowledge Graph">
+            <Card title="وضعیت گراف معنایی">
               <div className="space-y-2 text-xs">
                 <div className="flex justify-between"><span>وضعیت</span><b className={summary?.graph?.ready ? 'text-emerald-600' : 'text-amber-600'}>{summary?.graph?.ready ? 'آماده' : 'نیاز به ساخت'}</b></div>
-                <div className="flex justify-between"><span>Node</span><b>{fmt(summary?.graph?.nodes)}</b></div>
-                <div className="flex justify-between"><span>Edge</span><b>{fmt(summary?.graph?.edges)}</b></div>
+                <div className="flex justify-between"><span>گره</span><b>{fmt(summary?.graph?.nodes)}</b></div>
+                <div className="flex justify-between"><span>ارتباط</span><b>{fmt(summary?.graph?.edges)}</b></div>
                 <div className="flex justify-between"><span>حداقل امتیاز پیشنهاد</span><b>{summary?.graph?.minimumCandidateScore || 62}</b></div>
                 {summary?.graph?.stale && <div className="p-2 bg-amber-50 text-amber-700 rounded-xl">Graph بعد از تغییرات محتوا نیاز به بازسازی دارد.</div>}
               </div>
             </Card>
 
-            <Card title="Action Center">
+            <Card title="مرکز اقدامات">
               <div className="grid grid-cols-2 gap-2">
                 <div className="p-3 rounded-xl bg-red-50"><b className="text-red-700 text-xl">{fmt(actionCenter?.high)}</b><div className="text-[10px] text-red-600">High</div></div>
                 <div className="p-3 rounded-xl bg-amber-50"><b className="text-amber-700 text-xl">{fmt(actionCenter?.medium)}</b><div className="text-[10px] text-amber-600">Medium</div></div>
@@ -452,14 +640,14 @@ export const AdminSeoTab: React.FC = () => {
               </div>
             </Card>
 
-            <Card title="آخرین Audit">
+            <Card title="آخرین پایش">
               {summary?.lastAudit ? (
                 <div className="space-y-2 text-xs">
                   <div className="flex justify-between"><span>URL بررسی‌شده</span><b>{fmt(summary.lastAudit.scanned)}</b></div>
                   <div className="flex justify-between"><span>Issue شناسایی‌شده</span><b>{fmt(summary.lastAudit.issuesDetected)}</b></div>
                   <div className="text-[10px] text-neutral-400 ltr text-left">{summary.lastAudit.finishedAt}</div>
                 </div>
-              ) : <div className="text-xs text-neutral-500">هنوز Audit اجرا نشده است.</div>}
+              ) : <div className="text-xs text-neutral-500">هنوز پایش کامل اجرا نشده است.</div>}
             </Card>
           </div>
 
@@ -750,7 +938,7 @@ export const AdminSeoTab: React.FC = () => {
                         <textarea dir="rtl" rows={14} value={aiPackage.contentHtml || ''} onChange={e => setAiPackage({ ...aiPackage, contentHtml: e.target.value })} className="w-full p-3 border border-neutral-300 rounded-xl text-xs font-mono" />
                       </div>
                       <div className="p-3 rounded-xl bg-blue-50 text-blue-800 text-[10px]">
-                        لینک‌های داخلی فقط از URLهای مجاز Knowledge Graph پذیرفته می‌شوند. AI نمی‌تواند URL داخلی جعلی بسازد.
+                        لینک‌های داخلی فقط از URLهای مجاز گراف معنایی پذیرفته می‌شوند. AI نمی‌تواند URL داخلی جعلی بسازد.
                       </div>
                       <button onClick={() => void applyAi()} disabled={busy === 'ai-apply'} className="px-5 py-2.5 bg-emerald-600 text-white rounded-xl text-xs font-black flex items-center gap-2"><Check className="w-4 h-4" /> تأیید و اعمال روی سایت</button>
                     </div>
@@ -797,13 +985,13 @@ export const AdminSeoTab: React.FC = () => {
 
       {tab === 'schema' && (
         <Card>
-          <div className="flex justify-between items-center mb-4"><div><h3 className="font-black text-sm">Schema Audit</h3><p className="text-[10px] text-neutral-500">بررسی mapping محصول، مقاله، صفحات و آرشیوها</p></div><button onClick={() => void loadTabData('schema')} className="p-2 rounded-xl bg-neutral-100"><RefreshCw className="w-4 h-4" /></button></div>
+          <div className="flex justify-between items-center mb-4"><div><h3 className="font-black text-sm">پایش داده‌های ساختاریافته</h3><p className="text-[10px] text-neutral-500">بررسی mapping محصول، مقاله، صفحات و آرشیوها</p></div><button onClick={() => void loadTabData('schema')} className="p-2 rounded-xl bg-neutral-100"><RefreshCw className="w-4 h-4" /></button></div>
           <div className="space-y-2">
             {schemaIssues.map(item => (
               <div key={item.entityType + ':' + item.entityId} className="p-3 rounded-xl border border-neutral-200 flex items-center gap-3">
                 <Code2 className="w-4 h-4 text-violet-600" />
                 <div className="flex-1"><b className="text-xs">{item.title}</b><div className="text-[10px] text-neutral-500">{item.actual} → {item.expected}</div></div>
-                <button onClick={() => void run('schema-fix', () => api('/api/seo/schema/repair', { method: 'POST', body: JSON.stringify({ entityType: item.entityType, entityId: item.entityId }) }), 'Schema اصلاح شد.').then(() => loadTabData('schema'))} className="px-3 py-2 bg-violet-600 text-white rounded-xl text-[10px] font-bold">Repair Safe</button>
+                <button onClick={() => void run('schema-fix', () => api('/api/seo/schema/repair', { method: 'POST', body: JSON.stringify({ entityType: item.entityType, entityId: item.entityId }) }), 'Schema اصلاح شد.').then(() => loadTabData('schema'))} className="px-3 py-2 bg-violet-600 text-white rounded-xl text-[10px] font-bold">اصلاح امن</button>
               </div>
             ))}
             {!schemaIssues.length && <div className="p-8 text-center text-xs text-emerald-600 font-bold">Mapping ناسازگاری پیدا نشد.</div>}
@@ -813,16 +1001,16 @@ export const AdminSeoTab: React.FC = () => {
 
       {tab === 'indexing' && (
         <div className="grid lg:grid-cols-2 gap-4">
-          <Card title="Sitemap و Robots">
+          <Card title="نقشه سایت و Robots">
             <div className="space-y-3">
-              <Toggle label="Sitemap فعال" checked={settings.modules.sitemap} onChange={v => setSettings({ ...settings, modules: { ...settings.modules, sitemap: v } })} />
-              <Toggle label="درج تصاویر در Sitemap" checked={settings.sitemap.includeImages} onChange={v => setSettings({ ...settings, sitemap: { ...settings.sitemap, includeImages: v } })} />
-              <Toggle label="HTML Sitemap" checked={settings.sitemap.htmlEnabled} onChange={v => setSettings({ ...settings, sitemap: { ...settings.sitemap, htmlEnabled: v } })} />
-              <Field label="Sitemap chunk size" type="number" value={settings.sitemap.chunkSize} onChange={v => setSettings({ ...settings, sitemap: { ...settings.sitemap, chunkSize: Number(v) } })} />
+              <Toggle label="نقشه سایت فعال" checked={settings.modules.sitemap} onChange={v => setSettings({ ...settings, modules: { ...settings.modules, sitemap: v } })} />
+              <Toggle label="درج تصاویر در نقشه سایت" checked={settings.sitemap.includeImages} onChange={v => setSettings({ ...settings, sitemap: { ...settings.sitemap, includeImages: v } })} />
+              <Toggle label="نقشه سایت HTML" checked={settings.sitemap.htmlEnabled} onChange={v => setSettings({ ...settings, sitemap: { ...settings.sitemap, htmlEnabled: v } })} />
+              <Field label="اندازه هر بخش نقشه سایت" type="number" value={settings.sitemap.chunkSize} onChange={v => setSettings({ ...settings, sitemap: { ...settings.sitemap, chunkSize: Number(v) } })} />
               <Field textarea label="Robots rules اضافه" dir="ltr" value={settings.robots.extraRules} onChange={v => setSettings({ ...settings, robots: { ...settings.robots, extraRules: v } })} />
               <div className="flex gap-2 flex-wrap">
                 <a target="_blank" rel="noreferrer" href="/sitemap.xml" className="px-3 py-2 rounded-xl bg-neutral-900 text-white text-[10px] font-bold">XML Sitemap</a>
-                <a target="_blank" rel="noreferrer" href="/sitemap.html" className="px-3 py-2 rounded-xl bg-neutral-100 text-neutral-800 text-[10px] font-bold">HTML Sitemap</a>
+                <a target="_blank" rel="noreferrer" href="/sitemap.html" className="px-3 py-2 rounded-xl bg-neutral-100 text-neutral-800 text-[10px] font-bold">نقشه سایت HTML</a>
                 <a target="_blank" rel="noreferrer" href="/robots.txt" className="px-3 py-2 rounded-xl bg-neutral-100 text-neutral-800 text-[10px] font-bold">robots.txt</a>
               </div>
             </div>
@@ -840,17 +1028,17 @@ export const AdminSeoTab: React.FC = () => {
 
       {tab === 'redirects' && (
         <div className="space-y-4">
-          <Card title="افزودن Redirect">
+          <Card title="افزودن ریدایرکت">
             <div className="grid md:grid-cols-5 gap-2">
               <input dir="ltr" value={redirectForm.source} onChange={e => setRedirectForm({ ...redirectForm, source: e.target.value })} placeholder="/old-url" className="p-3 border rounded-xl text-xs md:col-span-2" />
               <input dir="ltr" value={redirectForm.target} onChange={e => setRedirectForm({ ...redirectForm, target: e.target.value })} placeholder="/new-url" className="p-3 border rounded-xl text-xs md:col-span-2" />
               <select value={redirectForm.statusCode} onChange={e => setRedirectForm({ ...redirectForm, statusCode: Number(e.target.value) })} className="p-3 border rounded-xl text-xs">{[301,302,307,308,410].map(x => <option key={x}>{x}</option>)}</select>
             </div>
-            <div className="flex gap-2 mt-2"><select value={redirectForm.matchType} onChange={e => setRedirectForm({ ...redirectForm, matchType: e.target.value })} className="p-2 border rounded-xl text-xs"><option value="exact">Exact</option><option value="regex">Regex</option></select><button onClick={() => void run('redirect-add', () => api('/api/seo/redirects', { method: 'POST', body: JSON.stringify(redirectForm) }), 'Redirect ذخیره شد.').then(() => loadTabData('redirects'))} className="px-4 py-2 bg-red-600 text-white rounded-xl text-xs font-bold">ذخیره Redirect</button></div>
+            <div className="flex gap-2 mt-2"><select value={redirectForm.matchType} onChange={e => setRedirectForm({ ...redirectForm, matchType: e.target.value })} className="p-2 border rounded-xl text-xs"><option value="exact">Exact</option><option value="regex">Regex</option></select><button onClick={() => void run('redirect-add', () => api('/api/seo/redirects', { method: 'POST', body: JSON.stringify(redirectForm) }), 'Redirect ذخیره شد.').then(() => loadTabData('redirects'))} className="px-4 py-2 bg-red-600 text-white rounded-xl text-xs font-bold">ذخیره ریدایرکت</button></div>
           </Card>
 
           <div className="grid lg:grid-cols-2 gap-4">
-            <Card title="Redirect Manager">
+            <Card title="مدیریت ریدایرکت‌ها">
               <div className="max-h-[500px] overflow-y-auto space-y-2">
                 {redirects.map(item => (
                   <div key={item.id} className="p-3 rounded-xl bg-neutral-50 border flex gap-2 items-center">
@@ -882,9 +1070,9 @@ export const AdminSeoTab: React.FC = () => {
         <div className="space-y-4">
           <Card>
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-              <div><h3 className="font-black text-sm">Google Search Console</h3><p className="text-[10px] text-neutral-500">{integrations?.gscConnected ? 'اتصال فعال' : 'هنوز متصل نشده'}</p></div>
+              <div><h3 className="font-black text-sm">سرچ کنسول گوگل</h3><p className="text-[10px] text-neutral-500">{integrations?.gscConnected ? 'اتصال فعال' : 'هنوز متصل نشده'}</p></div>
               <div className="flex gap-2">
-                <button onClick={() => void run('gsc-auth', async () => { const data = await api<any>('/api/seo/gsc/auth-url'); window.location.href = data.url; return data; })} className="px-3 py-2 bg-blue-600 text-white rounded-xl text-xs font-bold">اتصال Google</button>
+                <button onClick={() => void run('gsc-auth', async () => { const data = await api<any>('/api/seo/gsc/auth-url'); window.location.href = data.url; return data; })} className="px-3 py-2 bg-blue-600 text-white rounded-xl text-xs font-bold">اتصال به گوگل</button>
                 <button onClick={() => void run('gsc-sync', () => api('/api/seo/gsc/sync', { method: 'POST', body: JSON.stringify({ days: 28 }) }), 'GSC سینک شد.').then(async () => setGsc(await api('/api/seo/gsc/overview?days=28')))} className="px-3 py-2 bg-neutral-900 text-white rounded-xl text-xs font-bold">Sync 28d</button>
               </div>
             </div>
@@ -896,7 +1084,7 @@ export const AdminSeoTab: React.FC = () => {
             <Card className="!p-4"><div className="text-[9px] text-neutral-400">Position</div><b className="text-xl">{Number(gsc?.summary?.position || 0).toLocaleString('fa-IR', { maximumFractionDigits: 1 })}</b></Card>
           </div>
           <div className="grid lg:grid-cols-2 gap-4">
-            <Card title="Queryهای برتر">
+            <Card title="عبارت‌های جستجوی برتر">
               <div className="max-h-96 overflow-y-auto">{(gsc?.queries || []).slice(0, 50).map((row: any, i: number) => <button key={i} onClick={() => { setGscQuery(row.query); }} className="w-full grid grid-cols-[1fr_60px_70px] gap-2 p-2 text-[10px] border-b hover:bg-neutral-50 text-right"><span className="truncate">{row.query}</span><b>{fmt(row.clicks)}</b><span>{Number(row.position || 0).toFixed(1)}</span></button>)}</div>
             </Card>
             <Card title="صفحات برتر">
@@ -905,14 +1093,14 @@ export const AdminSeoTab: React.FC = () => {
           </div>
           <Card title="Query Inspector / Cannibalization">
             <div className="flex gap-2"><input value={gscQuery} onChange={e => setGscQuery(e.target.value)} className="flex-1 p-3 border rounded-xl text-xs" placeholder="عبارت جستجو..." /><button onClick={() => void run('gsc-query', async () => { const data = await api<any>('/api/seo/gsc/query?q=' + encodeURIComponent(gscQuery) + '&days=28'); setGscInspector(data); return data; })} className="px-4 bg-red-600 text-white rounded-xl text-xs font-bold">تحلیل</button></div>
-            {gscInspector && <div className="mt-4 grid md:grid-cols-2 gap-3"><div className="p-3 bg-neutral-50 rounded-xl"><b className="text-xs">Landing Pages</b>{(gscInspector.landingPages || []).map((x: any, i: number) => <div key={i} className="text-[10px] mt-2 font-mono ltr text-left truncate">{x.page} — {x.clicks} clicks</div>)}</div><div className="p-3 bg-neutral-50 rounded-xl"><b className="text-xs">Content Matches</b>{(gscInspector.contentMatches || []).slice(0,10).map((x: any, i: number) => <div key={i} className="text-[10px] mt-2">{x.title} — {x.occurrences}</div>)}</div></div>}
+            {gscInspector && <div className="mt-4 grid md:grid-cols-2 gap-3"><div className="p-3 bg-neutral-50 rounded-xl"><b className="text-xs">صفحات فرود</b>{(gscInspector.landingPages || []).map((x: any, i: number) => <div key={i} className="text-[10px] mt-2 font-mono ltr text-left truncate">{x.page} — {x.clicks} clicks</div>)}</div><div className="p-3 bg-neutral-50 rounded-xl"><b className="text-xs">محتواهای مرتبط</b>{(gscInspector.contentMatches || []).slice(0,10).map((x: any, i: number) => <div key={i} className="text-[10px] mt-2">{x.title} — {x.occurrences}</div>)}</div></div>}
           </Card>
         </div>
       )}
 
       {tab === 'performance' && (
         <div className="space-y-4">
-          <Card title="PageSpeed Insights">
+          <Card title="بررسی سرعت صفحات">
             <div className="flex flex-col md:flex-row gap-2">
               <input dir="ltr" value={performanceUrl} onChange={e => setPerformanceUrl(e.target.value)} className="flex-1 p-3 border rounded-xl text-xs" />
               <select value={performanceStrategy} onChange={e => setPerformanceStrategy(e.target.value as any)} className="p-3 border rounded-xl text-xs"><option value="mobile">Mobile</option><option value="desktop">Desktop</option></select>
@@ -921,11 +1109,11 @@ export const AdminSeoTab: React.FC = () => {
             {performanceReport && <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-4">{Object.entries(performanceReport.categories || {}).map(([k,v]) => <div key={k} className="p-3 bg-neutral-50 rounded-xl text-center"><b className="text-xl">{String(v)}</b><div className="text-[9px] text-neutral-400">{k}</div></div>)}</div>}
             {performanceReport?.metrics && <div className="flex gap-2 flex-wrap mt-3">{Object.entries(performanceReport.metrics).map(([k,v]) => <span key={k} className="px-2 py-1 bg-blue-50 text-blue-700 rounded-lg text-[9px]">{k}: {String(v || '-')}</span>)}</div>}
           </Card>
-          <Card title="URL Inspector امن">
+          <Card title="بازرسی امن URL">
             <div className="flex gap-2"><input dir="ltr" value={inspectUrl} onChange={e => setInspectUrl(e.target.value)} className="flex-1 p-3 border rounded-xl text-xs" /><button onClick={() => void run('inspect', async () => { const data = await api<any>('/api/seo/inspect', { method: 'POST', body: JSON.stringify({ url: inspectUrl }) }); setInspectResult(data.result); return data; })} className="px-4 bg-neutral-900 text-white rounded-xl text-xs font-bold">Inspect</button></div>
             {inspectResult && <div className="grid md:grid-cols-2 gap-3 mt-4 text-[10px]"><div className="p-3 bg-neutral-50 rounded-xl space-y-1"><div>Status: <b>{inspectResult.status}</b></div><div>Title: {inspectResult.title}</div><div>Canonical: <span className="font-mono ltr">{inspectResult.canonical}</span></div><div>Robots: {inspectResult.robots}</div></div><div className="p-3 bg-neutral-50 rounded-xl space-y-1"><div>H1: {(inspectResult.h1 || []).join(' | ')}</div><div>Schema blocks: {fmt(inspectResult.schemas?.length)}</div><div>Images: {fmt(inspectResult.images?.length)}</div><div>HTML: {fmt(inspectResult.htmlBytes)} bytes</div></div></div>}
           </Card>
-          <Card title="تاریخچه Performance">
+          <Card title="تاریخچه سرعت">
             <div className="overflow-x-auto"><table className="w-full text-[10px]"><thead><tr className="text-neutral-400"><th className="p-2 text-right">URL</th><th>Device</th><th>Score</th><th>زمان</th></tr></thead><tbody>{performance.map(item => <tr key={item.id} className="border-t"><td className="p-2 font-mono ltr text-left max-w-96 truncate">{item.url}</td><td>{item.strategy}</td><td className="font-black">{item.averageScore}</td><td>{new Date(item.createdAt).toLocaleString('fa-IR')}</td></tr>)}</tbody></table></div>
           </Card>
         </div>
@@ -954,7 +1142,7 @@ export const AdminSeoTab: React.FC = () => {
           </Card>
 
           <div className="grid lg:grid-cols-2 gap-4">
-            <Card title="Scoring">
+            <Card title="امتیازدهی محتوا">
               <div className="grid grid-cols-2 gap-3">
                 <Field label="حداقل کلمات مقاله" type="number" value={settings.scoring.articleMinimumWords} onChange={v => setSettings({ ...settings, scoring: { ...settings.scoring, articleMinimumWords: Number(v) } })} />
                 <Field label="حداقل کلمات محصول" type="number" value={settings.scoring.productMinimumWords} onChange={v => setSettings({ ...settings, scoring: { ...settings.scoring, productMinimumWords: Number(v) } })} />
@@ -962,7 +1150,7 @@ export const AdminSeoTab: React.FC = () => {
                 <Field label="حداقل تراکم %" type="number" value={settings.scoring.densityMin} onChange={v => setSettings({ ...settings, scoring: { ...settings.scoring, densityMin: Number(v) } })} />
               </div>
               <div className="mt-4 pt-4 border-t border-neutral-100 space-y-2">
-                <div className="text-xs font-black text-neutral-800">Table of Contents</div>
+                <div className="text-xs font-black text-neutral-800">فهرست مطالب</div>
                 <Toggle label="TOC خودکار فعال" checked={Boolean(settings.toc.enabled)} onChange={v => setSettings({ ...settings, modules: { ...settings.modules, toc: v }, toc: { ...settings.toc, enabled: v } })} />
                 <div className="grid grid-cols-2 gap-3">
                   <Field label="حداقل تعداد Heading" type="number" value={settings.toc.minimumHeadings} onChange={v => setSettings({ ...settings, toc: { ...settings.toc, minimumHeadings: Number(v) } })} />
@@ -971,7 +1159,7 @@ export const AdminSeoTab: React.FC = () => {
                 <Toggle label="TOC به‌صورت جمع‌شده" checked={Boolean(settings.toc.collapsed)} onChange={v => setSettings({ ...settings, toc: { ...settings.toc, collapsed: v } })} />
               </div>
             </Card>
-            <Card title="Local SEO / Organization">
+            <Card title="سئوی محلی و هویت کسب‌وکار">
               <div className="grid grid-cols-2 gap-3">
                 <Field label="نام سازمان" value={settings.identity.organizationName} onChange={v => setSettings({ ...settings, identity: { ...settings.identity, organizationName: v } })} />
                 <Field label="نوع" value={settings.identity.organizationType} onChange={v => setSettings({ ...settings, identity: { ...settings.identity, organizationType: v } })} />
@@ -983,17 +1171,17 @@ export const AdminSeoTab: React.FC = () => {
             </Card>
           </div>
 
-          <Card title="AI / GSC / PageSpeed">
+          <Card title="هوش مصنوعی، سرچ کنسول و سرعت">
             <div className="grid md:grid-cols-2 gap-4">
-              <label className="space-y-1.5"><span className="text-[11px] font-bold text-neutral-600">AI Provider</span><select value={integrations.aiProvider} onChange={e => setIntegrations({ ...integrations, aiProvider: e.target.value })} className="w-full p-3 border rounded-xl text-xs"><option value="gemini">Gemini</option><option value="openai">OpenAI</option><option value="anthropic">Anthropic</option></select></label>
-              <Field label="AI Model" dir="ltr" value={integrations.aiModel} onChange={v => setIntegrations({ ...integrations, aiModel: v })} />
-              <Field label="AI API Key" type="password" dir="ltr" value={integrations.aiApiKey} onChange={v => setIntegrations({ ...integrations, aiApiKey: v })} placeholder="کلید جدید یا ••••••••" />
-              <Field label="PageSpeed API Key" type="password" dir="ltr" value={integrations.pageSpeedApiKey} onChange={v => setIntegrations({ ...integrations, pageSpeedApiKey: v })} />
+              <label className="space-y-1.5"><span className="text-[11px] font-bold text-neutral-600">ارائه‌دهنده هوش مصنوعی</span><select value={integrations.aiProvider} onChange={e => setIntegrations({ ...integrations, aiProvider: e.target.value })} className="w-full p-3 border rounded-xl text-xs"><option value="gemini">Gemini</option><option value="openai">OpenAI</option><option value="anthropic">Anthropic</option></select></label>
+              <Field label="مدل هوش مصنوعی" dir="ltr" value={integrations.aiModel} onChange={v => setIntegrations({ ...integrations, aiModel: v })} />
+              <Field label="کلید API هوش مصنوعی" type="password" dir="ltr" value={integrations.aiApiKey} onChange={v => setIntegrations({ ...integrations, aiApiKey: v })} placeholder="کلید جدید یا ••••••••" />
+              <Field label="کلید API سرعت" type="password" dir="ltr" value={integrations.pageSpeedApiKey} onChange={v => setIntegrations({ ...integrations, pageSpeedApiKey: v })} />
               <Field label="GSC Client ID" dir="ltr" value={integrations.gscClientId} onChange={v => setIntegrations({ ...integrations, gscClientId: v })} />
               <Field label="GSC Client Secret" type="password" dir="ltr" value={integrations.gscClientSecret} onChange={v => setIntegrations({ ...integrations, gscClientSecret: v })} />
               <div className="md:col-span-2"><Field label="GSC Property (مثال sc-domain:yadak.store)" dir="ltr" value={integrations.gscProperty} onChange={v => setIntegrations({ ...integrations, gscProperty: v })} /></div>
             </div>
-            <div className="flex gap-2 mt-4"><button onClick={() => void saveSettings()} className="px-5 py-2.5 bg-red-600 text-white rounded-xl text-xs font-black">ذخیره تنظیمات SEO</button><button onClick={() => void saveIntegrations()} className="px-5 py-2.5 bg-neutral-900 text-white rounded-xl text-xs font-black">ذخیره اتصال‌ها</button></div>
+            <div className="flex gap-2 mt-4"><button onClick={() => void saveSettings()} className="px-5 py-2.5 bg-red-600 text-white rounded-xl text-xs font-black">ذخیره تنظیمات سئو</button><button onClick={() => void saveIntegrations()} className="px-5 py-2.5 bg-neutral-900 text-white rounded-xl text-xs font-black">ذخیره اتصال‌ها</button></div>
           </Card>
         </div>
       )}
@@ -1001,22 +1189,22 @@ export const AdminSeoTab: React.FC = () => {
       {tab === 'diagnostics' && (
         <div className="space-y-4">
           <div className="grid lg:grid-cols-3 gap-4">
-            <Card title="Health">
+            <Card title="سلامت سیستم">
               <div className="text-xs space-y-2"><div className="flex justify-between"><span>وضعیت</span><b className={health?.ok ? 'text-emerald-600' : 'text-red-600'}>{health?.ok ? 'OK' : 'ERROR'}</b></div><div className="flex justify-between"><span>App URL</span><span className="font-mono text-[9px]">{health?.appUrl}</span></div>{(health?.tables || []).map((x: any) => <div key={x.table} className="flex justify-between text-[10px]"><span>{x.table}</span><span className={x.ok ? 'text-emerald-600' : 'text-red-600'}>{x.ok ? '✓' : '×'}</span></div>)}</div>
             </Card>
-            <Card title="Self Test">
-              <button onClick={() => void run('self-test', async () => { const data = await api<any>('/api/seo/self-test', { method: 'POST', body: '{}' }); setSelfTest(data); return data; })} className="px-4 py-2 bg-neutral-900 text-white rounded-xl text-xs font-bold mb-3">اجرای Self Test</button>
+            <Card title="خودآزمایی">
+              <button onClick={() => void run('self-test', async () => { const data = await api<any>('/api/seo/self-test', { method: 'POST', body: '{}' }); setSelfTest(data); return data; })} className="px-4 py-2 bg-neutral-900 text-white rounded-xl text-xs font-bold mb-3">اجرای خودآزمایی</button>
               {(selfTest?.checks || []).map((x: any) => <div key={x.key} className="flex gap-2 items-center text-[10px] p-2 border-b"><span className={x.ok ? 'text-emerald-600' : 'text-amber-600'}>{x.ok ? '✓' : '!'}</span><b>{x.key}</b><span className="text-neutral-500 truncate">{x.detail}</span></div>)}
             </Card>
-            <Card title="Queue">
+            <Card title="صف پردازش">
               <div className="max-h-72 overflow-y-auto">{jobs.map(job => <div key={job.id} className="p-2 border-b text-[10px] flex justify-between"><span>{job.jobType}</span><b className={job.status === 'completed' ? 'text-emerald-600' : job.status === 'failed' ? 'text-red-600' : 'text-amber-600'}>{job.status}</b></div>)}</div>
             </Card>
           </div>
           <Card>
-            <div className="flex justify-between items-center mb-3"><h3 className="font-black text-sm">Runtime Log</h3><button onClick={() => void run('log-clear', () => api('/api/seo/diagnostics/logs', { method: 'DELETE' }), 'لاگ پاک شد.').then(() => setLogs([]))} className="px-3 py-2 bg-red-50 text-red-700 rounded-xl text-[10px] font-bold">پاک کردن</button></div>
+            <div className="flex justify-between items-center mb-3"><h3 className="font-black text-sm">لاگ زمان اجرا</h3><button onClick={() => void run('log-clear', () => api('/api/seo/diagnostics/logs', { method: 'DELETE' }), 'لاگ پاک شد.').then(() => setLogs([]))} className="px-3 py-2 bg-red-50 text-red-700 rounded-xl text-[10px] font-bold">پاک کردن</button></div>
             <div className="max-h-80 overflow-auto bg-neutral-950 text-neutral-300 rounded-2xl p-3 font-mono text-[9px] ltr text-left">{logs.map(row => <div key={row.id} className="py-1 border-b border-neutral-800"><span className="text-neutral-500">{row.createdAt}</span> <span className={row.level === 'error' ? 'text-red-400' : 'text-blue-400'}>{row.level}</span> {row.eventName} {JSON.stringify(row.context)}</div>)}</div>
           </Card>
-          <Card title="History">
+          <Card title="تاریخچه">
             <div className="max-h-80 overflow-y-auto">{history.map(row => <div key={row.id} className="grid grid-cols-[150px_1fr_120px] gap-2 p-2 border-b text-[10px]"><span className="font-mono">{row.action}</span><span>{row.entityType || '-'} / {row.entityId || '-'}</span><span>{new Date(row.createdAt).toLocaleString('fa-IR')}</span></div>)}</div>
           </Card>
         </div>

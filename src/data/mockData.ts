@@ -16,7 +16,7 @@ export const BRANDS: CarBrand[] = [
     popularCategorySlugs: ['cooling', 'engine', 'brakes', 'filters'],
     faq: [
       {
-        q: 'آیا قطعات KMC در انبار چین‌پارت موجودی دائم دارند؟',
+        q: 'آیا قطعات KMC در انبار فروشگاه موجودی دائم دارند؟',
         a: 'بله، تمامی قطعات پرمصرف و موتوری خودروهای KMC J7، KMC T8 و KMC K7 به صورت مستقیم و با تضمین اصالت عرضه می‌شوند.'
       },
       {
@@ -430,7 +430,7 @@ export const VEHICLE_MODELS: VehicleModel[] = [
     faq: [
       {
         q: 'قطعات چانگان CS35 پلاس وارداتی به راحتی یافت می‌شوند؟',
-        a: 'بله، چین‌پارت پارت‌های مصرفی، جلوپنجره، لنت‌ها و سنسورهای مدل‌های وارداتی جدید ۲۰۲۳ و ۲۰۲۴ را به طور مستقیم تامین می‌کند.'
+        a: 'بله، فروشگاه پارت‌های مصرفی، جلوپنجره، لنت‌ها و سنسورهای مدل‌های وارداتی جدید ۲۰۲۳ و ۲۰۲۴ را به طور مستقیم تامین می‌کند.'
       }
     ]
   },
@@ -1692,7 +1692,7 @@ export const INITIAL_ARTICLE_CATEGORIES: ArticleCategory[] = [
 ];
 
 export const INITIAL_SETTINGS = {
-  siteTitle: 'چین پارت | بازار تخصصی قطعات یدکی خودروهای چینی',
+  siteTitle: 'فروشگاه قطعات خودرو',
   siteSlogan: 'مرجع رسمی و تخصصی لوازم یدکی و قطعات فابریک با سیستم فیتمنت هوشمند',
   contactPhone: '۰۲۱-۸۸۹۹۲۲۱۱',
   supportPhone: '۰۹۱۲۳۴۵۶۷۸۹',
@@ -1716,10 +1716,10 @@ export const INITIAL_SETTINGS = {
   mobileFooterColumns: 2 as const,
   borderRadius: 'normal' as const,
   themeRadiusPx: 12,
-  metaTitle: 'چین‌پارت | فروشگاه تخصصی قطعات یدکی خودروهای چینی با سیستم فیتمنت',
+  metaTitle: 'فروشگاه | فروشگاه تخصصی قطعات یدکی خودروهای چینی با سیستم فیتمنت',
   metaDescription: 'مرجع تخصصی خرید لوازم یدکی و قطعات فابریک خودروهای کی‌ام‌سی KMC، چری، فونیکس، ام‌وی‌ام، لاماری و جک با تضمین اصالت و گارانتی بازگشت وجه.',
   metaKeywords: 'لوازم یدکی کی ام سی, قطعات چری, قطعات فونیکس, قطعات KMC J7, لوازم جک S5, قطعات فابریک چینی',
-  ogTitle: 'چین‌پارت پرو - مرجع قطعات خودروهای چینی',
+  ogTitle: 'فروشگاه پرو - مرجع قطعات خودروهای چینی',
   ogDescription: 'سیستم هوشمند فیتمنت و سازگاری ۱۰۰٪ قطعات با خودروهای مدرن چینی',
   ogImageUrl: 'https://images.unsplash.com/photo-1617788138017-80ad40651399?w=1200&auto=format&fit=crop&q=80',
   freeShippingThreshold: 5000000,
@@ -1770,7 +1770,7 @@ export const INITIAL_SETTINGS = {
   ],
   logoUrl: '',
   faviconUrl: 'https://cdn-icons-png.flaticon.com/512/3202/3202926.png',
-  sellerName: 'بازرگانی قطعات خودروهای چینی چین‌پارت (با مسئولیت محدود)',
+  sellerName: 'بازرگانی قطعات خودروهای چینی فروشگاه (با مسئولیت محدود)',
   sellerEconomicCode: '411589324567',
   sellerNationalId: '14009854321',
   sellerRegistrationNo: '584920',
@@ -1779,8 +1779,8 @@ export const INITIAL_SETTINGS = {
   sellerAddress: 'تهران، خیابان امیرکبیر (چراغ برق)، کوچه سراج، پاساژ کاشانی، طبقه همکف، پلاک ۲۸',
   
   // Footer Customization Defaults (Editable, Deletable, Addable)
-  footerAboutTitle: 'فروشگاه اینترنتی لوازم یدکی چین‌پارت',
-  footerAboutText: 'فروشگاه اینترنتی چین‌پارت، به عنوان مرجع تخصصی تامین، واردات و توزیع قطعات یدکی خودروهای چینی در ایران، با بیش از یک دهه سابقه در بازار چراغ برق تهران فعالیت می‌کند. تمرکز ما حذف واسطه‌ها، تضمین اصالت و تامین قطعات خودروهای مدرن کی‌ام‌سی (KMC)، چری، ام‌وی‌ام، فونیکس، لاماری، جک و چانگان است.',
+  footerAboutTitle: 'فروشگاه اینترنتی لوازم یدکی فروشگاه',
+  footerAboutText: 'فروشگاه اینترنتی فروشگاه، به عنوان مرجع تخصصی تامین، واردات و توزیع قطعات یدکی خودروهای چینی در ایران، با بیش از یک دهه سابقه در بازار چراغ برق تهران فعالیت می‌کند. تمرکز ما حذف واسطه‌ها، تضمین اصالت و تامین قطعات خودروهای مدرن کی‌ام‌سی (KMC)، چری، ام‌وی‌ام، فونیکس، لاماری، جک و چانگان است.',
   footerShowFeatures: true,
   footerFeatures: [
     { id: 'feat-1', title: 'ضمانت ۱۰۰٪ اصالت قطعه', description: 'تضمین قطعات اصلی شرکتی با هولوگرام لیزری', icon: 'ShieldCheck' },
@@ -1793,7 +1793,7 @@ export const INITIAL_SETTINGS = {
       id: 'fcol-1',
       title: 'راهنمای خرید و قوانین',
       links: [
-        { id: 'flink-1', title: 'درباره چین‌پارت پرو', url: 'page:about' },
+        { id: 'flink-1', title: 'درباره فروشگاه پرو', url: 'page:about' },
         { id: 'flink-2', title: 'ضمانت اصالت و شرایط بازگشت کالا', url: 'page:guarantee' },
         { id: 'flink-3', title: 'پیگیری وضعیت سفارش و مرسوله', url: 'tracking' },
         { id: 'flink-4', title: 'استعلام قطعات کم‌یاب و وارداتی', url: 'part-request' }
@@ -1813,7 +1813,7 @@ export const INITIAL_SETTINGS = {
   footerShowBadges: false,
   footerBadges: [],
   footerCustomHtml: '',
-  footerCopyrightText: 'تمامی حقوق مادی و معنوی برای فروشگاه اینترنتی چین‌پارت محفوظ است. طراحی تخصصی مخصوص صنعت خودروهای چینی.',
+  footerCopyrightText: 'تمامی حقوق مادی و معنوی برای فروشگاه اینترنتی فروشگاه محفوظ است. طراحی تخصصی مخصوص صنعت خودروهای چینی.',
   loyaltySettings: {
     enabled: true,
     pointsPerToman: 0.0001, // 1 point per 10,000 Tomans
@@ -2051,7 +2051,7 @@ export const INITIAL_PAGES: SitePage[] = [
       },
       {
         id: 'sec-trust',
-        title: 'چرا خرید از چین‌پارت پرو؟',
+        title: 'چرا خرید از فروشگاه پرو؟',
         subtitle: '۴ رکن اعتماد مشتریان و مکانیک‌های متخصص در سراسر ایران',
         content: 'تطبیق شماره شاسی VIN، اصالت ۱۰۰٪ فابریک، ضمانت بازگشت وجه ۷ روزه، ارسال سریع همان روز',
         badge: 'تضمین کیفیت',
@@ -2074,8 +2074,8 @@ export const INITIAL_PAGES: SitePage[] = [
   {
     id: 'page-about',
     slug: 'about',
-    title: 'درباره چین‌پارت پرو',
-    description: 'معرفی تاریخچه، انبار مرکزی و اهداف مجموعه چین‌پارت',
+    title: 'درباره فروشگاه پرو',
+    description: 'معرفی تاریخچه، انبار مرکزی و اهداف مجموعه فروشگاه',
     isSystem: true,
     updatedAt: '1403/01/10',
     sections: [
@@ -2083,7 +2083,7 @@ export const INITIAL_PAGES: SitePage[] = [
         id: 'sec-about-intro',
         title: 'مرجع تخصصی قطعات یدکی خودروهای چینی در ایران',
         subtitle: 'با بیش از یک دهه تجربه واردات و توزیع مستقیم لوازم یدکی شرکتی',
-        content: 'مجموعه چین‌پارت پرو فعالیت خود را با هدف رفع دغدغه مالکان و تعمیرکاران خودروهای چینی در زمینه تامین قطعات اصلی آغاز کرد. با واردات مستقیم از خطوط تولید مادر در چین و همکاری با نمایندگی‌های مجاز داخلی، بالاترین استانداردهای کیفی را به ارمغان آورده‌ایم.',
+        content: 'مجموعه فروشگاه پرو فعالیت خود را با هدف رفع دغدغه مالکان و تعمیرکاران خودروهای چینی در زمینه تامین قطعات اصلی آغاز کرد. با واردات مستقیم از خطوط تولید مادر در چین و همکاری با نمایندگی‌های مجاز داخلی، بالاترین استانداردهای کیفی را به ارمغان آورده‌ایم.',
         badge: 'درباره ما',
         imageUrl: 'https://images.unsplash.com/photo-1486006920555-c77dce18193b?auto=format&fit=crop&q=80&w=800',
         isVisible: true,

@@ -112,8 +112,46 @@ const PART_REQUEST_SECTION_DEFAULTS: PageSection[] = [
   { id: 'request-contact', sectionKey: 'request-contact', title: 'نیاز به استعلام تلفنی فوری دارید؟', subtitle: 'شماره تماس این بخش را از Page Builder تغییر دهید.', buttonText: 'تماس با واحد تامین', buttonLink: 'tel:02100000000', isVisible: true, order: 4, layout: 'boxed', desktopColumns: 1, mobileColumns: 1, borderRadiusPx: 20 }
 ];
 
+const upgradeLegacyHomeSection = (section: PageSection): PageSection => {
+  const key = section.sectionKey;
+  if (key === 'manufacturers' && (section.desktopColumns == null || section.desktopColumns === 6)) {
+    return {
+      ...section,
+      desktopColumns: 12,
+      mobileColumns: section.mobileColumns || 3,
+      maxItems: section.maxItems === 12 || section.maxItems == null ? 24 : section.maxItems,
+      imageSizePx: section.imageSizePx || 58,
+      gapPx: section.gapPx ?? 10
+    };
+  }
+  if (key === 'parts-brands' && (section.desktopColumns == null || section.desktopColumns === 4)) {
+    return {
+      ...section,
+      desktopColumns: 8,
+      mobileColumns: section.mobileColumns || 2,
+      maxItems: section.maxItems || 16,
+      imageSizePx: section.imageSizePx || 48,
+      gapPx: section.gapPx ?? 7
+    };
+  }
+  if (key === 'featured-categories' && (section.desktopColumns == null || section.desktopColumns === 6)) {
+    return {
+      ...section,
+      desktopColumns: 9,
+      mobileColumns: section.mobileColumns || 3,
+      maxItems: section.maxItems || 9,
+      imageSizePx: section.imageSizePx || 68,
+      gapPx: section.gapPx ?? 14
+    };
+  }
+  if (key === 'articles' && section.mobileColumns === 1) {
+    return { ...section, mobileColumns: 2, maxItems: section.maxItems || 3 };
+  }
+  return section;
+};
+
 const mergeSystemSections = (page: SitePage, defaults: PageSection[], inferredKeys: Record<string, string> = {}): SitePage => {
-  const existing = (page.sections || []).map(section => ({
+  const existing = (page.sections || []).map(section => upgradeLegacyHomeSection({
     ...section,
     sectionKey: section.sectionKey || inferredKeys[section.id]
   }));

@@ -527,7 +527,7 @@ export const AdminSeoTab: React.FC = () => {
                         <div className="p-2.5 rounded-xl bg-neutral-50 text-center"><b>{fmt(workspace.analysis?.wordCount)}</b><div className="text-[9px] text-neutral-400">کلمه</div></div>
                         <div className="p-2.5 rounded-xl bg-neutral-50 text-center"><b>{workspace.analysis?.keywordDensity || 0}%</b><div className="text-[9px] text-neutral-400">تراکم</div></div>
                         <div className="p-2.5 rounded-xl bg-neutral-50 text-center"><b>{fmt(workspace.analysis?.internalLinks)}</b><div className="text-[9px] text-neutral-400">لینک داخلی</div></div>
-                        <div className="p-2.5 rounded-xl bg-neutral-50 text-center"><b>{fmt(workspace.analysis?.imageCount)}</b><div className="text-[9px] text-neutral-400">تصویر</div></div>
+                        <div className="p-2.5 rounded-xl bg-neutral-50 text-center"><b>{fmt(workspace.analysis?.imageCount)}</b><div className="text-[9px] text-neutral-400">تصویر / بدون ALT: {fmt(workspace.analysis?.missingImageAlt)}</div></div>
                       </div>
                     </div>
                   </div>
@@ -551,10 +551,49 @@ export const AdminSeoTab: React.FC = () => {
                       <Toggle label="Follow" checked={metaForm?.robotsFollow !== false} onChange={v => setMetaForm({ ...metaForm, robotsFollow: v })} />
                       <Toggle label="Cornerstone" checked={Boolean(metaForm?.cornerstone)} onChange={v => setMetaForm({ ...metaForm, cornerstone: v })} />
                     </div>
+                    <div className="md:col-span-2">
+                      <Field
+                        textarea
+                        label="Hreflang — هر خط به شکل fa=https://... یا en=https://..."
+                        dir="ltr"
+                        value={(metaForm?.hreflang || []).map((row: any) => row.lang + '=' + row.url).join('\n')}
+                        onChange={v => setMetaForm({
+                          ...metaForm,
+                          hreflang: v.split('\n').map(line => {
+                            const i = line.indexOf('=');
+                            return i > 0 ? { lang: line.slice(0, i).trim(), url: line.slice(i + 1).trim() } : null;
+                          }).filter(Boolean)
+                        })}
+                      />
+                    </div>
                   </div>
-                  <button onClick={() => void saveMeta()} disabled={busy === 'save-meta'} className="mt-5 px-5 py-2.5 bg-red-600 text-white rounded-xl text-xs font-black flex items-center gap-2">
-                    {busy === 'save-meta' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} ذخیره و تحلیل مجدد
-                  </button>
+                  <div className="mt-5 flex flex-wrap gap-2">
+                    <button onClick={() => void saveMeta()} disabled={busy === 'save-meta'} className="px-5 py-2.5 bg-red-600 text-white rounded-xl text-xs font-black flex items-center gap-2">
+                      {busy === 'save-meta' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} ذخیره و تحلیل مجدد
+                    </button>
+                    {['article','product'].includes(selectedEntity?.type) && (
+                      <>
+                        <button
+                          onClick={() => void run('image-seo', () => api(
+                            `/api/seo/entities/${selectedEntity.type}/${encodeURIComponent(selectedEntity.id)}/image-seo`,
+                            { method: 'POST', body: '{}' }
+                          ), 'ALT تصاویر فاقد متن بهینه شد.').then(() => openEntity(selectedEntity))}
+                          className="px-4 py-2.5 bg-blue-600 text-white rounded-xl text-xs font-bold flex items-center gap-2"
+                        >
+                          <FileSearch className="w-4 h-4" /> Image SEO / ALT
+                        </button>
+                        <button
+                          onClick={() => void run('toc', () => api(
+                            `/api/seo/entities/${selectedEntity.type}/${encodeURIComponent(selectedEntity.id)}/toc`,
+                            { method: 'POST', body: JSON.stringify({ apply: true }) }
+                          ), 'فهرست مطالب هوشمند درج شد.').then(() => openEntity(selectedEntity))}
+                          className="px-4 py-2.5 bg-violet-600 text-white rounded-xl text-xs font-bold flex items-center gap-2"
+                        >
+                          <ListChecks className="w-4 h-4" /> ساخت TOC
+                        </button>
+                      </>
+                    )}
+                  </div>
                 </Card>
 
                 <Card title="پیش‌نمایش نتیجه گوگل">
@@ -855,6 +894,15 @@ export const AdminSeoTab: React.FC = () => {
                 <Field label="حداقل کلمات محصول" type="number" value={settings.scoring.productMinimumWords} onChange={v => setSettings({ ...settings, scoring: { ...settings.scoring, productMinimumWords: Number(v) } })} />
                 <Field label="حداقل کلمات برگه" type="number" value={settings.scoring.pageMinimumWords} onChange={v => setSettings({ ...settings, scoring: { ...settings.scoring, pageMinimumWords: Number(v) } })} />
                 <Field label="حداقل تراکم %" type="number" value={settings.scoring.densityMin} onChange={v => setSettings({ ...settings, scoring: { ...settings.scoring, densityMin: Number(v) } })} />
+              </div>
+              <div className="mt-4 pt-4 border-t border-neutral-100 space-y-2">
+                <div className="text-xs font-black text-neutral-800">Table of Contents</div>
+                <Toggle label="TOC خودکار فعال" checked={Boolean(settings.toc.enabled)} onChange={v => setSettings({ ...settings, modules: { ...settings.modules, toc: v }, toc: { ...settings.toc, enabled: v } })} />
+                <div className="grid grid-cols-2 gap-3">
+                  <Field label="حداقل تعداد Heading" type="number" value={settings.toc.minimumHeadings} onChange={v => setSettings({ ...settings, toc: { ...settings.toc, minimumHeadings: Number(v) } })} />
+                  <Field label="حداقل تعداد کلمه" type="number" value={settings.toc.minimumWords} onChange={v => setSettings({ ...settings, toc: { ...settings.toc, minimumWords: Number(v) } })} />
+                </div>
+                <Toggle label="TOC به‌صورت جمع‌شده" checked={Boolean(settings.toc.collapsed)} onChange={v => setSettings({ ...settings, toc: { ...settings.toc, collapsed: v } })} />
               </div>
             </Card>
             <Card title="Local SEO / Organization">

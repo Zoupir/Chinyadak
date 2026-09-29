@@ -22,7 +22,8 @@ import {
   PageSection,
   LoyaltyTier,
   LoyaltyTransaction,
-  LoyaltySettings
+  LoyaltySettings,
+  SeoEntityDraft
 } from '../types';
 import { 
   PRODUCTS as INITIAL_PRODUCTS, 
@@ -61,7 +62,7 @@ const EMPTY_API_INTEGRATIONS: ApiIntegrationsConfig = {
 };
 
 const HOME_SECTION_DEFAULTS: PageSection[] = [
-  { id: 'home-hero', sectionKey: 'hero', title: 'قطعات مطمئن برای خودروی شما', subtitle: 'خرید تخصصی قطعات خودروهای چینی با تضمین اصالت، فیتمنت دقیق و ارسال سریع.', badge: 'پیشنهاد ویژه قطعات خودرو', buttonText: 'مشاهده محصولات', buttonLink: 'shop', isVisible: true, order: 1, layout: 'full', desktopColumns: 1, mobileColumns: 1, borderRadiusPx: 12, itemRadiusPx: 10, gapPx: 12 },
+  { id: 'home-hero', sectionKey: 'hero', title: 'قطعات مطمئن برای خودروی شما', subtitle: 'خرید تخصصی قطعات خودروهای چینی با تضمین اصالت، فیتمنت دقیق و ارسال سریع.', badge: 'پیشنهاد ویژه قطعات خودرو', buttonText: 'مشاهده محصولات', buttonLink: 'shop', isVisible: true, order: 1, layout: 'full', desktopColumns: 1, mobileColumns: 1, borderRadiusPx: 0, itemRadiusPx: 0, gapPx: 0, fullWidth: true, widthPercent: 100, maxWidthPx: 0 },
   { id: 'home-featured-categories', sectionKey: 'featured-categories', title: 'دسته‌بندی‌های ویژه', subtitle: '', isVisible: true, order: 2, layout: 'grid', desktopColumns: 6, mobileColumns: 2, borderRadiusPx: 10, itemRadiusPx: 10, gapPx: 12 },
   { id: 'home-promo-small', sectionKey: 'promo-small', title: 'بنرهای کوچک صفحه اصلی', isVisible: true, order: 3, layout: 'grid', desktopColumns: 3, mobileColumns: 1, borderRadiusPx: 10, itemRadiusPx: 10, gapPx: 12, items: [
     { id: 'promo-small-1', title: 'باتری و برق خودرو', subtitle: 'پیشنهاد روز', buttonText: 'مشاهده محصولات', link: 'shop', isVisible: true, order: 1 },
@@ -70,7 +71,7 @@ const HOME_SECTION_DEFAULTS: PageSection[] = [
   ]},
   { id: 'home-featured-products', sectionKey: 'featured-products', title: 'محصولات ویژه', subtitle: 'محصولات منتخب، جدید و پرفروش فروشگاه', isVisible: true, order: 4, layout: 'grid', desktopColumns: 4, mobileColumns: 2, borderRadiusPx: 8, itemRadiusPx: 8, gapPx: 10 },
   { id: 'home-wide-banner-1', sectionKey: 'wide-banner-1', title: 'برای توقف مطمئن، قطعه مطمئن انتخاب کنید', subtitle: 'سیستم ترمز و ایمنی', buttonText: 'مشاهده محصولات', buttonLink: 'shop', isVisible: true, order: 5, layout: 'full', desktopColumns: 1, mobileColumns: 1, borderRadiusPx: 12, minHeightPx: 300 },
-  { id: 'home-manufacturers', sectionKey: 'manufacturers', title: 'برندهای خودرو', isVisible: true, order: 6, layout: 'grid', desktopColumns: 6, mobileColumns: 2, borderRadiusPx: 10, itemRadiusPx: 10, gapPx: 10 },
+  { id: 'home-manufacturers', sectionKey: 'manufacturers', title: 'برندهای خودرو', isVisible: true, order: 6, layout: 'grid', desktopColumns: 6, mobileColumns: 3, borderRadiusPx: 10, itemRadiusPx: 10, gapPx: 10, maxItems: 12, imageSizePx: 72, widthPercent: 100 },
   { id: 'home-parts-brands', sectionKey: 'parts-brands', title: 'برندهای محبوب قطعات', isVisible: true, order: 7, layout: 'grid', desktopColumns: 4, mobileColumns: 2, borderRadiusPx: 10, itemRadiusPx: 10, gapPx: 10 },
   { id: 'home-promo-medium', sectionKey: 'promo-medium', title: 'بنرهای متوسط', isVisible: true, order: 8, layout: 'grid', desktopColumns: 2, mobileColumns: 1, borderRadiusPx: 12, itemRadiusPx: 12, gapPx: 12, items: [
     { id: 'promo-medium-1', title: 'جلوبندی، تایر و سیستم تعلیق', subtitle: 'آماده برای جاده', buttonText: 'خرید کنید', link: 'shop', isVisible: true, order: 1 },
@@ -91,7 +92,7 @@ const HOME_SECTION_DEFAULTS: PageSection[] = [
     { id: 'testimonial-4', title: 'تعمیرکار', content: 'برای قطعه کمیاب خیلی سریع استعلام انجام شد.', isVisible: true, order: 4 }
   ]},
   { id: 'home-shipping-banner', sectionKey: 'shipping-banner', title: 'ارسال سریع', subtitle: 'برای سفارش‌های واجد شرایط', isVisible: true, order: 13, layout: 'full', desktopColumns: 1, mobileColumns: 1, borderRadiusPx: 12 },
-  { id: 'home-articles', sectionKey: 'articles', title: 'راهنما و مقالات', subtitle: 'آموزش، نگهداری و انتخاب صحیح قطعات خودرو', isVisible: true, order: 14, layout: 'grid', desktopColumns: 3, mobileColumns: 1, borderRadiusPx: 10, itemRadiusPx: 10, gapPx: 12 },
+  { id: 'home-articles', sectionKey: 'articles', title: 'راهنما و مقالات', subtitle: 'آموزش، نگهداری و انتخاب صحیح قطعات خودرو', isVisible: true, order: 14, layout: 'grid', desktopColumns: 3, mobileColumns: 2, borderRadiusPx: 10, itemRadiusPx: 10, gapPx: 12, maxItems: 6 },
   { id: 'home-service-strip', sectionKey: 'service-strip', title: 'مزایای فروشگاه', isVisible: true, order: 15, layout: 'grid', desktopColumns: 4, mobileColumns: 2, borderRadiusPx: 0, itemRadiusPx: 8, gapPx: 10, items: [
     { id: 'service-1', title: 'تضمین اصالت', content: 'کنترل اصالت و کیفیت قطعه', isVisible: true, order: 1 },
     { id: 'service-2', title: 'ارزش خرید', content: 'قیمت‌گذاری شفاف و رقابتی', isVisible: true, order: 2 },
@@ -100,6 +101,29 @@ const HOME_SECTION_DEFAULTS: PageSection[] = [
   ]}
 ];
 
+const PART_REQUEST_SECTION_DEFAULTS: PageSection[] = [
+  { id: 'request-hero', sectionKey: 'request-hero', title: 'استعلام و واردات قطعه کمیاب خودروهای چینی', subtitle: 'اگر قطعه مورد نظر شما در سایت موجود نیست، مشخصات خودرو و قطعه را ارسال کنید تا واحد تامین بررسی کند.', badge: 'سفارش اختصاصی و استعلام فوری', isVisible: true, order: 1, layout: 'boxed', desktopColumns: 1, mobileColumns: 1, borderRadiusPx: 16, paddingTopPx: 16, paddingBottomPx: 16 },
+  { id: 'request-form', sectionKey: 'request-form', title: 'فرم استعلام قطعه', subtitle: 'اطلاعات خودرو، قطعه و راه ارتباطی را وارد کنید.', isVisible: true, order: 2, layout: 'boxed', desktopColumns: 1, mobileColumns: 1, borderRadiusPx: 20 },
+  { id: 'request-info', sectionKey: 'request-info', title: 'زمان‌بندی پاسخگویی به استعلام', subtitle: 'استعلام‌های داخلی معمولاً سریع‌تر و استعلام وارداتی پس از بررسی تامین‌کننده اعلام می‌شود.', isVisible: true, order: 3, layout: 'cards', desktopColumns: 1, mobileColumns: 1, borderRadiusPx: 20, items: [
+    { id: 'request-info-1', title: 'تطبیق با شماره شاسی', content: 'بررسی قطعه براساس VIN و مشخصات خودرو', isVisible: true, order: 1 },
+    { id: 'request-info-2', title: 'اعلام قیمت و زمان تحویل', content: 'نتیجه استعلام پس از بررسی موجودی و تامین اعلام می‌شود.', isVisible: true, order: 2 },
+    { id: 'request-info-3', title: 'ارسال مطمئن', content: 'امکان ارسال به تعمیرگاه یا آدرس خریدار', isVisible: true, order: 3 }
+  ]},
+  { id: 'request-contact', sectionKey: 'request-contact', title: 'نیاز به استعلام تلفنی فوری دارید؟', subtitle: 'شماره تماس این بخش را از Page Builder تغییر دهید.', buttonText: 'تماس با واحد تامین', buttonLink: 'tel:02100000000', isVisible: true, order: 4, layout: 'boxed', desktopColumns: 1, mobileColumns: 1, borderRadiusPx: 20 }
+];
+
+const mergeSystemSections = (page: SitePage, defaults: PageSection[], inferredKeys: Record<string, string> = {}): SitePage => {
+  const existing = (page.sections || []).map(section => ({
+    ...section,
+    sectionKey: section.sectionKey || inferredKeys[section.id]
+  }));
+  const existingKeys = new Set(existing.map(section => section.sectionKey).filter(Boolean));
+  const missing = defaults
+    .filter(section => !section.sectionKey || !existingKeys.has(section.sectionKey))
+    .map(section => ({ ...section }));
+  return { ...page, sections: [...existing, ...missing].sort((a, b) => a.order - b.order) };
+};
+
 const normalizeBuilderPages = (inputPages: SitePage[]): SitePage[] => {
   const inferredKeys: Record<string, string> = {
     'sec-hero': 'hero',
@@ -107,17 +131,37 @@ const normalizeBuilderPages = (inputPages: SitePage[]): SitePage[] => {
     'sec-categories': 'featured-categories'
   };
 
-  return inputPages.map(page => {
-    if (page.slug !== 'home') return page;
-    const existing = (page.sections || []).map(section => ({
-      ...section,
-      sectionKey: section.sectionKey || inferredKeys[section.id]
-    }));
-    const existingKeys = new Set(existing.map(section => section.sectionKey).filter(Boolean));
-    const missing = HOME_SECTION_DEFAULTS
-      .filter(section => !section.sectionKey || !existingKeys.has(section.sectionKey))
-      .map(section => ({ ...section }));
-    return { ...page, sections: [...existing, ...missing].sort((a, b) => a.order - b.order) };
+  const mapped = inputPages.map(page => {
+    if (page.slug === 'home') return mergeSystemSections(page, HOME_SECTION_DEFAULTS, inferredKeys);
+    if (page.slug === 'part-request') return mergeSystemSections(page, PART_REQUEST_SECTION_DEFAULTS);
+    return page;
+  });
+
+  if (!mapped.some(page => page.slug === 'part-request')) {
+    mapped.push({
+      id: 'page-part-request',
+      slug: 'part-request',
+      title: 'استعلام قطعه',
+      description: 'فرم استعلام و تامین قطعات کمیاب',
+      isSystem: true,
+      updatedAt: new Date().toLocaleDateString('fa-IR'),
+      sections: PART_REQUEST_SECTION_DEFAULTS.map(section => ({ ...section }))
+    });
+  }
+
+  return mapped;
+};
+
+const syncSeoDraft = async (
+  type: 'product' | 'article' | 'page',
+  id: string,
+  seo?: SeoEntityDraft
+): Promise<void> => {
+  if (!seo || !id) return;
+  const { images: _images, ...meta } = seo;
+  await apiRequest(`/api/seo/entities/${type}/${encodeURIComponent(id)}/meta`, {
+    method: 'PUT',
+    body: JSON.stringify(meta)
   });
 };
 
@@ -907,11 +951,16 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     void apiRequest<{ page: SitePage }>(`/api/cms/pages/${encodeURIComponent(normalized.id)}`, {
       method: 'PUT',
       body: JSON.stringify(normalized)
-    }).then(({ page: saved }) => {
+    }).then(async ({ page: saved }) => {
       setPages(prev => {
         const exists = prev.some(item => item.id === saved.id);
         return exists ? prev.map(item => item.id === saved.id ? saved : item) : [...prev, saved];
       });
+      try {
+        await syncSeoDraft('page', saved.id, saved.seo);
+      } catch (seoError) {
+        console.error('Page SEO sync failed:', seoError);
+      }
       showToast(successMessage);
     }).catch(error => {
       console.error(error);
@@ -1261,8 +1310,13 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     void apiRequest<{ article: Article }>('/api/cms/articles', {
       method: 'POST',
       body: JSON.stringify(art)
-    }).then(({ article }) => {
+    }).then(async ({ article }) => {
       setArticles(prev => [article, ...prev]);
+      try {
+        await syncSeoDraft('article', article.id, article.seo);
+      } catch (seoError) {
+        console.error('Article SEO sync failed:', seoError);
+      }
       showToast(`مقاله "${article.title}" با موفقیت منتشر گردید.`);
     }).catch(error => {
       console.error(error);
@@ -1274,8 +1328,13 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     void apiRequest<{ article: Article }>(`/api/cms/articles/${encodeURIComponent(art.id)}`, {
       method: 'PUT',
       body: JSON.stringify(art)
-    }).then(({ article }) => {
+    }).then(async ({ article }) => {
       setArticles(prev => prev.map(item => item.id === article.id ? article : item));
+      try {
+        await syncSeoDraft('article', article.id, article.seo);
+      } catch (seoError) {
+        console.error('Article SEO sync failed:', seoError);
+      }
       showToast(`مقاله "${article.title}" به‌روزرسانی شد.`);
     }).catch(error => {
       console.error(error);
@@ -1421,8 +1480,13 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     void apiRequest<{ product: Product }>('/api/catalog/products', {
       method: 'POST',
       body: JSON.stringify(product)
-    }).then(result => {
+    }).then(async result => {
       setProducts(prev => [result.product, ...prev]);
+      try {
+        await syncSeoDraft('product', result.product.id, result.product.seo);
+      } catch (seoError) {
+        console.error('Product SEO sync failed:', seoError);
+      }
       showToast(`قطعه ${result.product.nameFa} با موفقیت ثبت شد.`);
     }).catch(error => {
       console.error(error);
@@ -1434,8 +1498,13 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     void apiRequest<{ product: Product }>(`/api/catalog/products/${encodeURIComponent(updated.id)}`, {
       method: 'PUT',
       body: JSON.stringify(updated)
-    }).then(result => {
+    }).then(async result => {
       setProducts(prev => prev.map(p => p.id === result.product.id ? result.product : p));
+      try {
+        await syncSeoDraft('product', result.product.id, result.product.seo);
+      } catch (seoError) {
+        console.error('Product SEO sync failed:', seoError);
+      }
       showToast(`محصول ${result.product.nameFa} با موفقیت ویرایش شد.`);
     }).catch(error => {
       console.error(error);

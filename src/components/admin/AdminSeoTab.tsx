@@ -247,6 +247,16 @@ export const AdminSeoTab: React.FC = () => {
     if (data) setIntegrations(data.integrations);
   };
 
+  const saveWizard = async (advance = false) => {
+    await saveSettings();
+    await saveIntegrations();
+    if (advance && wizardStep < 5) {
+      setWizardStep(step => Math.min(5, step + 1));
+    } else if (advance && wizardStep === 5) {
+      flash('ویزارد سئو ذخیره شد. اکنون می‌توانید پایش کامل را اجرا کنید.');
+    }
+  };
+
   const saveMeta = async () => {
     if (!selectedEntity || !metaForm) return;
     const data = await run('save-meta', () => api<any>(
@@ -356,6 +366,25 @@ export const AdminSeoTab: React.FC = () => {
   const entityTypeLabels: Record<string, string> = {
     product: 'محصولات', article: 'مقالات', category: 'دسته‌بندی‌ها',
     page: 'برگه‌ها', brand: 'برند خودرو', model: 'مدل خودرو'
+  };
+
+  const moduleLabels: Record<string, string> = {
+    meta: 'مدیریت متا',
+    schema: 'داده‌های ساختاریافته',
+    sitemap: 'نقشه سایت',
+    redirects: 'ریدایرکت‌ها',
+    monitor404: 'پایش خطاهای ۴۰۴',
+    breadcrumbs: 'بردکرامب',
+    hreflang: 'زبان و hreflang',
+    internalLinks: 'لینک‌سازی داخلی',
+    auditor: 'پایش خودکار سئو',
+    imageSeo: 'سئوی تصاویر',
+    indexNow: 'IndexNow',
+    performance: 'بررسی سرعت',
+    integrations: 'اتصال سرویس‌ها',
+    automation: 'اتوماسیون',
+    inspector: 'بازرسی فنی URL',
+    toc: 'فهرست مطالب'
   };
 
   const serpTitle = metaForm?.seoTitle || workspace?.entity?.title || '';
@@ -579,19 +608,14 @@ export const AdminSeoTab: React.FC = () => {
             <div className="flex gap-2 w-full sm:w-auto">
               <button
                 type="button"
-                onClick={() => { void saveSettings(); void saveIntegrations(); }}
+                onClick={() => void saveWizard(false)}
                 className="flex-1 sm:flex-none px-5 py-2.5 rounded-xl border border-neutral-300 bg-white text-neutral-800 text-xs font-black"
               >
                 ذخیره
               </button>
               <button
                 type="button"
-                onClick={() => {
-                  void saveSettings();
-                  void saveIntegrations();
-                  if (wizardStep < 5) setWizardStep(step => Math.min(5, step + 1));
-                  else flash('ویزارد سئو ذخیره شد. اکنون می‌توانید پایش کامل را اجرا کنید.');
-                }}
+                onClick={() => void saveWizard(true)}
                 className="flex-1 sm:flex-none px-6 py-2.5 rounded-xl bg-red-600 text-white text-xs font-black"
               >
                 {wizardStep < 5 ? 'ذخیره و ادامه' : 'پایان و ذخیره'}
@@ -1137,7 +1161,7 @@ export const AdminSeoTab: React.FC = () => {
 
           <Card title="ماژول‌ها">
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-2">
-              {Object.entries(settings.modules).map(([key, value]) => <Toggle key={key} label={key} checked={Boolean(value)} onChange={v => setSettings({ ...settings, modules: { ...settings.modules, [key]: v } })} />)}
+              {Object.entries(settings.modules).map(([key, value]) => <Toggle key={key} label={moduleLabels[key] || key} checked={Boolean(value)} onChange={v => setSettings({ ...settings, modules: { ...settings.modules, [key]: v } })} />)}
             </div>
           </Card>
 
@@ -1212,7 +1236,7 @@ export const AdminSeoTab: React.FC = () => {
 
       {tab !== 'settings' && ['indexing'].indexOf(tab) === -1 && (
         <div className="text-[9px] text-neutral-400 text-center">
-          TakRank SEO Native — داده‌های SEO از دیتابیس و Backend خود yadak.store خوانده و اعمال می‌شوند.
+          تک‌رنک سئو بومی — داده‌های سئو مستقیماً از دیتابیس و موتور داخلی سایت خوانده و اعمال می‌شوند.
         </div>
       )}
     </div>

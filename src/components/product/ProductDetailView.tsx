@@ -50,7 +50,8 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
     addToCompare, 
     isInCompare,
     subscribeToStockAlert,
-    showToast
+    showToast,
+    settings
   } = useStore();
 
   const product = products.find(p => p.id === productId || p.slug === productId);
@@ -87,10 +88,11 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
     ? products.filter(p => product.complementPartIds?.includes(p.id)) 
     : [];
 
+  const relatedProductsCount = Math.max(1, Math.min(12, Number(settings.relatedProductsCount || 4)));
   const relatedProducts = products.filter(p => 
     p.id !== product.id && 
     (p.categorySlug === product.categorySlug || p.fitments.some(f => product.fitments.some(pf => pf.modelId === f.modelId)))
-  ).slice(0, 4);
+  ).slice(0, relatedProductsCount);
 
   const handleStockSubscribe = (e: React.FormEvent) => {
     e.preventDefault();
@@ -106,8 +108,8 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
   return (
     <div className="max-w-7xl mx-auto px-4 py-8 space-y-12">
       {/* Breadcrumb Navigation & Direct Share */}
-      <div className="flex items-center justify-between gap-4 pb-2 border-b border-neutral-100">
-        <nav className="flex items-center gap-2 text-xs text-neutral-500 overflow-x-auto whitespace-nowrap">
+      <div className="product-breadcrumb-row flex items-center justify-between gap-4 pb-2 border-b border-neutral-100">
+        <nav className="site-breadcrumb flex items-center gap-2 text-xs text-neutral-500 overflow-x-auto whitespace-nowrap">
           <button onClick={() => onNavigate('home')} className="hover:text-red-600 transition-colors">
             خانه
           </button>
@@ -140,7 +142,8 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
           <div className="aspect-square bg-white rounded-3xl border border-neutral-200 overflow-hidden p-4 relative flex items-center justify-center shadow-xs">
             <img 
               src={product.images[activeImageIndex] || product.images[0]} 
-              alt={product.nameFa} 
+              alt={product.seo?.images?.[product.images[activeImageIndex] || product.images[0]]?.alt || product.nameFa}
+              title={product.seo?.images?.[product.images[activeImageIndex] || product.images[0]]?.title || product.nameFa}
               className="max-h-full max-w-full object-contain"
             />
 
@@ -194,7 +197,7 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
                     activeImageIndex === idx ? 'border-red-600 ring-2 ring-red-600/20' : 'border-neutral-200 hover:border-neutral-300'
                   }`}
                 >
-                  <img src={img} alt={`تصویر ${idx + 1}`} className="w-full h-full object-cover rounded-lg" />
+                  <img src={img} alt={product.seo?.images?.[img]?.alt || `${product.nameFa} - تصویر ${idx + 1}`} title={product.seo?.images?.[img]?.title || product.nameFa} className="w-full h-full object-cover rounded-lg" />
                 </button>
               ))}
             </div>
@@ -400,22 +403,22 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
           </div>
 
           {/* Quick Specifications Highlights */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-            <div className="p-3 bg-neutral-50 rounded-xl border border-neutral-200">
+          <div className="product-quick-specs grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+            <div className="product-quick-spec-card p-3 bg-neutral-50 rounded-xl border border-neutral-200">
               <span className="text-neutral-400 block text-[10px]">محل نصب:</span>
-              <span className="font-bold text-neutral-800 truncate block mt-0.5">{product.placement}</span>
+              <span className="font-bold text-neutral-800 block mt-1">{product.placement || '—'}</span>
             </div>
-            <div className="p-3 bg-neutral-50 rounded-xl border border-neutral-200">
+            <div className="product-quick-spec-card p-3 bg-neutral-50 rounded-xl border border-neutral-200">
               <span className="text-neutral-400 block text-[10px]">کشور سازنده:</span>
-              <span className="font-bold text-neutral-800 truncate block mt-0.5">{product.countryOfOrigin}</span>
+              <span className="font-bold text-neutral-800 block mt-1">{product.countryOfOrigin || '—'}</span>
             </div>
-            <div className="p-3 bg-neutral-50 rounded-xl border border-neutral-200">
+            <div className="product-quick-spec-card p-3 bg-neutral-50 rounded-xl border border-neutral-200">
               <span className="text-neutral-400 block text-[10px]">وزن و ابعاد:</span>
-              <span className="font-bold text-neutral-800 truncate block mt-0.5">{product.weightKg} کیلوگرم</span>
+              <span className="font-bold text-neutral-800 block mt-1">{product.weightKg ? `${product.weightKg} کیلوگرم` : '—'}{product.dimensionsCm ? ` — ${product.dimensionsCm}` : ''}</span>
             </div>
-            <div className="p-3 bg-neutral-50 rounded-xl border border-neutral-200">
+            <div className="product-quick-spec-card p-3 bg-neutral-50 rounded-xl border border-neutral-200">
               <span className="text-neutral-400 block text-[10px]">گرید کیفیتی:</span>
-              <span className="font-bold text-neutral-800 truncate block mt-0.5">{gradeInfo.shortLabel}</span>
+              <span className="font-bold text-neutral-800 block mt-1">{gradeInfo.shortLabel}</span>
             </div>
           </div>
 
@@ -435,7 +438,7 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
             <span className="text-xs text-neutral-500">برای تعویض استاندارد و عدم دوباره‌کاری پیشنهاد می‌شود:</span>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
             {complementProducts.map(comp => (
               <div 
                 key={comp.id} 
@@ -467,7 +470,7 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
       {/* Detailed Technical Tabs */}
       <section className="bg-white rounded-3xl border border-neutral-200 overflow-hidden shadow-xs">
         {/* Tab Headers */}
-        <div className="flex border-b border-neutral-200 bg-neutral-50 overflow-x-auto">
+        <div className="product-detail-tabs flex border-b border-neutral-200 bg-neutral-50 overflow-x-auto">
           <button
             onClick={() => setActiveTab('specs')}
             className={`py-4 px-6 text-xs sm:text-sm font-bold border-b-2 whitespace-nowrap transition-colors ${
@@ -562,7 +565,7 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
                 این قطعه بر روی مدل‌ها، سال‌های ساخت و پیشرانه‌های زیر مورد تست و تایید قرار گرفته است:
               </div>
 
-              <div className="overflow-x-auto border border-neutral-200 rounded-2xl">
+              <div className="product-fitment-table overflow-x-auto border border-neutral-200 rounded-2xl">
                 <table className="w-full text-xs text-right divide-y divide-neutral-200">
                   <thead className="bg-neutral-50 font-bold text-neutral-700">
                     <tr>
@@ -660,7 +663,7 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
             </button>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="related-products-grid grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             {relatedProducts.map(rel => (
               <ProductCard 
                 key={rel.id} 

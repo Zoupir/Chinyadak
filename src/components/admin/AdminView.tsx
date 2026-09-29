@@ -475,7 +475,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
             </div>
             <h2 className="text-xl font-black text-white pt-2">پرتال اختصاصی مدیریت سیستم</h2>
             <p className="text-xs text-neutral-400">
-              ورود امن به سامانه جامع مدیریت فروشگاه چین‌پارت
+              ورود امن به سامانه جامع مدیریت {settings.siteTitle || 'فروشگاه'}
             </p>
           </div>
 
@@ -691,7 +691,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
             </div>
             <div>
               <span className="font-black text-sm text-white tracking-tight">
-                کنترل پنل سازمانی چین‌پارت
+                کنترل پنل سازمانی {settings.siteTitle || 'فروشگاه'}
               </span>
               <span className="hidden sm:inline-block text-[10px] bg-red-600/90 text-white font-bold px-2 py-0.2 rounded-full mr-2">
                 ADMIN ENTERPRISE
@@ -825,7 +825,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
           {/* Sidebar Footer info */}
           {!isSidebarCollapsed && (
             <div className="p-3 border-t border-neutral-800 bg-neutral-950/50 text-[10px] text-neutral-500 text-center">
-              <span>چین‌پارت اختصاصی خودروهای چینی</span>
+              <span>{settings.siteTitle || 'فروشگاه قطعات خودرو'}</span>
             </div>
           )}
         </aside>

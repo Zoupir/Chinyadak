@@ -335,6 +335,8 @@ export const AdminPagesTab: React.FC<AdminPagesTabProps> = ({ onNavigate }) => {
                   onClick={() => {
                     if (selectedPage.slug === 'home') {
                       onNavigate('home');
+                    } else if (selectedPage.slug === 'part-request') {
+                      onNavigate('part-request');
                     } else {
                       onNavigate('page', selectedPage.slug);
                     }

@@ -3823,9 +3823,15 @@ html[data-layout="marketplace-rtl"] .marketplace-rtl-home {
 }
 
 html[data-layout="marketplace-rtl"] .marketplace-section {
-  width: min(1280px, calc(100% - 32px)) !important;
+  width: var(--builder-width, min(1280px, calc(100% - 32px))) !important;
+  max-width: var(--builder-max-width, 1280px) !important;
   margin-inline: auto !important;
-  padding-top: 32px !important;
+  padding-top: var(--builder-padding-top, 32px) !important;
+  padding-bottom: var(--builder-padding-bottom, 0px);
+  padding-inline: var(--builder-padding-inline, 0px);
+  border-radius: var(--builder-section-radius, 0px);
+  min-height: var(--builder-min-height, 0px);
+  color: var(--builder-text, inherit);
 }
 
 html[data-layout="marketplace-rtl"] .marketplace-section-heading {
@@ -3899,15 +3905,17 @@ html[data-layout="marketplace-rtl"] .marketplace-section-heading p {
 
 /* Hero: full-bleed image, compact car selector and large marketing copy. */
 html[data-layout="marketplace-rtl"] .marketplace-hero-shell {
-  width: 100% !important;
-  max-width: none !important;
-  padding: 0 !important;
-  margin: 0 !important;
+  width: var(--builder-width, 100%) !important;
+  max-width: var(--builder-max-width, none) !important;
+  padding-top: var(--builder-padding-top, 0px) !important;
+  padding-bottom: var(--builder-padding-bottom, 0px) !important;
+  padding-inline: var(--builder-padding-inline, 0px) !important;
+  margin-inline: auto !important;
 }
 
 html[data-layout="marketplace-rtl"] .marketplace-hero-banner {
   min-height: 455px !important;
-  border-radius: 0 !important;
+  border-radius: var(--builder-section-radius, 0px) !important;
   box-shadow: none !important;
   background-position: center center !important;
 }
@@ -3960,7 +3968,7 @@ html[data-layout="marketplace-rtl"] .marketplace-finder-grid button {
   min-height: 48px !important;
   padding: 7px 9px !important;
   border: 1px solid #e5e7eb !important;
-  border-radius: 2px !important;
+  border-radius: var(--builder-item-radius, 2px) !important;
   background: #fafafa !important;
 }
 
@@ -3974,9 +3982,9 @@ html[data-layout="marketplace-rtl"] .marketplace-search-car {
 
 /* Featured categories: light full-width band with round icon tiles. */
 html[data-layout="marketplace-rtl"] .marketplace-category-row {
-  padding-top: 22px !important;
-  padding-bottom: 24px !important;
-  background: #f4f5f6 !important;
+  padding-top: var(--builder-padding-top, 22px) !important;
+  padding-bottom: var(--builder-padding-bottom, 24px) !important;
+  background: var(--builder-bg, #f4f5f6);
   box-shadow: 0 0 0 100vmax #f4f5f6;
   clip-path: inset(0 -100vmax);
 }
@@ -4040,9 +4048,9 @@ html[data-layout="marketplace-rtl"] .marketplace-promo-card small {
 
 /* Featured product area mirrors the compact 4x2 reference grid. */
 html[data-layout="marketplace-rtl"] .marketplace-section[data-section-key="featured-products"] {
-  padding-top: 34px !important;
-  padding-bottom: 34px !important;
-  background: #f7f7f7 !important;
+  padding-top: var(--builder-padding-top, 34px) !important;
+  padding-bottom: var(--builder-padding-bottom, 34px) !important;
+  background: var(--builder-bg, #f7f7f7);
   box-shadow: 0 0 0 100vmax #f7f7f7;
   clip-path: inset(0 -100vmax);
 }
@@ -4103,13 +4111,15 @@ html[data-layout="marketplace-rtl"] .marketplace-ref-product-bottom {
 
 /* Full-width brake/system banner. */
 html[data-layout="marketplace-rtl"] .marketplace-wide-banner {
-  width: 100% !important;
-  max-width: none !important;
-  min-height: 330px !important;
-  margin-top: 0 !important;
-  padding: 48px max(24px, calc((100vw - 1280px) / 2 + 20px)) !important;
+  width: var(--builder-width, 100%) !important;
+  max-width: var(--builder-max-width, none) !important;
+  min-height: var(--builder-min-height, 330px) !important;
+  margin: 0 auto !important;
+  padding-top: var(--builder-padding-top, 48px) !important;
+  padding-bottom: var(--builder-padding-bottom, 48px) !important;
+  padding-inline: var(--builder-padding-inline, max(24px, calc((100vw - 1280px) / 2 + 20px))) !important;
   background-position: center !important;
-  border-radius: 0 !important;
+  border-radius: var(--builder-section-radius, 0px) !important;
   box-shadow: inset 0 0 0 999px rgba(0,0,0,.30) !important;
 }
 
@@ -4123,9 +4133,9 @@ html[data-layout="marketplace-rtl"] .marketplace-wide-banner h2 {
 
 /* Manufacturers: dense logo rows like the source template. */
 html[data-layout="marketplace-rtl"] .marketplace-brands {
-  padding-top: 26px !important;
-  padding-bottom: 28px !important;
-  background: #fff !important;
+  padding-top: var(--builder-padding-top, 26px) !important;
+  padding-bottom: var(--builder-padding-bottom, 28px) !important;
+  background: var(--builder-bg, #fff);
 }
 
 html[data-layout="marketplace-rtl"] .marketplace-brand-row {
@@ -4158,9 +4168,9 @@ html[data-layout="marketplace-rtl"] .marketplace-brand-row img {
 
 /* Parts brands: colourful, compact rectangular tiles. */
 html[data-layout="marketplace-rtl"] .marketplace-brand-tiles {
-  padding-top: 28px !important;
-  padding-bottom: 30px !important;
-  background: #f4f5f6 !important;
+  padding-top: var(--builder-padding-top, 28px) !important;
+  padding-bottom: var(--builder-padding-bottom, 30px) !important;
+  background: var(--builder-bg, #f4f5f6);
   box-shadow: 0 0 0 100vmax #f4f5f6;
   clip-path: inset(0 -100vmax);
 }
@@ -4203,8 +4213,10 @@ html[data-layout="marketplace-rtl"] .marketplace-promo-medium {
 /* Weekly deals orange strip. */
 html[data-layout="marketplace-rtl"] .marketplace-deals {
   margin-top: 34px !important;
-  padding: 26px 0 32px !important;
-  background: linear-gradient(100deg, #f4a000 0%, #e84e16 100%) !important;
+  padding-top: var(--builder-padding-top, 26px) !important;
+  padding-bottom: var(--builder-padding-bottom, 32px) !important;
+  padding-inline: var(--builder-padding-inline, 0px) !important;
+  background: var(--builder-bg, linear-gradient(100deg, #f4a000 0%, #e84e16 100%));
 }
 
 html[data-layout="marketplace-rtl"] .marketplace-deals .marketplace-section {
@@ -4222,7 +4234,7 @@ html[data-layout="marketplace-rtl"] .marketplace-feature-banners {
 html[data-layout="marketplace-rtl"] .marketplace-feature-banners > button {
   min-width: 0;
   padding: 28px !important;
-  border-radius: 3px !important;
+  border-radius: var(--builder-item-radius, 3px) !important;
   background-position: center !important;
 }
 
@@ -4243,14 +4255,16 @@ html[data-layout="marketplace-rtl"] .marketplace-feature-banners h3 {
 
 /* Maintenance products keep same card geometry as featured products. */
 html[data-layout="marketplace-rtl"] .marketplace-section[data-section-key="maintenance-products"] {
-  padding-bottom: 32px !important;
+  padding-bottom: var(--builder-padding-bottom, 32px) !important;
 }
 
 /* Testimonials. */
 html[data-layout="marketplace-rtl"] .marketplace-testimonials {
   margin-top: 34px !important;
-  padding: 30px 0 34px !important;
-  background: #eaf4fb !important;
+  padding-top: var(--builder-padding-top, 30px) !important;
+  padding-bottom: var(--builder-padding-bottom, 34px) !important;
+  padding-inline: var(--builder-padding-inline, 0px) !important;
+  background: var(--builder-bg, #eaf4fb);
 }
 
 html[data-layout="marketplace-rtl"] .marketplace-testimonials .marketplace-section {
@@ -4271,16 +4285,20 @@ html[data-layout="marketplace-rtl"] .marketplace-testimonial-grid article {
 
 /* Shipping band. */
 html[data-layout="marketplace-rtl"] .marketplace-shipping-banner {
-  width: min(1040px, calc(100% - 32px)) !important;
-  min-height: 128px !important;
+  width: var(--builder-width, min(1040px, calc(100% - 32px))) !important;
+  max-width: var(--builder-max-width, 1040px) !important;
+  min-height: var(--builder-min-height, 128px) !important;
   margin: 28px auto 0 !important;
-  padding: 20px 42px !important;
-  border-radius: 3px !important;
+  padding-top: var(--builder-padding-top, 20px) !important;
+  padding-bottom: var(--builder-padding-bottom, 20px) !important;
+  padding-inline: var(--builder-padding-inline, 42px) !important;
+  border-radius: var(--builder-section-radius, 3px) !important;
+  background: var(--builder-bg, linear-gradient(90deg, #f59e0b 0 45%, #ffd166 45% 100%));
 }
 
 /* Articles: intro plus three equal image cards. */
 html[data-layout="marketplace-rtl"] .marketplace-articles {
-  padding-bottom: 34px !important;
+  padding-bottom: var(--builder-padding-bottom, 34px) !important;
 }
 
 html[data-layout="marketplace-rtl"] .marketplace-ref-article-grid {
@@ -4303,12 +4321,14 @@ html[data-layout="marketplace-rtl"] .marketplace-article-grid > button > div {
 
 /* Green benefits strip and footer. */
 html[data-layout="marketplace-rtl"] .marketplace-service-strip {
-  width: 100% !important;
-  max-width: none !important;
+  width: var(--builder-width, 100%) !important;
+  max-width: var(--builder-max-width, none) !important;
   margin-top: 0 !important;
-  padding-inline: max(16px, calc((100vw - 1280px) / 2)) !important;
-  background: #08b934 !important;
-  border-radius: 0 !important;
+  padding-top: var(--builder-padding-top, 0px) !important;
+  padding-bottom: var(--builder-padding-bottom, 0px) !important;
+  padding-inline: var(--builder-padding-inline, max(16px, calc((100vw - 1280px) / 2))) !important;
+  background: var(--builder-bg, #08b934);
+  border-radius: var(--builder-section-radius, 0px) !important;
 }
 
 html[data-layout="marketplace-rtl"] .marketplace-service-strip > div {
@@ -4400,8 +4420,8 @@ html[data-layout="marketplace-rtl"] .marketplace-ref-footer-main {
 
   html[data-layout="marketplace-rtl"] .marketplace-promo-grid.three,
   html[data-layout="marketplace-rtl"] .marketplace-promo-grid.two {
-    grid-template-columns: 1fr !important;
-    gap: 10px !important;
+    grid-template-columns: repeat(var(--builder-mobile-cols, 1), minmax(0,1fr)) !important;
+    gap: var(--builder-gap, 10px) !important;
   }
 
   html[data-layout="marketplace-rtl"] .marketplace-promo-grid.three .marketplace-promo-card,
@@ -4458,7 +4478,7 @@ html[data-layout="marketplace-rtl"] .marketplace-ref-footer-main {
   }
 
   html[data-layout="marketplace-rtl"] .marketplace-feature-banners {
-    grid-template-columns: 1fr !important;
+    grid-template-columns: repeat(var(--builder-mobile-cols, 1), minmax(0,1fr)) !important;
     grid-auto-rows: 176px !important;
   }
 
@@ -4469,7 +4489,7 @@ html[data-layout="marketplace-rtl"] .marketplace-ref-footer-main {
   }
 
   html[data-layout="marketplace-rtl"] .marketplace-testimonial-grid {
-    grid-template-columns: repeat(2, minmax(0,1fr)) !important;
+    grid-template-columns: repeat(var(--builder-mobile-cols, 2), minmax(0,1fr)) !important;
   }
 
   html[data-layout="marketplace-rtl"] .marketplace-shipping-banner {
@@ -4488,8 +4508,8 @@ html[data-layout="marketplace-rtl"] .marketplace-ref-footer-main {
   }
 
   html[data-layout="marketplace-rtl"] .marketplace-ref-article-grid {
-    grid-template-columns: repeat(2, minmax(0,1fr)) !important;
-    gap: 9px !important;
+    grid-template-columns: repeat(var(--builder-mobile-cols, 2), minmax(0,1fr)) !important;
+    gap: var(--builder-gap, 9px) !important;
   }
 
   html[data-layout="marketplace-rtl"] .marketplace-ref-article-intro {
@@ -4501,7 +4521,7 @@ html[data-layout="marketplace-rtl"] .marketplace-ref-footer-main {
   }
 
   html[data-layout="marketplace-rtl"] .marketplace-service-strip {
-    grid-template-columns: repeat(2, minmax(0,1fr)) !important;
-    padding-inline: 8px !important;
+    grid-template-columns: repeat(var(--builder-mobile-cols, 2), minmax(0,1fr)) !important;
+    padding-inline: var(--builder-padding-inline, 8px) !important;
   }
 }

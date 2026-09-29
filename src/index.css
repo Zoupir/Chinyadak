@@ -912,6 +912,63 @@ html[data-layout="marketplace-rtl"] .marketplace-promo-medium {
   min-height: 215px;
 }
 
+html[data-layout="marketplace-rtl"] .marketplace-product-tabs {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin: -4px 0 13px;
+  background: #eef2f7;
+  padding: 4px;
+  border-radius: 3px;
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-product-tabs button {
+  padding: 6px 10px;
+  border-radius: 2px;
+  color: #64748b;
+  font-size: 9px;
+  font-weight: 900;
+  transition: background .15s ease, color .15s ease, box-shadow .15s ease;
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-product-tabs button.active {
+  background: #07558f;
+  color: #ffffff;
+  box-shadow: 0 3px 10px rgba(7,85,143,.18);
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-deal-heading {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-deal-timer {
+  direction: ltr;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-deal-timer span {
+  min-width: 27px;
+  height: 25px;
+  padding: 0 5px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255,255,255,.95);
+  color: #c2410c;
+  border-radius: 2px;
+  font-size: 9px;
+  font-weight: 950;
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-deal-timer b {
+  color: #ffffff;
+  font-size: 10px;
+}
+
 html[data-layout="marketplace-rtl"] .marketplace-product-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -1092,6 +1149,9 @@ html[data-layout="marketplace-rtl"] .marketplace-feature-banners > button {
   color: #fff;
   background: #111827;
   border-radius: 3px;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
 }
 
 html[data-layout="marketplace-rtl"] .marketplace-feature-banners .large.first {

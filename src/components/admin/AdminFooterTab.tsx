@@ -36,7 +36,7 @@ export const AdminFooterTab: React.FC = () => {
   const [activeSubtab, setActiveSubtab] = useState<'features' | 'about' | 'columns' | 'badges' | 'html'>('columns');
 
   // Form states
-  const [footerAboutTitle, setFooterAboutTitle] = useState(settings.footerAboutTitle || 'فروشگاه اینترنتی چین‌پارت');
+  const [footerAboutTitle, setFooterAboutTitle] = useState(settings.footerAboutTitle || settings.siteTitle || 'فروشگاه اینترنتی');
   const [footerAboutText, setFooterAboutText] = useState(settings.footerAboutText || '');
   const [footerCopyrightText, setFooterCopyrightText] = useState(settings.footerCopyrightText || '');
   const [footerCustomHtml, setFooterCustomHtml] = useState(settings.footerCustomHtml || '');
@@ -57,7 +57,7 @@ export const AdminFooterTab: React.FC = () => {
       id: 'fcol-1',
       title: 'راهنمای خرید و قوانین',
       links: [
-        { id: 'l1', title: 'درباره چین‌پارت پرو', url: 'page:about' },
+        { id: 'l1', title: 'درباره ما', url: 'page:about' },
         { id: 'l2', title: 'ضمانت اصالت و شرایط بازگشت کالا', url: 'page:guarantee' },
         { id: 'l3', title: 'پیگیری وضعیت سفارش و مرسوله', url: 'tracking' },
         { id: 'l4', title: 'استعلام قطعات کم‌یاب و وارداتی', url: 'part-request' }
@@ -757,7 +757,7 @@ export const AdminFooterTab: React.FC = () => {
                 value={footerAboutTitle}
                 onChange={e => setFooterAboutTitle(e.target.value)}
                 className="w-full p-2.5 border border-neutral-300 rounded-xl"
-                placeholder="مثال: فروشگاه اینترنتی لوازم یدکی چین‌پارت"
+                placeholder="مثال: فروشگاه اینترنتی قطعات خودرو"
               />
             </div>
 
@@ -779,7 +779,7 @@ export const AdminFooterTab: React.FC = () => {
                 value={footerCopyrightText}
                 onChange={e => setFooterCopyrightText(e.target.value)}
                 className="w-full p-2.5 border border-neutral-300 rounded-xl"
-                placeholder="مثال: تمامی حقوق برای چین‌پارت محفوظ است..."
+                placeholder="مثال: تمامی حقوق برای نام فروشگاه محفوظ است..."
               />
             </div>
 

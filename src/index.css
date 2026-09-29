@@ -4525,3 +4525,376 @@ html[data-layout="marketplace-rtl"] .marketplace-ref-footer-main {
     padding-inline: var(--builder-padding-inline, 8px) !important;
   }
 }
+
+
+/* MOBEX EXACT SECTION PASS V2 */
+/* Section-by-section visual reconstruction from the supplied Mobex reference. */
+
+/* 01 — Hero: true full-bleed with selector on the visual left and copy in the middle. */
+html[data-layout="marketplace-rtl"] .marketplace-hero-shell {
+  width: 100vw !important;
+  max-width: none !important;
+  margin-inline: calc(50% - 50vw) !important;
+  padding: 0 !important;
+}
+html[data-layout="marketplace-rtl"] .marketplace-hero-banner {
+  min-height: 455px !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+@media (min-width: 1001px) {
+  html[data-layout="marketplace-rtl"] .marketplace-vehicle-finder {
+    left: max(24px, calc((100vw - 1280px) / 2)) !important;
+    right: auto !important;
+    width: 255px !important;
+    top: 50% !important;
+    bottom: auto !important;
+    transform: translateY(-50%) !important;
+    padding: 16px !important;
+    border-radius: 3px !important;
+  }
+  html[data-layout="marketplace-rtl"] .marketplace-hero-content {
+    right: max(34px, calc((100vw - 1280px) / 2 + 315px)) !important;
+    left: auto !important;
+    width: min(480px, 39vw) !important;
+    text-align: right !important;
+  }
+  html[data-layout="marketplace-rtl"] .marketplace-hero-content h1 {
+    font-size: clamp(32px, 3vw, 48px) !important;
+    line-height: 1.08 !important;
+  }
+}
+
+/* 02 — Featured categories. */
+html[data-layout="marketplace-rtl"] .marketplace-category-row {
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 22px max(16px, calc((100vw - 1280px) / 2)) 24px !important;
+}
+html[data-layout="marketplace-rtl"] .marketplace-round-list {
+  max-width: 980px;
+  margin: 0 auto;
+  align-items: start;
+}
+html[data-layout="marketplace-rtl"] .marketplace-round-icon {
+  width: 78px !important;
+  height: 78px !important;
+}
+html[data-layout="marketplace-rtl"] .marketplace-round-list strong {
+  margin-top: 2px;
+  line-height: 1.5;
+}
+
+/* 03 — Three promotional banners. */
+html[data-layout="marketplace-rtl"] .marketplace-promo-grid.three {
+  max-width: 1040px !important;
+  margin: 0 auto !important;
+  padding-top: 30px !important;
+}
+html[data-layout="marketplace-rtl"] .marketplace-promo-grid.three .marketplace-promo-card {
+  min-height: 178px !important;
+}
+html[data-layout="marketplace-rtl"] .marketplace-promo-grid.three .marketplace-promo-card h3 {
+  font-size: 22px !important;
+  max-width: 62% !important;
+}
+
+/* 04 — Featured products. */
+html[data-layout="marketplace-rtl"] .marketplace-section[data-section-key="featured-products"] {
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 30px max(16px, calc((100vw - 1280px) / 2)) 34px !important;
+}
+html[data-layout="marketplace-rtl"] .marketplace-section[data-section-key="featured-products"] > * {
+  max-width: 1040px;
+  margin-inline: auto;
+}
+html[data-layout="marketplace-rtl"] .marketplace-section[data-section-key="featured-products"] .marketplace-section-heading {
+  max-width: 1040px;
+}
+html[data-layout="marketplace-rtl"] .marketplace-product-tabs {
+  width: fit-content;
+  margin-inline: auto !important;
+}
+html[data-layout="marketplace-rtl"] .marketplace-section[data-section-key="featured-products"] .marketplace-product-grid {
+  max-width: 1040px;
+  margin-inline: auto;
+}
+html[data-layout="marketplace-rtl"] .marketplace-ref-product-card {
+  min-height: 166px !important;
+}
+html[data-layout="marketplace-rtl"] .marketplace-ref-product-image {
+  min-height: 164px !important;
+}
+html[data-layout="marketplace-rtl"] .marketplace-ref-product-image img {
+  height: 108px !important;
+}
+
+/* 05 — Full brake/feature banner. */
+html[data-layout="marketplace-rtl"] .marketplace-wide-banner {
+  width: 100vw !important;
+  max-width: none !important;
+  margin-inline: calc(50% - 50vw) !important;
+  min-height: 330px !important;
+  padding-inline: max(24px, calc((100vw - 1280px) / 2)) !important;
+}
+html[data-layout="marketplace-rtl"] .marketplace-wide-banner > div {
+  width: min(440px, 42vw);
+}
+
+/* 06 — Featured manufacturers. */
+html[data-layout="marketplace-rtl"] .marketplace-brands {
+  max-width: 1040px !important;
+  padding-top: 25px !important;
+  padding-bottom: 28px !important;
+}
+html[data-layout="marketplace-rtl"] .marketplace-brands .marketplace-section-heading {
+  margin-bottom: 12px !important;
+}
+html[data-layout="marketplace-rtl"] .marketplace-brand-row {
+  max-width: 1040px;
+  margin-inline: auto;
+  row-gap: 10px !important;
+}
+html[data-layout="marketplace-rtl"] .marketplace-brand-row button {
+  min-height: 72px !important;
+}
+html[data-layout="marketplace-rtl"] .marketplace-brand-row button > span {
+  width: var(--builder-image-size, 54px) !important;
+  height: var(--builder-image-size, 54px) !important;
+}
+
+/* 07 — Featured parts brands: colored logo-only Mobex tiles. */
+html[data-layout="marketplace-rtl"] .marketplace-brand-tiles {
+  width: 100% !important;
+  max-width: none !important;
+  padding: 24px max(16px, calc((100vw - 1280px) / 2)) 28px !important;
+}
+html[data-layout="marketplace-rtl"] .marketplace-brand-tiles > * {
+  max-width: 1040px;
+  margin-inline: auto;
+}
+html[data-layout="marketplace-rtl"] .marketplace-logo-tiles {
+  max-width: 1040px;
+  margin-inline: auto;
+}
+html[data-layout="marketplace-rtl"] .marketplace-logo-tiles-with-images button {
+  min-height: 68px !important;
+  justify-content: center !important;
+  padding: 8px !important;
+  border: 0 !important;
+  border-radius: var(--builder-item-radius, 2px) !important;
+  color: #fff !important;
+}
+html[data-layout="marketplace-rtl"] .marketplace-logo-tiles-with-images button:nth-child(8n+1) { background: #8c1d2c !important; }
+html[data-layout="marketplace-rtl"] .marketplace-logo-tiles-with-images button:nth-child(8n+2) { background: #2e55a3 !important; }
+html[data-layout="marketplace-rtl"] .marketplace-logo-tiles-with-images button:nth-child(8n+3) { background: #15915a !important; }
+html[data-layout="marketplace-rtl"] .marketplace-logo-tiles-with-images button:nth-child(8n+4) { background: #d76c27 !important; }
+html[data-layout="marketplace-rtl"] .marketplace-logo-tiles-with-images button:nth-child(8n+5) { background: #704a9e !important; }
+html[data-layout="marketplace-rtl"] .marketplace-logo-tiles-with-images button:nth-child(8n+6) { background: #111827 !important; }
+html[data-layout="marketplace-rtl"] .marketplace-logo-tiles-with-images button:nth-child(8n+7) { background: #2f9ad8 !important; }
+html[data-layout="marketplace-rtl"] .marketplace-logo-tiles-with-images button:nth-child(8n)   { background: #16a085 !important; }
+html[data-layout="marketplace-rtl"] .marketplace-parts-brand-logo.has-image {
+  width: 100% !important;
+  height: 48px !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+}
+html[data-layout="marketplace-rtl"] .marketplace-parts-brand-logo.has-image img {
+  max-width: 92% !important;
+  max-height: 42px !important;
+  filter: none;
+}
+html[data-layout="marketplace-rtl"] .marketplace-parts-brand-copy.no-image {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: inherit;
+  text-align: center;
+}
+
+/* 08 — Two mid banners. */
+html[data-layout="marketplace-rtl"] .marketplace-promo-grid.two {
+  max-width: 1040px !important;
+  margin-inline: auto !important;
+  padding-top: 28px !important;
+}
+html[data-layout="marketplace-rtl"] .marketplace-promo-medium {
+  min-height: 205px !important;
+}
+
+/* 09 — Weekly deals full-width band with centered 4x2 grid. */
+html[data-layout="marketplace-rtl"] .marketplace-deals {
+  width: 100vw !important;
+  margin-inline: calc(50% - 50vw) !important;
+}
+html[data-layout="marketplace-rtl"] .marketplace-deals-inner {
+  width: min(1040px, calc(100% - 32px)) !important;
+  max-width: 1040px !important;
+  margin-inline: auto !important;
+}
+html[data-layout="marketplace-rtl"] .marketplace-deals .marketplace-product-grid {
+  grid-template-columns: repeat(4, minmax(0,1fr)) !important;
+}
+
+/* 10 — Mobex 2x2 promotional mosaic. */
+html[data-layout="marketplace-rtl"] .marketplace-feature-banners {
+  max-width: 1040px !important;
+  margin-inline: auto !important;
+  padding-top: 30px !important;
+  grid-template-columns: repeat(3, minmax(0,1fr)) !important;
+  grid-auto-rows: 205px !important;
+}
+html[data-layout="marketplace-rtl"] .marketplace-feature-banners > button:nth-child(1) { grid-column: span 2 !important; }
+html[data-layout="marketplace-rtl"] .marketplace-feature-banners > button:nth-child(2) { grid-column: span 1 !important; }
+html[data-layout="marketplace-rtl"] .marketplace-feature-banners > button:nth-child(3) { grid-column: span 1 !important; }
+html[data-layout="marketplace-rtl"] .marketplace-feature-banners > button:nth-child(4) { grid-column: span 2 !important; }
+
+/* 11 — The reference has no extra product grid between mosaic and testimonials. */
+html[data-layout="marketplace-rtl"] [data-section-key="maintenance-products"] {
+  display: none;
+}
+
+/* 12 — Testimonials: compact 4 cards inside a full light-blue band. */
+html[data-layout="marketplace-rtl"] .marketplace-testimonials {
+  width: 100vw !important;
+  margin-inline: calc(50% - 50vw) !important;
+  padding: 28px 0 32px !important;
+}
+html[data-layout="marketplace-rtl"] .marketplace-testimonials .marketplace-section {
+  width: min(1040px, calc(100% - 32px)) !important;
+  max-width: 1040px !important;
+  margin-inline: auto !important;
+}
+html[data-layout="marketplace-rtl"] .marketplace-testimonial-grid {
+  max-width: 1040px;
+  margin-inline: auto;
+}
+html[data-layout="marketplace-rtl"] .marketplace-testimonial-grid article {
+  min-height: 120px !important;
+  padding: 13px 14px !important;
+}
+html[data-layout="marketplace-rtl"] .marketplace-testimonial-grid article > img {
+  width: 34px !important;
+  height: 34px !important;
+  float: right;
+  margin: 0 0 6px 8px !important;
+}
+
+/* 13 — Narrow shipping banner. */
+html[data-layout="marketplace-rtl"] .marketplace-shipping-banner {
+  width: min(900px, calc(100% - 32px)) !important;
+  max-width: 900px !important;
+  min-height: 115px !important;
+  margin: 28px auto 0 !important;
+  padding: 16px 34px !important;
+  background-position: center !important;
+  background-size: cover !important;
+}
+
+/* 14 — Guides/articles: intro column + three equal cards. */
+html[data-layout="marketplace-rtl"] .marketplace-articles {
+  max-width: 1040px !important;
+  padding-top: 30px !important;
+  padding-bottom: 34px !important;
+}
+html[data-layout="marketplace-rtl"] .marketplace-ref-article-grid {
+  max-width: 1040px;
+  margin-inline: auto;
+  grid-template-columns: .78fr repeat(3, minmax(0,1fr)) !important;
+}
+html[data-layout="marketplace-rtl"] .marketplace-article-grid img {
+  height: 136px !important;
+}
+
+/* 15 — Green benefits strip, then black footer. */
+html[data-layout="marketplace-rtl"] .marketplace-service-strip {
+  width: 100vw !important;
+  max-width: none !important;
+  margin-inline: calc(50% - 50vw) !important;
+  grid-template-columns: repeat(4, minmax(0,1fr)) !important;
+  padding-inline: max(16px, calc((100vw - 1280px) / 2)) !important;
+}
+html[data-layout="marketplace-rtl"] .marketplace-service-strip > div {
+  min-height: 66px !important;
+}
+html[data-layout="marketplace-rtl"] .marketplace-ref-footer {
+  margin-top: 0 !important;
+}
+html[data-layout="marketplace-rtl"] .marketplace-ref-footer-main {
+  width: min(1040px, calc(100% - 32px)) !important;
+  max-width: 1040px !important;
+  padding: 36px 0 28px !important;
+}
+
+/* Mobile: keep the visual hierarchy but stack like the reference's responsive intent. */
+@media (max-width: 700px) {
+  html[data-layout="marketplace-rtl"] .marketplace-hero-shell {
+    width: 100% !important;
+    margin-inline: 0 !important;
+  }
+  html[data-layout="marketplace-rtl"] .marketplace-hero-banner {
+    min-height: 520px !important;
+  }
+  html[data-layout="marketplace-rtl"] .marketplace-hero-content {
+    top: 28px !important;
+    right: 16px !important;
+    left: 16px !important;
+    width: auto !important;
+  }
+  html[data-layout="marketplace-rtl"] .marketplace-vehicle-finder {
+    left: 12px !important;
+    right: 12px !important;
+    bottom: 12px !important;
+    width: auto !important;
+  }
+  html[data-layout="marketplace-rtl"] .marketplace-category-row,
+  html[data-layout="marketplace-rtl"] .marketplace-section[data-section-key="featured-products"],
+  html[data-layout="marketplace-rtl"] .marketplace-brand-tiles {
+    padding-inline: 12px !important;
+  }
+  html[data-layout="marketplace-rtl"] .marketplace-round-list {
+    grid-template-columns: repeat(3, minmax(0,1fr)) !important;
+  }
+  html[data-layout="marketplace-rtl"] .marketplace-promo-grid.three,
+  html[data-layout="marketplace-rtl"] .marketplace-promo-grid.two {
+    width: 100% !important;
+    padding-inline: 12px !important;
+    grid-template-columns: 1fr !important;
+  }
+  html[data-layout="marketplace-rtl"] .marketplace-product-grid,
+  html[data-layout="marketplace-rtl"] .marketplace-deals .marketplace-product-grid {
+    grid-template-columns: repeat(2, minmax(0,1fr)) !important;
+  }
+  html[data-layout="marketplace-rtl"] .marketplace-feature-banners {
+    width: 100% !important;
+    padding-inline: 12px !important;
+    grid-template-columns: 1fr !important;
+    grid-auto-rows: 168px !important;
+  }
+  html[data-layout="marketplace-rtl"] .marketplace-feature-banners > button {
+    grid-column: auto !important;
+  }
+  html[data-layout="marketplace-rtl"] .marketplace-testimonial-grid {
+    grid-template-columns: repeat(2, minmax(0,1fr)) !important;
+  }
+  html[data-layout="marketplace-rtl"] .marketplace-shipping-banner {
+    width: calc(100% - 24px) !important;
+    min-height: 100px !important;
+    padding-inline: 14px !important;
+  }
+  html[data-layout="marketplace-rtl"] .marketplace-ref-article-grid {
+    grid-template-columns: repeat(2, minmax(0,1fr)) !important;
+  }
+  html[data-layout="marketplace-rtl"] .marketplace-ref-article-intro {
+    grid-column: 1 / -1 !important;
+  }
+  html[data-layout="marketplace-rtl"] .marketplace-service-strip {
+    width: 100% !important;
+    margin-inline: 0 !important;
+    grid-template-columns: repeat(2, minmax(0,1fr)) !important;
+  }
+}

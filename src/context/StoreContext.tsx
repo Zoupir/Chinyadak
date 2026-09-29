@@ -63,36 +63,36 @@ const EMPTY_API_INTEGRATIONS: ApiIntegrationsConfig = {
 
 const HOME_SECTION_DEFAULTS: PageSection[] = [
   { id: 'home-hero', sectionKey: 'hero', title: 'قطعات مطمئن برای خودروی شما', subtitle: 'خرید تخصصی قطعات خودروهای چینی با تضمین اصالت، فیتمنت دقیق و ارسال سریع.', badge: 'پیشنهاد ویژه قطعات خودرو', buttonText: 'مشاهده محصولات', buttonLink: 'shop', isVisible: true, order: 1, layout: 'full', desktopColumns: 1, mobileColumns: 1, borderRadiusPx: 0, itemRadiusPx: 0, gapPx: 0, fullWidth: true, widthPercent: 100, maxWidthPx: 0 },
-  { id: 'home-featured-categories', sectionKey: 'featured-categories', title: 'دسته‌بندی‌های ویژه', subtitle: '', isVisible: true, order: 2, layout: 'grid', desktopColumns: 6, mobileColumns: 2, borderRadiusPx: 10, itemRadiusPx: 10, gapPx: 12 },
+  { id: 'home-featured-categories', sectionKey: 'featured-categories', title: 'دسته‌بندی‌های ویژه', subtitle: '', isVisible: true, order: 2, layout: 'grid', desktopColumns: 9, mobileColumns: 3, borderRadiusPx: 0, itemRadiusPx: 999, gapPx: 14, maxItems: 9, imageSizePx: 68, widthPercent: 100, maxWidthPx: 1280 },
   { id: 'home-promo-small', sectionKey: 'promo-small', title: 'بنرهای کوچک صفحه اصلی', isVisible: true, order: 3, layout: 'grid', desktopColumns: 3, mobileColumns: 1, borderRadiusPx: 10, itemRadiusPx: 10, gapPx: 12, items: [
     { id: 'promo-small-1', title: 'باتری و برق خودرو', subtitle: 'پیشنهاد روز', buttonText: 'مشاهده محصولات', link: 'shop', isVisible: true, order: 1 },
     { id: 'promo-small-2', title: 'رینگ، جلوبندی و تعلیق', subtitle: 'محصولات منتخب', buttonText: 'مشاهده محصولات', link: 'shop', isVisible: true, order: 2 },
     { id: 'promo-small-3', title: 'پیشنهادهای محدود فروشگاه', subtitle: 'فروش ویژه', buttonText: 'مشاهده محصولات', link: 'shop', isVisible: true, order: 3 }
   ]},
-  { id: 'home-featured-products', sectionKey: 'featured-products', title: 'محصولات ویژه', subtitle: 'محصولات منتخب، جدید و پرفروش فروشگاه', isVisible: true, order: 4, layout: 'grid', desktopColumns: 4, mobileColumns: 2, borderRadiusPx: 8, itemRadiusPx: 8, gapPx: 10 },
+  { id: 'home-featured-products', sectionKey: 'featured-products', title: 'محصولات ویژه', subtitle: 'محصولات منتخب، جدید و پرفروش فروشگاه', isVisible: true, order: 4, layout: 'grid', desktopColumns: 4, mobileColumns: 2, borderRadiusPx: 0, itemRadiusPx: 3, gapPx: 10, maxItems: 8, widthPercent: 100, maxWidthPx: 1280 },
   { id: 'home-wide-banner-1', sectionKey: 'wide-banner-1', title: 'برای توقف مطمئن، قطعه مطمئن انتخاب کنید', subtitle: 'سیستم ترمز و ایمنی', buttonText: 'مشاهده محصولات', buttonLink: 'shop', isVisible: true, order: 5, layout: 'full', desktopColumns: 1, mobileColumns: 1, borderRadiusPx: 12, minHeightPx: 300 },
-  { id: 'home-manufacturers', sectionKey: 'manufacturers', title: 'برندهای خودرو', isVisible: true, order: 6, layout: 'grid', desktopColumns: 6, mobileColumns: 3, borderRadiusPx: 10, itemRadiusPx: 10, gapPx: 10, maxItems: 12, imageSizePx: 72, widthPercent: 100 },
-  { id: 'home-parts-brands', sectionKey: 'parts-brands', title: 'برندهای محبوب قطعات', isVisible: true, order: 7, layout: 'grid', desktopColumns: 4, mobileColumns: 2, borderRadiusPx: 10, itemRadiusPx: 10, gapPx: 10 },
-  { id: 'home-promo-medium', sectionKey: 'promo-medium', title: 'بنرهای متوسط', isVisible: true, order: 8, layout: 'grid', desktopColumns: 2, mobileColumns: 1, borderRadiusPx: 12, itemRadiusPx: 12, gapPx: 12, items: [
+  { id: 'home-manufacturers', sectionKey: 'manufacturers', title: 'برندهای خودرو', isVisible: true, order: 6, layout: 'grid', desktopColumns: 12, mobileColumns: 3, borderRadiusPx: 0, itemRadiusPx: 999, gapPx: 10, maxItems: 24, imageSizePx: 58, widthPercent: 100, maxWidthPx: 1280 },
+  { id: 'home-parts-brands', sectionKey: 'parts-brands', title: 'برندهای محبوب قطعات', isVisible: true, order: 7, layout: 'grid', desktopColumns: 8, mobileColumns: 2, borderRadiusPx: 0, itemRadiusPx: 2, gapPx: 7, maxItems: 16, imageSizePx: 48, widthPercent: 100, maxWidthPx: 1280 },
+  { id: 'home-promo-medium', sectionKey: 'promo-medium', title: 'بنرهای متوسط', isVisible: true, order: 8, layout: 'grid', desktopColumns: 2, mobileColumns: 1, borderRadiusPx: 0, itemRadiusPx: 3, gapPx: 12, widthPercent: 100, maxWidthPx: 1280, items: [
     { id: 'promo-medium-1', title: 'جلوبندی، تایر و سیستم تعلیق', subtitle: 'آماده برای جاده', buttonText: 'خرید کنید', link: 'shop', isVisible: true, order: 1 },
     { id: 'promo-medium-2', title: 'قطعات موتور و سرویس تخصصی', subtitle: 'قطعات حیاتی موتور', buttonText: 'خرید کنید', link: 'shop', isVisible: true, order: 2 }
   ]},
-  { id: 'home-weekly-deals', sectionKey: 'weekly-deals', title: 'بهترین پیشنهادهای این هفته', subtitle: 'فرصت محدود برای خرید قطعات منتخب', isVisible: true, order: 9, layout: 'grid', desktopColumns: 4, mobileColumns: 2, borderRadiusPx: 8, itemRadiusPx: 8, gapPx: 10 },
+  { id: 'home-weekly-deals', sectionKey: 'weekly-deals', title: 'بهترین پیشنهادهای این هفته', subtitle: 'فرصت محدود برای خرید قطعات منتخب', isVisible: true, order: 9, layout: 'grid', desktopColumns: 4, mobileColumns: 2, borderRadiusPx: 0, itemRadiusPx: 3, gapPx: 10, maxItems: 8, widthPercent: 100, maxWidthPx: 1280 },
   { id: 'home-promo-large', sectionKey: 'promo-large', title: 'بنرهای اصلی', isVisible: true, order: 10, layout: 'grid', desktopColumns: 2, mobileColumns: 1, borderRadiusPx: 12, itemRadiusPx: 12, gapPx: 12, items: [
     { id: 'promo-large-1', title: 'چراغ‌ها و قطعات بدنه با تنوع کامل', subtitle: 'روشنایی و بدنه', buttonText: 'مشاهده محصولات', link: 'shop', isVisible: true, order: 1 },
     { id: 'promo-large-2', title: 'سرویس دوره‌ای مطمئن', subtitle: 'فیلترها', link: 'shop:maintenance', isVisible: true, order: 2 },
     { id: 'promo-large-3', title: 'قطعات تخصصی انتقال قدرت', subtitle: 'گیربکس و روغن', link: 'shop', isVisible: true, order: 3 },
     { id: 'promo-large-4', title: 'محصولات نگهداری و لوازم جانبی', subtitle: 'مراقبت خودرو', buttonText: 'مشاهده محصولات', link: 'shop', isVisible: true, order: 4 }
   ]},
-  { id: 'home-maintenance-products', sectionKey: 'maintenance-products', title: 'قطعات مصرفی و سرویس دوره‌ای', subtitle: 'انتخاب‌های سریع برای نگهداری اصولی خودرو', isVisible: true, order: 11, layout: 'grid', desktopColumns: 4, mobileColumns: 2, borderRadiusPx: 8, itemRadiusPx: 8, gapPx: 10 },
-  { id: 'home-testimonials', sectionKey: 'testimonials', title: 'نظر مشتریان ما', subtitle: 'تجربه خرید از فروشگاه تخصصی قطعات', isVisible: true, order: 12, layout: 'cards', desktopColumns: 4, mobileColumns: 2, borderRadiusPx: 12, itemRadiusPx: 12, gapPx: 12, items: [
+  { id: 'home-maintenance-products', sectionKey: 'maintenance-products', title: 'قطعات مصرفی و سرویس دوره‌ای', subtitle: 'انتخاب‌های سریع برای نگهداری اصولی خودرو', isVisible: true, order: 11, layout: 'grid', desktopColumns: 4, mobileColumns: 2, borderRadiusPx: 0, itemRadiusPx: 3, gapPx: 10, maxItems: 8, widthPercent: 100, maxWidthPx: 1280 },
+  { id: 'home-testimonials', sectionKey: 'testimonials', title: 'نظر مشتریان ما', subtitle: 'تجربه خرید از فروشگاه تخصصی قطعات', isVisible: true, order: 12, layout: 'cards', desktopColumns: 4, mobileColumns: 2, borderRadiusPx: 0, itemRadiusPx: 3, gapPx: 10, widthPercent: 100, maxWidthPx: 1280, items: [
     { id: 'testimonial-1', title: 'خریدار قطعات موتور', content: 'اصالت قطعه دقیق بود و خیلی سریع به دستم رسید.', isVisible: true, order: 1 },
     { id: 'testimonial-2', title: 'مشتری فروشگاه', content: 'قبل از خرید شماره فنی را بررسی کردند و قطعه کاملاً مناسب بود.', isVisible: true, order: 2 },
     { id: 'testimonial-3', title: 'خریدار عمده', content: 'بسته‌بندی و پیگیری سفارش حرفه‌ای بود.', isVisible: true, order: 3 },
     { id: 'testimonial-4', title: 'تعمیرکار', content: 'برای قطعه کمیاب خیلی سریع استعلام انجام شد.', isVisible: true, order: 4 }
   ]},
   { id: 'home-shipping-banner', sectionKey: 'shipping-banner', title: 'ارسال سریع', subtitle: 'برای سفارش‌های واجد شرایط', isVisible: true, order: 13, layout: 'full', desktopColumns: 1, mobileColumns: 1, borderRadiusPx: 12 },
-  { id: 'home-articles', sectionKey: 'articles', title: 'راهنما و مقالات', subtitle: 'آموزش، نگهداری و انتخاب صحیح قطعات خودرو', isVisible: true, order: 14, layout: 'grid', desktopColumns: 3, mobileColumns: 2, borderRadiusPx: 10, itemRadiusPx: 10, gapPx: 12, maxItems: 6 },
+  { id: 'home-articles', sectionKey: 'articles', title: 'راهنما و مقالات', subtitle: 'آموزش، نگهداری و انتخاب صحیح قطعات خودرو', isVisible: true, order: 14, layout: 'grid', desktopColumns: 3, mobileColumns: 2, borderRadiusPx: 0, itemRadiusPx: 2, gapPx: 10, maxItems: 3, widthPercent: 100, maxWidthPx: 1280 },
   { id: 'home-service-strip', sectionKey: 'service-strip', title: 'مزایای فروشگاه', isVisible: true, order: 15, layout: 'grid', desktopColumns: 4, mobileColumns: 2, borderRadiusPx: 0, itemRadiusPx: 8, gapPx: 10, items: [
     { id: 'service-1', title: 'تضمین اصالت', content: 'کنترل اصالت و کیفیت قطعه', isVisible: true, order: 1 },
     { id: 'service-2', title: 'ارزش خرید', content: 'قیمت‌گذاری شفاف و رقابتی', isVisible: true, order: 2 },

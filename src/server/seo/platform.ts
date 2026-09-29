@@ -2056,6 +2056,11 @@ export const seoPathExists = async (pathname: string): Promise<boolean> => {
     '/checkout', '/tracking', '/compare', '/part-request', '/cart', '/wishlist'
   ]);
   if (staticPaths.has(path)) return true;
+  if (/^\/shop\/[^/]+$/.test(path)) return true;
+  if (/^\/account\/[^/]+$/.test(path)) return true;
+  if (/^\/tracking\/[^/]+$/.test(path)) return true;
+  if (/^\/invoice\/[^/]+$/.test(path)) return true;
+  if (/^\/part-request\/[^/]+$/.test(path)) return true;
   const match = path.match(/^\/(product|article|category|page|brand|car-model)\/([^/]+)$/);
   if (!match) return false;
   const typeMap: Record<string, SeoEntityType> = {

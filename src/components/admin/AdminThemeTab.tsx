@@ -28,7 +28,7 @@ export const AdminThemeTab: React.FC = () => {
   const { settings, updateSettings, showToast } = useStore();
 
   const [form, setForm] = useState<SiteSettings>({ ...settings });
-  const [activeSubTab, setActiveSubTab] = useState<'theme' | 'colors' | 'typography' | 'seo' | 'loyalty'>('theme');
+  const [activeSubTab, setActiveSubTab] = useState<'identity' | 'theme' | 'colors' | 'typography' | 'seo' | 'loyalty'>('identity');
 
   const LAYOUT_PRESETS = [
     {
@@ -220,6 +220,13 @@ export const AdminThemeTab: React.FC = () => {
         <div className="flex items-center gap-1.5 bg-neutral-100 p-1.5 rounded-2xl flex-wrap">
           <button
             type="button"
+            onClick={() => setActiveSubTab('identity')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${activeSubTab === 'identity' ? 'bg-white text-neutral-900 shadow-md' : 'text-neutral-600 hover:text-neutral-900'}`}
+          >
+            <span>هویت سایت</span>
+          </button>
+          <button
+            type="button"
             onClick={() => setActiveSubTab('theme')}
             className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
               activeSubTab === 'theme' ? 'bg-white text-neutral-900 shadow-md' : 'text-neutral-600 hover:text-neutral-900'
@@ -269,6 +276,90 @@ export const AdminThemeTab: React.FC = () => {
       </div>
 
       <form onSubmit={handleSaveAll} className="space-y-6">
+
+        {/* =========================================================================
+            SITE IDENTITY
+        ========================================================================= */}
+        {activeSubTab === 'identity' && (
+          <div className="bg-white rounded-3xl border border-neutral-200 p-6 sm:p-8 shadow-xs space-y-6">
+            <div>
+              <h3 className="font-black text-base text-neutral-900 flex items-center gap-2">
+                <Globe className="w-5 h-5 text-blue-600" />
+                <span>هویت و نام وب‌سایت</span>
+              </h3>
+              <p className="text-xs text-neutral-500 mt-1">
+                نام، لوگو و اطلاعاتی که در هدر، فوتر و داده‌های هویتی سئو نمایش داده می‌شوند از این بخش کنترل می‌شوند.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <div className="lg:col-span-2">
+                <label className="block text-neutral-700 font-bold text-xs mb-1">نام سایت *</label>
+                <input
+                  type="text"
+                  value={form.siteTitle || ''}
+                  onChange={e => setForm({ ...form, siteTitle: e.target.value })}
+                  placeholder="مثال: یدک استور"
+                  className="w-full p-3 border border-neutral-300 rounded-xl text-sm font-bold"
+                  required
+                />
+                <p className="text-[10px] text-neutral-400 mt-1">این نام جایگزین نام‌های پیش‌فرض در هدر و فوتر می‌شود و با هویت TakRank SEO همگام خواهد شد.</p>
+              </div>
+
+              <div className="lg:col-span-2">
+                <label className="block text-neutral-700 font-bold text-xs mb-1">شعار یا توضیح کوتاه سایت</label>
+                <input
+                  type="text"
+                  value={form.siteSlogan || ''}
+                  onChange={e => setForm({ ...form, siteSlogan: e.target.value })}
+                  className="w-full p-3 border border-neutral-300 rounded-xl text-xs"
+                  placeholder="توضیح کوتاه درباره فروشگاه"
+                />
+              </div>
+
+              <ImageUploadInput
+                label="لوگوی سایت"
+                value={form.logoUrl || ''}
+                onChange={(url) => setForm({ ...form, logoUrl: url })}
+                aspectRatio="logo"
+                presetCategory="logos"
+                placeholder="آپلود لوگو یا آدرس تصویر"
+                helperText="در هدر، فوتر و هویت ساختاریافته سایت استفاده می‌شود."
+              />
+
+              <ImageUploadInput
+                label="Favicon"
+                value={form.faviconUrl || ''}
+                onChange={(url) => setForm({ ...form, faviconUrl: url })}
+                aspectRatio="square"
+                presetCategory="logos"
+                placeholder="آیکن مرورگر"
+                helperText="ترجیحاً تصویر مربعی PNG یا SVG"
+              />
+
+              <div>
+                <label className="block text-neutral-700 font-bold text-xs mb-1">شماره تماس اصلی</label>
+                <input type="text" value={form.contactPhone || ''} onChange={e => setForm({ ...form, contactPhone: e.target.value })} className="w-full p-3 border border-neutral-300 rounded-xl text-xs" dir="ltr" />
+              </div>
+              <div>
+                <label className="block text-neutral-700 font-bold text-xs mb-1">شماره پشتیبانی</label>
+                <input type="text" value={form.supportPhone || ''} onChange={e => setForm({ ...form, supportPhone: e.target.value })} className="w-full p-3 border border-neutral-300 rounded-xl text-xs" dir="ltr" />
+              </div>
+              <div>
+                <label className="block text-neutral-700 font-bold text-xs mb-1">ایمیل پشتیبانی</label>
+                <input type="email" value={form.supportEmail || ''} onChange={e => setForm({ ...form, supportEmail: e.target.value })} className="w-full p-3 border border-neutral-300 rounded-xl text-xs" dir="ltr" />
+              </div>
+              <div>
+                <label className="block text-neutral-700 font-bold text-xs mb-1">متن نوار اطلاع‌رسانی</label>
+                <input type="text" value={form.announcementText || ''} onChange={e => setForm({ ...form, announcementText: e.target.value })} className="w-full p-3 border border-neutral-300 rounded-xl text-xs" />
+              </div>
+              <div className="lg:col-span-2">
+                <label className="block text-neutral-700 font-bold text-xs mb-1">آدرس</label>
+                <textarea value={form.address || ''} onChange={e => setForm({ ...form, address: e.target.value })} rows={3} className="w-full p-3 border border-neutral-300 rounded-xl text-xs" />
+              </div>
+            </div>
+          </div>
+        )}
         
         {/* =========================================================================
             SUBTAB 1: PRESET THEMES & PALETTES
@@ -645,6 +736,63 @@ export const AdminThemeTab: React.FC = () => {
                     </span>
                   </button>
                 ))}
+              </div>
+            </div>
+
+            {/* Precise global font size */}
+            <div className="space-y-3 pt-4 border-t border-neutral-100">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div>
+                  <h4 className="font-bold text-xs text-neutral-800">اندازه پایه فونت کل سایت</h4>
+                  <p className="text-[10px] text-neutral-500 mt-1">این مقدار روی متن‌های عمومی فروشگاه، هدر، فوتر و رابط موبایل اثر می‌گذارد.</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    min={12}
+                    max={24}
+                    value={form.baseFontSizePx || 16}
+                    onChange={e => setForm({ ...form, baseFontSizePx: Math.max(12, Math.min(24, Number(e.target.value || 16))) })}
+                    className="w-20 p-2 border border-neutral-300 rounded-lg text-center font-mono text-xs"
+                  />
+                  <span className="text-xs text-neutral-500">px</span>
+                </div>
+              </div>
+              <input
+                type="range"
+                min={12}
+                max={24}
+                step={1}
+                value={form.baseFontSizePx || 16}
+                onChange={e => setForm({ ...form, baseFontSizePx: Number(e.target.value) })}
+                className="w-full accent-red-600"
+              />
+              <div
+                className="p-4 bg-neutral-50 border border-neutral-200 rounded-xl text-neutral-800"
+                style={{ fontSize: `${form.baseFontSizePx || 16}px` }}
+              >
+                پیش‌نمایش اندازه متن فروشگاه — قطعات یدکی خودروهای چینی
+              </div>
+            </div>
+
+            {/* Mobile columns */}
+            <div className="space-y-3 pt-4 border-t border-neutral-100">
+              <h4 className="font-bold text-xs text-neutral-800">چیدمان موبایل</h4>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <label className="p-3 rounded-xl border border-neutral-200 bg-neutral-50">
+                  <span className="block text-[11px] font-bold mb-2">تعداد ستون محصولات</span>
+                  <select value={form.mobileProductColumns || 2} onChange={e => setForm({ ...form, mobileProductColumns: Number(e.target.value) as 1 | 2 })} className="w-full p-2 border border-neutral-300 rounded-lg text-xs bg-white">
+                    <option value={1}>۱ ستون</option>
+                    <option value={2}>۲ ستون</option>
+                  </select>
+                </label>
+                <label className="p-3 rounded-xl border border-neutral-200 bg-neutral-50">
+                  <span className="block text-[11px] font-bold mb-2">تعداد ستون فوتر</span>
+                  <select value={form.mobileFooterColumns || 2} onChange={e => setForm({ ...form, mobileFooterColumns: Number(e.target.value) as 1 | 2 })} className="w-full p-2 border border-neutral-300 rounded-lg text-xs bg-white">
+                    <option value={1}>۱ ستون</option>
+                    <option value={2}>۲ ستون</option>
+                  </select>
+                </label>
               </div>
             </div>
 

@@ -14,7 +14,7 @@ import {
   Wrench
 } from 'lucide-react';
 import { useStore } from '../../context/StoreContext';
-import { ProductCard } from '../product/ProductCard';
+import { formatToman } from '../../utils/formatters';
 
 interface MarketplaceRtlHomeProps {
   onNavigate: (view: string, param?: string) => void;
@@ -31,7 +31,8 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
     categories,
     sliders,
     articles,
-    selectedVehicle
+    selectedVehicle,
+    addToCart
   } = useStore();
 
   const activeSlides = useMemo(
@@ -87,6 +88,52 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
       return;
     }
     onNavigate(link);
+  };
+
+  const ReferenceProductCard = ({ product }: { product: (typeof products)[number] }) => {
+    const effectivePrice = product.discountPrice || product.price;
+    const hasDiscount = Boolean(product.discountPrice && product.discountPrice < product.price);
+    return (
+      <article className="marketplace-ref-product-card">
+        <button
+          type="button"
+          className="marketplace-ref-product-image"
+          onClick={() => onNavigate('product', product.id)}
+          aria-label={product.nameFa}
+        >
+          {product.images?.[0] ? <img src={product.images[0]} alt={product.nameFa} /> : <Wrench className="w-7 h-7" />}
+          {hasDiscount && <span className="marketplace-ref-sale">فروش ویژه</span>}
+        </button>
+        <div className="marketplace-ref-product-info">
+          <div className="marketplace-ref-badges">
+            {product.isBestSeller && <span>پرفروش</span>}
+            <span className="muted">{product.brandManufacturer || 'قطعه اصلی'}</span>
+          </div>
+          <button type="button" className="marketplace-ref-product-title" onClick={() => onNavigate('product', product.id)}>
+            {product.nameFa}
+          </button>
+          <small className="marketplace-ref-sku">{product.oemNumber || product.partNumber || product.sku}</small>
+          <div className="marketplace-ref-rating">★★★★★ <em>({product.reviewsCount || 0})</em></div>
+          <div className="marketplace-ref-product-bottom">
+            <div>
+              {hasDiscount && <del>{formatToman(product.price)}</del>}
+              <strong>{formatToman(effectivePrice)}</strong>
+            </div>
+            <button
+              type="button"
+              className="marketplace-ref-add"
+              onClick={(event) => {
+                event.stopPropagation();
+                addToCart(product, 1, selectedVehicle || null);
+              }}
+            >
+              <ShoppingCart className="w-3.5 h-3.5" />
+              <span>افزودن</span>
+            </button>
+          </div>
+        </div>
+      </article>
+    );
   };
 
   return (
@@ -194,11 +241,7 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
         </div>
         <div className="marketplace-product-grid">
           {visibleFeaturedProducts.map(product => (
-            <ProductCard
-              key={product.id}
-              product={product}
-              onViewDetails={(id) => onNavigate('product', id)}
-            />
+            <ReferenceProductCard key={product.id} product={product} />
           ))}
         </div>
       </section>
@@ -276,11 +319,7 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
           </div>
           <div className="marketplace-product-grid">
             {deals.map(product => (
-              <ProductCard
-                key={product.id}
-                product={product}
-                onViewDetails={(id) => onNavigate('product', id)}
-              />
+              <ReferenceProductCard key={product.id} product={product} />
             ))}
           </div>
         </div>
@@ -328,11 +367,7 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
         </div>
         <div className="marketplace-product-grid">
           {serviceParts.map(product => (
-            <ProductCard
-              key={product.id}
-              product={product}
-              onViewDetails={(id) => onNavigate('product', id)}
-            />
+            <ReferenceProductCard key={product.id} product={product} />
           ))}
         </div>
       </section>
@@ -382,7 +417,12 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
             <ChevronLeft className="w-4 h-4" />
           </button>
         </div>
-        <div className="marketplace-article-grid">
+        <div className="marketplace-article-grid marketplace-ref-article-grid">
+          <div className="marketplace-ref-article-intro">
+            <h3>راهنما و مقالات تخصصی</h3>
+            <p>مطالب کاربردی برای انتخاب قطعه، نگهداری خودرو و شناخت بهتر سیستم‌های فنی.</p>
+            <button type="button" onClick={() => onNavigate('blog')}>مشاهده همه مقالات</button>
+          </div>
           {articles.slice(0, 3).map(article => (
             <button key={article.id} type="button" onClick={() => onNavigate('article', article.slug || article.id)}>
               <img src={article.imageUrl} alt={article.title} />

@@ -23,6 +23,9 @@ jobs:
       - name: Type check
         run: npm run lint
 
+      - name: Validate one-step updater
+        run: bash -n update.sh
+
       - name: Production build
         env:
           DB_HOST: localhost

@@ -3034,7 +3034,8 @@ html[data-layout="marketplace-rtl"] .marketplace-ref-mobile-drawer {
   }
 
   html[data-layout="marketplace-rtl"] .marketplace-ref-topbar,
-  html[data-layout="marketplace-rtl"] .marketplace-ref-nav {
+  html[data-layout="marketplace-rtl"] .marketplace-ref-nav,
+  html[data-layout="marketplace-rtl"] .marketplace-ref-category-mega {
     display: none;
   }
 

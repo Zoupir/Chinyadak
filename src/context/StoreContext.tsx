@@ -567,7 +567,10 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     root.style.setProperty('--accent-glow-subtle', toRgba(accentGlow, 0.2));
     root.style.setProperty('--accent-glow-strong', toRgba(accentGlow, 0.5));
 
-    // Dynamic Site & Card Background Themes
+    // Dynamic Site Layout + Card/Background Themes
+    const layoutPreset = settings.layoutPreset || 'classic';
+    root.dataset.layout = layoutPreset;
+
     const themeMode = settings.themeMode || 'dark';
     let siteBg = settings.siteBgColor;
     let cardBg = settings.cardBgColor;
@@ -653,7 +656,8 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     settings.primaryColor, 
     settings.primaryHover, 
     settings.accentGlowColor, 
-    settings.themeMode, 
+    settings.themeMode,
+    settings.layoutPreset,
     settings.siteBgColor, 
     settings.cardBgColor, 
     settings.headerBgColor, 

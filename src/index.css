@@ -4048,13 +4048,15 @@ html[data-layout="marketplace-rtl"] .marketplace-section[data-section-key="featu
 }
 
 html[data-layout="marketplace-rtl"] .marketplace-section[data-section-key="featured-products"] .marketplace-section-heading {
+  position: relative;
+  width: 100%;
   justify-content: center !important;
   text-align: center !important;
 }
 
 html[data-layout="marketplace-rtl"] .marketplace-section[data-section-key="featured-products"] .marketplace-section-heading > button {
   position: absolute;
-  left: max(16px, calc((100vw - 1280px) / 2));
+  left: 0;
 }
 
 html[data-layout="marketplace-rtl"] .marketplace-product-tabs {
@@ -4330,7 +4332,7 @@ html[data-layout="marketplace-rtl"] .marketplace-ref-footer-main {
   }
 
   html[data-layout="marketplace-rtl"] .marketplace-brand-row {
-    grid-template-columns: repeat(min(var(--builder-cols, 6), 6), minmax(0,1fr)) !important;
+    grid-template-columns: repeat(6, minmax(0,1fr)) !important;
   }
 
   html[data-layout="marketplace-rtl"] .marketplace-logo-tiles {

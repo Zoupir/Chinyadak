@@ -29,7 +29,74 @@ export const AdminThemeTab: React.FC = () => {
   const [form, setForm] = useState<SiteSettings>({ ...settings });
   const [activeSubTab, setActiveSubTab] = useState<'theme' | 'colors' | 'typography' | 'seo' | 'loyalty'>('theme');
 
-  // Preset themes
+  const LAYOUT_PRESETS = [
+    {
+      id: 'classic',
+      name: 'قالب فعلی (Classic)',
+      desc: 'چیدمان متعادل فعلی با کارت‌های استاندارد و Header دو ردیفه.',
+      layoutPreset: 'classic' as const,
+      themeMode: 'light' as const,
+      siteBgColor: '#f8fafc',
+      cardBgColor: '#ffffff',
+      headerBgColor: '#ffffff',
+      footerBgColor: '#0f172a',
+      textColor: '#0f172a',
+      primaryColor: '#DC2626',
+      primaryHover: '#b91c1c',
+      accentGlowColor: '#DC2626'
+    },
+    {
+      id: 'catalog-pro',
+      name: 'Catalog Pro',
+      desc: 'فروشگاهی و فشرده؛ محصول بیشتر در هر ردیف، کارت‌های کم‌ارتفاع و Header سریع.',
+      layoutPreset: 'catalog-pro' as const,
+      themeMode: 'light' as const,
+      siteBgColor: '#f3f4f6',
+      cardBgColor: '#ffffff',
+      headerBgColor: '#ffffff',
+      footerBgColor: '#111827',
+      textColor: '#111827',
+      primaryColor: '#DC2626',
+      primaryHover: '#b91c1c',
+      accentGlowColor: '#DC2626'
+    },
+    {
+      id: 'showroom',
+      name: 'Showroom Luxe',
+      desc: 'نمایشی و لوکس؛ فضای باز، کارت‌های بزرگ و گرد، سکشن‌های برند و خودرو با حس Showroom.',
+      layoutPreset: 'showroom' as const,
+      themeMode: 'light' as const,
+      siteBgColor: '#f7f4ef',
+      cardBgColor: '#ffffff',
+      headerBgColor: '#ffffff',
+      footerBgColor: '#292524',
+      textColor: '#292524',
+      primaryColor: '#B45309',
+      primaryHover: '#92400E',
+      accentGlowColor: '#D97706'
+    }
+  ];
+
+  const applyLayoutPreset = (preset: typeof LAYOUT_PRESETS[number]) => {
+    const updated: SiteSettings = {
+      ...form,
+      layoutPreset: preset.layoutPreset,
+      themeMode: preset.themeMode,
+      siteBgColor: preset.siteBgColor,
+      cardBgColor: preset.cardBgColor,
+      headerBgColor: preset.headerBgColor,
+      footerBgColor: preset.footerBgColor,
+      textColor: preset.textColor,
+      primaryColor: preset.primaryColor,
+      primaryHover: preset.primaryHover,
+      accentGlowColor: preset.accentGlowColor
+    };
+    setForm(updated);
+    updateSettings(updated);
+    showToast(`قالب «${preset.name}» روی سایت فعال شد.`);
+  };
+
+  // Preset color themes
   const THEME_PRESETS = [
     {
       id: 'dark',
@@ -191,7 +258,55 @@ export const AdminThemeTab: React.FC = () => {
             SUBTAB 1: PRESET THEMES & PALETTES
         ========================================================================= */}
         {activeSubTab === 'theme' && (
-          <div className="bg-white rounded-3xl border border-neutral-200 p-6 sm:p-8 shadow-xs space-y-6">
+          <div className="space-y-6">
+            <div className="bg-white rounded-3xl border border-neutral-200 p-6 sm:p-8 shadow-xs space-y-5">
+              <div>
+                <div className="flex items-center gap-2">
+                  <LayoutTemplate className="w-5 h-5 text-violet-600" />
+                  <h3 className="font-black text-base text-neutral-900">قالب‌های کامل سایت</h3>
+                </div>
+                <p className="text-xs text-neutral-500 mt-1">
+                  این گزینه فقط رنگ را تغییر نمی‌دهد؛ شکل Header، فاصله سکشن‌ها، فرم کارت‌ها و تراکم فروشگاه را عوض می‌کند.
+                </p>
+              </div>
+
+              <div className="grid lg:grid-cols-3 gap-4">
+                {LAYOUT_PRESETS.map(preset => {
+                  const active = (form.layoutPreset || 'classic') === preset.layoutPreset;
+                  return (
+                    <button
+                      key={preset.id}
+                      type="button"
+                      onClick={() => applyLayoutPreset(preset)}
+                      className={`text-right p-4 rounded-2xl border-2 transition-all ${active ? 'border-violet-600 ring-2 ring-violet-100' : 'border-neutral-200 hover:border-neutral-300'}`}
+                    >
+                      <div className="flex items-center justify-between mb-3">
+                        <div>
+                          <div className="font-black text-sm text-neutral-900">{preset.name}</div>
+                          <div className="text-[10px] text-neutral-500 mt-1">{preset.desc}</div>
+                        </div>
+                        {active && <span className="w-6 h-6 rounded-full bg-violet-600 text-white flex items-center justify-center"><Check className="w-3.5 h-3.5" /></span>}
+                      </div>
+
+                      <div className={`h-36 border border-neutral-200 overflow-hidden bg-neutral-50 ${preset.layoutPreset === 'showroom' ? 'rounded-[24px] p-3' : preset.layoutPreset === 'catalog-pro' ? 'rounded-md p-2' : 'rounded-xl p-2.5'}`}>
+                        <div className={`h-5 mb-2 ${preset.layoutPreset === 'showroom' ? 'rounded-full bg-neutral-800/90' : preset.layoutPreset === 'catalog-pro' ? 'rounded-sm bg-neutral-900' : 'rounded-lg bg-neutral-800'}`} />
+                        <div className={`grid gap-2 h-[92px] ${preset.layoutPreset === 'showroom' ? 'grid-cols-2' : preset.layoutPreset === 'catalog-pro' ? 'grid-cols-4' : 'grid-cols-3'}`}>
+                          {Array.from({ length: preset.layoutPreset === 'catalog-pro' ? 4 : preset.layoutPreset === 'showroom' ? 2 : 3 }).map((_, i) => (
+                            <div key={i} className={`bg-white border border-neutral-200 overflow-hidden ${preset.layoutPreset === 'showroom' ? 'rounded-2xl p-2 shadow-md' : preset.layoutPreset === 'catalog-pro' ? 'rounded-sm p-1' : 'rounded-lg p-1.5'}`}>
+                              <div className={`bg-neutral-200 h-10 ${preset.layoutPreset === 'showroom' ? 'rounded-xl' : preset.layoutPreset === 'catalog-pro' ? 'rounded-sm' : 'rounded-md'}`} />
+                              <div className="mt-2 h-1.5 bg-neutral-300 rounded-full" />
+                              <div className="mt-1 h-1.5 w-2/3 bg-neutral-200 rounded-full" />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="bg-white rounded-3xl border border-neutral-200 p-6 sm:p-8 shadow-xs space-y-6">
             <div>
               <h3 className="font-black text-base text-neutral-900 flex items-center gap-2">
                 <Sun className="w-5 h-5 text-amber-500" />
@@ -259,6 +374,7 @@ export const AdminThemeTab: React.FC = () => {
                 />
               </div>
             </div>
+          </div>
           </div>
         )}
 

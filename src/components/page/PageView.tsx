@@ -139,7 +139,8 @@ export const PageView: React.FC<PageViewProps> = ({ pageSlug, onNavigate }) => {
             {item.imageUrl && (
               <img
                 src={item.imageUrl}
-                alt={item.title || section.title}
+                alt={currentPage.seo?.images?.[item.imageUrl]?.alt || item.title || section.title}
+                title={currentPage.seo?.images?.[item.imageUrl]?.title || item.title || section.title}
                 className="object-contain mb-3"
                 style={{ width: 'var(--builder-image-size)', height: 'var(--builder-image-size)' }}
               />
@@ -403,7 +404,8 @@ export const PageView: React.FC<PageViewProps> = ({ pageSlug, onNavigate }) => {
                     <div className="w-full h-56 sm:h-72 md:h-88 overflow-hidden bg-neutral-100">
                       <img
                         src={section.imageUrl}
-                        alt={section.title}
+                        alt={currentPage.seo?.images?.[section.imageUrl || '']?.alt || section.title}
+                        title={currentPage.seo?.images?.[section.imageUrl || '']?.title || section.title}
                         className="w-full h-full object-cover"
                         loading="lazy"
                       />
@@ -562,7 +564,8 @@ export const PageView: React.FC<PageViewProps> = ({ pageSlug, onNavigate }) => {
                           <div className="relative rounded-2xl overflow-hidden border border-neutral-200/80 shadow-md group-hover:shadow-lg transition-shadow bg-neutral-50 flex items-center justify-center">
                             <img
                               src={section.imageUrl}
-                              alt={section.title}
+                              alt={currentPage.seo?.images?.[section.imageUrl || '']?.alt || section.title}
+                              title={currentPage.seo?.images?.[section.imageUrl || '']?.title || section.title}
                               className={`w-full ${mode === 'contain' ? 'max-h-80 object-contain p-4' : 'h-64 sm:h-80 object-cover hover:scale-102 transition-transform duration-300'}`}
                               loading="lazy"
                             />

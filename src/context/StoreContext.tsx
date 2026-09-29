@@ -685,7 +685,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     root.style.setProperty('--theme-radius', radiusVal);
 
     // Global SEO Synchronization
-    const effectiveTitle = settings.metaTitle || settings.siteTitle || 'چین‌پارت | قطعات یدکی خودروهای چینی';
+    const effectiveTitle = settings.metaTitle || settings.siteTitle || 'فروشگاه قطعات خودرو';
     document.title = effectiveTitle;
 
     const updateOrCreateMeta = (nameAttr: string, nameValue: string, content: string) => {

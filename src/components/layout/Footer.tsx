@@ -87,7 +87,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenAuthModal }) =
       id: 'fcol-1',
       title: 'راهنمای خرید و قوانین',
       links: [
-        { id: 'l1', title: 'درباره چین‌پارت پرو', url: 'page:about' },
+        { id: 'l1', title: 'درباره ما', url: 'page:about' },
         { id: 'l2', title: 'ضمانت اصالت و شرایط بازگشت کالا', url: 'page:guarantee' },
         { id: 'l3', title: 'پیگیری وضعیت سفارش و مرسوله', url: 'tracking' },
         { id: 'l4', title: 'استعلام قطعات کم‌یاب و وارداتی', url: 'part-request' }
@@ -220,7 +220,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenAuthModal }) =
                 </div>
               )}
               <span className="font-black text-lg text-white">
-                {settings.footerAboutTitle || settings.siteTitle || 'چین‌پارت پرو'}
+                {settings.footerAboutTitle || settings.siteTitle || 'فروشگاه'}
               </span>
             </div>
 
@@ -386,7 +386,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenAuthModal }) =
         ========================================================================= */}
         <div className="pt-8 flex flex-col md:flex-row items-center justify-between text-xs text-neutral-500 gap-4">
           <p>
-            {settings.footerCopyrightText || `© ${new Date().toLocaleDateString('fa-IR')} چین‌پارت پرو. تمامی حقوق محفوظ است.`}
+            {settings.footerCopyrightText || `© ${new Date().toLocaleDateString('fa-IR')} ${settings.siteTitle || 'فروشگاه'}. تمامی حقوق محفوظ است.`}
           </p>
           <div className="flex items-center gap-4 text-[11px]">
             <span className="flex items-center gap-1 text-emerald-500">

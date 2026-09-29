@@ -5015,3 +5015,29 @@ html[data-layout="marketplace-rtl"] .marketplace-finder-vin input:focus {
 html[data-layout="marketplace-rtl"] .marketplace-search-car {
   margin-top: 7px !important;
 }
+
+
+/* MOBEX HERO DOTS V5 */
+html[data-layout="marketplace-rtl"] .marketplace-hero-dots {
+  position: absolute;
+  z-index: 6;
+  left: 50%;
+  bottom: 11px;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+html[data-layout="marketplace-rtl"] .marketplace-hero-dots button {
+  width: 5px;
+  height: 5px;
+  padding: 0;
+  border-radius: 999px;
+  background: rgba(255,255,255,.55);
+  box-shadow: 0 0 0 1px rgba(0,0,0,.08);
+  transition: width .18s ease, background .18s ease;
+}
+html[data-layout="marketplace-rtl"] .marketplace-hero-dots button.active {
+  width: 18px;
+  background: #fff;
+}

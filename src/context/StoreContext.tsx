@@ -154,14 +154,17 @@ const upgradeLegacyHomeSection = (section: PageSection): PageSection => {
   ) {
     return { ...section, isVisible: false };
   }
-  if (key === 'manufacturers' && (section.desktopColumns == null || section.desktopColumns === 6)) {
+  if (key === 'manufacturers') {
+    const manufacturerDefaults = HOME_SECTION_DEFAULTS.find(item => item.sectionKey === 'manufacturers');
+    const shouldUpgradeGrid = section.desktopColumns == null || section.desktopColumns === 6 || section.desktopColumns === 12;
     return {
       ...section,
-      desktopColumns: 12,
+      desktopColumns: shouldUpgradeGrid ? 10 : section.desktopColumns,
       mobileColumns: section.mobileColumns || 3,
-      maxItems: section.maxItems === 12 || section.maxItems == null ? 24 : section.maxItems,
+      maxItems: section.maxItems === 12 || section.maxItems === 24 || section.maxItems == null ? 20 : section.maxItems,
       imageSizePx: section.imageSizePx || 58,
-      gapPx: section.gapPx ?? 10
+      gapPx: section.gapPx ?? 10,
+      items: section.items?.length ? section.items : manufacturerDefaults?.items
     };
   }
   if (key === 'parts-brands' && (section.desktopColumns == null || section.desktopColumns === 4)) {

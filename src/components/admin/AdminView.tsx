@@ -76,6 +76,7 @@ import { AdminVisualPageBuilder } from './AdminVisualPageBuilder';
 import { AdminCategoryStudio } from './AdminCategoryStudio';
 import { AdminPaymentGateways } from './AdminPaymentGateways';
 import { ProductClassificationFields } from './ProductClassificationFields';
+import { AdminDashboardPro } from './AdminDashboardPro';
 
 interface AdminViewProps {
   onExitToStore?: () => void;
@@ -886,99 +887,9 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
             </div>
           </div>
 
-          {/* TAB 1: OVERVIEW */}
+          {/* TAB 1: PROFESSIONAL OVERVIEW */}
           {activeTab === 'overview' && (
-            <div className="space-y-6">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className="p-5 bg-white rounded-3xl border border-neutral-200 shadow-xs space-y-1">
-                  <span className="text-xs text-neutral-400 font-semibold">مجموع فروش و فاکتورها:</span>
-                  <div className="text-xl font-black text-neutral-900">
-                    {formatToman(orders.reduce((sum, o) => sum + o.total, 0))}
-                  </div>
-                  <span className="text-[11px] text-emerald-600 font-bold block pt-1">
-                    {orders.length} سفارش ثبت شده
-                  </span>
-                </div>
-
-                <div className="p-5 bg-white rounded-3xl border border-neutral-200 shadow-xs space-y-1">
-                  <span className="text-xs text-neutral-400 font-semibold">تعداد قطعات در انبار:</span>
-                  <div className="text-xl font-black text-neutral-900">
-                    {products.length} کالا
-                  </div>
-                  <span className="text-[11px] text-neutral-500 block pt-1">
-                    تطبیق با {models.length} مدل خودروی چینی
-                  </span>
-                </div>
-
-                <div className="p-5 bg-white rounded-3xl border border-neutral-200 shadow-xs space-y-1">
-                  <span className="text-xs text-neutral-400 font-semibold">مشتریان ثبت‌شده (CRM):</span>
-                  <div className="text-xl font-black text-neutral-900">
-                    {customers.length} کاربر
-                  </div>
-                  <span className="text-[11px] text-blue-600 font-bold block pt-1">
-                    شامل مکانیک‌ها و خریداران عمده
-                  </span>
-                </div>
-
-                <div className="p-5 bg-white rounded-3xl border border-neutral-200 shadow-xs space-y-1">
-                  <span className="text-xs text-neutral-400 font-semibold">استعلام قطعات نایاب:</span>
-                  <div className="text-xl font-black text-neutral-900">
-                    {partRequests.length} درخواست
-                  </div>
-                  <span className="text-[11px] text-amber-600 font-bold block pt-1">
-                    {partRequests.filter(r => r.status === 'در حال بررسی').length} در انتظار پاسخ
-                  </span>
-                </div>
-              </div>
-
-              {/* Quick Jump Shortcuts */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div 
-                  onClick={() => setActiveTab('orders')}
-                  className="p-5 bg-white rounded-3xl border border-neutral-200 shadow-xs hover:border-red-600 cursor-pointer transition-all space-y-2 group"
-                >
-                  <div className="flex items-center justify-between">
-                    <h3 className="font-bold text-sm text-neutral-900 group-hover:text-red-600 transition-colors">
-                      سفارشات اخیر و صدور فاکتور
-                    </h3>
-                    <FileCheck2 className="w-5 h-5 text-red-600" />
-                  </div>
-                  <p className="text-xs text-neutral-500">
-                    بررسی {orders.length} فاکتور ثبت شده و چاپ فرم رسمی مالیاتی با مهر دیجیتال
-                  </p>
-                </div>
-
-                <div 
-                  onClick={() => setActiveTab('sliders')}
-                  className="p-5 bg-white rounded-3xl border border-neutral-200 shadow-xs hover:border-red-600 cursor-pointer transition-all space-y-2 group"
-                >
-                  <div className="flex items-center justify-between">
-                    <h3 className="font-bold text-sm text-neutral-900 group-hover:text-red-600 transition-colors">
-                      مدیریت اسلایدرهای صفحه نخست
-                    </h3>
-                    <Compass className="w-5 h-5 text-red-600" />
-                  </div>
-                  <p className="text-xs text-neutral-500">
-                    طراحی {sliders.length} اسلاید تبلیغاتی با بنرهای باکیفیت و لینک‌های هدف
-                  </p>
-                </div>
-
-                <div 
-                  onClick={() => setActiveTab('admins')}
-                  className="p-5 bg-white rounded-3xl border border-neutral-200 shadow-xs hover:border-red-600 cursor-pointer transition-all space-y-2 group"
-                >
-                  <div className="flex items-center justify-between">
-                    <h3 className="font-bold text-sm text-neutral-900 group-hover:text-red-600 transition-colors">
-                      مدیران و سطوح دسترسی
-                    </h3>
-                    <ShieldCheck className="w-5 h-5 text-red-600" />
-                  </div>
-                  <p className="text-xs text-neutral-500">
-                    تعریف مدیران مختلف (محتوا، سفارشات، انبار) با مجوزهای تفکیک‌شده
-                  </p>
-                </div>
-              </div>
-            </div>
+            <AdminDashboardPro onNavigateTab={(tab) => setActiveTab(tab)} />
           )}
 
           {/* TAB 2: CARS & MODELS */}

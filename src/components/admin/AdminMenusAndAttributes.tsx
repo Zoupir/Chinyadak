@@ -364,15 +364,15 @@ export const AdminMenusAndAttributes: React.FC = () => {
         <div>
           <h3 className="text-lg font-black text-neutral-900 flex items-center gap-2">
             <Sliders className="w-5 h-5 text-red-600" />
-            مدیریت کامل Header و ویژگی‌های فنی
+            فهرست‌ها، برندها و ویژگی‌های فروشگاه
           </h3>
           <p className="text-xs text-neutral-500 mt-1">
-            عنوان، ترتیب، نمایش و مقصد همه منوهای بالای سایت—including دسته‌بندی قطعات و برندهای خودرو—از اینجا کنترل می‌شود.
+            فهرست سایت را مثل وردپرس بسازید؛ محتوا را انتخاب کنید و بدون نوشتن لینک در منو قرار دهید.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
           <button onClick={() => setActiveSection('menus')} className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 ${activeSection === 'menus' ? 'bg-neutral-900 text-white' : 'bg-neutral-100 text-neutral-600'}`}>
-            <Menu className="w-4 h-4" /> منوها و زیرمنوها ({visibleCount}/{menus.length})
+            <Menu className="w-4 h-4" /> فهرست اصلی ({visibleCount}/{menus.length})
           </button>
           <button onClick={() => setActiveSection('brands')} className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 ${activeSection === 'brands' ? 'bg-neutral-900 text-white' : 'bg-neutral-100 text-neutral-600'}`}>
             <Car className="w-4 h-4" /> برندهای محبوب

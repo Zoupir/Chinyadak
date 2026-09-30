@@ -59,6 +59,7 @@ import { AdminSandboxGateway } from './AdminSandboxGateway';
 import { AdminMenusAndAttributes } from './AdminMenusAndAttributes';
 import { AdminFooterTab } from './AdminFooterTab';
 import { AdminSlidersTab } from './AdminSlidersTab';
+import { AdminSliderStudio } from './AdminSliderStudio';
 import { AdminUsersTab } from './AdminUsersTab';
 import { AdminPagesTab } from './AdminPagesTab';
 import { AdminThemeTab } from './AdminThemeTab';
@@ -1119,7 +1120,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
 
           {/* TAB 7: SLIDERS & BANNERS */}
           {activeTab === 'sliders' && (
-            <AdminSlidersTab />
+            <AdminSliderStudio />
           )}
 
           {/* TAB 8: ORDERS & INVOICES */}

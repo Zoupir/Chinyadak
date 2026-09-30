@@ -146,6 +146,13 @@ export const Header: React.FC<HeaderProps> = ({
     headerMenus.filter(item => item.parentId === parentId && item.isVisible !== false);
   const categoriesRoot = topHeaderMenus.find(item => item.kind === 'categories');
   const editableCategoryChildren = categoriesRoot ? menuChildren(categoriesRoot.id) : [];
+  const categoriesTreeControlled = Boolean(
+    categoriesRoot &&
+    (
+      categoriesRoot.sourceId === 'categories-root' ||
+      editableCategoryChildren.length > 0
+    )
+  );
 
   const renderMegaDescendants = (parentId: string, depth = 0): React.ReactNode =>
     menuChildren(parentId).map(item => {
@@ -299,7 +306,7 @@ export const Header: React.FC<HeaderProps> = ({
 
   if (settings.layoutPreset === 'marketplace-rtl') {
     const renderCategoryRows = () => {
-      if (editableCategoryChildren.length > 0) {
+      if (categoriesTreeControlled) {
         return editableCategoryChildren.map(item => {
           const nested = menuChildren(item.id);
           if (!nested.length) {
@@ -511,9 +518,24 @@ export const Header: React.FC<HeaderProps> = ({
         </nav>
 
         {isMegaMenuOpen && (
-          <div className="marketplace-ref-category-mega">
-            <div className="marketplace-ref-container marketplace-ref-category-grid">
+          <div className={`marketplace-ref-category-mega ${categoriesRoot?.megaMenu?.width === 'boxed' ? 'is-boxed' : 'is-full'}`}>
+            <div
+              className="marketplace-ref-container marketplace-ref-category-grid"
+              style={{ ['--category-mega-cols' as any]: String(Math.max(2, Math.min(6, Number(categoriesRoot?.megaMenu?.columns || 4)))) }}
+            >
               {renderCategoryRows()}
+
+              {categoriesRoot?.megaMenu?.bannerImageUrl && (
+                <button
+                  type="button"
+                  className="marketplace-ref-category-banner"
+                  onClick={() => categoriesRoot.megaMenu?.bannerLink && handleMenuClick({ link: categoriesRoot.megaMenu.bannerLink })}
+                >
+                  <img src={categoriesRoot.megaMenu.bannerImageUrl} alt={categoriesRoot.megaMenu.bannerTitle || categoriesRoot.title} />
+                  {categoriesRoot.megaMenu.bannerTitle && <strong>{categoriesRoot.megaMenu.bannerTitle}</strong>}
+                </button>
+              )}
+
               <button
                 type="button"
                 className="marketplace-ref-category-all"

@@ -253,6 +253,25 @@ export const AdminMenuBuilder: React.FC = () => {
       : 0;
 
     const categoryNodes: MenuItem[] = [];
+    const appendCategoryChildren = (nodes: any[] = [], parentId: string, pathPrefix: string) => {
+      nodes.forEach((node, index) => {
+        const id = `mega-subcategory-${pathPrefix}-${node.id || index}`;
+        categoryNodes.push({
+          id,
+          title: node.nameFa,
+          originalTitle: node.nameFa,
+          link: `category:${node.slug}`,
+          kind: 'category',
+          sourceType: 'category',
+          sourceId: `sub:${node.id}`,
+          parentId,
+          isVisible: true,
+          icon: node.icon
+        });
+        appendCategoryChildren(node.subcategories || [], id, `${pathPrefix}-${node.id || index}`);
+      });
+    };
+
     categories.forEach(category => {
       const categoryId = `mega-category-${category.id}`;
       categoryNodes.push({
@@ -264,22 +283,10 @@ export const AdminMenuBuilder: React.FC = () => {
         sourceType: 'category',
         sourceId: category.id,
         parentId: rootId,
-        isVisible: true
+        isVisible: true,
+        icon: category.icon
       });
-
-      (category.subcategories || []).forEach(sub => {
-        categoryNodes.push({
-          id: `mega-subcategory-${category.id}-${sub.id}`,
-          title: sub.nameFa,
-          originalTitle: sub.nameFa,
-          link: `category:${sub.slug}`,
-          kind: 'category',
-          sourceType: 'category',
-          sourceId: `sub:${sub.id}`,
-          parentId: categoryId,
-          isVisible: true
-        });
-      });
+      appendCategoryChildren(category.subcategories || [], categoryId, category.id);
     });
 
     const next = [...preserved];

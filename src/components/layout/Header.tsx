@@ -321,20 +321,9 @@ export const Header: React.FC<HeaderProps> = ({
               >
                 {item.title}
               </button>
-              {nested.map(sub => (
-                <button
-                  key={sub.id}
-                  type="button"
-                  className="marketplace-ref-category-sub"
-                  onClick={() => {
-                    handleMenuClick(sub);
-                    setIsMegaMenuOpen(false);
-                    setIsMarketplaceMobileOpen(false);
-                  }}
-                >
-                  {sub.title}
-                </button>
-              ))}
+              <div className="marketplace-ref-category-tree">
+                {renderCategoryMenuDescendants(item.id)}
+              </div>
             </div>
           );
         });
@@ -493,26 +482,7 @@ export const Header: React.FC<HeaderProps> = ({
                           ? renderGenericMegaMenu(item)
                           : (
                             <div className="marketplace-ref-submenu">
-                              {children.map(child => {
-                                const nested = menuChildren(child.id);
-                                return (
-                                  <div key={child.id} className="marketplace-ref-submenu-group">
-                                    <button type="button" onClick={() => handleMenuClick(child)}>
-                                      <span>{child.title}</span>
-                                      {child.badge && <small>{child.badge}</small>}
-                                    </button>
-                                    {nested.length > 0 && (
-                                      <div className="marketplace-ref-submenu-nested">
-                                        {nested.map(grandchild => (
-                                          <button key={grandchild.id} type="button" onClick={() => handleMenuClick(grandchild)}>
-                                            {grandchild.title}
-                                          </button>
-                                        ))}
-                                      </div>
-                                    )}
-                                  </div>
-                                );
-                              })}
+                              {renderDesktopSubmenuTree(item.id)}
                             </div>
                           )
                       )}
@@ -599,38 +569,7 @@ export const Header: React.FC<HeaderProps> = ({
                         </button>
                         {open && children.length > 0 && (
                           <div className="marketplace-ref-mobile-submenu">
-                            {children.map(child => {
-                              const nested = menuChildren(child.id);
-                              return (
-                                <div key={child.id} className="marketplace-ref-mobile-submenu-group">
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      handleMenuClick(child);
-                                      setIsMarketplaceMobileOpen(false);
-                                    }}
-                                  >
-                                    {child.title}
-                                  </button>
-                                  {nested.length > 0 && (
-                                    <div className="marketplace-ref-mobile-submenu-nested">
-                                      {nested.map(grandchild => (
-                                        <button
-                                          key={grandchild.id}
-                                          type="button"
-                                          onClick={() => {
-                                            handleMenuClick(grandchild);
-                                            setIsMarketplaceMobileOpen(false);
-                                          }}
-                                        >
-                                          {grandchild.title}
-                                        </button>
-                                      ))}
-                                    </div>
-                                  )}
-                                </div>
-                              );
-                            })}
+                            {renderMobileSubmenuTree(item.id)}
                           </div>
                         )}
                       </div>

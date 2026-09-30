@@ -483,8 +483,8 @@ export const AdminCarsTab: React.FC = () => {
 
       {/* ================= MODAL: ADD / EDIT BRAND ================= */}
       {isBrandModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white rounded-3xl border border-neutral-200 max-w-4xl w-full p-6 shadow-2xl space-y-5 my-8">
+        <div className="fixed inset-0 z-[220] bg-black/60 backdrop-blur-xs flex items-start justify-center px-3 sm:px-4 pt-4 sm:pt-8 pb-8 overflow-y-auto">
+          <div className="bg-white rounded-3xl border border-neutral-200 max-w-4xl w-full p-6 shadow-2xl space-y-5 max-h-[calc(100vh-3rem)] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-neutral-100 pb-3">
               <h3 className="font-black text-base text-neutral-900 flex items-center gap-2">
                 <Building2 className="w-5 h-5 text-red-600" />
@@ -621,8 +621,8 @@ export const AdminCarsTab: React.FC = () => {
 
       {/* ================= MODAL: ADD / EDIT MODEL ================= */}
       {isModelModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white rounded-3xl border border-neutral-200 max-w-2xl w-full p-6 shadow-2xl space-y-5 my-8">
+        <div className="fixed inset-0 z-[220] bg-black/60 backdrop-blur-xs flex items-start justify-center px-3 sm:px-4 pt-4 sm:pt-8 pb-8 overflow-y-auto">
+          <div className="bg-white rounded-3xl border border-neutral-200 max-w-2xl w-full p-6 shadow-2xl space-y-5 max-h-[calc(100vh-3rem)] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-neutral-100 pb-3">
               <h3 className="font-black text-base text-neutral-900 flex items-center gap-2">
                 <Car className="w-5 h-5 text-red-600" />

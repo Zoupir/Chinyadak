@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { CheckCircle2, Gauge, Image as ImageIcon, Loader2, Search, ShieldCheck, Sparkles } from 'lucide-react';
 import type { SeoEntityDraft } from '../../types';
 
-type EntityType = 'product' | 'article' | 'page';
+type EntityType = 'product' | 'article' | 'page' | 'category' | 'brand' | 'model';
 
 interface AdminEntitySeoPanelProps {
   entityType: EntityType;
@@ -27,7 +27,7 @@ const defaultSeo = (type: EntityType, title: string): SeoEntityDraft => ({
   twitterTitle: '',
   twitterDescription: '',
   twitterImageUrl: '',
-  schemaType: type === 'product' ? 'Product' : type === 'article' ? 'Article' : 'WebPage',
+  schemaType: type === 'product' ? 'Product' : type === 'article' ? 'Article' : ['category','brand','model'].includes(type) ? 'CollectionPage' : 'WebPage',
   cornerstone: false,
   breadcrumbTitle: '',
   hreflang: [],
@@ -223,6 +223,7 @@ export const AdminEntitySeoPanel: React.FC<AdminEntitySeoPanelProps> = ({
                 {entityType === 'product' && <option value="Product">Product / محصول</option>}
                 {entityType === 'article' && <><option value="Article">Article / مقاله</option><option value="NewsArticle">NewsArticle</option><option value="HowTo">HowTo</option></>}
                 {entityType === 'page' && <><option value="WebPage">WebPage / برگه</option><option value="AboutPage">AboutPage</option><option value="ContactPage">ContactPage</option><option value="FAQPage">FAQPage</option></>}
+                {['category','brand','model'].includes(entityType) && <><option value="CollectionPage">CollectionPage / صفحه آرشیو</option><option value="WebPage">WebPage</option></>}
               </select>
             </label>
 

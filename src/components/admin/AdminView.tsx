@@ -639,7 +639,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
         { id: 'pages', label: 'برگه‌ها و سکشن‌ها (Builder)', icon: LayoutTemplate, count: pages.length },
         { id: 'articles', label: 'مقالات و آموزش‌ها', icon: BookOpen, count: articles.length },
         { id: 'sliders', label: 'اسلایدرها و بنرها', icon: Compass, count: sliders.length },
-        { id: 'menus_attrs', label: 'منوی بالای سایت (Header)', icon: Menu },
+        { id: 'menus_attrs', label: 'فهرست‌ها و منوها', icon: Menu },
         { id: 'footer', label: 'مدیریت فوتر و اینماد', icon: PanelsTopLeft }
       ]
     },

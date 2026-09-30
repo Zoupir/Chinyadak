@@ -166,7 +166,10 @@ export const Header: React.FC<HeaderProps> = ({
             onClick={() => handleMenuClick(item)}
             style={{ paddingRight: `${Math.min(depth, 6) * 10}px` }}
           >
-            <span>{item.title}</span>
+            <span className="inline-flex items-center gap-1.5">
+              <IconRenderer icon={item.icon || item.cssClass} className="w-3.5 h-3.5" />
+              {item.title}
+            </span>
             {item.badge && <small>{item.badge}</small>}
           </button>
           {nested.length > 0 && (
@@ -184,7 +187,10 @@ export const Header: React.FC<HeaderProps> = ({
       return (
         <div key={item.id} className="marketplace-ref-submenu-group" data-depth={depth}>
           <button type="button" onClick={() => handleMenuClick(item)}>
-            <span>{item.title}</span>
+            <span className="inline-flex items-center gap-1.5">
+              <IconRenderer icon={item.icon || item.cssClass} className="w-3.5 h-3.5" />
+              {item.title}
+            </span>
             {item.badge && <small>{item.badge}</small>}
             {nested.length > 0 && <ChevronDown className="w-3 h-3 -rotate-90" />}
           </button>
@@ -224,7 +230,10 @@ export const Header: React.FC<HeaderProps> = ({
               }
             }}
           >
-            <span>{item.title}</span>
+            <span className="inline-flex items-center gap-1.5">
+              <IconRenderer icon={item.icon || item.cssClass} className="w-3.5 h-3.5" />
+              {item.title}
+            </span>
             {item.badge && <small>{item.badge}</small>}
             {nested.length > 0 && <ChevronDown className={`w-3.5 h-3.5 transition-transform ${open ? 'rotate-180' : ''}`} />}
           </button>
@@ -252,7 +261,10 @@ export const Header: React.FC<HeaderProps> = ({
               setIsMarketplaceMobileOpen(false);
             }}
           >
-            <span>{item.title}</span>
+            <span className="inline-flex items-center gap-1.5">
+              <IconRenderer icon={item.icon || item.cssClass} className="w-3.5 h-3.5" />
+              {item.title}
+            </span>
             {item.badge && <small>{item.badge}</small>}
           </button>
           {nested.length > 0 && (
@@ -277,7 +289,10 @@ export const Header: React.FC<HeaderProps> = ({
               return (
                 <div key={child.id} className="marketplace-ref-generic-mega-column">
                   <button type="button" className="marketplace-ref-generic-mega-title" onClick={() => handleMenuClick(child)}>
-                    <span>{child.title}</span>
+                    <span className="inline-flex items-center gap-1.5">
+                      <IconRenderer icon={child.icon || child.cssClass} className="w-3.5 h-3.5" />
+                      {child.title}
+                    </span>
                     {child.badge && <small>{child.badge}</small>}
                   </button>
                   {nested.length > 0 && (
@@ -338,7 +353,10 @@ export const Header: React.FC<HeaderProps> = ({
                   setIsMarketplaceMobileOpen(false);
                 }}
               >
-                {item.title}
+                <span className="inline-flex items-center gap-1.5">
+                  <IconRenderer icon={item.icon || item.cssClass} className="w-3.5 h-3.5" />
+                  {item.title}
+                </span>
               </button>
               <div className="marketplace-ref-category-tree">
                 {renderCategoryMenuDescendants(item.id)}

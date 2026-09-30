@@ -5041,3 +5041,27 @@ html[data-layout="marketplace-rtl"] .marketplace-hero-dots button.active {
   width: 18px;
   background: #fff;
 }
+
+
+/* MOBEX BRAND WORDMARK FILL */
+html[data-layout="marketplace-rtl"] .marketplace-parts-brand-logo.has-image {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+}
+html[data-layout="marketplace-rtl"] .marketplace-parts-brand-logo.has-image img {
+  width: 28px !important;
+  height: 28px !important;
+  max-width: 28px !important;
+  max-height: 28px !important;
+  object-fit: contain;
+}
+html[data-layout="marketplace-rtl"] .marketplace-parts-brand-logo.has-image strong {
+  color: #fff;
+  font-size: 11px;
+  line-height: 1;
+  font-weight: 950;
+  letter-spacing: -.01em;
+  white-space: nowrap;
+}

@@ -371,6 +371,24 @@ export type HeaderMenuKind =
   | 'system'
   | 'custom';
 
+export type MenuSourceType =
+  | 'system'
+  | 'page'
+  | 'product'
+  | 'category'
+  | 'article'
+  | 'brand'
+  | 'custom';
+
+export interface MenuMegaConfig {
+  enabled: boolean;
+  columns?: number;
+  width?: 'boxed' | 'full';
+  bannerImageUrl?: string;
+  bannerTitle?: string;
+  bannerLink?: string;
+}
+
 export interface MenuItem {
   id: string;
   title: string;
@@ -380,6 +398,16 @@ export interface MenuItem {
   isVisible?: boolean;
   openInNewTab?: boolean;
   parentId?: string;
+
+  /** WordPress-like menu builder source binding. */
+  sourceType?: MenuSourceType;
+  sourceId?: string;
+  originalTitle?: string;
+
+  /** Optional presentation overrides. */
+  cssClass?: string;
+  icon?: string;
+  megaMenu?: MenuMegaConfig;
 }
 
 export interface PopularPartsBrandItem {

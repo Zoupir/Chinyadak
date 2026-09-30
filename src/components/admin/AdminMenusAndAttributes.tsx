@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useStore } from '../../context/StoreContext';
 import { HeaderMenuKind, MenuItem, PopularPartsBrandItem, ProductAttributeDefinition } from '../../types';
 import { ImageUploadInput } from '../common/ImageUploadInput';
+import { AdminMenuBuilder } from './AdminMenuBuilder';
 import {
   ArrowDown, ArrowUp, Car, Check, Edit3, Eye, EyeOff, Globe2, Layers,
   Link2, Menu, Plus, Save, Sliders, Tag, Trash2, X
@@ -382,60 +383,7 @@ export const AdminMenusAndAttributes: React.FC = () => {
         </div>
       </div>
 
-      {activeSection === 'menus' && (
-        <div className="space-y-5">
-          <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4 flex flex-col md:flex-row md:items-center justify-between gap-3">
-            <div>
-              <div className="font-black text-sm text-blue-950">Header واقعاً داینامیک است</div>
-              <div className="text-[11px] text-blue-700 mt-1">
-                «دسته‌بندی قطعات» و «برندهای خودرو» دیگر هاردکد نیستند؛ می‌توانید نامشان را تغییر دهید، جابه‌جا یا مخفی کنید.
-              </div>
-            </div>
-            <div className="flex gap-2">
-              <button onClick={restoreDefaultMenus} className="px-3 py-2 rounded-xl bg-white border border-blue-200 text-blue-800 text-xs font-bold">
-                بازیابی استاندارد
-              </button>
-              <button onClick={() => openNewMenu()} className="px-4 py-2 rounded-xl bg-red-600 text-white text-xs font-black flex items-center gap-1.5">
-                <Plus className="w-4 h-4" /> افزودن آیتم
-              </button>
-            </div>
-          </div>
-
-          <div className="border border-neutral-200 rounded-2xl divide-y divide-neutral-100 overflow-hidden">
-            {orderedMenus.map(({ item, depth }, index) => (
-              <div key={item.id} className={`p-4 flex items-center gap-3 ${depth ? 'mr-8 border-r-4 border-blue-100' : ''} ${item.isVisible === false ? 'bg-neutral-50 opacity-60' : 'bg-white'}`}>
-                <div className="w-7 h-7 rounded-full bg-neutral-100 flex items-center justify-center font-mono text-[10px] font-black shrink-0">
-                  {index + 1}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex gap-2 items-center flex-wrap">
-                    <b className="text-sm text-neutral-900">{item.title}</b>
-                    <span className="px-2 py-0.5 rounded-md bg-neutral-100 text-neutral-500 text-[9px] font-bold">{typeLabel(item)}</span>
-                    {item.badge && <span className="px-2 py-0.5 rounded-md bg-red-100 text-red-700 text-[9px] font-bold">{item.badge}</span>}
-                    {item.isVisible === false && <span className="text-[9px] text-neutral-500">مخفی</span>}
-                    {item.parentId && <span className="px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 text-[9px] font-bold">زیرمنو</span>}
-                  </div>
-                  <div className="text-[10px] text-neutral-400 mt-1">
-                    <span className="font-mono ltr inline-block">{item.link}</span>
-                    {item.parentId && <span className="mr-2 text-blue-600">والد: {menus.find(x => x.id === item.parentId)?.title || 'نامشخص'}</span>}
-                  </div>
-                </div>
-                <div className="flex items-center gap-1">
-                  <button onClick={() => handleMove(index, 'up')} disabled={index === 0} className="p-2 rounded-lg hover:bg-neutral-100 disabled:opacity-20"><ArrowUp className="w-4 h-4" /></button>
-                  <button onClick={() => handleMove(index, 'down')} disabled={index === menus.length - 1} className="p-2 rounded-lg hover:bg-neutral-100 disabled:opacity-20"><ArrowDown className="w-4 h-4" /></button>
-                  <button onClick={() => toggleVisibility(item.id)} className="p-2 rounded-lg hover:bg-neutral-100" title={item.isVisible === false ? 'نمایش' : 'مخفی کردن'}>
-                    {item.isVisible === false ? <EyeOff className="w-4 h-4 text-neutral-500" /> : <Eye className="w-4 h-4 text-emerald-600" />}
-                  </button>
-                  {!item.parentId && <button onClick={() => openNewMenu(item.id)} className="p-2 rounded-lg hover:bg-emerald-50" title="افزودن زیرمنو"><Plus className="w-4 h-4 text-emerald-600" /></button>}
-                  <button onClick={() => openEditMenu(item)} className="p-2 rounded-lg hover:bg-blue-50"><Edit3 className="w-4 h-4 text-blue-600" /></button>
-                  <button onClick={() => deleteMenu(item)} className="p-2 rounded-lg hover:bg-red-50"><Trash2 className="w-4 h-4 text-red-600" /></button>
-                </div>
-              </div>
-            ))}
-            {!menus.length && <div className="p-10 text-center text-xs text-neutral-400">هیچ آیتمی در Header وجود ندارد.</div>}
-          </div>
-        </div>
-      )}
+      {activeSection === 'menus' && <AdminMenuBuilder />}
 
       {activeSection === 'brands' && (
         <div className="space-y-5">

@@ -1,5 +1,5 @@
-import React, { useState, useRef } from 'react';
-import { uploadImage, MediaUploadError } from '../../api/media';
+import React, { useEffect, useState, useRef } from 'react';
+import { uploadImage, MediaUploadError, listMediaLibrary, MediaLibraryItem } from '../../api/media';
 import { 
   Upload, 
   Image as ImageIcon, 
@@ -65,7 +65,10 @@ export const ImageUploadInput: React.FC<ImageUploadInputProps> = ({
   presetCategory = 'parts',
   className = ''
 }) => {
-  const [mode, setMode] = useState<'upload' | 'url' | 'presets'>('upload');
+  const [mode, setMode] = useState<'upload' | 'library' | 'url' | 'presets'>('upload');
+  const [libraryItems, setLibraryItems] = useState<MediaLibraryItem[]>([]);
+  const [libraryQuery, setLibraryQuery] = useState('');
+  const [libraryLoading, setLibraryLoading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [fileName, setFileName] = useState<string>('');
   const [isUploading, setIsUploading] = useState(false);
@@ -73,6 +76,29 @@ export const ImageUploadInput: React.FC<ImageUploadInputProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const presets = AUTOMOTIVE_PRESETS[presetCategory] || AUTOMOTIVE_PRESETS.parts;
+
+  useEffect(() => {
+    if (mode !== 'library') return;
+    let cancelled = false;
+    setLibraryLoading(true);
+    listMediaLibrary({ category: 'all', limit: 300 })
+      .then(result => {
+        if (!cancelled) setLibraryItems(result.items || []);
+      })
+      .catch(() => {
+        if (!cancelled) setLibraryItems([]);
+      })
+      .finally(() => {
+        if (!cancelled) setLibraryLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [mode]);
+
+  const visibleLibraryItems = libraryItems.filter(item => {
+    const q = libraryQuery.trim().toLowerCase();
+    if (!q) return true;
+    return item.filename.toLowerCase().includes(q) || item.category.toLowerCase().includes(q) || item.relativePath.toLowerCase().includes(q);
+  });
 
   // Upload the original image to the application server; never persist Base64 in product data.
   const handleFileProcess = async (file: File) => {
@@ -151,6 +177,15 @@ export const ImageUploadInput: React.FC<ImageUploadInputProps> = ({
             </button>
             <button
               type="button"
+              onClick={() => setMode('library')}
+              className={`px-2 py-0.5 rounded-md font-bold transition-colors ${
+                mode === 'library' ? 'bg-white text-neutral-900 shadow-xs' : 'text-neutral-500 hover:text-neutral-900'
+              }`}
+            >
+              رسانه‌ها
+            </button>
+            <button
+              type="button"
               onClick={() => setMode('url')}
               className={`px-2 py-0.5 rounded-md font-bold transition-colors ${
                 mode === 'url' ? 'bg-white text-neutral-900 shadow-xs' : 'text-neutral-500 hover:text-neutral-900'
@@ -213,6 +248,55 @@ export const ImageUploadInput: React.FC<ImageUploadInputProps> = ({
               {uploadError}
             </span>
           )}
+        </div>
+      )}
+
+      {/* Media Library */}
+      {mode === 'library' && (
+        <div className="rounded-2xl border border-neutral-200 bg-neutral-50 overflow-hidden">
+          <div className="p-2.5 border-b border-neutral-200 bg-white">
+            <div className="relative">
+              <FolderOpen className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
+              <input
+                value={libraryQuery}
+                onChange={e => setLibraryQuery(e.target.value)}
+                placeholder="جستجو در رسانه‌های آپلودشده..."
+                className="w-full pr-9 pl-3 py-2 border border-neutral-300 rounded-lg text-[10px]"
+              />
+            </div>
+          </div>
+          <div className="max-h-64 overflow-y-auto p-2 grid grid-cols-3 sm:grid-cols-4 gap-2">
+            {libraryLoading ? (
+              <div className="col-span-full py-8 text-center text-[10px] text-neutral-400">
+                <RefreshCw className="w-5 h-5 animate-spin mx-auto mb-2" />
+                در حال دریافت رسانه‌ها...
+              </div>
+            ) : visibleLibraryItems.length ? (
+              visibleLibraryItems.map(item => (
+                <button
+                  key={item.relativePath}
+                  type="button"
+                  onClick={() => onChange(item.url)}
+                  className={`rounded-xl border overflow-hidden bg-white text-right ${
+                    value === item.url ? 'border-red-600 ring-1 ring-red-600' : 'border-neutral-200 hover:border-neutral-400'
+                  }`}
+                  title={item.filename}
+                >
+                  <div className="aspect-square bg-white">
+                    <img src={item.url} alt="" className="w-full h-full object-cover" />
+                  </div>
+                  <div className="p-1.5">
+                    <span className="block text-[8px] font-bold truncate">{item.filename}</span>
+                    <span className="block text-[7px] text-neutral-400 truncate">{item.category}</span>
+                  </div>
+                </button>
+              ))
+            ) : (
+              <div className="col-span-full py-8 text-center text-[10px] text-neutral-400">
+                رسانه‌ای پیدا نشد.
+              </div>
+            )}
+          </div>
         </div>
       )}
 

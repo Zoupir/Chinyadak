@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { useStore } from '../../context/StoreContext';
 import { formatToman } from '../../utils/formatters';
+import { LiveSectionModal } from '../common/LiveSectionModal';
 
 interface MarketplaceRtlHomeProps {
   onNavigate: (view: string, param?: string) => void;
@@ -34,7 +35,10 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
     selectedVehicle,
     addToCart,
     settings,
-    pages
+    pages,
+    isLiveEditActive,
+    setIsLiveEditActive,
+    adminAuth
   } = useStore();
 
   const activeSlides = useMemo(
@@ -92,6 +96,7 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
       .sort((a, b) => a.order - b.order);
 
   const [heroIndex, setHeroIndex] = useState(0);
+  const [liveSectionId, setLiveSectionId] = useState<string | null>(null);
 
   useEffect(() => {
     if (activeSlides.length <= 1 || sectionConfig('hero')?.imageUrl) return;
@@ -139,6 +144,21 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
     categories[index]?.imageUrl ||
     hero?.imageUrl ||
     '';
+
+  const handleLiveEditCapture = (event: React.MouseEvent<HTMLDivElement>) => {
+    if (!isLiveEditActive || !adminAuth.isAuthenticated) return;
+    const target = event.target as HTMLElement;
+    const sectionElement = target.closest<HTMLElement>('[data-section-key]');
+    if (!sectionElement) return;
+
+    const sectionKey = sectionElement.dataset.sectionKey;
+    const section = homeSections.find(item => item.sectionKey === sectionKey);
+    if (!section) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+    setLiveSectionId(section.id);
+  };
 
   const goLink = (link?: string) => {
     if (!link) return onNavigate('shop');
@@ -201,7 +221,17 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
   };
 
   return (
-    <div className="marketplace-rtl-home" dir="rtl">
+    <div
+      className={`marketplace-rtl-home ${isLiveEditActive && adminAuth.isAuthenticated ? 'is-live-editing' : ''}`}
+      dir="rtl"
+      onClickCapture={handleLiveEditCapture}
+    >
+      {isLiveEditActive && adminAuth.isAuthenticated && (
+        <div className="marketplace-live-edit-toolbar">
+          <span>ویرایش زنده فعال است — روی هر سکشن کلیک کن</span>
+          <button type="button" onClick={(event) => { event.stopPropagation(); setIsLiveEditActive(false); }}>خروج از ویرایش</button>
+        </div>
+      )}
       {sectionVisible('hero') && (
       <section className="marketplace-hero-shell" data-section-key="hero" style={sectionStyle('hero')}>
         <div
@@ -640,6 +670,15 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
           );
         })}
       </section>
+      )}
+
+      {liveSectionId && (
+        <LiveSectionModal
+          pageSlug="home"
+          sectionId={liveSectionId}
+          isOpen={Boolean(liveSectionId)}
+          onClose={() => setLiveSectionId(null)}
+        />
       )}
     </div>
   );

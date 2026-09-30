@@ -47,6 +47,72 @@ const upload = multer({
   }
 });
 
+
+type MediaListItem = {
+  url: string;
+  relativePath: string;
+  filename: string;
+  extension: string;
+  category: string;
+  year: string;
+  month: string;
+  size: number;
+  createdAt: string;
+  modifiedAt: string;
+};
+
+const listMediaFiles = async (): Promise<MediaListItem[]> => {
+  const root = uploadDirectory();
+  const items: MediaListItem[] = [];
+
+  const walk = async (dir: string, relative = ''): Promise<void> => {
+    let entries: import('fs').Dirent[] = [];
+    try {
+      entries = await fs.readdir(dir, { withFileTypes: true });
+    } catch {
+      return;
+    }
+
+    for (const entry of entries) {
+      const rel = path.posix.join(relative.split(path.sep).join('/'), entry.name);
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        await walk(full, rel);
+        continue;
+      }
+      if (!entry.isFile() || !/\.(?:jpe?g|png|webp|gif)$/i.test(entry.name)) continue;
+      try {
+        const stat = await fs.stat(full);
+        const parts = rel.split('/');
+        items.push({
+          url: '/uploads/' + rel,
+          relativePath: rel,
+          filename: entry.name,
+          extension: path.extname(entry.name).slice(1).toLowerCase(),
+          year: parts[0] || '',
+          month: parts[1] || '',
+          category: parts[2] || 'general',
+          size: stat.size,
+          createdAt: stat.birthtime.toISOString(),
+          modifiedAt: stat.mtime.toISOString()
+        });
+      } catch {}
+    }
+  };
+
+  await walk(root);
+  return items.sort((a, b) => b.modifiedAt.localeCompare(a.modifiedAt));
+};
+
+const safeMediaPath = (relativePath: string): string | null => {
+  const normalized = String(relativePath || '').replace(/\\/g, '/').replace(/^\/+/, '');
+  if (!normalized || normalized.includes('..') || !/\.(?:jpe?g|png|webp|gif)$/i.test(normalized)) return null;
+  const root = path.resolve(uploadDirectory());
+  const target = path.resolve(root, normalized);
+  if (target === root || !target.startsWith(root + path.sep)) return null;
+  return target;
+};
+
 export const mediaRouter = Router();
 
 mediaRouter.post(
@@ -90,3 +156,43 @@ mediaRouter.post(
     });
   }
 );
+
+
+mediaRouter.get('/library', requireAdmin, async (req, res) => {
+  const q = String(req.query.q || '').trim().toLowerCase();
+  const category = String(req.query.category || '').trim().toLowerCase();
+  const limit = Math.max(1, Math.min(1000, Number(req.query.limit || 300)));
+  const offset = Math.max(0, Number(req.query.offset || 0));
+
+  const all = await listMediaFiles();
+  const filtered = all.filter(item => {
+    if (category && category !== 'all' && item.category !== category) return false;
+    if (q && !item.filename.toLowerCase().includes(q) && !item.relativePath.toLowerCase().includes(q) && !item.category.toLowerCase().includes(q)) return false;
+    return true;
+  });
+
+  res.json({
+    total: filtered.length,
+    items: filtered.slice(offset, offset + limit),
+    categories: Array.from(new Set(all.map(item => item.category))).sort()
+  });
+});
+
+mediaRouter.delete('/library', requireAdmin, async (req, res) => {
+  const relativePath = String(req.body?.relativePath || '');
+  const target = safeMediaPath(relativePath);
+  if (!target) {
+    res.status(400).json({ error: 'MEDIA_PATH_INVALID' });
+    return;
+  }
+  try {
+    await fs.unlink(target);
+    res.json({ ok: true });
+  } catch (error: any) {
+    if (error?.code === 'ENOENT') {
+      res.status(404).json({ error: 'MEDIA_NOT_FOUND' });
+      return;
+    }
+    throw error;
+  }
+});

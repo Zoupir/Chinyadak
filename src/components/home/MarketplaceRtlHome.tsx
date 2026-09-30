@@ -393,12 +393,30 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
           <button type="button" onClick={() => onNavigate('shop')}>مشاهده همه</button>
         </div>
         <div className="marketplace-brand-row builder-section-grid">
-          {brands.slice(0, sectionConfig('manufacturers')?.maxItems || brands.length).map(brand => (
-            <button key={brand.id} type="button" onClick={() => onNavigate('car-brand', brand.slug)} style={{ borderRadius: `${sectionConfig('manufacturers')?.itemRadiusPx ?? 10}px` }}>
+          {(sectionConfig('manufacturers')?.items?.length
+            ? sortedItems('manufacturers').slice(0, sectionConfig('manufacturers')?.maxItems || sortedItems('manufacturers').length)
+            : brands.slice(0, sectionConfig('manufacturers')?.maxItems || brands.length).map((brand, index) => ({
+                id: brand.id,
+                title: brand.nameFa,
+                imageUrl: brand.logo,
+                link: `car-brand:${brand.slug}`,
+                isVisible: true,
+                order: index + 1
+              }))
+          ).map(item => (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => {
+                if (item.link?.startsWith('car-brand:')) onNavigate('car-brand', item.link.split(':')[1]);
+                else goLink(item.link || 'shop');
+              }}
+              style={{ borderRadius: `${sectionConfig('manufacturers')?.itemRadiusPx ?? 999}px` }}
+            >
               <span style={{ width: 'var(--builder-image-size)', height: 'var(--builder-image-size)' }}>
-                <img src={brand.logo} alt={brand.nameFa} style={{ maxWidth: '100%', maxHeight: '100%' }} />
+                {item.imageUrl ? <img src={item.imageUrl} alt={item.title || 'برند خودرو'} style={{ maxWidth: '100%', maxHeight: '100%' }} /> : <CarFront className="w-6 h-6" />}
               </span>
-              <small>{brand.nameFa}</small>
+              <small>{item.title}</small>
             </button>
           ))}
         </div>

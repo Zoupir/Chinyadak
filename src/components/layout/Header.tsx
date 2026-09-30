@@ -146,6 +146,105 @@ export const Header: React.FC<HeaderProps> = ({
   const categoriesRoot = topHeaderMenus.find(item => item.kind === 'categories');
   const editableCategoryChildren = categoriesRoot ? menuChildren(categoriesRoot.id) : [];
 
+  const renderMegaDescendants = (parentId: string, depth = 0): React.ReactNode =>
+    menuChildren(parentId).map(item => {
+      const nested = menuChildren(item.id);
+      return (
+        <div key={item.id} className="marketplace-ref-generic-mega-branch" data-depth={depth}>
+          <button
+            type="button"
+            className="marketplace-ref-generic-mega-link"
+            onClick={() => handleMenuClick(item)}
+            style={{ paddingRight: `${Math.min(depth, 6) * 10}px` }}
+          >
+            <span>{item.title}</span>
+            {item.badge && <small>{item.badge}</small>}
+          </button>
+          {nested.length > 0 && (
+            <div className="marketplace-ref-generic-mega-nested">
+              {renderMegaDescendants(item.id, depth + 1)}
+            </div>
+          )}
+        </div>
+      );
+    });
+
+  const renderDesktopSubmenuTree = (parentId: string, depth = 0): React.ReactNode =>
+    menuChildren(parentId).map(item => {
+      const nested = menuChildren(item.id);
+      return (
+        <div key={item.id} className="marketplace-ref-submenu-group" data-depth={depth}>
+          <button type="button" onClick={() => handleMenuClick(item)}>
+            <span>{item.title}</span>
+            {item.badge && <small>{item.badge}</small>}
+            {nested.length > 0 && <ChevronDown className="w-3 h-3 -rotate-90" />}
+          </button>
+          {nested.length > 0 && (
+            <div className="marketplace-ref-submenu-nested">
+              {renderDesktopSubmenuTree(item.id, depth + 1)}
+            </div>
+          )}
+        </div>
+      );
+    });
+
+  const renderMobileSubmenuTree = (parentId: string, depth = 0): React.ReactNode =>
+    menuChildren(parentId).map(item => {
+      const nested = menuChildren(item.id);
+      return (
+        <div key={item.id} className="marketplace-ref-mobile-submenu-group" data-depth={depth}>
+          <button
+            type="button"
+            style={{ paddingRight: `${Math.min(depth, 8) * 12}px` }}
+            onClick={() => {
+              if (nested.length) {
+                setMarketplaceOpenMenuId(current => current === item.id ? null : item.id);
+              } else {
+                handleMenuClick(item);
+                setIsMarketplaceMobileOpen(false);
+              }
+            }}
+          >
+            <span>{item.title}</span>
+            {item.badge && <small>{item.badge}</small>}
+            {nested.length > 0 && <ChevronDown className={`w-3.5 h-3.5 transition-transform ${marketplaceOpenMenuId === item.id ? 'rotate-180' : ''}`} />}
+          </button>
+          {nested.length > 0 && marketplaceOpenMenuId === item.id && (
+            <div className="marketplace-ref-mobile-submenu-nested">
+              {renderMobileSubmenuTree(item.id, depth + 1)}
+            </div>
+          )}
+        </div>
+      );
+    });
+
+  const renderCategoryMenuDescendants = (parentId: string, depth = 0): React.ReactNode =>
+    menuChildren(parentId).map(item => {
+      const nested = menuChildren(item.id);
+      return (
+        <div key={item.id} className="marketplace-ref-category-branch" data-depth={depth}>
+          <button
+            type="button"
+            className={depth === 0 ? 'marketplace-ref-category-sub' : 'marketplace-ref-category-deep'}
+            style={{ paddingRight: `${Math.min(depth, 6) * 10}px` }}
+            onClick={() => {
+              handleMenuClick(item);
+              setIsMegaMenuOpen(false);
+              setIsMarketplaceMobileOpen(false);
+            }}
+          >
+            <span>{item.title}</span>
+            {item.badge && <small>{item.badge}</small>}
+          </button>
+          {nested.length > 0 && (
+            <div className="marketplace-ref-category-nested">
+              {renderCategoryMenuDescendants(item.id, depth + 1)}
+            </div>
+          )}
+        </div>
+      );
+    });
+
   const renderGenericMegaMenu = (root: MenuItem) => {
     const children = menuChildren(root.id);
     if (!children.length) return null;
@@ -155,19 +254,18 @@ export const Header: React.FC<HeaderProps> = ({
         <div className="marketplace-ref-generic-mega-inner" style={{ ['--mega-cols' as any]: String(columns) }}>
           <div className="marketplace-ref-generic-mega-grid">
             {children.map(child => {
-              const grandchildren = menuChildren(child.id);
+              const nested = menuChildren(child.id);
               return (
                 <div key={child.id} className="marketplace-ref-generic-mega-column">
                   <button type="button" className="marketplace-ref-generic-mega-title" onClick={() => handleMenuClick(child)}>
                     <span>{child.title}</span>
                     {child.badge && <small>{child.badge}</small>}
                   </button>
-                  {grandchildren.map(grandchild => (
-                    <button key={grandchild.id} type="button" className="marketplace-ref-generic-mega-link" onClick={() => handleMenuClick(grandchild)}>
-                      <span>{grandchild.title}</span>
-                      {grandchild.badge && <small>{grandchild.badge}</small>}
-                    </button>
-                  ))}
+                  {nested.length > 0 && (
+                    <div className="marketplace-ref-generic-mega-column-tree">
+                      {renderMegaDescendants(child.id)}
+                    </div>
+                  )}
                 </div>
               );
             })}

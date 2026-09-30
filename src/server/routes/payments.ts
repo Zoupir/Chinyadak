@@ -8,7 +8,7 @@ import {
   releaseOrderReservation,
   reserveOrderInventory
 } from '../inventory';
-import { getPaymentAdapter, getPaymentProviderStatus } from '../payments';
+import { ensurePaymentRuntimeConfig, getPaymentAdapter, getPaymentProviderStatus } from '../payments';
 
 interface PaymentOrderRow extends RowDataPacket {
   id: string;
@@ -68,7 +68,8 @@ const paymentLimiter = rateLimit({
 
 export const paymentsRouter = Router();
 
-paymentsRouter.get('/providers', (_req, res) => {
+paymentsRouter.get('/providers', async (_req, res) => {
+  await ensurePaymentRuntimeConfig();
   const status = getPaymentProviderStatus();
   res.json({
     providers: [
@@ -87,6 +88,7 @@ paymentsRouter.post('/start', paymentLimiter, async (req, res) => {
   }
 
   try {
+    await ensurePaymentRuntimeConfig();
     await releaseExpiredReservations();
   } catch (error) {
     console.error('Expired reservation cleanup failed:', error);
@@ -308,6 +310,7 @@ const handleCallback = async (req: any, res: any) => {
 
   let verifyResult;
   try {
+    await ensurePaymentRuntimeConfig();
     const adapter = getPaymentAdapter(provider);
     verifyResult = await adapter.verify({
       gatewayOrderId: Number(transaction.gateway_order_id),

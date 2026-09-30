@@ -1,9 +1,23 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useStore } from '../../context/StoreContext';
-import { PageSection } from '../../types';
+import { PageSection, PageSectionItem } from '../../types';
 import { RichTextEditor } from './RichTextEditor';
 import { ImageUploadInput } from './ImageUploadInput';
-import { Edit3, X, Save, Trash2, Eye, EyeOff, Plus, ArrowUp, ArrowDown } from 'lucide-react';
+import {
+  AlignCenter,
+  AlignLeft,
+  AlignRight,
+  Columns3,
+  Eye,
+  EyeOff,
+  Image as ImageIcon,
+  LayoutPanelLeft,
+  Plus,
+  Save,
+  SlidersHorizontal,
+  Trash2,
+  X
+} from 'lucide-react';
 
 interface LiveSectionModalProps {
   pageSlug: string;
@@ -12,336 +26,364 @@ interface LiveSectionModalProps {
   onClose: () => void;
 }
 
+type InspectorTab = 'content' | 'layout' | 'style' | 'items';
+
+const makeItem = (order: number): PageSectionItem => ({
+  id: `item-${Date.now()}-${order}-${Math.random().toString(36).slice(2,7)}`,
+  title: '',
+  subtitle: '',
+  content: '',
+  imageUrl: '',
+  link: '',
+  buttonText: '',
+  isVisible: true,
+  order
+});
+
+const autoRepeaterSection = (section: PageSection) =>
+  Boolean(section.items?.length) ||
+  /promo|banner|testimonial|brand|manufacturer|service|feature|benefit|logo/i.test(section.sectionKey || '');
+
 export const LiveSectionModal: React.FC<LiveSectionModalProps> = ({
   pageSlug,
   sectionId,
   isOpen,
   onClose
 }) => {
-  const { pages, updateSection, deleteSection, showToast } = useStore();
-  const currentPage = pages.find(p => p.slug === pageSlug);
-  const currentSection = currentPage?.sections.find(s => s.id === sectionId);
+  const {
+    pages,
+    previewSection,
+    updateSection,
+    deleteSection,
+    showToast
+  } = useStore();
 
+  const page = pages.find(item => item.slug === pageSlug);
+  const liveSection = page?.sections.find(section => section.id === sectionId);
   const [form, setForm] = useState<PageSection | null>(null);
+  const [tab, setTab] = useState<InspectorTab>('content');
+  const originalRef = useRef<PageSection | null>(null);
+  const activeKeyRef = useRef('');
 
   useEffect(() => {
-    if (currentSection) {
-      setForm({ ...currentSection });
+    if (!isOpen || !liveSection) return;
+    const key = `${pageSlug}:${sectionId}`;
+    if (activeKeyRef.current === key && form) return;
+    const snapshot = JSON.parse(JSON.stringify(liveSection)) as PageSection;
+    originalRef.current = snapshot;
+    activeKeyRef.current = key;
+    setForm(snapshot);
+    setTab('content');
+  }, [isOpen, pageSlug, sectionId, liveSection?.id]);
+
+  useEffect(() => {
+    if (!isOpen) {
+      activeKeyRef.current = '';
+      originalRef.current = null;
+      setForm(null);
     }
-  }, [currentSection, isOpen]);
+  }, [isOpen]);
 
   if (!isOpen || !form) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!form.title) {
-      showToast('عنوان سکشن الزامی است.', 'error');
-      return;
-    }
+  const apply = (next: PageSection) => {
+    setForm(next);
+    previewSection(pageSlug, next);
+  };
 
-    updateSection(pageSlug, form);
+  const patch = (partial: Partial<PageSection>) => {
+    apply({ ...form, ...partial });
+  };
+
+  const ensureSlots = (count: number, base = form): PageSectionItem[] => {
+    const current = [...(base.items || [])];
+    if (!autoRepeaterSection(base)) return current;
+    while (current.length < count) current.push(makeItem(current.length + 1));
+    return current.map((item, index) => ({ ...item, order: index + 1 }));
+  };
+
+  const setColumns = (device: 'desktop' | 'tablet' | 'mobile', count: number) => {
+    const key =
+      device === 'desktop' ? 'desktopColumns' :
+      device === 'tablet' ? 'tabletColumns' :
+      'mobileColumns';
+    const next: PageSection = {
+      ...form,
+      [key]: count,
+      items: device === 'desktop' ? ensureSlots(count) : form.items
+    } as PageSection;
+    apply(next);
+  };
+
+  const updateItem = (id: string, partial: Partial<PageSectionItem>) => {
+    apply({
+      ...form,
+      items: (form.items || []).map(item => item.id === id ? { ...item, ...partial } : item)
+    });
+  };
+
+  const addItem = () => {
+    const items = [...(form.items || []), makeItem((form.items || []).length + 1)];
+    apply({ ...form, items });
+  };
+
+  const moveItem = (index: number, direction: 'up' | 'down') => {
+    const items = [...(form.items || [])];
+    const target = direction === 'up' ? index - 1 : index + 1;
+    if (target < 0 || target >= items.length) return;
+    [items[index], items[target]] = [items[target], items[index]];
+    apply({ ...form, items: items.map((item, order) => ({ ...item, order: order + 1 })) });
+  };
+
+  const cancel = () => {
+    if (originalRef.current) previewSection(pageSlug, originalRef.current);
     onClose();
   };
 
+  const save = () => {
+    if (!form.title?.trim()) {
+      showToast('عنوان سکشن الزامی است.', 'error');
+      return;
+    }
+    updateSection(pageSlug, form);
+    originalRef.current = JSON.parse(JSON.stringify(form));
+    onClose();
+  };
+
+  const deleteCurrent = () => {
+    if (!window.confirm(`سکشن «${form.title || 'انتخاب‌شده'}» حذف شود؟`)) return;
+    deleteSection(pageSlug, form.id);
+    originalRef.current = null;
+    onClose();
+  };
+
+  const numberField = (
+    label: string,
+    key: keyof PageSection,
+    min: number,
+    max: number,
+    fallback: number
+  ) => (
+    <label className="block">
+      <span className="block text-[10px] font-bold text-neutral-600 mb-1">{label}</span>
+      <input
+        type="number"
+        min={min}
+        max={max}
+        value={Number((form as any)[key] ?? fallback)}
+        onChange={event => patch({ [key]: Number(event.target.value) } as Partial<PageSection>)}
+        className="w-full p-2.5 border border-neutral-300 rounded-xl bg-white text-xs font-mono"
+      />
+    </label>
+  );
+
   return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
-      <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-4xl w-full max-h-[90vh] overflow-y-auto space-y-4 text-right shadow-2xl">
-        <div className="flex items-center justify-between pb-3 border-b border-neutral-100">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-red-100 text-red-600 flex items-center justify-center">
-              <Edit3 className="w-4 h-4" />
-            </div>
-            <div>
-              <h3 className="font-bold text-sm text-neutral-900">ویرایش زنده بخش: {form.title || sectionId}</h3>
-              <span className="text-[10px] text-neutral-400">برگه: {currentPage?.title || pageSlug}</span>
-            </div>
-          </div>
-          <button onClick={onClose} className="text-neutral-400 hover:text-neutral-700 p-1">
-            <X className="w-4 h-4" />
-          </button>
+    <aside className="fixed top-0 right-0 bottom-0 z-[230] w-[min(430px,94vw)] bg-white shadow-[-12px_0_40px_rgba(15,23,42,.22)] border-l border-neutral-200 flex flex-col text-right" dir="rtl">
+      <header className="h-16 px-4 border-b border-neutral-200 flex items-center justify-between gap-3 shrink-0 bg-neutral-950 text-white">
+        <div className="min-w-0">
+          <strong className="block text-xs truncate">{form.title || 'ویرایش سکشن'}</strong>
+          <span className="block mt-0.5 text-[9px] text-neutral-400 truncate">{page?.title || pageSlug} • تغییرات فوراً روی سایت دیده می‌شوند</span>
         </div>
+        <button type="button" onClick={cancel} className="w-9 h-9 grid place-items-center rounded-xl bg-white/10 hover:bg-white/20">
+          <X className="w-4 h-4" />
+        </button>
+      </header>
 
-        <form onSubmit={handleSubmit} className="space-y-4 text-xs">
-          <div>
-            <label className="block text-neutral-700 font-bold mb-1">عنوان اصلی بخش *:</label>
-            <input
-              type="text"
-              value={form.title}
-              onChange={e => setForm({ ...form, title: e.target.value })}
-              className="w-full p-2.5 border border-neutral-300 rounded-xl"
-              required
-            />
-          </div>
+      <nav className="grid grid-cols-4 border-b border-neutral-200 shrink-0 bg-white">
+        {([
+          ['content','محتوا',LayoutPanelLeft],
+          ['layout','چیدمان',Columns3],
+          ['style','استایل',SlidersHorizontal],
+          ['items','آیتم‌ها',ImageIcon]
+        ] as Array<[InspectorTab,string,React.ElementType]>).map(([id,label,Icon]) => (
+          <button
+            key={id}
+            type="button"
+            onClick={() => setTab(id)}
+            className={`py-3 flex flex-col items-center gap-1 text-[9px] font-black border-b-2 ${tab === id ? 'border-blue-600 text-blue-700 bg-blue-50/40' : 'border-transparent text-neutral-500'}`}
+          >
+            <Icon className="w-4 h-4" /> {label}
+          </button>
+        ))}
+      </nav>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-neutral-700 font-bold mb-1">برچسب بالای تیتر (Badge):</label>
-              <input
-                type="text"
-                value={form.badge || ''}
-                onChange={e => setForm({ ...form, badge: e.target.value })}
-                className="w-full p-2.5 border border-neutral-300 rounded-xl"
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-neutral-50/60">
+        {tab === 'content' && (
+          <>
+            <section className="bg-white rounded-2xl border border-neutral-200 p-4 space-y-3">
+              <label className="block">
+                <span className="block text-[10px] font-bold mb-1">عنوان</span>
+                <input value={form.title || ''} onChange={e => patch({title:e.target.value})} className="w-full p-2.5 border rounded-xl text-xs" />
+              </label>
+              <label className="block">
+                <span className="block text-[10px] font-bold mb-1">زیرعنوان</span>
+                <input value={form.subtitle || ''} onChange={e => patch({subtitle:e.target.value})} className="w-full p-2.5 border rounded-xl text-xs" />
+              </label>
+              <label className="block">
+                <span className="block text-[10px] font-bold mb-1">Badge</span>
+                <input value={form.badge || ''} onChange={e => patch({badge:e.target.value})} className="w-full p-2.5 border rounded-xl text-xs" />
+              </label>
+              <RichTextEditor label="متن کامل" value={form.content || ''} onChange={value => patch({content:value})} rows={5} />
+            </section>
+
+            <section className="bg-white rounded-2xl border border-neutral-200 p-4 space-y-3">
+              <ImageUploadInput
+                label="تصویر / پس‌زمینه سکشن"
+                value={form.imageUrl || ''}
+                onChange={url => patch({imageUrl:url})}
+                aspectRatio="banner"
+                presetCategory="banners"
               />
-            </div>
-            <div>
-              <label className="block text-neutral-700 font-bold mb-1">زیرعنوان / خلاصه:</label>
-              <input
-                type="text"
-                value={form.subtitle || ''}
-                onChange={e => setForm({ ...form, subtitle: e.target.value })}
-                className="w-full p-2.5 border border-neutral-300 rounded-xl"
-              />
-            </div>
-          </div>
-
-          <ImageUploadInput
-            label="تصویر این بخش:"
-            value={form.imageUrl || ''}
-            onChange={(url) => setForm({ ...form, imageUrl: url })}
-            aspectRatio="banner"
-            presetCategory="banners"
-          />
-
-          {form.imageUrl && (
-            <div className="p-3 bg-neutral-50 rounded-xl border border-neutral-200 space-y-2">
-              <label className="block text-neutral-800 font-bold text-xs">
-                حالت نمایش تصویر در سکشن (Display Mode):
-              </label>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                {[
-                  { id: 'full', label: 'تمام‌عرض (فول)', desc: 'بنر کامل سراسری' },
-                  { id: 'cover', label: 'کاور پس‌زمینه', desc: 'پوشش کل سکشن' },
-                  { id: 'side', label: 'کنار متن', desc: 'ستون تصویر اختصاصی' },
-                  { id: 'contain', label: 'بدون برش (کادر)', desc: 'درون کادر کامل' }
-                ].map(mode => (
-                  <button
-                    key={mode.id}
-                    type="button"
-                    onClick={() => setForm({ ...form, imageMode: mode.id as any })}
-                    className={`p-2 rounded-lg border text-right transition-all cursor-pointer ${
-                      (form.imageMode || 'side') === mode.id
-                        ? 'bg-red-50 border-red-500 text-red-700 shadow-xs'
-                        : 'bg-white border-neutral-200 text-neutral-700 hover:bg-neutral-100'
-                    }`}
-                  >
-                    <strong className="block text-[11px] font-bold">{mode.label}</strong>
-                    <span className="text-[9px] text-neutral-500">{mode.desc}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          <div className="p-4 rounded-2xl bg-neutral-50 border border-neutral-200 space-y-4">
-            <div>
-              <h4 className="font-black text-sm text-neutral-900">چیدمان حرفه‌ای بخش</h4>
-              <p className="text-[10px] text-neutral-500 mt-1">عرض، ستون‌بندی، فاصله، رنگ، گردی، تعداد آیتم و اندازه تصاویر را بدون کدنویسی تنظیم کنید.</p>
-            </div>
-
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-              <label>
-                <span className="block text-[10px] font-bold mb-1">نوع چیدمان</span>
-                <select value={form.layout || 'boxed'} onChange={e => setForm({ ...form, layout: e.target.value as PageSection['layout'] })} className="w-full p-2 border border-neutral-300 rounded-lg bg-white">
-                  <option value="boxed">کادر استاندارد</option>
-                  <option value="full">تمام‌عرض</option>
-                  <option value="grid">شبکه‌ای</option>
-                  <option value="split">دو بخشی</option>
-                  <option value="cards">کارت‌ها</option>
-                </select>
-              </label>
-              <label>
-                <span className="block text-[10px] font-bold mb-1">ستون دسکتاپ</span>
-                <select value={form.desktopColumns || 3} onChange={e => setForm({ ...form, desktopColumns: Number(e.target.value) })} className="w-full p-2 border border-neutral-300 rounded-lg bg-white">
-                  {[1,2,3,4,5,6,7,8,9,10,11,12].map(n => <option key={n} value={n}>{n} ستون</option>)}
-                </select>
-              </label>
-              <label>
-                <span className="block text-[10px] font-bold mb-1">ستون تبلت</span>
-                <select value={form.tabletColumns || Math.min(form.desktopColumns || 3, 2)} onChange={e => setForm({ ...form, tabletColumns: Number(e.target.value) })} className="w-full p-2 border border-neutral-300 rounded-lg bg-white">
-                  {[1,2,3,4,5,6,7,8].map(n => <option key={n} value={n}>{n} ستون</option>)}
-                </select>
-              </label>
-              <label>
-                <span className="block text-[10px] font-bold mb-1">ستون موبایل</span>
-                <select value={form.mobileColumns || 1} onChange={e => setForm({ ...form, mobileColumns: Number(e.target.value) })} className="w-full p-2 border border-neutral-300 rounded-lg bg-white">
-                  {[1,2,3,4].map(n => <option key={n} value={n}>{n} ستون</option>)}
-                </select>
-              </label>
-              <label>
-                <span className="block text-[10px] font-bold mb-1">تراز محتوا</span>
-                <select value={form.contentAlign || 'right'} onChange={e => setForm({ ...form, contentAlign: e.target.value as PageSection['contentAlign'] })} className="w-full p-2 border border-neutral-300 rounded-lg bg-white">
-                  <option value="right">راست</option>
-                  <option value="center">وسط</option>
-                  <option value="left">چپ</option>
-                </select>
-              </label>
-            </div>
-
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-              {[
-                ['widthPercent','عرض دسکتاپ %',20,100,100],
-                ['tabletWidthPercent','عرض تبلت %',20,100,100],
-                ['mobileWidthPercent','عرض موبایل %',20,100,100],
-                ['maxWidthPx','حداکثر عرض px',0,2400,1280],
-                ['borderRadiusPx','گردی سکشن',0,80,12],
-                ['itemRadiusPx','گردی آیتم',0,80,10],
-                ['gapPx','فاصله آیتم',0,80,16],
-                ['paddingTopPx','فاصله بالا',0,180,28],
-                ['paddingBottomPx','فاصله پایین',0,180,28],
-                ['paddingInlinePx','فاصله طرفین',0,160,20],
-                ['maxItems','حداکثر آیتم',0,50,0],
-                ['imageSizePx','اندازه عکس',24,320,72]
-              ].map(([key,label,min,max,fallback]) => (
-                <label key={String(key)}>
-                  <span className="block text-[10px] font-bold mb-1">{String(label)}</span>
-                  <input type="number" min={Number(min)} max={Number(max)} value={Number((form as any)[String(key)] ?? fallback)} onChange={e => setForm({ ...form, [String(key)]: Number(e.target.value) } as PageSection)} className="w-full p-2 border border-neutral-300 rounded-lg bg-white font-mono" />
-                </label>
-              ))}
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <label className="flex items-center justify-between p-3 bg-white border border-neutral-200 rounded-xl">
-                <span className="text-[10px] font-bold">تمام‌عرض</span>
-                <input type="checkbox" checked={Boolean(form.fullWidth)} onChange={e => setForm({ ...form, fullWidth: e.target.checked })} />
-              </label>
-              <label>
-                <span className="block text-[10px] font-bold mb-1">رنگ پس‌زمینه</span>
-                <input type="color" value={form.backgroundColor || '#ffffff'} onChange={e => setForm({ ...form, backgroundColor: e.target.value })} className="w-full h-10 p-1 border border-neutral-300 rounded-lg bg-white" />
-              </label>
-              <label>
-                <span className="block text-[10px] font-bold mb-1">رنگ متن</span>
-                <input type="color" value={form.textColor || '#111827'} onChange={e => setForm({ ...form, textColor: e.target.value })} className="w-full h-10 p-1 border border-neutral-300 rounded-lg bg-white" />
-              </label>
-            </div>
-          </div>
-
-          <RichTextEditor
-            label="متن و توضیحات کامل این بخش:"
-            value={form.content || ''}
-            onChange={(val) => setForm({ ...form, content: val })}
-            rows={4}
-          />
-
-          <div className="p-4 rounded-2xl bg-neutral-50 border border-neutral-200 space-y-3">
-            <div className="flex items-center justify-between gap-2">
-              <div>
-                <h4 className="font-black text-sm text-neutral-900">آیتم‌های داخل بخش</h4>
-                <p className="text-[10px] text-neutral-500">برای بنرهای چندتایی، برندها، نظر مشتریان، کارت‌ها و مزایا.</p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setForm({ ...form, items: [...(form.items || []), { id: `item-${Date.now()}`, title: '', subtitle: '', content: '', imageUrl: '', link: '', buttonText: '', isVisible: true, order: (form.items || []).length + 1 }] })}
-                className="px-3 py-2 bg-neutral-900 text-white rounded-xl text-[10px] font-bold flex items-center gap-1 cursor-pointer"
-              >
-                <Plus className="w-3.5 h-3.5" /> افزودن آیتم
-              </button>
-            </div>
-            <div className="space-y-2">
-              {(form.items || []).map((item, index) => (
-                <div key={item.id} className="p-3 bg-white border border-neutral-200 rounded-xl space-y-2">
-                  <div className="flex items-center justify-between">
-                    <strong className="text-[10px] text-neutral-600">آیتم {index + 1}</strong>
-                    <div className="flex items-center gap-1">
-                      <button type="button" disabled={index === 0} onClick={() => {
-                        const items = [...(form.items || [])];
-                        [items[index - 1], items[index]] = [items[index], items[index - 1]];
-                        setForm({ ...form, items: items.map((x,i) => ({ ...x, order: i + 1 })) });
-                      }} className="p-1.5 text-neutral-500 hover:bg-neutral-100 rounded-lg disabled:opacity-30 cursor-pointer"><ArrowUp className="w-3.5 h-3.5" /></button>
-                      <button type="button" disabled={index === (form.items || []).length - 1} onClick={() => {
-                        const items = [...(form.items || [])];
-                        [items[index + 1], items[index]] = [items[index], items[index + 1]];
-                        setForm({ ...form, items: items.map((x,i) => ({ ...x, order: i + 1 })) });
-                      }} className="p-1.5 text-neutral-500 hover:bg-neutral-100 rounded-lg disabled:opacity-30 cursor-pointer"><ArrowDown className="w-3.5 h-3.5" /></button>
-                      <button type="button" onClick={() => setForm({ ...form, items: (form.items || []).filter((_,i) => i !== index) })} className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg cursor-pointer"><Trash2 className="w-4 h-4" /></button>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    <input value={item.title || ''} onChange={e => setForm({ ...form, items: (form.items || []).map((x,i) => i === index ? { ...x, title: e.target.value } : x) })} placeholder="عنوان" className="p-2 border rounded-lg" />
-                    <input value={item.subtitle || ''} onChange={e => setForm({ ...form, items: (form.items || []).map((x,i) => i === index ? { ...x, subtitle: e.target.value } : x) })} placeholder="زیرعنوان" className="p-2 border rounded-lg" />
-                    <input value={item.buttonText || ''} onChange={e => setForm({ ...form, items: (form.items || []).map((x,i) => i === index ? { ...x, buttonText: e.target.value } : x) })} placeholder="متن دکمه" className="p-2 border rounded-lg" />
-                    <input dir="ltr" value={item.link || ''} onChange={e => setForm({ ...form, items: (form.items || []).map((x,i) => i === index ? { ...x, link: e.target.value } : x) })} placeholder="لینک" className="p-2 border rounded-lg text-left" />
-                  </div>
-                  <ImageUploadInput
-                    label="تصویر / بنر آیتم"
-                    value={item.imageUrl || ''}
-                    onChange={(url) => setForm({ ...form, items: (form.items || []).map((x,i) => i === index ? { ...x, imageUrl: url } : x) })}
-                    aspectRatio="banner"
-                    presetCategory="banners"
-                  />
-                  <textarea rows={2} value={item.content || ''} onChange={e => setForm({ ...form, items: (form.items || []).map((x,i) => i === index ? { ...x, content: e.target.value } : x) })} placeholder="متن آیتم" className="w-full p-2 border rounded-lg" />
+              {form.imageUrl && (
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    ['side','کنار متن'],
+                    ['cover','پس‌زمینه Cover'],
+                    ['full','تمام تصویر'],
+                    ['contain','Contain']
+                  ].map(([id,label]) => (
+                    <button
+                      key={id}
+                      type="button"
+                      onClick={() => patch({imageMode:id as PageSection['imageMode']})}
+                      className={`p-2 rounded-xl border text-[9px] font-bold ${(form.imageMode || 'side') === id ? 'border-blue-500 bg-blue-50 text-blue-700' : 'bg-white'}`}
+                    >
+                      {label}
+                    </button>
+                  ))}
                 </div>
-              ))}
-            </div>
-          </div>
+              )}
+            </section>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-neutral-700 font-bold mb-1">متن دکمه:</label>
-              <input
-                type="text"
-                value={form.buttonText || ''}
-                onChange={e => setForm({ ...form, buttonText: e.target.value })}
-                className="w-full p-2.5 border border-neutral-300 rounded-xl"
-              />
-            </div>
-            <div>
-              <label className="block text-neutral-700 font-bold mb-1">لینک دکمه:</label>
-              <input
-                type="text"
-                value={form.buttonLink || ''}
-                onChange={e => setForm({ ...form, buttonLink: e.target.value })}
-                className="w-full p-2.5 border border-neutral-300 rounded-xl font-mono text-left"
-              />
-            </div>
-          </div>
+            <section className="bg-white rounded-2xl border border-neutral-200 p-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <label><span className="block text-[10px] font-bold mb-1">متن دکمه</span><input value={form.buttonText || ''} onChange={e => patch({buttonText:e.target.value})} className="w-full p-2.5 border rounded-xl text-xs" /></label>
+              <label><span className="block text-[10px] font-bold mb-1">لینک دکمه</span><input dir="ltr" value={form.buttonLink || ''} onChange={e => patch({buttonLink:e.target.value})} className="w-full p-2.5 border rounded-xl text-xs text-left font-mono" /></label>
+            </section>
+          </>
+        )}
 
-          {/* Visibility Toggle */}
-          <div className="flex items-center justify-between p-3 bg-neutral-50 rounded-xl border border-neutral-200">
-            <span className="text-xs font-bold text-neutral-800">وضعیت نمایش در سایت:</span>
-            <button
-              type="button"
-              onClick={() => setForm({ ...form, isVisible: !form.isVisible })}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-colors ${
-                form.isVisible ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-neutral-200 text-neutral-600'
-              }`}
-            >
-              {form.isVisible ? <Eye className="w-3.5 h-3.5 text-emerald-600" /> : <EyeOff className="w-3.5 h-3.5" />}
-              <span>{form.isVisible ? 'نمایش به مشتریان (فعال)' : 'مخفی از دید عموم'}</span>
-            </button>
-          </div>
+        {tab === 'layout' && (
+          <>
+            <section className="bg-white rounded-2xl border border-neutral-200 p-4 space-y-4">
+              <div>
+                <strong className="text-xs">Container</strong>
+                <p className="text-[9px] text-neutral-400 mt-1">Full Width، Boxed یا اندازه سفارشی برای هر دستگاه.</p>
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                <button type="button" onClick={() => patch({fullWidth:true,widthPercent:100,tabletWidthPercent:100,mobileWidthPercent:100,maxWidthPx:0,layout:'full'})} className={`p-2.5 rounded-xl border text-[9px] font-black ${form.fullWidth ? 'bg-blue-600 text-white border-blue-600' : 'bg-white'}`}>تمام عرض</button>
+                <button type="button" onClick={() => patch({fullWidth:false,widthPercent:100,tabletWidthPercent:100,mobileWidthPercent:100,maxWidthPx:1280,layout:'boxed'})} className={`p-2.5 rounded-xl border text-[9px] font-black ${!form.fullWidth && (form.maxWidthPx || 1280) === 1280 ? 'bg-blue-600 text-white border-blue-600' : 'bg-white'}`}>Boxed</button>
+                <button type="button" onClick={() => patch({fullWidth:false,maxWidthPx:form.maxWidthPx || 1100})} className="p-2.5 rounded-xl border bg-white text-[9px] font-black">سفارشی</button>
+              </div>
 
-          <div className="flex items-center gap-2 pt-3 border-t border-neutral-100">
-            <button
-              type="button"
-              onClick={() => {
-                if (confirm(`آیا از حذف کامل سکشن "${form.title || 'انتخاب شده'}" اطمینان دارید؟`)) {
-                  deleteSection(pageSlug, form.id);
-                  onClose();
-                }
-              }}
-              className="px-3.5 py-2.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl font-bold flex items-center justify-center gap-1.5 transition-colors shrink-0 text-xs"
-              title="حذف کامل این سکشن"
-            >
-              <Trash2 className="w-4 h-4" />
-              <span>حذف سکشن</span>
-            </button>
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 py-2.5 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 rounded-xl font-bold text-xs"
-            >
-              انصراف
-            </button>
-            <button
-              type="submit"
-              className="flex-1 py-2.5 bg-red-600 text-white rounded-xl font-bold shadow-md hover:bg-red-700 flex items-center justify-center gap-1.5 text-xs"
-            >
-              <Save className="w-4 h-4" />
-              <span>ذخیره تغییرات بخش</span>
-            </button>
-          </div>
-        </form>
+              {!form.fullWidth && (
+                <div className="grid grid-cols-2 gap-3">
+                  {numberField('عرض دسکتاپ %','widthPercent',20,100,100)}
+                  {numberField('عرض تبلت %','tabletWidthPercent',20,100,100)}
+                  {numberField('عرض موبایل %','mobileWidthPercent',20,100,100)}
+                  {numberField('حداکثر عرض px','maxWidthPx',0,2400,1280)}
+                </div>
+              )}
+            </section>
+
+            <section className="bg-white rounded-2xl border border-neutral-200 p-4 space-y-4">
+              <div>
+                <strong className="text-xs">Responsive Grid</strong>
+                <p className="text-[9px] text-neutral-400 mt-1">با افزایش ستون دسکتاپ در سکشن‌های بنری، Slot خالی جدید هم خودکار ساخته می‌شود.</p>
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                <label><span className="block text-[9px] font-bold mb-1">Desktop</span><select value={form.desktopColumns || 3} onChange={e => setColumns('desktop',Number(e.target.value))} className="w-full p-2 border rounded-lg bg-white text-xs">{Array.from({length:12},(_,i)=>i+1).map(n=><option key={n} value={n}>{n}</option>)}</select></label>
+                <label><span className="block text-[9px] font-bold mb-1">Tablet</span><select value={form.tabletColumns || Math.min(form.desktopColumns || 3,2)} onChange={e => setColumns('tablet',Number(e.target.value))} className="w-full p-2 border rounded-lg bg-white text-xs">{Array.from({length:8},(_,i)=>i+1).map(n=><option key={n} value={n}>{n}</option>)}</select></label>
+                <label><span className="block text-[9px] font-bold mb-1">Mobile</span><select value={form.mobileColumns || 1} onChange={e => setColumns('mobile',Number(e.target.value))} className="w-full p-2 border rounded-lg bg-white text-xs">{[1,2,3,4].map(n=><option key={n} value={n}>{n}</option>)}</select></label>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                {numberField('فاصله آیتم‌ها','gapPx',0,100,16)}
+                {numberField('حداکثر آیتم','maxItems',0,100,0)}
+                {numberField('اندازه تصویر','imageSizePx',16,500,72)}
+                {numberField('حداقل ارتفاع','minHeightPx',0,1200,0)}
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                <button type="button" onClick={() => patch({contentAlign:'right'})} className={`p-2 rounded-lg border grid place-items-center ${form.contentAlign === 'right' ? 'bg-blue-50 border-blue-500' : 'bg-white'}`}><AlignRight className="w-4 h-4" /></button>
+                <button type="button" onClick={() => patch({contentAlign:'center'})} className={`p-2 rounded-lg border grid place-items-center ${form.contentAlign === 'center' ? 'bg-blue-50 border-blue-500' : 'bg-white'}`}><AlignCenter className="w-4 h-4" /></button>
+                <button type="button" onClick={() => patch({contentAlign:'left'})} className={`p-2 rounded-lg border grid place-items-center ${form.contentAlign === 'left' ? 'bg-blue-50 border-blue-500' : 'bg-white'}`}><AlignLeft className="w-4 h-4" /></button>
+              </div>
+            </section>
+          </>
+        )}
+
+        {tab === 'style' && (
+          <>
+            <section className="bg-white rounded-2xl border border-neutral-200 p-4 grid grid-cols-2 gap-3">
+              <label><span className="block text-[10px] font-bold mb-1">رنگ پس‌زمینه</span><input type="color" value={form.backgroundColor || '#ffffff'} onChange={e => patch({backgroundColor:e.target.value})} className="w-full h-11 p-1 border rounded-xl" /></label>
+              <label><span className="block text-[10px] font-bold mb-1">رنگ متن</span><input type="color" value={form.textColor || '#111827'} onChange={e => patch({textColor:e.target.value})} className="w-full h-11 p-1 border rounded-xl" /></label>
+              {numberField('گردی سکشن','borderRadiusPx',0,100,0)}
+              {numberField('گردی کارت‌ها','itemRadiusPx',0,100,10)}
+              {numberField('Padding بالا','paddingTopPx',0,250,28)}
+              {numberField('Padding پایین','paddingBottomPx',0,250,28)}
+              {numberField('Padding طرفین','paddingInlinePx',0,200,20)}
+              {numberField('Opacity تصویر %','backgroundImageOpacity',0,100,100)}
+            </section>
+
+            <section className="bg-white rounded-2xl border border-neutral-200 p-4">
+              <label className="flex items-center justify-between gap-3">
+                <span>
+                  <strong className="block text-xs">نمایش سکشن</strong>
+                  <small className="text-[9px] text-neutral-400">مخفی‌کردن هم فوراً در Preview اعمال می‌شود.</small>
+                </span>
+                <button type="button" onClick={() => patch({isVisible:!form.isVisible})} className={`px-3 py-2 rounded-xl text-[9px] font-black inline-flex items-center gap-1 ${form.isVisible ? 'bg-emerald-50 text-emerald-700' : 'bg-neutral-100 text-neutral-500'}`}>
+                  {form.isVisible ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+                  {form.isVisible ? 'فعال' : 'مخفی'}
+                </button>
+              </label>
+            </section>
+          </>
+        )}
+
+        {tab === 'items' && (
+          <section className="space-y-3">
+            <div className="bg-white rounded-2xl border border-neutral-200 p-3 flex items-center justify-between gap-2 sticky top-0 z-10">
+              <div>
+                <strong className="text-xs">آیتم‌های سکشن</strong>
+                <span className="block text-[8px] text-neutral-400 mt-0.5">{(form.items || []).length.toLocaleString('fa-IR')} آیتم</span>
+              </div>
+              <button type="button" onClick={addItem} className="px-3 py-2 rounded-xl bg-blue-600 text-white text-[9px] font-black inline-flex items-center gap-1"><Plus className="w-3.5 h-3.5" /> آیتم جدید</button>
+            </div>
+
+            {(form.items || []).map((item,index) => (
+              <article key={item.id} className="bg-white rounded-2xl border border-neutral-200 p-3 space-y-3">
+                <div className="flex items-center justify-between gap-2">
+                  <strong className="text-[10px]">آیتم {index + 1}{!item.title ? ' — خالی' : ` — ${item.title}`}</strong>
+                  <div className="flex items-center gap-1">
+                    <button type="button" disabled={index===0} onClick={() => moveItem(index,'up')} className="px-2 py-1 rounded bg-neutral-100 text-[8px] disabled:opacity-30">↑</button>
+                    <button type="button" disabled={index===(form.items||[]).length-1} onClick={() => moveItem(index,'down')} className="px-2 py-1 rounded bg-neutral-100 text-[8px] disabled:opacity-30">↓</button>
+                    <button type="button" onClick={() => apply({...form,items:(form.items||[]).filter(row=>row.id!==item.id)})} className="w-7 h-7 grid place-items-center rounded-lg bg-red-50 text-red-600"><Trash2 className="w-3.5 h-3.5" /></button>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <input value={item.title || ''} onChange={e => updateItem(item.id,{title:e.target.value})} placeholder="عنوان" className="p-2 border rounded-lg text-[10px]" />
+                  <input value={item.subtitle || ''} onChange={e => updateItem(item.id,{subtitle:e.target.value})} placeholder="زیرعنوان" className="p-2 border rounded-lg text-[10px]" />
+                  <input value={item.buttonText || ''} onChange={e => updateItem(item.id,{buttonText:e.target.value})} placeholder="متن دکمه" className="p-2 border rounded-lg text-[10px]" />
+                  <input dir="ltr" value={item.link || ''} onChange={e => updateItem(item.id,{link:e.target.value})} placeholder="link" className="p-2 border rounded-lg text-[10px] text-left font-mono" />
+                </div>
+                <ImageUploadInput label="تصویر / بنر" value={item.imageUrl || ''} onChange={url => updateItem(item.id,{imageUrl:url})} aspectRatio="banner" presetCategory="banners" />
+                <textarea rows={2} value={item.content || ''} onChange={e => updateItem(item.id,{content:e.target.value})} placeholder="متن آیتم" className="w-full p-2 border rounded-lg text-[10px]" />
+              </article>
+            ))}
+
+            {!(form.items || []).length && (
+              <button type="button" onClick={addItem} className="w-full py-10 border-2 border-dashed rounded-2xl text-neutral-400 text-[10px] font-bold">
+                <Plus className="w-5 h-5 mx-auto mb-2" /> اولین آیتم را اضافه کنید
+              </button>
+            )}
+          </section>
+        )}
       </div>
-    </div>
+
+      <footer className="p-3 border-t border-neutral-200 bg-white shrink-0 grid grid-cols-[40px_1fr_1fr] gap-2">
+        <button type="button" onClick={deleteCurrent} className="grid place-items-center rounded-xl bg-red-50 text-red-600" title="حذف سکشن"><Trash2 className="w-4 h-4" /></button>
+        <button type="button" onClick={cancel} className="py-2.5 rounded-xl bg-neutral-100 text-neutral-700 text-xs font-bold">لغو و بازگردانی</button>
+        <button type="button" onClick={save} className="py-2.5 rounded-xl bg-emerald-600 text-white text-xs font-black inline-flex items-center justify-center gap-1"><Save className="w-4 h-4" /> ذخیره</button>
+      </footer>
+    </aside>
   );
 };

@@ -72,6 +72,7 @@ export const Header: React.FC<HeaderProps> = ({
   const [isMarketplaceMobileOpen, setIsMarketplaceMobileOpen] = useState(false);
   const [marketplaceMobileTab, setMarketplaceMobileTab] = useState<'menu' | 'categories' | 'vehicle'>('menu');
   const [marketplaceOpenMenuId, setMarketplaceOpenMenuId] = useState<string | null>(null);
+  const [marketplaceMobileOpenIds, setMarketplaceMobileOpenIds] = useState<Set<string>>(new Set());
 
   // Hover timers to prevent menu abrupt closing
   const megaTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -188,9 +189,19 @@ export const Header: React.FC<HeaderProps> = ({
       );
     });
 
+  const toggleMobileTreeItem = (id: string) => {
+    setMarketplaceMobileOpenIds(current => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
   const renderMobileSubmenuTree = (parentId: string, depth = 0): React.ReactNode =>
     menuChildren(parentId).map(item => {
       const nested = menuChildren(item.id);
+      const open = marketplaceMobileOpenIds.has(item.id);
       return (
         <div key={item.id} className="marketplace-ref-mobile-submenu-group" data-depth={depth}>
           <button
@@ -198,7 +209,7 @@ export const Header: React.FC<HeaderProps> = ({
             style={{ paddingRight: `${Math.min(depth, 8) * 12}px` }}
             onClick={() => {
               if (nested.length) {
-                setMarketplaceOpenMenuId(current => current === item.id ? null : item.id);
+                toggleMobileTreeItem(item.id);
               } else {
                 handleMenuClick(item);
                 setIsMarketplaceMobileOpen(false);
@@ -207,9 +218,9 @@ export const Header: React.FC<HeaderProps> = ({
           >
             <span>{item.title}</span>
             {item.badge && <small>{item.badge}</small>}
-            {nested.length > 0 && <ChevronDown className={`w-3.5 h-3.5 transition-transform ${marketplaceOpenMenuId === item.id ? 'rotate-180' : ''}`} />}
+            {nested.length > 0 && <ChevronDown className={`w-3.5 h-3.5 transition-transform ${open ? 'rotate-180' : ''}`} />}
           </button>
-          {nested.length > 0 && marketplaceOpenMenuId === item.id && (
+          {nested.length > 0 && open && (
             <div className="marketplace-ref-mobile-submenu-nested">
               {renderMobileSubmenuTree(item.id, depth + 1)}
             </div>
@@ -551,13 +562,13 @@ export const Header: React.FC<HeaderProps> = ({
                 <div className="marketplace-ref-mobile-links">
                   {topHeaderMenus.filter(item => item.kind !== 'categories').map(item => {
                     const children = menuChildren(item.id);
-                    const open = marketplaceOpenMenuId === item.id;
+                    const open = marketplaceMobileOpenIds.has(item.id);
                     return (
                       <div key={item.id} className="marketplace-ref-mobile-menu-item">
                         <button
                           type="button"
                           onClick={() => {
-                            if (children.length) setMarketplaceOpenMenuId(open ? null : item.id);
+                            if (children.length) toggleMobileTreeItem(item.id);
                             else {
                               handleMenuClick(item);
                               setIsMarketplaceMobileOpen(false);

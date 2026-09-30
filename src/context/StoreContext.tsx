@@ -246,7 +246,7 @@ const normalizeBuilderPages = (inputPages: SitePage[]): SitePage[] => {
 };
 
 const syncSeoDraft = async (
-  type: 'product' | 'article' | 'page',
+  type: 'product' | 'article' | 'page' | 'category' | 'brand' | 'model',
   id: string,
   seo?: SeoEntityDraft
 ): Promise<void> => {
@@ -256,6 +256,20 @@ const syncSeoDraft = async (
     method: 'PUT',
     body: JSON.stringify(meta)
   });
+};
+
+const syncCategorySeoTree = async (category: Category): Promise<void> => {
+  const jobs: Array<Promise<void>> = [];
+  if (category.seo) jobs.push(syncSeoDraft('category', category.id, category.seo));
+
+  const walk = (nodes: any[] = []) => {
+    for (const node of nodes) {
+      if (node?.seo && node?.id) jobs.push(syncSeoDraft('category', `sub:${node.id}`, node.seo));
+      if (Array.isArray(node?.subcategories)) walk(node.subcategories);
+    }
+  };
+  walk(category.subcategories || []);
+  if (jobs.length) await Promise.allSettled(jobs);
 };
 
 interface StoreContextType {
@@ -1286,8 +1300,13 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     void apiRequest<{ category: Category }>('/api/catalog/categories', {
       method: 'POST',
       body: JSON.stringify(cat)
-    }).then(({ category }) => {
+    }).then(async ({ category }) => {
       setCategories(prev => [...prev, category]);
+      try {
+        await syncCategorySeoTree(category);
+      } catch (seoError) {
+        console.error('Category SEO sync failed:', seoError);
+      }
       showToast(`دسته‌بندی ${category.nameFa} افزوده شد.`);
     }).catch(error => {
       console.error(error);
@@ -1299,8 +1318,13 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     void apiRequest<{ category: Category }>(`/api/catalog/categories/${encodeURIComponent(cat.id)}`, {
       method: 'PUT',
       body: JSON.stringify(cat)
-    }).then(({ category }) => {
+    }).then(async ({ category }) => {
       setCategories(prev => prev.map(item => item.id === category.id ? category : item));
+      try {
+        await syncCategorySeoTree(category);
+      } catch (seoError) {
+        console.error('Category SEO sync failed:', seoError);
+      }
       showToast(`دسته‌بندی ${category.nameFa} به‌روزرسانی شد.`);
     }).catch(error => {
       console.error(error);
@@ -1325,8 +1349,13 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     void apiRequest<{ brand: CarBrand }>('/api/vehicles/brands', {
       method: 'POST',
       body: JSON.stringify(brand)
-    }).then(({ brand: saved }) => {
+    }).then(async ({ brand: saved }) => {
       setBrands(prev => [...prev, saved]);
+      try {
+        await syncSeoDraft('brand', saved.id, saved.seo);
+      } catch (seoError) {
+        console.error('Brand SEO sync failed:', seoError);
+      }
       showToast(`برند ${saved.nameFa} اضافه شد.`);
     }).catch(error => {
       console.error(error);
@@ -1338,8 +1367,13 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     void apiRequest<{ brand: CarBrand }>(`/api/vehicles/brands/${encodeURIComponent(brand.id)}`, {
       method: 'PUT',
       body: JSON.stringify(brand)
-    }).then(({ brand: saved }) => {
+    }).then(async ({ brand: saved }) => {
       setBrands(prev => prev.map(item => item.id === saved.id ? saved : item));
+      try {
+        await syncSeoDraft('brand', saved.id, saved.seo);
+      } catch (seoError) {
+        console.error('Brand SEO sync failed:', seoError);
+      }
       showToast(`برند ${saved.nameFa} به‌روزرسانی شد.`);
     }).catch(error => {
       console.error(error);

@@ -74,6 +74,7 @@ import { AdminMediaLibrary } from './AdminMediaLibrary';
 import { AdminIconLibrary } from './AdminIconLibrary';
 import { AdminVisualPageBuilder } from './AdminVisualPageBuilder';
 import { AdminCategoryStudio } from './AdminCategoryStudio';
+import { AdminPaymentGateways } from './AdminPaymentGateways';
 
 interface AdminViewProps {
   onExitToStore?: () => void;
@@ -715,14 +716,16 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
         {/* Right Top Bar Quick Actions */}
         <div className="flex items-center gap-3">
           {/* Quick Preview Store Link */}
-          <button
-            onClick={onExitToStore || (() => window.location.href = '/')}
+          <a
+            href="/"
+            target="_blank"
+            rel="noopener noreferrer"
             className="px-3 py-1.5 bg-neutral-800 hover:bg-neutral-700 text-neutral-200 hover:text-white rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 border border-neutral-700"
-            title="مشاهده ظاهر فروشگاه"
+            title="مشاهده فروشگاه در پنجره جدید"
           >
             <ExternalLink className="w-3.5 h-3.5 text-red-500" />
             <span className="hidden sm:inline">مشاهده فروشگاه</span>
-          </button>
+          </a>
 
           {/* Active Admin Identity Badge */}
           <div className="flex items-center gap-2.5 bg-neutral-800/80 border border-neutral-700 px-3 py-1.5 rounded-xl text-xs">
@@ -1310,43 +1313,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
 
           {/* TAB 11: GATEWAYS */}
           {activeTab === 'gateways' && (
-            <div className="bg-white rounded-3xl border border-neutral-200 p-6 sm:p-8 shadow-xs space-y-6">
-              <div className="border-b border-neutral-100 pb-4">
-                <h2 className="text-lg font-black text-neutral-900 flex items-center gap-2">
-                  <CreditCard className="w-5 h-5 text-red-600" />
-                  <span>تنظیمات درگاه‌های بانکی شبکه شاپرک</span>
-                </h2>
-                <p className="text-xs text-neutral-500 mt-1">
-                  فعال‌سازی، تغییر مرچنت کد، ترمینال و سوییچ درگاه‌های پرداخت متصل به شتاب
-                </p>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {paymentGateways.map(g => (
-                  <div key={g.id} className="p-5 bg-neutral-50 rounded-2xl border border-neutral-200 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <CreditCard className="w-5 h-5 text-neutral-700" />
-                        <h3 className="font-bold text-sm text-neutral-900">{g.name}</h3>
-                      </div>
-                      <button
-                        onClick={() => toggleGatewayActive(g.id)}
-                        className={`px-3 py-1 rounded-full text-xs font-bold ${
-                          g.isActive ? 'bg-emerald-100 text-emerald-800' : 'bg-neutral-200 text-neutral-600'
-                        }`}
-                      >
-                        {g.isActive ? 'فعال' : 'غیرفعال'}
-                      </button>
-                    </div>
-
-                    <p className="text-xs text-neutral-500">{g.description}</p>
-                    <div className="text-[11px] font-mono text-neutral-400">
-                      Merchant ID: {g.merchantId} {g.terminalId ? `| Terminal: ${g.terminalId}` : ''}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
+            <AdminPaymentGateways />
           )}
 
           {/* TAB 12: PAYMENT SANDBOX SIMULATOR */}

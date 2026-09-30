@@ -411,6 +411,7 @@ interface StoreContextType {
   updatePage: (page: SitePage) => void;
   deletePage: (pageId: string) => void;
   updateSection: (pageSlug: string, section: PageSection) => void;
+  previewSection: (pageSlug: string, section: PageSection) => void;
   addSection: (pageSlug: string, section: PageSection) => void;
   deleteSection: (pageSlug: string, sectionId: string) => void;
 
@@ -1108,6 +1109,19 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       ...page,
       sections: page.sections.map(section => section.id === updatedSection.id ? updatedSection : section)
     }, `بخش "${updatedSection.title}" با موفقیت به‌روزرسانی شد.`);
+  };
+
+  const previewSection = (pageSlug: string, sectionPreview: PageSection) => {
+    setPages(prev => prev.map(page => {
+      if (page.slug !== pageSlug) return page;
+      const exists = page.sections.some(section => section.id === sectionPreview.id);
+      return {
+        ...page,
+        sections: exists
+          ? page.sections.map(section => section.id === sectionPreview.id ? { ...sectionPreview } : section)
+          : [...page.sections, { ...sectionPreview }]
+      };
+    }));
   };
 
   const addSection = (pageSlug: string, newSection: PageSection) => {
@@ -2246,6 +2260,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       updatePage,
       deletePage,
       updateSection,
+      previewSection,
       addSection,
       deleteSection,
       setFontSize,

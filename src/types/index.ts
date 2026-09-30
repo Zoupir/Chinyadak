@@ -8,12 +8,14 @@ export interface CarBrand {
   logo: string;
   heroImage: string;
   description: string;
+  bottomDescription?: string;
   country: string;
   foundedYear: number;
   modelsCount?: number;
   officialRepresentative?: string;
   popularCategorySlugs?: string[];
   faq: { q: string; a: string }[];
+  seo?: SeoEntityDraft;
 }
 
 export interface VehicleModel {
@@ -62,6 +64,9 @@ export interface Category {
   iconUrl?: string;
   imageUrl?: string;
   description: string;
+  bottomDescription?: string;
+  heroTitle?: string;
+  heroSubtitle?: string;
   parentId?: string;
   subcategories?: {
     id: string;
@@ -69,6 +74,7 @@ export interface Category {
     nameEn: string;
     slug: string;
   }[];
+  seo?: SeoEntityDraft;
 }
 
 export interface VehicleFitment {
@@ -635,6 +641,7 @@ export interface PageSection {
   // Layout builder controls
   layout?: 'boxed' | 'full' | 'grid' | 'split' | 'cards';
   desktopColumns?: number;
+  tabletColumns?: number;
   mobileColumns?: number;
   fullWidth?: boolean;
   backgroundColor?: string;
@@ -648,6 +655,8 @@ export interface PageSection {
   minHeightPx?: number;
   contentAlign?: 'right' | 'center' | 'left';
   widthPercent?: number;
+  tabletWidthPercent?: number;
+  mobileWidthPercent?: number;
   maxWidthPx?: number;
   maxItems?: number;
   imageSizePx?: number;

@@ -104,6 +104,7 @@ export const AdminMenuBuilder: React.FC = () => {
   const [customTitle, setCustomTitle] = useState('');
   const [customUrl, setCustomUrl] = useState('https://');
   const libraryRef = useRef<HTMLDivElement>(null);
+  const megaMigrationDoneRef = useRef(false);
 
   useEffect(() => {
     if (dirty) return;
@@ -214,6 +215,75 @@ export const AdminMenuBuilder: React.FC = () => {
   const childrenOf = (parentId?: string) =>
     menus.filter(item => (item.parentId || undefined) === parentId);
 
+  const collectDescendantIds = (items: MenuItem[], id: string): string[] => {
+    const direct = items.filter(item => item.parentId === id).map(item => item.id);
+    return [...direct, ...direct.flatMap(childId => collectDescendantIds(items, childId))];
+  };
+
+  const buildCategoryMegaTree = (baseMenus: MenuItem[]): MenuItem[] => {
+    const existingRoot = baseMenus.find(item => !item.parentId && item.kind === 'categories');
+    const rootId = existingRoot?.id || 'header-categories';
+    const root: MenuItem = {
+      ...(existingRoot || {}),
+      id: rootId,
+      title: existingRoot?.title || 'همه دسته‌بندی‌ها',
+      originalTitle: existingRoot?.originalTitle || existingRoot?.title || 'همه دسته‌بندی‌ها',
+      link: existingRoot?.link || 'shop',
+      kind: 'categories',
+      sourceType: 'system',
+      sourceId: 'categories-root',
+      isVisible: existingRoot?.isVisible !== false,
+      megaMenu: {
+        ...(existingRoot?.megaMenu || {}),
+        enabled: true,
+        columns: existingRoot?.megaMenu?.columns || 4,
+        width: existingRoot?.megaMenu?.width || 'full'
+      }
+    };
+
+    const descendantIds = existingRoot ? collectDescendantIds(baseMenus, rootId) : [];
+    const preserved = baseMenus
+      .filter(item => item.id !== rootId && !descendantIds.includes(item.id));
+
+    const rootIndex = existingRoot
+      ? Math.max(0, baseMenus.findIndex(item => item.id === rootId))
+      : 0;
+
+    const categoryNodes: MenuItem[] = [];
+    categories.forEach(category => {
+      const categoryId = `mega-category-${category.id}`;
+      categoryNodes.push({
+        id: categoryId,
+        title: category.nameFa,
+        originalTitle: category.nameFa,
+        link: `category:${category.slug}`,
+        kind: 'category',
+        sourceType: 'category',
+        sourceId: category.id,
+        parentId: rootId,
+        isVisible: true
+      });
+
+      (category.subcategories || []).forEach(sub => {
+        categoryNodes.push({
+          id: `mega-subcategory-${category.id}-${sub.id}`,
+          title: sub.nameFa,
+          originalTitle: sub.nameFa,
+          link: `category:${sub.slug}`,
+          kind: 'category',
+          sourceType: 'category',
+          sourceId: `sub:${sub.id}`,
+          parentId: categoryId,
+          isVisible: true
+        });
+      });
+    });
+
+    const next = [...preserved];
+    next.splice(Math.min(rootIndex, next.length), 0, root);
+    return [...next, ...categoryNodes];
+  };
+
   const descendantsOf = (id: string): string[] => {
     const direct = menus.filter(item => item.parentId === id).map(item => item.id);
     return [...direct, ...direct.flatMap(descendantsOf)];
@@ -230,6 +300,48 @@ export const AdminMenuBuilder: React.FC = () => {
   const markChanged = (next: MenuItem[]) => {
     setMenus(next);
     setDirty(true);
+  };
+
+  useEffect(() => {
+    if (megaMigrationDoneRef.current || dirty || categories.length === 0) return;
+
+    const current = settings.headerMenus || [];
+    const categoryRoot = current.find(item => !item.parentId && item.kind === 'categories');
+    const hasEditableCategoryTree = Boolean(
+      categoryRoot &&
+      (
+        categoryRoot.sourceId === 'categories-root' ||
+        current.some(item => item.parentId === categoryRoot.id)
+      )
+    );
+
+    megaMigrationDoneRef.current = true;
+    if (hasEditableCategoryTree) return;
+
+    const next = buildCategoryMegaTree(current);
+    const nextRoot = next.find(item => !item.parentId && item.kind === 'categories');
+    setMenus(next);
+    setDirty(true);
+    setInsertParentId(nextRoot?.id);
+    if (nextRoot) {
+      setOpenSettings(prev => new Set(prev).add(nextRoot.id));
+    }
+    showToast('مگامنوی فعلی دسته‌بندی‌ها وارد Tree Editor شد. حالا همان ستون‌ها و زیرمنوها را مستقیم ویرایش و سپس ذخیره کنید.', 'info');
+  }, [categories.length, dirty, settings.headerMenus]);
+
+  const rebuildCategoryMegaFromCatalog = () => {
+    const categoryRoot = menus.find(item => !item.parentId && item.kind === 'categories');
+    const childCount = categoryRoot ? collectDescendantIds(menus, categoryRoot.id).length : 0;
+    if (childCount > 0 && !window.confirm('ساختار فعلی مگامنوی دسته‌بندی‌ها از روی دسته‌بندی‌های سایت بازسازی شود؟ ویرایش‌های دستی داخل همین شاخه جایگزین می‌شوند.')) {
+      return;
+    }
+
+    const next = buildCategoryMegaTree(menus);
+    const nextRoot = next.find(item => !item.parentId && item.kind === 'categories');
+    markChanged(next);
+    setInsertParentId(nextRoot?.id);
+    if (nextRoot) setOpenSettings(prev => new Set(prev).add(nextRoot.id));
+    showToast('تمام ستون‌ها و زیرمنوهای مگامنوی دسته‌بندی‌ها داخل درخت قابل ویرایش شدند.');
   };
 
   const patchItem = (id: string, patch: Partial<MenuItem>) => {
@@ -465,6 +577,7 @@ export const AdminMenuBuilder: React.FC = () => {
               <div className="menu-tree-meta">
                 <span>{sourceLabel(item.sourceType)}</span>
                 {children.length > 0 && <span>{children.length.toLocaleString('fa-IR')} زیرمنو</span>}
+                {item.kind === 'categories' && <span className="category-mega">مگامنوی «همه دسته‌بندی‌ها»</span>}
                 {item.megaMenu?.enabled && <span className="mega">Mega Menu</span>}
                 {item.isVisible === false && <span>مخفی</span>}
                 {missing && <span className="missing"><AlertTriangle className="w-3 h-3" /> منبع حذف شده</span>}
@@ -606,10 +719,13 @@ export const AdminMenuBuilder: React.FC = () => {
           <div>
             <h4 className="font-black text-sm text-blue-950">فهرست اصلی سایت — Tree Editor</h4>
             <p className="text-[11px] text-blue-700 mt-1">
-              تمام ساختار منو در همین صفحه دیده و ویرایش می‌شود. عمق زیرمنو محدود نیست؛ هر نود می‌تواند هر تعداد زیرشاخه داشته باشد.
+              تمام ساختار منو در همین صفحه دیده و ویرایش می‌شود. مگامنوی «همه دسته‌بندی‌ها» هم دقیقاً در همین درخت قرار دارد؛ هر ستون و هر لینک داخل آن یک نود قابل ویرایش است.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
+            <button type="button" onClick={rebuildCategoryMegaFromCatalog} className="px-3 py-2 rounded-xl bg-amber-500 text-neutral-950 text-xs font-black inline-flex items-center gap-1.5">
+              <Layers className="w-3.5 h-3.5" /> ویرایش مگامنوی دسته‌بندی‌ها
+            </button>
             <button type="button" onClick={syncBoundTitles} className="px-3 py-2 rounded-xl bg-white border border-blue-200 text-blue-800 text-xs font-bold inline-flex items-center gap-1.5">
               <RotateCcw className="w-3.5 h-3.5" /> همگام‌سازی
             </button>

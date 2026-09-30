@@ -70,6 +70,7 @@ export const Header: React.FC<HeaderProps> = ({
   const [isBrandsMenuOpen, setIsBrandsMenuOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isMarketplaceMobileOpen, setIsMarketplaceMobileOpen] = useState(false);
+  const [marketplaceMobileTab, setMarketplaceMobileTab] = useState<'menu' | 'categories' | 'vehicle'>('menu');
   const [marketplaceOpenMenuId, setMarketplaceOpenMenuId] = useState<string | null>(null);
 
   // Hover timers to prevent menu abrupt closing
@@ -358,70 +359,94 @@ export const Header: React.FC<HeaderProps> = ({
         {isMarketplaceMobileOpen && (
           <div className="marketplace-ref-mobile-drawer">
             <div className="marketplace-ref-mobile-drawer-head">
-              <strong>منوی سایت</strong>
-              <button type="button" onClick={() => setIsMarketplaceMobileOpen(false)}><X className="w-5 h-5" /></button>
+              <strong>{settings.siteTitle?.split('|')[0]?.trim() || 'فروشگاه'}</strong>
+              <button type="button" onClick={() => setIsMarketplaceMobileOpen(false)} aria-label="بستن منو"><X className="w-5 h-5" /></button>
             </div>
 
-            <button
-              type="button"
-              className="marketplace-ref-mobile-category-toggle"
-              onClick={() => setIsMegaMenuOpen(prev => !prev)}
-            >
-              <span>دسته‌بندی قطعات</span>
-              <ChevronDown className={`w-4 h-4 transition-transform ${isMegaMenuOpen ? 'rotate-180' : ''}`} />
-            </button>
+            <div className="marketplace-ref-mobile-tabs" role="tablist" aria-label="منوی موبایل">
+              <button type="button" className={marketplaceMobileTab === 'menu' ? 'active' : ''} onClick={() => setMarketplaceMobileTab('menu')}>
+                <MenuIcon className="w-4 h-4" />
+                <span>منو</span>
+              </button>
+              <button type="button" className={marketplaceMobileTab === 'categories' ? 'active' : ''} onClick={() => setMarketplaceMobileTab('categories')}>
+                <Layers className="w-4 h-4" />
+                <span>دسته‌بندی‌ها</span>
+              </button>
+              <button type="button" className={marketplaceMobileTab === 'vehicle' ? 'active' : ''} onClick={() => setMarketplaceMobileTab('vehicle')}>
+                <Car className="w-4 h-4" />
+                <span>خودرو</span>
+              </button>
+            </div>
 
-            {isMegaMenuOpen && (
-              <div className="marketplace-ref-mobile-categories">
+            {marketplaceMobileTab === 'categories' && (
+              <div className="marketplace-ref-mobile-categories marketplace-ref-mobile-categories-tab">
                 {renderCategoryRows()}
               </div>
             )}
 
-            <div className="marketplace-ref-mobile-links">
-              {topHeaderMenus.filter(item => item.kind !== 'categories').map(item => {
-                const children = menuChildren(item.id);
-                const open = marketplaceOpenMenuId === item.id;
-                return (
-                  <div key={item.id} className="marketplace-ref-mobile-menu-item">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (children.length) setMarketplaceOpenMenuId(open ? null : item.id);
-                        else {
-                          handleMenuClick(item);
-                          setIsMarketplaceMobileOpen(false);
-                        }
-                      }}
-                    >
-                      <span>{item.title}</span>
-                      {children.length > 0 && <ChevronDown className={`w-4 h-4 transition-transform ${open ? 'rotate-180' : ''}`} />}
-                    </button>
-                    {open && children.length > 0 && (
-                      <div className="marketplace-ref-mobile-submenu">
-                        {children.map(child => (
-                          <button
-                            key={child.id}
-                            type="button"
-                            onClick={() => {
-                              handleMenuClick(child);
+            {marketplaceMobileTab === 'menu' && (
+              <>
+                <div className="marketplace-ref-mobile-links">
+                  {topHeaderMenus.filter(item => item.kind !== 'categories').map(item => {
+                    const children = menuChildren(item.id);
+                    const open = marketplaceOpenMenuId === item.id;
+                    return (
+                      <div key={item.id} className="marketplace-ref-mobile-menu-item">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (children.length) setMarketplaceOpenMenuId(open ? null : item.id);
+                            else {
+                              handleMenuClick(item);
                               setIsMarketplaceMobileOpen(false);
-                            }}
-                          >
-                            {child.title}
-                          </button>
-                        ))}
+                            }
+                          }}
+                        >
+                          <span>{item.title}</span>
+                          {children.length > 0 && <ChevronDown className={`w-4 h-4 transition-transform ${open ? 'rotate-180' : ''}`} />}
+                        </button>
+                        {open && children.length > 0 && (
+                          <div className="marketplace-ref-mobile-submenu">
+                            {children.map(child => (
+                              <button
+                                key={child.id}
+                                type="button"
+                                onClick={() => {
+                                  handleMenuClick(child);
+                                  setIsMarketplaceMobileOpen(false);
+                                }}
+                              >
+                                {child.title}
+                              </button>
+                            ))}
+                          </div>
+                        )}
                       </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
+                    );
+                  })}
+                </div>
 
-            <div className="marketplace-ref-mobile-quick">
-              <button type="button" onClick={() => { onOpenVehicleModal(); setIsMarketplaceMobileOpen(false); }}>خودروی من</button>
-              <button type="button" onClick={() => { onNavigate('tracking'); setIsMarketplaceMobileOpen(false); }}>پیگیری سفارش</button>
-              <button type="button" onClick={() => { onNavigate('blog'); setIsMarketplaceMobileOpen(false); }}>مقالات</button>
-            </div>
+                <div className="marketplace-ref-mobile-quick">
+                  <button type="button" onClick={() => { onNavigate('tracking'); setIsMarketplaceMobileOpen(false); }}>پیگیری سفارش</button>
+                  <button type="button" onClick={() => { onNavigate('blog'); setIsMarketplaceMobileOpen(false); }}>مقالات</button>
+                  <button type="button" onClick={() => { currentCustomer ? onNavigate('account') : onOpenAuthModal?.('login'); setIsMarketplaceMobileOpen(false); }}>حساب من</button>
+                </div>
+              </>
+            )}
+
+            {marketplaceMobileTab === 'vehicle' && (
+              <div className="marketplace-ref-mobile-vehicle">
+                <div className="marketplace-ref-mobile-vehicle-icon"><Car className="w-8 h-8" /></div>
+                <h3>{selectedVehicle ? selectedVehicle.modelName : 'خودروی خود را انتخاب کنید'}</h3>
+                <p>{selectedVehicle ? 'فیلتر قطعات سازگار با خودروی شما فعال است.' : 'با انتخاب خودرو فقط قطعات سازگار نمایش داده می‌شوند.'}</p>
+                <button type="button" onClick={() => { onOpenVehicleModal(); setIsMarketplaceMobileOpen(false); }}>
+                  {selectedVehicle ? 'تغییر خودرو' : 'انتخاب خودرو'}
+                </button>
+                <button type="button" className="secondary" onClick={() => { onNavigate('account', 'garage'); setIsMarketplaceMobileOpen(false); }}>
+                  گاراژ من
+                </button>
+              </div>
+            )}
           </div>
         )}
       </header>

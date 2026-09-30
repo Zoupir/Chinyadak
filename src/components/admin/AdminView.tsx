@@ -68,6 +68,11 @@ import { RichTextEditor } from '../common/RichTextEditor';
 import { ImageUploadInput } from '../common/ImageUploadInput';
 import { MultiImageUploadInput } from '../common/MultiImageUploadInput';
 import { AdminEntitySeoPanel } from './AdminEntitySeoPanel';
+import { AdminMegaMenuStudio } from './AdminMegaMenuStudio';
+import { AdminMediaLibrary } from './AdminMediaLibrary';
+import { AdminIconLibrary } from './AdminIconLibrary';
+import { AdminVisualPageBuilder } from './AdminVisualPageBuilder';
+import { AdminCategoryStudio } from './AdminCategoryStudio';
 
 interface AdminViewProps {
   onExitToStore?: () => void;
@@ -117,7 +122,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
 
   // Navigation tab inside Admin
   const [activeTab, setActiveTab] = useState<
-    'overview' | 'cars' | 'products' | 'categories' | 'menus_attrs' | 'footer' | 'pages' | 'articles' | 'sliders' | 'orders' | 'customers' | 'admins' | 'gateways' | 'sandbox' | 'apis' | 'theme' | 'seo' | 'bulk' | 'analytics'
+    'overview' | 'cars' | 'products' | 'categories' | 'menus_attrs' | 'mega_menu' | 'media' | 'icons' | 'footer' | 'pages' | 'articles' | 'sliders' | 'orders' | 'customers' | 'admins' | 'gateways' | 'sandbox' | 'apis' | 'theme' | 'seo' | 'bulk' | 'analytics'
   >('overview');
 
   // Sidebar Layout State
@@ -233,6 +238,9 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
       case 'sliders':
         return permissions.canManageSliders;
       case 'menus_attrs':
+      case 'mega_menu':
+      case 'media':
+      case 'icons':
       case 'footer':
       case 'theme':
       case 'seo':
@@ -636,10 +644,13 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
     {
       groupTitle: 'محتوا و وب‌سایت',
       items: [
-        { id: 'pages', label: 'برگه‌ها و سکشن‌ها (Builder)', icon: LayoutTemplate, count: pages.length },
+        { id: 'pages', label: 'Visual Builder صفحات', icon: LayoutTemplate, count: pages.length },
         { id: 'articles', label: 'مقالات و آموزش‌ها', icon: BookOpen, count: articles.length },
         { id: 'sliders', label: 'اسلایدرها و بنرها', icon: Compass, count: sliders.length },
-        { id: 'menus_attrs', label: 'فهرست‌ها و منوها', icon: Menu },
+        { id: 'menus_attrs', label: 'فهرست اصلی', icon: Menu },
+        { id: 'mega_menu', label: 'Mega Menu Studio', icon: PanelsTopLeft },
+        { id: 'media', label: 'کتابخانه رسانه', icon: ImageIcon },
+        { id: 'icons', label: 'کتابخانه آیکن', icon: Sparkles },
         { id: 'footer', label: 'مدیریت فوتر و اینماد', icon: PanelsTopLeft }
       ]
     },
@@ -1066,74 +1077,9 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
             </div>
           )}
 
-          {/* TAB 4: CATEGORIES */}
+          {/* TAB 4: CATEGORIES — RECURSIVE TREE + TAKRANK SEO */}
           {activeTab === 'categories' && (
-            <div className="bg-white rounded-3xl border border-neutral-200 p-6 sm:p-8 shadow-xs space-y-6">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-neutral-100 gap-4">
-                <div>
-                  <h2 className="text-lg font-black text-neutral-900 flex items-center gap-2">
-                    <Layers className="w-5 h-5 text-red-600" />
-                    <span>دسته‌بندی تخصصی قطعات ({categories.length} دسته‌بندی)</span>
-                  </h2>
-                  <p className="text-xs text-neutral-500 mt-0.5">
-                    تعریف زیردسته‌ها، آیکون‌ها و ساختار تاکسونومی فروشگاه
-                  </p>
-                </div>
-
-                <button
-                  onClick={() => setIsCategoryModalOpen(true)}
-                  className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 self-start shadow-md"
-                >
-                  <Plus className="w-4 h-4" />
-                  <span>افزودن دسته‌بندی جدید</span>
-                </button>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {categories.map(cat => (
-                  <div key={cat.id} className="p-5 rounded-2xl border border-neutral-200 bg-neutral-50/50 space-y-3 hover:border-neutral-300 transition-colors">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        {cat.imageUrl ? (
-                          <img 
-                            src={cat.imageUrl} 
-                            alt={cat.nameFa} 
-                            className="w-12 h-12 rounded-xl object-cover border border-neutral-200 bg-white shrink-0" 
-                          />
-                        ) : (
-                          <div className="w-12 h-12 rounded-xl bg-red-100 text-red-600 flex items-center justify-center font-bold shrink-0">
-                            <Layers className="w-6 h-6" />
-                          </div>
-                        )}
-                        <div>
-                          <h3 className="font-bold text-sm text-neutral-900">{cat.nameFa}</h3>
-                          <span className="text-[10px] text-neutral-400 font-mono">{cat.nameEn} ({cat.slug})</span>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-1">
-                        <button
-                          onClick={() => setEditingCategory(cat)}
-                          className="p-1.5 text-neutral-500 hover:text-blue-600 rounded-lg hover:bg-blue-50 transition-colors"
-                          title="ویرایش دسته‌بندی و عکس"
-                        >
-                          <Edit3 className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => deleteCategory(cat.id)}
-                          className="p-1.5 text-neutral-400 hover:text-red-600 rounded-lg hover:bg-red-50 transition-colors"
-                          title="حذف دسته‌بندی"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </div>
-
-                    <p className="text-xs text-neutral-500">{cat.description}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
+            <AdminCategoryStudio />
           )}
 
           {/* TAB 5: MENUS AND ATTRIBUTES */}
@@ -1141,14 +1087,26 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
             <AdminMenusAndAttributes />
           )}
 
+          {activeTab === 'mega_menu' && (
+            <AdminMegaMenuStudio />
+          )}
+
+          {activeTab === 'media' && (
+            <AdminMediaLibrary />
+          )}
+
+          {activeTab === 'icons' && (
+            <AdminIconLibrary />
+          )}
+
           {/* TAB: FOOTER BUILDER & ENAMAD */}
           {activeTab === 'footer' && (
             <AdminFooterTab />
           )}
 
-          {/* TAB: PAGES & SECTION BUILDER */}
+          {/* TAB: VISUAL PAGE BUILDER */}
           {activeTab === 'pages' && (
-            <AdminPagesTab onNavigate={(view, param) => {
+            <AdminVisualPageBuilder onNavigate={(view, param) => {
               if (onExitToStore) onExitToStore();
               if (onNavigate) onNavigate(view, param);
             }} />

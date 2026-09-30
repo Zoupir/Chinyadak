@@ -108,7 +108,11 @@ export const PageView: React.FC<PageViewProps> = ({ pageSlug, onNavigate }) => {
       maxWidth: section.fullWidth || section.maxWidthPx === 0 ? 'none' : `${Number(section.maxWidthPx || 1280)}px`,
       marginInline: 'auto',
       ['--builder-cols' as any]: String(section.desktopColumns || 3),
+      ['--builder-tablet-cols' as any]: String(section.tabletColumns || Math.min(section.desktopColumns || 3, 2)),
       ['--builder-mobile-cols' as any]: String(section.mobileColumns || 1),
+      ['--builder-width' as any]: section.fullWidth ? '100%' : `${Math.max(20, Math.min(100, Number(section.widthPercent ?? 100)))}%`,
+      ['--builder-tablet-width' as any]: section.fullWidth ? '100%' : `${Math.max(20, Math.min(100, Number(section.tabletWidthPercent ?? section.widthPercent ?? 100)))}%`,
+      ['--builder-mobile-width' as any]: section.fullWidth ? '100%' : `${Math.max(20, Math.min(100, Number(section.mobileWidthPercent ?? section.widthPercent ?? 100)))}%`,
       ['--builder-gap' as any]: `${section.gapPx ?? 16}px`,
       ['--builder-item-radius' as any]: `${section.itemRadiusPx ?? 10}px`,
       ['--builder-image-size' as any]: `${section.imageSizePx ?? 72}px`,
@@ -287,7 +291,7 @@ export const PageView: React.FC<PageViewProps> = ({ pageSlug, onNavigate }) => {
                 return (
                   <div
                     key={section.id}
-                    className={`relative group rounded-3xl overflow-hidden shadow-xl border transition-all ${
+                    className={`builder-responsive-section relative group rounded-3xl overflow-hidden shadow-xl border transition-all ${
                       isLiveEditActive 
                         ? 'border-amber-400 ring-2 ring-amber-400/30' 
                         : 'border-neutral-800'
@@ -368,7 +372,7 @@ export const PageView: React.FC<PageViewProps> = ({ pageSlug, onNavigate }) => {
                 return (
                   <div 
                     key={section.id} 
-                    className={`relative group bg-white rounded-3xl overflow-hidden border transition-all ${
+                    className={`builder-responsive-section relative group bg-white rounded-3xl overflow-hidden border transition-all ${
                       isLiveEditActive 
                         ? 'border-amber-400/80 shadow-md ring-2 ring-amber-400/20' 
                         : 'border-neutral-200/80 shadow-xs hover:shadow-md'
@@ -452,7 +456,7 @@ export const PageView: React.FC<PageViewProps> = ({ pageSlug, onNavigate }) => {
               return (
                 <div 
                   key={section.id} 
-                  className={`relative group bg-white rounded-3xl border transition-all ${
+                  className={`builder-responsive-section relative group bg-white rounded-3xl border transition-all ${
                     isLiveEditActive 
                       ? 'border-amber-400/80 shadow-md ring-2 ring-amber-400/20' 
                       : 'border-neutral-200/80 shadow-xs hover:shadow-md'

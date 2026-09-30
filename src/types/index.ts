@@ -668,6 +668,14 @@ export interface PageSectionItem {
   buttonText?: string;
   isVisible?: boolean;
   order: number;
+  /** Optional free-position layout for visual banner composition. */
+  responsiveLayout?: {
+    desktop?: SliderDeviceLayout;
+    tablet?: SliderDeviceLayout;
+    mobile?: SliderDeviceLayout;
+  };
+  inheritTabletFromDesktop?: boolean;
+  inheritMobileFromDesktop?: boolean;
 }
 
 export interface PageSection {

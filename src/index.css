@@ -6598,3 +6598,25 @@ html[data-layout="marketplace-rtl"] .marketplace-rtl-home.is-live-editing [data-
   .shop-category-vehicle-card { min-width:0; width:100%; }
   .shop-category-seo-content { padding:18px; border-radius:14px; }
 }
+
+
+/* GENERIC VISUAL BUILDER RESPONSIVE WIDTHS */
+.builder-responsive-section {
+  width: var(--builder-width, 100%) !important;
+}
+@media (min-width: 768px) and (max-width: 1279px) {
+  .builder-responsive-section {
+    width: var(--builder-tablet-width, var(--builder-width, 100%)) !important;
+  }
+  .builder-responsive-section .builder-section-grid {
+    grid-template-columns: repeat(var(--builder-tablet-cols, 2), minmax(0,1fr)) !important;
+  }
+}
+@media (max-width: 767px) {
+  .builder-responsive-section {
+    width: var(--builder-mobile-width, var(--builder-width, 100%)) !important;
+  }
+  .builder-responsive-section .builder-section-grid {
+    grid-template-columns: repeat(var(--builder-mobile-cols, 1), minmax(0,1fr)) !important;
+  }
+}

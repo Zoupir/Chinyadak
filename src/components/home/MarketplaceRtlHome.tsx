@@ -434,6 +434,7 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
               {item.imageUrl ? (
                 <span className="marketplace-parts-brand-logo has-image">
                   <img src={item.imageUrl} alt={item.title} />
+                  <strong>{item.title}</strong>
                 </span>
               ) : (
                 <span className="marketplace-parts-brand-copy no-image">

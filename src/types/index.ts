@@ -367,6 +367,7 @@ export type HeaderMenuKind =
   | 'brands'
   | 'category'
   | 'brand'
+  | 'model'
   | 'page'
   | 'product'
   | 'article'
@@ -380,6 +381,7 @@ export type MenuSourceType =
   | 'category'
   | 'article'
   | 'brand'
+  | 'model'
   | 'custom';
 
 export interface MenuMegaConfig {

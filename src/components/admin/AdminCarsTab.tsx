@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useStore } from '../../context/StoreContext';
 import { CarBrand, VehicleModel } from '../../types';
 import { ImageUploadInput } from '../common/ImageUploadInput';
+import { AdminEntitySeoPanel } from './AdminEntitySeoPanel';
 import { 
   Car, 
   Plus, 
@@ -48,7 +49,9 @@ export const AdminCarsTab: React.FC = () => {
     officialRepresentative: '',
     logo: 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?w=200&auto=format&fit=crop&q=80',
     heroImage: 'https://images.unsplash.com/photo-1617814076367-b759c7d7e738?w=1200&auto=format&fit=crop&q=80',
-    description: ''
+    description: '',
+    bottomDescription: '',
+    seo: undefined
   });
 
   const [isModelModalOpen, setIsModelModalOpen] = useState(false);
@@ -101,7 +104,9 @@ export const AdminCarsTab: React.FC = () => {
       officialRepresentative: 'کرمان موتور / مدیران خودرو',
       logo: 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?w=200&auto=format&fit=crop&q=80',
       heroImage: 'https://images.unsplash.com/photo-1617814076367-b759c7d7e738?w=1200&auto=format&fit=crop&q=80',
-      description: 'شرکت خودروسازی معتبر و فعال در بازار ایران'
+      description: 'شرکت خودروسازی معتبر و فعال در بازار ایران',
+      bottomDescription: '',
+      seo: undefined
     });
     setIsBrandModalOpen(true);
   };
@@ -133,6 +138,8 @@ export const AdminCarsTab: React.FC = () => {
         logo: brandForm.logo || 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?w=200&auto=format&fit=crop&q=80',
         heroImage: brandForm.heroImage || 'https://images.unsplash.com/photo-1617814076367-b759c7d7e738?w=1200&auto=format&fit=crop&q=80',
         description: brandForm.description || '',
+        bottomDescription: brandForm.bottomDescription || '',
+        seo: brandForm.seo,
         country: brandForm.country || 'چین',
         foundedYear: Number(brandForm.foundedYear) || 2000,
         officialRepresentative: brandForm.officialRepresentative || '',
@@ -477,7 +484,7 @@ export const AdminCarsTab: React.FC = () => {
       {/* ================= MODAL: ADD / EDIT BRAND ================= */}
       {isBrandModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white rounded-3xl border border-neutral-200 max-w-xl w-full p-6 shadow-2xl space-y-5">
+          <div className="bg-white rounded-3xl border border-neutral-200 max-w-4xl w-full p-6 shadow-2xl space-y-5 my-8">
             <div className="flex items-center justify-between border-b border-neutral-100 pb-3">
               <h3 className="font-black text-base text-neutral-900 flex items-center gap-2">
                 <Building2 className="w-5 h-5 text-red-600" />
@@ -551,16 +558,46 @@ export const AdminCarsTab: React.FC = () => {
                 helperText="لوگوی بارگذاری‌شده در منوها، صفحه برند و هدر فروشگاه نمایش داده می‌شود."
               />
 
+              <ImageUploadInput
+                label="تصویر Hero صفحه برند:"
+                value={brandForm.heroImage || ''}
+                onChange={url => setBrandForm({ ...brandForm, heroImage: url })}
+                presetCategory="banners"
+                aspectRatio="banner"
+                placeholder="تصویر عریض برند..."
+                helperText="در بالای صفحه برند، پشت عنوان و معرفی برند نمایش داده می‌شود."
+              />
+
               <div>
-                <label className="block text-neutral-700 font-bold mb-1">توضیحات و معرفی برند:</label>
+                <label className="block text-neutral-700 font-bold mb-1">توضیح کوتاه بالای صفحه برند:</label>
                 <textarea
                   rows={3}
-                  value={brandForm.description}
+                  value={brandForm.description || ''}
                   onChange={e => setBrandForm({ ...brandForm, description: e.target.value })}
-                  placeholder="تاریخچه و اطلاعات مربوط به قطعات یدکی این برند در ایران..."
+                  placeholder="معرفی کوتاه برند و قطعات آن..."
                   className="w-full p-2.5 border border-neutral-300 rounded-xl"
                 />
               </div>
+
+              <div>
+                <label className="block text-neutral-700 font-bold mb-1">محتوای کامل پایین صفحه برند:</label>
+                <textarea
+                  rows={6}
+                  value={brandForm.bottomDescription || ''}
+                  onChange={e => setBrandForm({ ...brandForm, bottomDescription: e.target.value })}
+                  placeholder="راهنمای خرید، توضیحات تخصصی و محتوای سئویی که بعد از محصولات نمایش داده می‌شود..."
+                  className="w-full p-2.5 border border-neutral-300 rounded-xl"
+                />
+              </div>
+
+              <AdminEntitySeoPanel
+                entityType="brand"
+                entityId={editingBrand?.id}
+                entityTitle={brandForm.nameFa || 'برند خودرو'}
+                value={brandForm.seo}
+                images={[brandForm.logo || '', brandForm.heroImage || ''].filter(Boolean)}
+                onChange={seo => setBrandForm({ ...brandForm, seo })}
+              />
 
               <div className="flex gap-2 pt-2">
                 <button

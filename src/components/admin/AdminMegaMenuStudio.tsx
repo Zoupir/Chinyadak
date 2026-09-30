@@ -64,16 +64,23 @@ export const AdminMegaMenuStudio: React.FC = () => {
   const activeRoot = menus.find(item => item.id === activeRootId);
 
   const sourceOptions = useMemo<SourceOption[]>(() => {
-    const cat: SourceOption[] = categories.flatMap(category => [
-      {
-        key:`category:${category.id}`, sourceType:'category', sourceId:category.id, title:category.nameFa,
-        subtitle:'دسته اصلی', link:`category:${category.slug}`, kind:'category'
-      },
-      ...(category.subcategories || []).map(sub => ({
-        key:`category:sub:${sub.id}`, sourceType:'category' as const, sourceId:`sub:${sub.id}`, title:sub.nameFa,
-        subtitle:`زیرمجموعه ${category.nameFa}`, link:`category:${sub.slug}`, kind:'category' as const
-      }))
-    ]);
+    const cat: SourceOption[] = [];
+    const appendCategorySources=(nodes:any[]=[],trail:string[]=[])=>{
+      nodes.forEach(node=>{
+        cat.push({
+          key:`category:sub:${node.id}`,sourceType:'category',sourceId:`sub:${node.id}`,title:node.nameFa,
+          subtitle:trail.join(' ← '),link:`category:${node.slug}`,kind:'category'
+        });
+        appendCategorySources(node.subcategories||[],[...trail,node.nameFa]);
+      });
+    };
+    categories.forEach(category=>{
+      cat.push({
+        key:`category:${category.id}`,sourceType:'category',sourceId:category.id,title:category.nameFa,
+        subtitle:'دسته اصلی',link:`category:${category.slug}`,kind:'category'
+      });
+      appendCategorySources(category.subcategories||[],[category.nameFa]);
+    });
     const prod: SourceOption[] = products.map(product => ({
       key:`product:${product.id}`, sourceType:'product', sourceId:product.id, title:product.nameFa,
       subtitle:[product.oemNumber,product.sku].filter(Boolean).join(' • '), link:`product:${product.slug || product.id}`, kind:'product'

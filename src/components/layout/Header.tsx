@@ -29,6 +29,7 @@ import {
 } from 'lucide-react';
 import { formatToman } from '../../utils/formatters';
 import { ShareButton } from '../common/ShareButton';
+import { IconRenderer } from '../common/IconRenderer';
 import { MenuItem } from '../../types';
 
 interface HeaderProps {

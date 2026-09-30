@@ -364,20 +364,27 @@ export const AdminMenuBuilder: React.FC = () => {
 
   const syncBoundTitles = () => {
     const next = menus.map(item => {
-      if (!item.sourceType || !item.sourceId || item.sourceType === 'custom') return item;
-      const source = sourceMap.get(`${item.sourceType}:${item.sourceId}`);
+      if (item.sourceType === 'custom') return item;
+
+      const source = item.sourceType && item.sourceId
+        ? sourceMap.get(`${item.sourceType}:${item.sourceId}`)
+        : allLibraryOptions.find(option => option.link === item.link);
+
       if (!source) return item;
-      const wasUnedited = !item.originalTitle || item.title === item.originalTitle;
+
+      const wasUnedited = !item.originalTitle || item.title === item.originalTitle || !item.sourceType;
       return {
         ...item,
         title: wasUnedited ? source.title : item.title,
         originalTitle: source.title,
         link: source.link,
-        kind: source.kind
+        kind: source.kind,
+        sourceType: source.sourceType,
+        sourceId: source.sourceId
       };
     });
     markChanged(next);
-    showToast('لینک‌ها و عنوان‌های ویرایش‌نشده با محتوای سایت همگام شدند.');
+    showToast('آیتم‌های قدیمی هم به محتوای واقعی سایت متصل و لینک‌ها همگام شدند.');
   };
 
   const resetToSaved = () => {

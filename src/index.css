@@ -6358,3 +6358,243 @@ html[data-layout="marketplace-rtl"] .marketplace-ref-category-all {
     grid-template-columns: 1fr !important;
   }
 }
+
+
+/* ADMIN UX + LIVE BUILDER FINAL PASS */
+/* Site logo must remain transparent on every responsive breakpoint. */
+html[data-layout="marketplace-rtl"] .marketplace-ref-logo,
+html[data-layout="marketplace-rtl"] .marketplace-ref-logo:hover,
+html[data-layout="marketplace-rtl"] .marketplace-ref-logo:focus {
+  background: transparent !important;
+  box-shadow: none !important;
+  border: 0 !important;
+  padding: 0 !important;
+}
+
+/* Homepage live editor. */
+html[data-layout="marketplace-rtl"] .marketplace-rtl-home.is-live-editing [data-section-key] {
+  position: relative;
+  outline: 1px dashed rgba(37, 99, 235, .55) !important;
+  outline-offset: -2px;
+  cursor: pointer !important;
+}
+html[data-layout="marketplace-rtl"] .marketplace-rtl-home.is-live-editing [data-section-key]::after {
+  content: "ویرایش سکشن";
+  position: absolute;
+  z-index: 80;
+  top: 5px;
+  left: 5px;
+  padding: 4px 7px;
+  border-radius: 4px;
+  background: #2563eb;
+  color: white;
+  font-size: 8px;
+  font-weight: 900;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .15s ease;
+}
+html[data-layout="marketplace-rtl"] .marketplace-rtl-home.is-live-editing [data-section-key]:hover {
+  outline: 2px solid #2563eb !important;
+}
+html[data-layout="marketplace-rtl"] .marketplace-rtl-home.is-live-editing [data-section-key]:hover::after {
+  opacity: 1;
+}
+.marketplace-live-edit-toolbar {
+  position: fixed;
+  z-index: 145;
+  right: 50%;
+  top: 76px;
+  transform: translateX(50%);
+  min-width: min(520px, calc(100vw - 24px));
+  padding: 8px 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border-radius: 10px;
+  background: #111827;
+  color: #fff;
+  box-shadow: 0 8px 28px rgba(15,23,42,.28);
+  font-size: 10px;
+  font-weight: 850;
+}
+.marketplace-live-edit-toolbar button {
+  padding: 6px 9px;
+  border-radius: 7px;
+  background: #f59e0b;
+  color: #111827;
+  font-size: 9px;
+  font-weight: 950;
+}
+
+/* Responsive width values coming from the visual builder. */
+@media (min-width: 768px) and (max-width: 1279px) {
+  html[data-layout="marketplace-rtl"] .marketplace-rtl-home [data-section-key] {
+    width: var(--builder-tablet-width, var(--builder-width, 100%)) !important;
+  }
+  html[data-layout="marketplace-rtl"] .marketplace-rtl-home .builder-section-grid {
+    grid-template-columns: repeat(var(--builder-tablet-cols, 2), minmax(0,1fr));
+  }
+}
+@media (max-width: 767px) {
+  html[data-layout="marketplace-rtl"] .marketplace-rtl-home [data-section-key] {
+    width: var(--builder-mobile-width, var(--builder-width, 100%)) !important;
+  }
+}
+
+/* Rich category landing page. */
+.shop-category-hero {
+  min-height: 190px;
+  padding: 28px 30px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  border-radius: 18px;
+  background: linear-gradient(115deg,#f8fafc,#eef2f7);
+}
+.shop-category-hero.has-image {
+  min-height: 280px;
+  color: #fff;
+  border-color: transparent;
+}
+.shop-category-hero-content {
+  position: relative;
+  z-index: 2;
+  max-width: 720px;
+}
+.shop-category-kicker {
+  display: inline-flex;
+  padding: 4px 8px;
+  border-radius: 5px;
+  background: #f59e0b;
+  color: #111827;
+  font-size: 9px;
+  font-weight: 950;
+}
+.shop-category-hero h1 {
+  margin-top: 10px;
+  font-size: clamp(24px,3vw,40px);
+  line-height: 1.25;
+  font-weight: 950;
+}
+.shop-category-hero p {
+  margin-top: 8px;
+  max-width: 680px;
+  font-size: 11px;
+  line-height: 2;
+  opacity: .84;
+}
+.shop-category-hero-meta {
+  margin-top: 12px;
+  display: flex;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+.shop-category-hero-meta span {
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: rgba(255,255,255,.15);
+  backdrop-filter: blur(8px);
+  font-size: 9px;
+  font-weight: 800;
+}
+.shop-category-vehicle-card {
+  position: relative;
+  z-index: 2;
+  min-width: 250px;
+  padding: 12px;
+  display: grid;
+  grid-template-columns: 34px 1fr auto;
+  align-items: center;
+  gap: 9px;
+  border-radius: 12px;
+  background: rgba(255,255,255,.95);
+  color: #111827;
+  box-shadow: 0 8px 25px rgba(15,23,42,.10);
+}
+.shop-category-vehicle-card small,
+.shop-category-vehicle-card strong {
+  display: block;
+}
+.shop-category-vehicle-card small { color:#8a949f; font-size:8px; }
+.shop-category-vehicle-card strong { margin-top:2px; font-size:10px; }
+.shop-category-vehicle-card button {
+  padding: 7px 9px;
+  border-radius: 7px;
+  background:#111827;
+  color:#fff;
+  font-size:8px;
+  font-weight:900;
+}
+.shop-category-children {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.shop-category-children button {
+  min-height: 39px;
+  padding: 6px 10px;
+  display:flex;
+  align-items:center;
+  gap:6px;
+  border:1px solid #e5e7eb;
+  border-radius:10px;
+  background:#fff;
+  color:#4b5563;
+  font-size:10px;
+  font-weight:800;
+}
+.shop-category-children button.active,
+.shop-category-children button:hover {
+  border-color:#111827;
+  color:#111827;
+}
+.shop-category-children img {
+  width:24px;height:24px;object-fit:contain;
+}
+.shop-category-seo-content {
+  margin-top: 12px;
+  padding: 28px;
+  border:1px solid #e5e7eb;
+  border-radius:20px;
+  background:#fff;
+}
+.shop-category-seo-heading {
+  display:flex;
+  align-items:center;
+  gap:8px;
+  margin-bottom:14px;
+}
+.shop-category-seo-heading h2 {
+  font-size:17px;
+  font-weight:950;
+}
+.shop-category-seo-body {
+  color:#5d6671;
+  font-size:12px;
+  line-height:2.2;
+}
+.brand-detail-logo {
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+@media (max-width: 767px) {
+  .marketplace-live-edit-toolbar {
+    top: 104px;
+    min-width: calc(100vw - 18px);
+  }
+  .shop-category-hero {
+    min-height: 0;
+    padding: 22px 18px;
+    align-items: stretch;
+    flex-direction: column;
+    border-radius: 14px;
+  }
+  .shop-category-hero.has-image { min-height: 360px; justify-content:flex-end; }
+  .shop-category-hero h1 { font-size:26px; }
+  .shop-category-vehicle-card { min-width:0; width:100%; }
+  .shop-category-seo-content { padding:18px; border-radius:14px; }
+}

@@ -432,6 +432,10 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
           buttonText: 'مشاهده محصولات',
           link: activeSlides[index]?.link || 'shop',
           imageUrl: promoImage(index),
+          badge: undefined,
+          responsiveLayout: undefined,
+          inheritTabletFromDesktop: true,
+          inheritMobileFromDesktop: true,
           order: index + 1
         }))).map((item, index) => (
           <button
@@ -579,6 +583,10 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
           buttonText: 'خرید کنید',
           link: activeSlides[index]?.link || 'shop',
           imageUrl: promoImage(index),
+          badge: undefined,
+          responsiveLayout: undefined,
+          inheritTabletFromDesktop: true,
+          inheritMobileFromDesktop: true,
           order: index
         }))).map((item, index) => (
           <button

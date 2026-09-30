@@ -31,6 +31,7 @@ import { formatToman } from '../../utils/formatters';
 import { ShareButton } from '../common/ShareButton';
 import { IconRenderer } from '../common/IconRenderer';
 import { MenuItem } from '../../types';
+import { parseRoutePath } from '../../utils/navigation';
 
 interface HeaderProps {
   onOpenVehicleModal: () => void;
@@ -109,18 +110,76 @@ export const Header: React.FC<HeaderProps> = ({
   }, []);
 
   const handleMenuClick = (item: { link: string; openInNewTab?: boolean }) => {
-    const link = String(item.link || '');
-    if (!link) return;
-    if (link.startsWith('http://') || link.startsWith('https://')) {
-      window.open(link, item.openInNewTab === false ? '_self' : '_blank', 'noopener,noreferrer');
+    const raw = String(item.link || '').trim();
+    if (!raw) return;
+
+    const closeMenus = () => {
+      setIsMegaMenuOpen(false);
+      setIsBrandsMenuOpen(false);
+      setIsMarketplaceMobileOpen(false);
+      setMarketplaceOpenMenuId(null);
+      setMarketplaceMobileOpenIds(new Set());
+    };
+
+    if (/^(?:https?:)?\/\//i.test(raw)) {
+      window.open(raw, item.openInNewTab === false ? '_self' : '_blank', 'noopener,noreferrer');
+      closeMenus();
       return;
     }
-    if (link.includes(':')) {
-      const [view, ...rest] = link.split(':');
-      onNavigate(view, rest.join(':'));
-    } else {
-      onNavigate(link);
+
+    if (/^(?:tel:|mailto:)/i.test(raw)) {
+      window.location.href = raw;
+      closeMenus();
+      return;
     }
+
+    if (item.openInNewTab) {
+      const route = raw.startsWith('/')
+        ? parseRoutePath(raw)
+        : (() => {
+            const [candidate, ...rest] = raw.split(':');
+            const aliases: Record<string, string> = {
+              brand: 'car-brand',
+              model: 'car-model',
+              categories: 'category'
+            };
+            return { view: aliases[candidate] || candidate || 'home', param: rest.join(':') || undefined };
+          })();
+      const target = route.param
+        ? `/${route.view === 'car-brand' ? 'brand' : route.view === 'car-model' ? 'car-model' : route.view}/${encodeURIComponent(route.param)}`
+        : route.view === 'home' ? '/' : `/${route.view}`;
+      window.open(target, '_blank', 'noopener,noreferrer');
+      closeMenus();
+      return;
+    }
+
+    if (raw.startsWith('/')) {
+      const route = parseRoutePath(raw);
+      onNavigate(route.view, route.param);
+      closeMenus();
+      return;
+    }
+
+    if (raw.includes(':')) {
+      const [candidate, ...rest] = raw.split(':');
+      const aliases: Record<string, string> = {
+        brand: 'car-brand',
+        model: 'car-model',
+        categories: 'category'
+      };
+      onNavigate(aliases[candidate] || candidate, rest.join(':') || undefined);
+      closeMenus();
+      return;
+    }
+
+    const normalized = raw.replace(/^#\/?/, '').replace(/^\/+/, '');
+    if (normalized.includes('/')) {
+      const route = parseRoutePath('/' + normalized);
+      onNavigate(route.view, route.param);
+    } else {
+      onNavigate(normalized || 'home');
+    }
+    closeMenus();
   };
 
   const fallbackHeaderMenus: MenuItem[] = [

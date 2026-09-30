@@ -146,24 +146,100 @@ export const Header: React.FC<HeaderProps> = ({
   const categoriesRoot = topHeaderMenus.find(item => item.kind === 'categories');
   const editableCategoryChildren = categoriesRoot ? menuChildren(categoriesRoot.id) : [];
 
+  const renderGenericMegaMenu = (root: MenuItem) => {
+    const children = menuChildren(root.id);
+    if (!children.length) return null;
+    const columns = Math.max(2, Math.min(6, Number(root.megaMenu?.columns || 4)));
+    return (
+      <div className={`marketplace-ref-generic-mega ${root.megaMenu?.width === 'full' ? 'is-full' : 'is-boxed'}`}>
+        <div className="marketplace-ref-generic-mega-inner" style={{ ['--mega-cols' as any]: String(columns) }}>
+          <div className="marketplace-ref-generic-mega-grid">
+            {children.map(child => {
+              const grandchildren = menuChildren(child.id);
+              return (
+                <div key={child.id} className="marketplace-ref-generic-mega-column">
+                  <button type="button" className="marketplace-ref-generic-mega-title" onClick={() => handleMenuClick(child)}>
+                    <span>{child.title}</span>
+                    {child.badge && <small>{child.badge}</small>}
+                  </button>
+                  {grandchildren.map(grandchild => (
+                    <button key={grandchild.id} type="button" className="marketplace-ref-generic-mega-link" onClick={() => handleMenuClick(grandchild)}>
+                      <span>{grandchild.title}</span>
+                      {grandchild.badge && <small>{grandchild.badge}</small>}
+                    </button>
+                  ))}
+                </div>
+              );
+            })}
+          </div>
+
+          {root.megaMenu?.bannerImageUrl && (
+            <button
+              type="button"
+              className="marketplace-ref-generic-mega-banner"
+              onClick={() => root.megaMenu?.bannerLink && handleMenuClick({ link: root.megaMenu.bannerLink })}
+            >
+              <img src={root.megaMenu.bannerImageUrl} alt={root.megaMenu.bannerTitle || root.title} />
+              {root.megaMenu.bannerTitle && <strong>{root.megaMenu.bannerTitle}</strong>}
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   if (settings.layoutPreset === 'marketplace-rtl') {
     const renderCategoryRows = () => {
       if (editableCategoryChildren.length > 0) {
-        return editableCategoryChildren.map(item => (
-          <button
-            key={item.id}
-            type="button"
-            className="marketplace-ref-category-link"
-            onClick={() => {
-              handleMenuClick(item);
-              setIsMegaMenuOpen(false);
-              setIsMarketplaceMobileOpen(false);
-            }}
-          >
-            <span>{item.title}</span>
-            {item.badge && <small>{item.badge}</small>}
-          </button>
-        ));
+        return editableCategoryChildren.map(item => {
+          const nested = menuChildren(item.id);
+          if (!nested.length) {
+            return (
+              <button
+                key={item.id}
+                type="button"
+                className="marketplace-ref-category-link"
+                onClick={() => {
+                  handleMenuClick(item);
+                  setIsMegaMenuOpen(false);
+                  setIsMarketplaceMobileOpen(false);
+                }}
+              >
+                <span>{item.title}</span>
+                {item.badge && <small>{item.badge}</small>}
+              </button>
+            );
+          }
+          return (
+            <div key={item.id} className="marketplace-ref-category-column">
+              <button
+                type="button"
+                className="marketplace-ref-category-title"
+                onClick={() => {
+                  handleMenuClick(item);
+                  setIsMegaMenuOpen(false);
+                  setIsMarketplaceMobileOpen(false);
+                }}
+              >
+                {item.title}
+              </button>
+              {nested.map(sub => (
+                <button
+                  key={sub.id}
+                  type="button"
+                  className="marketplace-ref-category-sub"
+                  onClick={() => {
+                    handleMenuClick(sub);
+                    setIsMegaMenuOpen(false);
+                    setIsMarketplaceMobileOpen(false);
+                  }}
+                >
+                  {sub.title}
+                </button>
+              ))}
+            </div>
+          );
+        });
       }
 
       return categories.slice(0, 12).map(category => (
@@ -315,14 +391,32 @@ export const Header: React.FC<HeaderProps> = ({
                         {item.badge && <small>{item.badge}</small>}
                       </button>
                       {children.length > 0 && marketplaceOpenMenuId === item.id && (
-                        <div className="marketplace-ref-submenu">
-                          {children.map(child => (
-                            <button key={child.id} type="button" onClick={() => handleMenuClick(child)}>
-                              <span>{child.title}</span>
-                              {child.badge && <small>{child.badge}</small>}
-                            </button>
-                          ))}
-                        </div>
+                        item.megaMenu?.enabled
+                          ? renderGenericMegaMenu(item)
+                          : (
+                            <div className="marketplace-ref-submenu">
+                              {children.map(child => {
+                                const nested = menuChildren(child.id);
+                                return (
+                                  <div key={child.id} className="marketplace-ref-submenu-group">
+                                    <button type="button" onClick={() => handleMenuClick(child)}>
+                                      <span>{child.title}</span>
+                                      {child.badge && <small>{child.badge}</small>}
+                                    </button>
+                                    {nested.length > 0 && (
+                                      <div className="marketplace-ref-submenu-nested">
+                                        {nested.map(grandchild => (
+                                          <button key={grandchild.id} type="button" onClick={() => handleMenuClick(grandchild)}>
+                                            {grandchild.title}
+                                          </button>
+                                        ))}
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )
                       )}
                     </div>
                   );
@@ -407,18 +501,38 @@ export const Header: React.FC<HeaderProps> = ({
                         </button>
                         {open && children.length > 0 && (
                           <div className="marketplace-ref-mobile-submenu">
-                            {children.map(child => (
-                              <button
-                                key={child.id}
-                                type="button"
-                                onClick={() => {
-                                  handleMenuClick(child);
-                                  setIsMarketplaceMobileOpen(false);
-                                }}
-                              >
-                                {child.title}
-                              </button>
-                            ))}
+                            {children.map(child => {
+                              const nested = menuChildren(child.id);
+                              return (
+                                <div key={child.id} className="marketplace-ref-mobile-submenu-group">
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      handleMenuClick(child);
+                                      setIsMarketplaceMobileOpen(false);
+                                    }}
+                                  >
+                                    {child.title}
+                                  </button>
+                                  {nested.length > 0 && (
+                                    <div className="marketplace-ref-mobile-submenu-nested">
+                                      {nested.map(grandchild => (
+                                        <button
+                                          key={grandchild.id}
+                                          type="button"
+                                          onClick={() => {
+                                            handleMenuClick(grandchild);
+                                            setIsMarketplaceMobileOpen(false);
+                                          }}
+                                        >
+                                          {grandchild.title}
+                                        </button>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
                           </div>
                         )}
                       </div>

@@ -368,6 +368,8 @@ export type HeaderMenuKind =
   | 'category'
   | 'brand'
   | 'page'
+  | 'product'
+  | 'article'
   | 'system'
   | 'custom';
 

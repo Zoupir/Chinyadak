@@ -1,0 +1,307 @@
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import {
+  Check,
+  FileImage,
+  Folder,
+  FolderOpen,
+  Loader2,
+  Search,
+  Upload,
+  X
+} from 'lucide-react';
+import {
+  listMediaLibrary,
+  MediaLibraryItem,
+  MediaUploadError,
+  uploadImage
+} from '../../api/media';
+
+interface MediaPickerModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSelect: (url: string, item?: MediaLibraryItem) => void;
+  category?: string;
+  title?: string;
+  allowUrl?: boolean;
+}
+
+type Tab = 'library' | 'upload' | 'url';
+
+export const MediaPickerModal: React.FC<MediaPickerModalProps> = ({
+  isOpen,
+  onClose,
+  onSelect,
+  category = 'general',
+  title = 'انتخاب رسانه',
+  allowUrl = true
+}) => {
+  const [tab, setTab] = useState<Tab>('library');
+  const [items, setItems] = useState<MediaLibraryItem[]>([]);
+  const [categories, setCategories] = useState<string[]>([]);
+  const [years, setYears] = useState<string[]>([]);
+  const [months, setMonths] = useState<string[]>([]);
+  const [filterCategory, setFilterCategory] = useState('all');
+  const [filterYear, setFilterYear] = useState('all');
+  const [filterMonth, setFilterMonth] = useState('all');
+  const [query, setQuery] = useState('');
+  const [selected, setSelected] = useState<MediaLibraryItem | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState('');
+  const [directUrl, setDirectUrl] = useState('');
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const load = async () => {
+    setLoading(true);
+    try {
+      const result = await listMediaLibrary({
+        category: filterCategory,
+        year: filterYear,
+        month: filterMonth,
+        limit: 1200
+      });
+      setItems(result.items || []);
+      setCategories(result.categories || []);
+      setYears(result.years || []);
+      setMonths(result.months || []);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!isOpen) return;
+    void load();
+  }, [isOpen, filterCategory, filterYear, filterMonth]);
+
+  useEffect(() => {
+    if (!isOpen) {
+      setSelected(null);
+      setQuery('');
+      setUploadError('');
+      setDirectUrl('');
+    }
+  }, [isOpen]);
+
+  const visible = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return items;
+    return items.filter(item =>
+      item.filename.toLowerCase().includes(q) ||
+      item.category.toLowerCase().includes(q) ||
+      item.seo?.alt?.toLowerCase().includes(q) ||
+      item.seo?.title?.toLowerCase().includes(q)
+    );
+  }, [items, query]);
+
+  const uploadFiles = async (files: FileList | File[]) => {
+    const list = Array.from(files);
+    if (!list.length) return;
+    setUploading(true);
+    setUploadError('');
+    let lastUrl = '';
+    try {
+      for (const file of list) {
+        const uploaded = await uploadImage(file, category);
+        lastUrl = uploaded.url;
+      }
+      setFilterCategory(category);
+      setFilterYear('all');
+      setFilterMonth('all');
+      setTab('library');
+      await load();
+      if (list.length === 1 && lastUrl) {
+        const refreshed = await listMediaLibrary({ category, limit: 1200 });
+        const item = refreshed.items.find(media => media.url === lastUrl);
+        if (item) setSelected(item);
+      }
+    } catch (error) {
+      setUploadError(
+        error instanceof MediaUploadError
+          ? `آپلود انجام نشد: ${error.code}`
+          : 'آپلود رسانه انجام نشد.'
+      );
+    } finally {
+      setUploading(false);
+      if (fileRef.current) fileRef.current.value = '';
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-[240] bg-black/65 backdrop-blur-sm p-3 sm:p-6 flex items-center justify-center" onClick={onClose}>
+      <div className="w-full max-w-7xl h-[min(90vh,900px)] bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col" onClick={event => event.stopPropagation()}>
+        <header className="h-16 px-4 sm:px-6 border-b border-neutral-200 flex items-center justify-between gap-4 shrink-0">
+          <div>
+            <h2 className="font-black text-base">{title}</h2>
+            <p className="text-[10px] text-neutral-500 mt-0.5">کتابخانه رسانه، آپلود جدید یا لینک مستقیم</p>
+          </div>
+          <button type="button" onClick={onClose} className="w-9 h-9 grid place-items-center rounded-xl bg-neutral-100 hover:bg-neutral-200">
+            <X className="w-4 h-4" />
+          </button>
+        </header>
+
+        <div className="px-4 sm:px-6 border-b border-neutral-200 flex items-center gap-1 shrink-0">
+          {([
+            ['library', 'کتابخانه رسانه'],
+            ['upload', 'بارگذاری فایل جدید'],
+            ...(allowUrl ? [['url', 'لینک مستقیم']] : [])
+          ] as Array<[Tab, string]>).map(([id, label]) => (
+            <button
+              key={id}
+              type="button"
+              onClick={() => setTab(id)}
+              className={`px-4 py-3 text-xs font-bold border-b-2 ${tab === id ? 'border-blue-600 text-blue-700' : 'border-transparent text-neutral-500'}`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {tab === 'library' && (
+          <div className="min-h-0 flex-1 grid grid-cols-1 lg:grid-cols-[220px_minmax(0,1fr)_300px]">
+            <aside className="border-l border-neutral-200 bg-neutral-50 p-3 overflow-y-auto hidden lg:block">
+              <strong className="text-[11px]">پوشه‌ها</strong>
+              <button type="button" onClick={() => { setFilterCategory('all'); setFilterYear('all'); setFilterMonth('all'); }} className={`mt-2 w-full p-2 rounded-lg text-right text-[10px] font-bold flex items-center gap-2 ${filterCategory === 'all' ? 'bg-blue-600 text-white' : 'hover:bg-white'}`}>
+                <FolderOpen className="w-4 h-4" /> همه رسانه‌ها
+              </button>
+              <div className="mt-2 space-y-1">
+                {categories.map(cat => (
+                  <div key={cat}>
+                    <button
+                      type="button"
+                      onClick={() => { setFilterCategory(cat); setFilterYear('all'); setFilterMonth('all'); }}
+                      className={`w-full p-2 rounded-lg text-right text-[10px] font-bold flex items-center gap-2 ${filterCategory === cat && filterYear === 'all' ? 'bg-white shadow-xs text-blue-700' : 'hover:bg-white'}`}
+                    >
+                      <Folder className="w-4 h-4" /> {cat}
+                    </button>
+                    {filterCategory === cat && (
+                      <div className="mr-5 mt-1 border-r border-neutral-200 pr-2 space-y-1">
+                        {years.map(year => (
+                          <div key={year}>
+                            <button
+                              type="button"
+                              onClick={() => { setFilterYear(year); setFilterMonth('all'); }}
+                              className={`w-full p-1.5 rounded text-right text-[9px] font-bold ${filterYear === year && filterMonth === 'all' ? 'bg-blue-50 text-blue-700' : 'text-neutral-600'}`}
+                            >
+                              {year}
+                            </button>
+                            {filterYear === year && (
+                              <div className="mr-3 border-r border-neutral-200 pr-2">
+                                {months.map(month => (
+                                  <button
+                                    key={month}
+                                    type="button"
+                                    onClick={() => setFilterMonth(month)}
+                                    className={`block w-full p-1.5 rounded text-right text-[9px] ${filterMonth === month ? 'bg-blue-600 text-white' : 'text-neutral-500'}`}
+                                  >
+                                    ماه {month}
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </aside>
+
+            <main className="min-w-0 min-h-0 flex flex-col">
+              <div className="p-3 border-b border-neutral-200 flex flex-wrap items-center gap-2 shrink-0">
+                <div className="relative flex-1 min-w-[220px]">
+                  <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
+                  <input value={query} onChange={e => setQuery(e.target.value)} className="w-full h-10 pr-10 pl-3 border border-neutral-300 rounded-xl text-xs" placeholder="جستجو در نام فایل، ALT یا عنوان..." />
+                </div>
+                <select value={filterCategory} onChange={e => { setFilterCategory(e.target.value); setFilterYear('all'); setFilterMonth('all'); }} className="lg:hidden h-10 px-2 border rounded-xl bg-white text-[10px]">
+                  <option value="all">همه پوشه‌ها</option>
+                  {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                </select>
+                <span className="text-[10px] text-neutral-400">{visible.length.toLocaleString('fa-IR')} رسانه</span>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-3">
+                {loading ? (
+                  <div className="h-full grid place-items-center text-neutral-400 text-xs">
+                    <div className="text-center"><Loader2 className="w-7 h-7 animate-spin mx-auto mb-2" />در حال بارگذاری...</div>
+                  </div>
+                ) : visible.length ? (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-2">
+                    {visible.map(item => (
+                      <button
+                        key={item.relativePath}
+                        type="button"
+                        onClick={() => setSelected(item)}
+                        className={`relative rounded-xl border overflow-hidden bg-neutral-50 text-right ${selected?.relativePath === item.relativePath ? 'border-blue-600 ring-2 ring-blue-100' : 'border-neutral-200 hover:border-neutral-400'}`}
+                      >
+                        {selected?.relativePath === item.relativePath && <span className="absolute top-1.5 left-1.5 z-10 w-5 h-5 rounded-full bg-blue-600 text-white grid place-items-center"><Check className="w-3 h-3" /></span>}
+                        <div className="aspect-square bg-white"><img src={item.url} alt={item.seo?.alt || item.filename} className="w-full h-full object-cover" /></div>
+                        <div className="p-2"><strong className="block text-[8px] truncate">{item.seo?.title || item.filename}</strong><span className="block text-[7px] text-neutral-400 truncate">{item.category}/{item.year}/{item.month}</span></div>
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="h-full grid place-items-center text-neutral-400 text-xs"><FileImage className="w-8 h-8 mb-2" />رسانه‌ای پیدا نشد.</div>
+                )}
+              </div>
+            </main>
+
+            <aside className="border-r border-neutral-200 p-4 overflow-y-auto bg-white">
+              {selected ? (
+                <div className="space-y-4">
+                  <div className="aspect-video rounded-xl border bg-neutral-50 overflow-hidden grid place-items-center">
+                    <img src={selected.url} alt={selected.seo?.alt || ''} className="max-w-full max-h-full object-contain" />
+                  </div>
+                  <div className="text-[10px] space-y-1">
+                    <strong className="block break-all">{selected.filename}</strong>
+                    <span className="text-neutral-400 block">{selected.category}/{selected.year}/{selected.month}</span>
+                    <span className="text-neutral-400 block">{selected.seo?.alt ? `ALT: ${selected.seo.alt}` : 'ALT تنظیم نشده'}</span>
+                  </div>
+                  <button type="button" onClick={() => { onSelect(selected.url, selected); onClose(); }} className="w-full py-2.5 rounded-xl bg-blue-600 text-white text-xs font-black">استفاده از این رسانه</button>
+                </div>
+              ) : (
+                <div className="h-full grid place-items-center text-center text-[10px] text-neutral-400">یک تصویر را انتخاب کنید.</div>
+              )}
+            </aside>
+          </div>
+        )}
+
+        {tab === 'upload' && (
+          <div className="flex-1 p-6 sm:p-10 grid place-items-center">
+            <div className="w-full max-w-3xl">
+              <input ref={fileRef} type="file" accept="image/*" multiple className="hidden" onChange={e => e.target.files && void uploadFiles(e.target.files)} />
+              <button
+                type="button"
+                disabled={uploading}
+                onClick={() => fileRef.current?.click()}
+                onDragOver={e => e.preventDefault()}
+                onDrop={e => { e.preventDefault(); void uploadFiles(e.dataTransfer.files); }}
+                className="w-full min-h-[320px] border-2 border-dashed border-neutral-300 hover:border-blue-500 rounded-3xl bg-neutral-50 flex flex-col items-center justify-center gap-4 text-neutral-600 disabled:opacity-50"
+              >
+                {uploading ? <Loader2 className="w-12 h-12 animate-spin text-blue-600" /> : <Upload className="w-12 h-12 text-blue-600" />}
+                <div>
+                  <strong className="block text-base">فایل‌ها را اینجا رها کنید یا کلیک کنید</strong>
+                  <span className="block text-xs text-neutral-400 mt-2">فایل جدید خودکار در {category}/سال/ماه ذخیره می‌شود.</span>
+                </div>
+              </button>
+              {uploadError && <div className="mt-3 p-3 rounded-xl bg-red-50 text-red-700 text-xs font-bold">{uploadError}</div>}
+            </div>
+          </div>
+        )}
+
+        {tab === 'url' && allowUrl && (
+          <div className="flex-1 p-6 sm:p-10 grid place-items-center">
+            <div className="w-full max-w-xl space-y-3">
+              <label className="text-xs font-bold">آدرس مستقیم تصویر</label>
+              <input dir="ltr" value={directUrl} onChange={e => setDirectUrl(e.target.value)} className="w-full p-3 border rounded-xl text-left font-mono text-xs" placeholder="https://..." />
+              <button type="button" disabled={!directUrl.trim()} onClick={() => { onSelect(directUrl.trim()); onClose(); }} className="w-full py-3 rounded-xl bg-blue-600 disabled:bg-neutral-300 text-white text-xs font-black">استفاده از لینک</button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};

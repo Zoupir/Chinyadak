@@ -98,6 +98,33 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
       .filter(item => item.isVisible !== false)
       .sort((a, b) => a.order - b.order);
 
+  const freeLayoutStyle = (
+    owner: any,
+    key: 'tag' | 'title' | 'subtitle' | 'button',
+    fallback: { x: number; y: number; width: number }
+  ): React.CSSProperties => {
+    const layouts = owner?.responsiveLayout || {};
+    const desktop = { ...fallback, ...(layouts.desktop?.[key] || {}) };
+    const tablet = owner?.inheritTabletFromDesktop === false
+      ? { ...desktop, ...(layouts.tablet?.[key] || {}) }
+      : desktop;
+    const mobile = owner?.inheritMobileFromDesktop === false
+      ? { ...desktop, ...(layouts.mobile?.[key] || {}) }
+      : desktop;
+
+    return {
+      ['--free-d-x' as any]: String(desktop.x),
+      ['--free-d-y' as any]: String(desktop.y),
+      ['--free-d-w' as any]: String(desktop.width),
+      ['--free-t-x' as any]: String(tablet.x),
+      ['--free-t-y' as any]: String(tablet.y),
+      ['--free-t-w' as any]: String(tablet.width),
+      ['--free-m-x' as any]: String(mobile.x),
+      ['--free-m-y' as any]: String(mobile.y),
+      ['--free-m-w' as any]: String(mobile.width)
+    };
+  };
+
   const [heroIndex, setHeroIndex] = useState(0);
   const [liveSectionId, setLiveSectionId] = useState<string | null>(null);
 
@@ -245,15 +272,65 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
           }}
         >
           <div className="marketplace-hero-overlay" />
-          <div className="marketplace-hero-content">
-            <span className="marketplace-kicker">{sectionConfig('hero')?.badge || hero?.tag || 'پیشنهاد ویژه قطعات خودرو'}</span>
-            <h1>{sectionConfig('hero')?.title || hero?.title || 'قطعات مطمئن برای خودروی شما'}</h1>
-            <p>{sectionConfig('hero')?.subtitle || hero?.subtitle || 'خرید تخصصی قطعات خودروهای چینی با تضمین اصالت، فیتمنت دقیق و ارسال سریع.'}</p>
-            <button type="button" onClick={() => goLink(sectionConfig('hero')?.buttonLink || hero?.link || 'shop')}>
-              {sectionConfig('hero')?.buttonText || hero?.buttonText || 'مشاهده محصولات'}
-              <ArrowLeft className="w-4 h-4" />
-            </button>
-          </div>
+          {hero?.responsiveLayout ? (
+            <div className="marketplace-free-layout-layer" aria-label="محتوای اسلاید">
+              {(sectionConfig('hero')?.badge || hero?.tag) && (
+                <span
+                  className="marketplace-free-layout-el marketplace-free-tag"
+                  style={{
+                    ...freeLayoutStyle(hero, 'tag', { x: 70, y: 18, width: 20 }),
+                    backgroundColor: hero.badgeBgColor || undefined,
+                    color: hero.badgeTextColor || undefined
+                  }}
+                >
+                  {sectionConfig('hero')?.badge || hero?.tag}
+                </span>
+              )}
+              <h1
+                className="marketplace-free-layout-el marketplace-free-title"
+                style={{
+                  ...freeLayoutStyle(hero, 'title', { x: 58, y: 29, width: 34 }),
+                  color: hero.titleColor || undefined,
+                  textAlign: hero.textAlignment || 'right'
+                }}
+              >
+                {sectionConfig('hero')?.title || hero?.title || 'قطعات مطمئن برای خودروی شما'}
+              </h1>
+              <p
+                className="marketplace-free-layout-el marketplace-free-subtitle"
+                style={{
+                  ...freeLayoutStyle(hero, 'subtitle', { x: 60, y: 51, width: 32 }),
+                  color: hero.subtitleColor || undefined,
+                  textAlign: hero.textAlignment || 'right'
+                }}
+              >
+                {sectionConfig('hero')?.subtitle || hero?.subtitle || 'خرید تخصصی قطعات خودروهای چینی با تضمین اصالت، فیتمنت دقیق و ارسال سریع.'}
+              </p>
+              <button
+                type="button"
+                className="marketplace-free-layout-el marketplace-free-button"
+                style={{
+                  ...freeLayoutStyle(hero, 'button', { x: 75, y: 69, width: 17 }),
+                  backgroundColor: hero.buttonBgColor || undefined,
+                  color: hero.buttonTextColor || undefined
+                }}
+                onClick={() => goLink(sectionConfig('hero')?.buttonLink || hero?.link || 'shop')}
+              >
+                {sectionConfig('hero')?.buttonText || hero?.buttonText || 'مشاهده محصولات'}
+                <ArrowLeft className="w-4 h-4" />
+              </button>
+            </div>
+          ) : (
+            <div className="marketplace-hero-content">
+              <span className="marketplace-kicker">{sectionConfig('hero')?.badge || hero?.tag || 'پیشنهاد ویژه قطعات خودرو'}</span>
+              <h1>{sectionConfig('hero')?.title || hero?.title || 'قطعات مطمئن برای خودروی شما'}</h1>
+              <p>{sectionConfig('hero')?.subtitle || hero?.subtitle || 'خرید تخصصی قطعات خودروهای چینی با تضمین اصالت، فیتمنت دقیق و ارسال سریع.'}</p>
+              <button type="button" onClick={() => goLink(sectionConfig('hero')?.buttonLink || hero?.link || 'shop')}>
+                {sectionConfig('hero')?.buttonText || hero?.buttonText || 'مشاهده محصولات'}
+                <ArrowLeft className="w-4 h-4" />
+              </button>
+            </div>
+          )}
 
           {activeSlides.length > 1 && !sectionConfig('hero')?.imageUrl && (
             <div className="marketplace-hero-dots" aria-label="اسلایدهای صفحه اصلی">
@@ -367,9 +444,22 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
             }}
             onClick={() => goLink(item.link || 'shop')}
           >
-            <span>{item.subtitle || 'پیشنهاد ویژه'}</span>
-            <h3>{item.title || 'بنر فروشگاه'}</h3>
-            <small>{item.buttonText || 'مشاهده محصولات'}</small>
+            {item.responsiveLayout ? (
+              <span className="marketplace-free-layout-layer" aria-hidden="true">
+                {item.badge && (
+                  <span className="marketplace-free-layout-el marketplace-free-tag" style={freeLayoutStyle(item, 'tag', { x: 70, y: 16, width: 22 })}>{item.badge}</span>
+                )}
+                <h3 className="marketplace-free-layout-el marketplace-free-title marketplace-free-promo-title" style={freeLayoutStyle(item, 'title', { x: 55, y: 24, width: 38 })}>{item.title || 'بنر فروشگاه'}</h3>
+                {item.subtitle && <span className="marketplace-free-layout-el marketplace-free-subtitle marketplace-free-promo-subtitle" style={freeLayoutStyle(item, 'subtitle', { x: 58, y: 48, width: 34 })}>{item.subtitle}</span>}
+                <small className="marketplace-free-layout-el marketplace-free-button marketplace-free-promo-button" style={freeLayoutStyle(item, 'button', { x: 73, y: 70, width: 20 })}>{item.buttonText || 'مشاهده محصولات'}</small>
+              </span>
+            ) : (
+              <>
+                <span>{item.subtitle || 'پیشنهاد ویژه'}</span>
+                <h3>{item.title || 'بنر فروشگاه'}</h3>
+                <small>{item.buttonText || 'مشاهده محصولات'}</small>
+              </>
+            )}
           </button>
         ))}
       </section>

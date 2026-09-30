@@ -42,6 +42,8 @@ interface LibraryOption {
 }
 
 const systemOptions: LibraryOption[] = [
+  { key: 'system-categories-root', sourceType: 'system', sourceId: 'categories-root', title: 'همه دسته‌بندی‌ها', subtitle: 'مگامنو دسته‌بندی قطعات', link: 'shop', kind: 'categories' },
+  { key: 'system-brands-root', sourceType: 'system', sourceId: 'brands-root', title: 'برندهای خودرو', subtitle: 'منوی ویژه برندها', link: 'shop', kind: 'brands' },
   { key: 'system-home', sourceType: 'system', sourceId: 'home', title: 'صفحه اصلی', link: 'home', kind: 'system' },
   { key: 'system-shop', sourceType: 'system', sourceId: 'shop', title: 'فروشگاه قطعات', link: 'shop', kind: 'system' },
   { key: 'system-maintenance', sourceType: 'system', sourceId: 'maintenance', title: 'سرویس دوره‌ای', link: 'shop:maintenance', kind: 'system' },

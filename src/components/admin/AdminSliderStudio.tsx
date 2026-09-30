@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import {
   AlignCenter,
   AlignLeft,
@@ -7,6 +7,7 @@ import {
   ArrowUp,
   Eye,
   EyeOff,
+  Grip,
   Monitor,
   Plus,
   Save,
@@ -15,10 +16,18 @@ import {
   Trash2
 } from 'lucide-react';
 import { useStore } from '../../context/StoreContext';
-import type { SliderItem } from '../../types';
+import type {
+  PageSection,
+  PageSectionItem,
+  SliderDevice,
+  SliderDeviceLayout,
+  SliderElementKey,
+  SliderElementPosition,
+  SliderItem
+} from '../../types';
 import { ImageUploadInput } from '../common/ImageUploadInput';
 
-type Device='desktop'|'tablet'|'mobile';
+type StudioMode = 'slides' | 'banners';
 
 const makeSlide=(order:number):SliderItem=>({
   id:`slide-${Date.now()}`,
@@ -39,125 +48,464 @@ const makeSlide=(order:number):SliderItem=>({
   buttonBgColor:'#f59e0b',
   buttonTextColor:'#111827',
   badgeBgColor:'rgba(245,158,11,.18)',
-  badgeTextColor:'#fbbf24'
+  badgeTextColor:'#fbbf24',
+  inheritTabletFromDesktop:true,
+  inheritMobileFromDesktop:true,
+  responsiveLayout:{
+    desktop:{
+      tag:{x:70,y:18,width:20},
+      title:{x:58,y:29,width:34},
+      subtitle:{x:60,y:51,width:32},
+      button:{x:75,y:69,width:17}
+    }
+  }
+});
+
+const makeBannerItem=(order:number):PageSectionItem=>({
+  id:`banner-${Date.now()}-${order}`,
+  title:'عنوان بنر',
+  subtitle:'توضیح کوتاه',
+  imageUrl:'',
+  link:'shop',
+  buttonText:'مشاهده',
+  isVisible:true,
+  order,
+  inheritTabletFromDesktop:true,
+  inheritMobileFromDesktop:true,
+  responsiveLayout:{
+    desktop:{
+      title:{x:55,y:24,width:38},
+      subtitle:{x:58,y:48,width:34},
+      button:{x:73,y:70,width:20}
+    }
+  }
+});
+
+const DEFAULT_POSITIONS:Record<SliderElementKey,SliderElementPosition>={
+  tag:{x:70,y:18,width:20},
+  title:{x:58,y:29,width:34},
+  subtitle:{x:60,y:51,width:32},
+  button:{x:75,y:69,width:17}
+};
+
+const clone=<T,>(value:T):T=>JSON.parse(JSON.stringify(value));
+
+const clamp=(value:number,min:number,max:number)=>Math.max(min,Math.min(max,value));
+
+const inherited=(owner:SliderItem|PageSectionItem,device:SliderDevice)=>
+  device==='tablet'
+    ? owner.inheritTabletFromDesktop!==false
+    : device==='mobile'
+      ? owner.inheritMobileFromDesktop!==false
+      : false;
+
+const effectiveLayout=(owner:SliderItem|PageSectionItem,device:SliderDevice):SliderDeviceLayout=>{
+  const layouts=owner.responsiveLayout||{};
+  if(device!=='desktop'&&inherited(owner,device)) return layouts.desktop||{};
+  return layouts[device]||layouts.desktop||{};
+};
+
+const elementPosition=(owner:SliderItem|PageSectionItem,device:SliderDevice,key:SliderElementKey):SliderElementPosition=>({
+  ...DEFAULT_POSITIONS[key],
+  ...(effectiveLayout(owner,device)[key]||{})
 });
 
 export const AdminSliderStudio:React.FC=()=>{
-  const {sliders,addSlider,updateSlider,deleteSlider,reorderSliders,showToast}=useStore();
+  const {
+    sliders,
+    addSlider,
+    updateSlider,
+    deleteSlider,
+    reorderSliders,
+    pages,
+    updateSection,
+    showToast
+  }=useStore();
+
   const ordered=useMemo(()=>[...sliders].sort((a,b)=>a.order-b.order),[sliders]);
+  const homePage=pages.find(page=>page.slug==='home');
+  const bannerSections=useMemo(
+    ()=>[...(homePage?.sections||[])]
+      .filter(section=>/promo|banner/i.test(section.sectionKey||section.id||''))
+      .sort((a,b)=>a.order-b.order),
+    [homePage]
+  );
+
+  const [mode,setMode]=useState<StudioMode>('slides');
   const [selectedId,setSelectedId]=useState(ordered[0]?.id||'');
-  const selected=ordered.find(s=>s.id===selectedId)||ordered[0];
-  const [draft,setDraft]=useState<SliderItem|null>(selected?{...selected}:null);
-  const [device,setDevice]=useState<Device>('desktop');
+  const [draft,setDraft]=useState<SliderItem|null>(ordered[0]?clone(ordered[0]):null);
+  const [bannerSelection,setBannerSelection]=useState<{sectionId:string;itemId:string}|null>(null);
+  const [bannerDraft,setBannerDraft]=useState<PageSectionItem|null>(null);
+  const [device,setDevice]=useState<SliderDevice>('desktop');
+  const [activeElement,setActiveElement]=useState<SliderElementKey>('title');
+  const [dragging,setDragging]=useState<{key:SliderElementKey;offsetX:number;offsetY:number}|null>(null);
+  const canvasRef=useRef<HTMLDivElement>(null);
 
-  React.useEffect(()=>{const s=ordered.find(x=>x.id===selectedId)||ordered[0];setDraft(s?{...s}:null);},[selectedId,sliders.length]);
+  React.useEffect(()=>{
+    const selected=ordered.find(item=>item.id===selectedId)||ordered[0];
+    setDraft(selected?clone(selected):null);
+  },[selectedId,sliders]);
 
-  const patch=(partial:Partial<SliderItem>)=>setDraft(current=>current?{...current,...partial}:current);
+  React.useEffect(()=>{
+    if(mode!=='banners')return;
+    if(bannerSelection){
+      const section=bannerSections.find(item=>item.id===bannerSelection.sectionId);
+      const item=section?.items?.find(row=>row.id===bannerSelection.itemId);
+      if(item){setBannerDraft(clone(item));return;}
+    }
+    const section=bannerSections[0];
+    const item=section?.items?.[0];
+    if(section&&item){
+      setBannerSelection({sectionId:section.id,itemId:item.id});
+      setBannerDraft(clone(item));
+    }else{
+      setBannerSelection(null);
+      setBannerDraft(null);
+    }
+  },[mode,homePage?.id,bannerSections.length]);
+
+  const owner:SliderItem|PageSectionItem|null=mode==='slides'?draft:bannerDraft;
+  const activeBannerSection=bannerSelection?bannerSections.find(section=>section.id===bannerSelection.sectionId):undefined;
+
+  const patchSlide=(partial:Partial<SliderItem>)=>setDraft(current=>current?{...current,...partial}:current);
+  const patchBanner=(partial:Partial<PageSectionItem>)=>setBannerDraft(current=>current?{...current,...partial}:current);
+
+  const patchOwner=(partial:Partial<SliderItem&PageSectionItem>)=>{
+    if(mode==='slides') patchSlide(partial as Partial<SliderItem>);
+    else patchBanner(partial as Partial<PageSectionItem>);
+  };
+
+  const selectBanner=(section:PageSection,item:PageSectionItem)=>{
+    setBannerSelection({sectionId:section.id,itemId:item.id});
+    setBannerDraft(clone(item));
+  };
 
   const save=()=>{
-    if(!draft)return;
-    updateSlider(draft);
-    showToast('اسلاید ذخیره شد.');
+    if(mode==='slides'){
+      if(!draft)return;
+      updateSlider(draft);
+      showToast('اسلاید و جانمایی Responsive ذخیره شد.');
+      return;
+    }
+    if(!homePage||!activeBannerSection||!bannerDraft)return;
+    updateSection(homePage.slug,{
+      ...activeBannerSection,
+      items:(activeBannerSection.items||[]).map(item=>item.id===bannerDraft.id?bannerDraft:item)
+    });
+    showToast('بنر و جانمایی Responsive ذخیره شد.');
   };
 
   const add=()=>{
-    const s=makeSlide(ordered.length+1);
-    addSlider(s);setSelectedId(s.id);setDraft(s);
+    if(mode==='slides'){
+      const slide=makeSlide(ordered.length+1);
+      addSlider(slide);
+      setSelectedId(slide.id);
+      setDraft(slide);
+      return;
+    }
+    const section=activeBannerSection||bannerSections[0];
+    if(!homePage||!section){
+      showToast('ابتدا در Visual Builder یک سکشن بنری مثل promo-small یا banner بسازید.','error');
+      return;
+    }
+    const item=makeBannerItem((section.items||[]).length+1);
+    updateSection(homePage.slug,{...section,items:[...(section.items||[]),item]});
+    setBannerSelection({sectionId:section.id,itemId:item.id});
+    setBannerDraft(item);
   };
 
-  const move=(id:string,dir:'up'|'down')=>{
-    const list=[...ordered];const i=list.findIndex(x=>x.id===id);const j=dir==='up'?i-1:i+1;
-    if(i<0||j<0||j>=list.length)return;
-    [list[i],list[j]]=[list[j],list[i]];
-    reorderSliders(list.map((x,index)=>({...x,order:index+1})));
+  const removeCurrent=()=>{
+    if(mode==='slides'){
+      if(!draft)return;
+      if(!window.confirm('اسلاید حذف شود؟'))return;
+      deleteSlider(draft.id);
+      setSelectedId('');
+      setDraft(null);
+      return;
+    }
+    if(!homePage||!activeBannerSection||!bannerDraft)return;
+    if(!window.confirm('این بنر حذف شود؟'))return;
+    updateSection(homePage.slug,{
+      ...activeBannerSection,
+      items:(activeBannerSection.items||[]).filter(item=>item.id!==bannerDraft.id)
+    });
+    setBannerSelection(null);
+    setBannerDraft(null);
+  };
+
+  const moveSlide=(id:string,dir:'up'|'down')=>{
+    const list=[...ordered];
+    const index=list.findIndex(item=>item.id===id);
+    const target=dir==='up'?index-1:index+1;
+    if(index<0||target<0||target>=list.length)return;
+    [list[index],list[target]]=[list[target],list[index]];
+    reorderSliders(list.map((item,order)=>({...item,order:order+1})));
+  };
+
+  const setInheritance=(checked:boolean)=>{
+    if(!owner||device==='desktop')return;
+    if(device==='tablet'){
+      patchOwner({
+        inheritTabletFromDesktop:checked,
+        responsiveLayout:checked
+          ? owner.responsiveLayout
+          : {
+              ...(owner.responsiveLayout||{}),
+              tablet:clone(owner.responsiveLayout?.desktop||{})
+            }
+      } as any);
+    }else{
+      patchOwner({
+        inheritMobileFromDesktop:checked,
+        responsiveLayout:checked
+          ? owner.responsiveLayout
+          : {
+              ...(owner.responsiveLayout||{}),
+              mobile:clone(owner.responsiveLayout?.desktop||{})
+            }
+      } as any);
+    }
+  };
+
+  const setElementPosition=(key:SliderElementKey,next:SliderElementPosition)=>{
+    if(!owner)return;
+    const directDevice=device;
+    const layouts=clone(owner.responsiveLayout||{});
+    if(device!=='desktop'&&inherited(owner,device)){
+      layouts[device]=clone(layouts.desktop||{});
+    }
+    layouts[directDevice]={
+      ...(layouts[directDevice]||{}),
+      [key]:next
+    };
+    const partial:any={responsiveLayout:layouts};
+    if(device==='tablet')partial.inheritTabletFromDesktop=false;
+    if(device==='mobile')partial.inheritMobileFromDesktop=false;
+    patchOwner(partial);
+  };
+
+  const startDrag=(event:React.PointerEvent<HTMLDivElement>,key:SliderElementKey)=>{
+    if(!owner||!canvasRef.current)return;
+    event.preventDefault();
+    event.stopPropagation();
+    const rect=canvasRef.current.getBoundingClientRect();
+    const pos=elementPosition(owner,device,key);
+    const px=rect.left+(pos.x/100)*rect.width;
+    const py=rect.top+(pos.y/100)*rect.height;
+    setActiveElement(key);
+    setDragging({key,offsetX:event.clientX-px,offsetY:event.clientY-py});
+    event.currentTarget.setPointerCapture(event.pointerId);
+  };
+
+  const dragMove=(event:React.PointerEvent<HTMLDivElement>)=>{
+    if(!dragging||!owner||!canvasRef.current)return;
+    const rect=canvasRef.current.getBoundingClientRect();
+    const current=elementPosition(owner,device,dragging.key);
+    const width=clamp(Number(current.width||DEFAULT_POSITIONS[dragging.key].width||20),8,90);
+    const x=clamp(((event.clientX-dragging.offsetX-rect.left)/rect.width)*100,0,100-width);
+    const y=clamp(((event.clientY-dragging.offsetY-rect.top)/rect.height)*100,0,92);
+    setElementPosition(dragging.key,{...current,x:Number(x.toFixed(2)),y:Number(y.toFixed(2)),width});
+  };
+
+  const stopDrag=()=>setDragging(null);
+
+  const positionStyle=(key:SliderElementKey):React.CSSProperties=>{
+    if(!owner)return{};
+    const pos=elementPosition(owner,device,key);
+    return{
+      position:'absolute',
+      left:`${pos.x}%`,
+      top:`${pos.y}%`,
+      width:`${pos.width||DEFAULT_POSITIONS[key].width}%`,
+      zIndex:4,
+      touchAction:'none',
+      cursor:dragging?.key===key?'grabbing':'grab'
+    };
+  };
+
+  const visibleElement=(key:SliderElementKey)=>{
+    if(!owner)return false;
+    if(mode==='slides'){
+      if(key==='tag')return Boolean((owner as SliderItem).tag);
+      if(key==='title')return Boolean(owner.title);
+      if(key==='subtitle')return Boolean(owner.subtitle);
+      if(key==='button')return Boolean(owner.buttonText);
+    }else{
+      if(key==='tag')return Boolean((owner as PageSectionItem).badge);
+      if(key==='title')return Boolean(owner.title);
+      if(key==='subtitle')return Boolean(owner.subtitle);
+      if(key==='button')return Boolean(owner.buttonText);
+    }
+    return false;
   };
 
   const width=device==='desktop'?'100%':device==='tablet'?'820px':'390px';
-  const previewHeight=device==='desktop'?430:device==='tablet'?390:520;
+  const previewHeight=device==='desktop'?430:device==='tablet'?430:560;
+
+  const renderElement=(key:SliderElementKey)=>{
+    if(!owner||!visibleElement(key))return null;
+    const slide=mode==='slides'?owner as SliderItem:null;
+    const banner=mode==='banners'?owner as PageSectionItem:null;
+    const common=`absolute select-none rounded-lg ${activeElement===key?'ring-2 ring-blue-400 ring-offset-2 ring-offset-transparent':''}`;
+    if(key==='tag'){
+      return <div onPointerDown={e=>startDrag(e,key)} onPointerMove={dragMove} onPointerUp={stopDrag} onPointerCancel={stopDrag} className={common} style={{...positionStyle(key),backgroundColor:slide?.badgeBgColor||'rgba(245,158,11,.2)',color:slide?.badgeTextColor||'#fbbf24',padding:'6px 9px',fontSize:10,fontWeight:900}}><Grip className="inline w-3 h-3 ml-1"/>{slide?.tag||banner?.badge}</div>;
+    }
+    if(key==='title'){
+      return <div onPointerDown={e=>startDrag(e,key)} onPointerMove={dragMove} onPointerUp={stopDrag} onPointerCancel={stopDrag} className={common} style={{...positionStyle(key),color:slide?.titleColor||'#fff',fontWeight:900,fontSize:device==='mobile'?24:40,lineHeight:1.2,textAlign:slide?.textAlignment||'right'}}>{owner.title}</div>;
+    }
+    if(key==='subtitle'){
+      return <div onPointerDown={e=>startDrag(e,key)} onPointerMove={dragMove} onPointerUp={stopDrag} onPointerCancel={stopDrag} className={common} style={{...positionStyle(key),color:slide?.subtitleColor||'#e5e7eb',fontSize:device==='mobile'?11:13,lineHeight:1.9,textAlign:slide?.textAlignment||'right'}}>{owner.subtitle}</div>;
+    }
+    return <div onPointerDown={e=>startDrag(e,key)} onPointerMove={dragMove} onPointerUp={stopDrag} onPointerCancel={stopDrag} className={common} style={{...positionStyle(key),backgroundColor:slide?.buttonBgColor||'#f59e0b',color:slide?.buttonTextColor||'#111827',padding:'10px 12px',fontSize:10,fontWeight:900,textAlign:'center'}}>{owner.buttonText}</div>;
+  };
 
   return (
     <div className="slider-studio -m-4 sm:-m-6 lg:-m-8 bg-[#eef1f4] min-h-[calc(100vh-128px)]">
-      <div className="h-14 px-4 bg-neutral-950 text-white sticky top-16 z-20 flex items-center justify-between gap-3">
-        <div>
-          <strong className="text-sm">Slider & Banner Studio</strong>
-          <span className="text-[9px] text-neutral-400 mr-2">ویرایش بصری اسلایدهای Hero</span>
+      <div className="min-h-14 px-4 py-2 bg-neutral-950 text-white sticky top-16 z-20 flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div>
+            <strong className="text-sm">Slider & Banner Studio</strong>
+            <span className="text-[9px] text-neutral-400 mr-2">Drag & Drop واقعی متن و CTA</span>
+          </div>
+          <div className="flex items-center gap-1 bg-neutral-800 p-1 rounded-lg">
+            <button onClick={()=>setMode('slides')} className={`px-3 py-2 rounded text-[9px] font-black ${mode==='slides'?'bg-blue-600':'text-neutral-400'}`}>Hero Slides</button>
+            <button onClick={()=>setMode('banners')} className={`px-3 py-2 rounded text-[9px] font-black ${mode==='banners'?'bg-blue-600':'text-neutral-400'}`}>Home Banners</button>
+          </div>
         </div>
+
         <div className="flex items-center gap-1 bg-neutral-800 p-1 rounded-lg">
           <button onClick={()=>setDevice('desktop')} className={`p-2 rounded ${device==='desktop'?'bg-blue-600':'text-neutral-400'}`}><Monitor className="w-4 h-4"/></button>
           <button onClick={()=>setDevice('tablet')} className={`p-2 rounded ${device==='tablet'?'bg-blue-600':'text-neutral-400'}`}><Tablet className="w-4 h-4"/></button>
           <button onClick={()=>setDevice('mobile')} className={`p-2 rounded ${device==='mobile'?'bg-blue-600':'text-neutral-400'}`}><Smartphone className="w-4 h-4"/></button>
         </div>
-        <button onClick={save} disabled={!draft} className="h-9 px-4 rounded-lg bg-emerald-600 disabled:bg-neutral-600 text-white text-[10px] font-black inline-flex gap-1 items-center"><Save className="w-3.5 h-3.5"/>ذخیره</button>
+
+        <button onClick={save} disabled={!owner} className="h-9 px-4 rounded-lg bg-emerald-600 disabled:bg-neutral-600 text-white text-[10px] font-black inline-flex gap-1 items-center"><Save className="w-3.5 h-3.5"/>ذخیره</button>
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-[260px_minmax(0,1fr)_340px] min-h-[calc(100vh-184px)]">
-        <aside className="bg-white border-l p-3">
-          <div className="flex items-center justify-between mb-3"><strong className="text-xs">اسلایدها</strong><button onClick={add} className="w-8 h-8 grid place-items-center rounded-lg bg-blue-600 text-white"><Plus className="w-4 h-4"/></button></div>
-          <div className="space-y-2">
-            {ordered.map((slide,index)=>(
-              <button key={slide.id} onClick={()=>setSelectedId(slide.id)} className={`w-full rounded-xl border overflow-hidden text-right ${selected?.id===slide.id?'border-blue-500 ring-1 ring-blue-500':'border-neutral-200'}`}>
-                <div className="h-24 relative bg-neutral-900">
-                  {slide.imageUrl&&<img src={slide.imageUrl} alt="" className="w-full h-full object-cover"/>}
-                  <div className="absolute inset-0 bg-black/40"/>
-                  <strong className="absolute right-2 bottom-2 left-2 text-[9px] text-white line-clamp-2">{slide.title}</strong>
-                  <span className="absolute top-2 left-2 px-1.5 py-0.5 rounded bg-black/60 text-white text-[8px]">#{index+1}</span>
+      <div className="grid grid-cols-1 xl:grid-cols-[280px_minmax(0,1fr)_350px] min-h-[calc(100vh-184px)]">
+        <aside className="bg-white border-l p-3 overflow-y-auto">
+          <div className="flex items-center justify-between mb-3"><strong className="text-xs">{mode==='slides'?'اسلایدها':'بنرهای صفحه اصلی'}</strong><button onClick={add} className="w-8 h-8 grid place-items-center rounded-lg bg-blue-600 text-white"><Plus className="w-4 h-4"/></button></div>
+
+          {mode==='slides'?(
+            <div className="space-y-2">
+              {ordered.map((slide,index)=>(
+                <button key={slide.id} onClick={()=>setSelectedId(slide.id)} className={`w-full rounded-xl border overflow-hidden text-right ${draft?.id===slide.id?'border-blue-500 ring-1 ring-blue-500':'border-neutral-200'}`}>
+                  <div className="h-24 relative bg-neutral-900">
+                    {slide.imageUrl&&<img src={slide.imageUrl} alt="" className="w-full h-full object-cover"/>}
+                    <div className="absolute inset-0 bg-black/40"/>
+                    <strong className="absolute right-2 bottom-2 left-2 text-[9px] text-white line-clamp-2">{slide.title}</strong>
+                    <span className="absolute top-2 left-2 px-1.5 py-0.5 rounded bg-black/60 text-white text-[8px]">#{index+1}</span>
+                  </div>
+                  <div className="p-2 flex justify-between items-center">
+                    <span className={`text-[8px] font-bold ${slide.isActive?'text-emerald-600':'text-neutral-400'}`}>{slide.isActive?'فعال':'خاموش'}</span>
+                    <span className="flex">
+                      <span onClick={event=>{event.stopPropagation();moveSlide(slide.id,'up')}} className="p-1"><ArrowUp className="w-3 h-3"/></span>
+                      <span onClick={event=>{event.stopPropagation();moveSlide(slide.id,'down')}} className="p-1"><ArrowDown className="w-3 h-3"/></span>
+                    </span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          ):(
+            <div className="space-y-4">
+              {bannerSections.map(section=>(
+                <div key={section.id}>
+                  <strong className="block text-[9px] text-neutral-500 mb-1.5">{section.title||section.sectionKey}</strong>
+                  <div className="space-y-1.5">
+                    {(section.items||[]).map((item,index)=>(
+                      <button key={item.id} onClick={()=>selectBanner(section,item)} className={`w-full p-2 rounded-xl border text-right flex gap-2 items-center ${bannerSelection?.sectionId===section.id&&bannerSelection?.itemId===item.id?'border-blue-500 bg-blue-50':'border-neutral-200 bg-white'}`}>
+                        <div className="w-16 h-11 rounded-lg bg-neutral-100 overflow-hidden shrink-0">{item.imageUrl&&<img src={item.imageUrl} alt="" className="w-full h-full object-cover"/>}</div>
+                        <div className="min-w-0"><strong className="block text-[9px] truncate">{item.title||`بنر ${index+1}`}</strong><span className="text-[8px] text-neutral-400">{section.sectionKey||section.id}</span></div>
+                      </button>
+                    ))}
+                  </div>
                 </div>
-                <div className="p-2 flex justify-between items-center">
-                  <span className={`text-[8px] font-bold ${slide.isActive?'text-emerald-600':'text-neutral-400'}`}>{slide.isActive?'فعال':'خاموش'}</span>
-                  <span className="flex">
-                    <span onClick={e=>{e.stopPropagation();move(slide.id,'up')}} className="p-1"><ArrowUp className="w-3 h-3"/></span>
-                    <span onClick={e=>{e.stopPropagation();move(slide.id,'down')}} className="p-1"><ArrowDown className="w-3 h-3"/></span>
-                  </span>
-                </div>
-              </button>
-            ))}
-          </div>
+              ))}
+              {!bannerSections.length&&<div className="p-6 rounded-xl border-2 border-dashed text-center text-[9px] text-neutral-400">سکشن بنری در صفحه اصلی پیدا نشد.</div>}
+            </div>
+          )}
         </aside>
 
         <main className="p-6 overflow-auto">
           <div className="mx-auto transition-all" style={{width,maxWidth:'100%'}}>
             <div className="h-8 bg-neutral-900 rounded-t-xl flex items-center gap-1.5 px-3"><span className="w-2 h-2 rounded-full bg-red-400"/><span className="w-2 h-2 rounded-full bg-amber-400"/><span className="w-2 h-2 rounded-full bg-emerald-400"/></div>
-            {draft?(
+            {owner?(
               <div
+                ref={canvasRef}
                 className="relative overflow-hidden bg-neutral-900 shadow-2xl"
                 style={{
                   minHeight:`${previewHeight}px`,
-                  backgroundColor:draft.bgColor||'#111827',
-                  backgroundImage:draft.imageUrl?`url(${draft.imageUrl})`:undefined,
+                  backgroundColor:mode==='slides'?(draft?.bgColor||'#111827'):'#111827',
+                  backgroundImage:owner.imageUrl?`url(${owner.imageUrl})`:undefined,
                   backgroundSize:'cover',
                   backgroundPosition:'center'
                 }}
               >
-                {draft.gradientOverlay!==false&&<div className="absolute inset-0 bg-gradient-to-l from-black/80 via-black/40 to-black/5" style={{opacity:Math.max(.15,(draft.overlayOpacity??60)/100)}}/>}
-                <div className={`absolute inset-0 p-8 md:p-12 flex flex-col justify-center ${draft.textAlignment==='center'?'items-center text-center':draft.textAlignment==='left'?'items-end text-left':'items-start text-right'}`}>
-                  {draft.tag&&<span className="px-2 py-1 rounded text-[9px] font-black" style={{backgroundColor:draft.badgeBgColor,color:draft.badgeTextColor}}>{draft.tag}</span>}
-                  <h2 className="mt-3 text-3xl md:text-5xl font-black max-w-2xl leading-tight" style={{color:draft.titleColor}}>{draft.title}</h2>
-                  <p className="mt-3 max-w-xl text-xs md:text-sm leading-7" style={{color:draft.subtitleColor}}>{draft.subtitle}</p>
-                  <button className="mt-5 px-4 py-2.5 rounded text-xs font-black" style={{backgroundColor:draft.buttonBgColor,color:draft.buttonTextColor}}>{draft.buttonText}</button>
-                </div>
+                {mode==='slides'&&draft?.gradientOverlay!==false&&<div className="absolute inset-0 bg-gradient-to-l from-black/80 via-black/40 to-black/5" style={{opacity:Math.max(.15,(draft?.overlayOpacity??60)/100)}}/>}
+                {mode==='banners'&&<div className="absolute inset-0 bg-gradient-to-l from-black/75 via-black/35 to-black/10"/>}
+                {(['tag','title','subtitle','button'] as SliderElementKey[]).map(renderElement)}
+                <div className="absolute bottom-2 left-2 bg-black/55 text-white rounded-lg px-2 py-1 text-[8px] pointer-events-none">عنصر را با موس بکشید و رها کنید</div>
               </div>
-            ):<div className="min-h-[430px] bg-white grid place-items-center text-xs text-neutral-400">یک اسلاید بساز.</div>}
+            ):<div className="min-h-[430px] bg-white grid place-items-center text-xs text-neutral-400">یک مورد را انتخاب کنید.</div>}
           </div>
         </main>
 
         <aside className="bg-white border-r p-4 overflow-y-auto">
-          {!draft?<p className="text-xs text-neutral-400">اسلایدی انتخاب نشده.</p>:<div className="space-y-4 text-[10px]">
-            <div className="flex justify-between items-center"><strong className="text-sm">تنظیمات اسلاید</strong><button onClick={()=>patch({isActive:!draft.isActive})} className={`px-2 py-1.5 rounded-lg ${draft.isActive?'bg-emerald-50 text-emerald-700':'bg-neutral-100'}`}>{draft.isActive?<Eye className="w-4 h-4"/>:<EyeOff className="w-4 h-4"/>}</button></div>
-            <label className="block"><span className="font-bold">عنوان</span><input value={draft.title} onChange={e=>patch({title:e.target.value})} className="w-full mt-1 p-2.5 border rounded-lg"/></label>
-            <label className="block"><span className="font-bold">توضیح</span><textarea rows={3} value={draft.subtitle} onChange={e=>patch({subtitle:e.target.value})} className="w-full mt-1 p-2.5 border rounded-lg"/></label>
-            <div className="grid grid-cols-2 gap-2"><input value={draft.tag||''} onChange={e=>patch({tag:e.target.value})} className="p-2 border rounded" placeholder="Badge"/><input value={draft.buttonText} onChange={e=>patch({buttonText:e.target.value})} className="p-2 border rounded" placeholder="CTA"/></div>
-            <input dir="ltr" value={draft.link} onChange={e=>patch({link:e.target.value})} className="w-full p-2 border rounded text-left" placeholder="link"/>
-            <ImageUploadInput label="تصویر اسلاید" value={draft.imageUrl} onChange={url=>patch({imageUrl:url})} aspectRatio="banner" presetCategory="banners"/>
-            <div><span className="font-bold block mb-1">تراز متن</span><div className="grid grid-cols-3 gap-1"><button onClick={()=>patch({textAlignment:'right'})} className={`p-2 border rounded flex justify-center ${draft.textAlignment==='right'?'bg-blue-50 border-blue-500':''}`}><AlignRight className="w-4 h-4"/></button><button onClick={()=>patch({textAlignment:'center'})} className={`p-2 border rounded flex justify-center ${draft.textAlignment==='center'?'bg-blue-50 border-blue-500':''}`}><AlignCenter className="w-4 h-4"/></button><button onClick={()=>patch({textAlignment:'left'})} className={`p-2 border rounded flex justify-center ${draft.textAlignment==='left'?'bg-blue-50 border-blue-500':''}`}><AlignLeft className="w-4 h-4"/></button></div></div>
-            <label><span>شدت Overlay: {draft.overlayOpacity??60}%</span><input type="range" min="0" max="100" value={draft.overlayOpacity??60} onChange={e=>patch({overlayOpacity:Number(e.target.value)})} className="w-full"/></label>
-            <label className="flex items-center justify-between p-2 border rounded-lg"><span>گرادیان روی تصویر</span><input type="checkbox" checked={draft.gradientOverlay!==false} onChange={e=>patch({gradientOverlay:e.target.checked})}/></label>
-            <div className="grid grid-cols-2 gap-2">
-              <label><span>عنوان</span><input type="color" value={draft.titleColor||'#ffffff'} onChange={e=>patch({titleColor:e.target.value})} className="w-full h-9"/></label>
-              <label><span>توضیح</span><input type="color" value={draft.subtitleColor||'#e5e7eb'} onChange={e=>patch({subtitleColor:e.target.value})} className="w-full h-9"/></label>
-              <label><span>دکمه</span><input type="color" value={draft.buttonBgColor||'#f59e0b'} onChange={e=>patch({buttonBgColor:e.target.value})} className="w-full h-9"/></label>
-              <label><span>متن دکمه</span><input type="color" value={draft.buttonTextColor||'#111827'} onChange={e=>patch({buttonTextColor:e.target.value})} className="w-full h-9"/></label>
+          {!owner?<p className="text-xs text-neutral-400">موردی انتخاب نشده.</p>:<div className="space-y-4 text-[10px]">
+            <div className="flex justify-between items-center">
+              <div><strong className="text-sm">{mode==='slides'?'تنظیمات اسلاید':'تنظیمات بنر'}</strong><span className="block text-[8px] text-neutral-400 mt-1">{device==='desktop'?'Desktop':device==='tablet'?'Tablet':'Mobile'} Layout</span></div>
+              {mode==='slides'&&draft&&<button onClick={()=>patchSlide({isActive:!draft.isActive})} className={`px-2 py-1.5 rounded-lg ${draft.isActive?'bg-emerald-50 text-emerald-700':'bg-neutral-100'}`}>{draft.isActive?<Eye className="w-4 h-4"/>:<EyeOff className="w-4 h-4"/>}</button>}
             </div>
-            <div className="pt-3 border-t flex gap-2"><button onClick={save} className="flex-1 py-2.5 rounded-xl bg-emerald-600 text-white font-black inline-flex items-center justify-center gap-1"><Save className="w-3.5 h-3.5"/>ذخیره</button><button onClick={()=>{if(window.confirm('اسلاید حذف شود؟')){deleteSlider(draft.id);setSelectedId('');setDraft(null);}}} className="w-10 grid place-items-center rounded-xl bg-red-50 text-red-600"><Trash2 className="w-4 h-4"/></button></div>
+
+            {device!=='desktop'&&(
+              <label className="flex items-center justify-between p-3 rounded-xl border bg-neutral-50">
+                <span><strong className="block text-[9px]">ارث‌بری از دسکتاپ</strong><small className="text-[8px] text-neutral-400">خاموش = جانمایی مستقل برای این دستگاه</small></span>
+                <input type="checkbox" checked={inherited(owner,device)} onChange={event=>setInheritance(event.target.checked)}/>
+              </label>
+            )}
+
+            <label className="block"><span className="font-bold">عنوان</span><input value={owner.title||''} onChange={event=>patchOwner({title:event.target.value})} className="w-full mt-1 p-2.5 border rounded-lg"/></label>
+            <label className="block"><span className="font-bold">توضیح</span><textarea rows={3} value={owner.subtitle||''} onChange={event=>patchOwner({subtitle:event.target.value})} className="w-full mt-1 p-2.5 border rounded-lg"/></label>
+            <div className="grid grid-cols-2 gap-2">
+              {mode==='slides'
+                ? <input value={(draft as SliderItem)?.tag||''} onChange={event=>patchSlide({tag:event.target.value})} className="p-2 border rounded" placeholder="Badge"/>
+                : <input value={(bannerDraft as PageSectionItem)?.badge||''} onChange={event=>patchBanner({badge:event.target.value})} className="p-2 border rounded" placeholder="Badge"/>
+              }
+              <input value={owner.buttonText||''} onChange={event=>patchOwner({buttonText:event.target.value})} className="p-2 border rounded" placeholder="CTA"/>
+            </div>
+            <input dir="ltr" value={mode==='slides'?(draft as SliderItem)?.link||'':(bannerDraft as PageSectionItem)?.link||''} onChange={event=>mode==='slides'?patchSlide({link:event.target.value}):patchBanner({link:event.target.value})} className="w-full p-2 border rounded text-left" placeholder="link"/>
+            <ImageUploadInput label={mode==='slides'?'تصویر اسلاید':'تصویر بنر'} value={owner.imageUrl||''} onChange={url=>patchOwner({imageUrl:url})} aspectRatio="banner" presetCategory="banners"/>
+
+            <section className="p-3 rounded-xl border border-blue-200 bg-blue-50/20 space-y-3">
+              <strong className="block text-[9px]">جانمایی دقیق عنصر انتخاب‌شده</strong>
+              <select value={activeElement} onChange={event=>setActiveElement(event.target.value as SliderElementKey)} className="w-full p-2 border rounded-lg bg-white">
+                <option value="tag">Badge</option>
+                <option value="title">عنوان</option>
+                <option value="subtitle">توضیح</option>
+                <option value="button">دکمه</option>
+              </select>
+              <div className="grid grid-cols-3 gap-2">
+                {(['x','y','width'] as const).map(field=>{
+                  const pos=elementPosition(owner,device,activeElement);
+                  const label=field==='x'?'X %':field==='y'?'Y %':'Width %';
+                  return <label key={field}><span className="block text-[8px] font-bold mb-1">{label}</span><input type="number" min="0" max={field==='width'?90:100} value={Number(pos[field]||0)} onChange={event=>setElementPosition(activeElement,{...pos,[field]:Number(event.target.value)})} className="w-full p-2 border rounded-lg font-mono"/></label>;
+                })}
+              </div>
+            </section>
+
+            {mode==='slides'&&draft&&<>
+              <div><span className="font-bold block mb-1">تراز متن</span><div className="grid grid-cols-3 gap-1"><button onClick={()=>patchSlide({textAlignment:'right'})} className={`p-2 border rounded flex justify-center ${draft.textAlignment==='right'?'bg-blue-50 border-blue-500':''}`}><AlignRight className="w-4 h-4"/></button><button onClick={()=>patchSlide({textAlignment:'center'})} className={`p-2 border rounded flex justify-center ${draft.textAlignment==='center'?'bg-blue-50 border-blue-500':''}`}><AlignCenter className="w-4 h-4"/></button><button onClick={()=>patchSlide({textAlignment:'left'})} className={`p-2 border rounded flex justify-center ${draft.textAlignment==='left'?'bg-blue-50 border-blue-500':''}`}><AlignLeft className="w-4 h-4"/></button></div></div>
+              <label><span>شدت Overlay: {draft.overlayOpacity??60}%</span><input type="range" min="0" max="100" value={draft.overlayOpacity??60} onChange={event=>patchSlide({overlayOpacity:Number(event.target.value)})} className="w-full"/></label>
+              <label className="flex items-center justify-between p-2 border rounded-lg"><span>گرادیان روی تصویر</span><input type="checkbox" checked={draft.gradientOverlay!==false} onChange={event=>patchSlide({gradientOverlay:event.target.checked})}/></label>
+              <div className="grid grid-cols-2 gap-2">
+                <label><span>عنوان</span><input type="color" value={draft.titleColor||'#ffffff'} onChange={event=>patchSlide({titleColor:event.target.value})} className="w-full h-9"/></label>
+                <label><span>توضیح</span><input type="color" value={draft.subtitleColor||'#e5e7eb'} onChange={event=>patchSlide({subtitleColor:event.target.value})} className="w-full h-9"/></label>
+                <label><span>دکمه</span><input type="color" value={draft.buttonBgColor||'#f59e0b'} onChange={event=>patchSlide({buttonBgColor:event.target.value})} className="w-full h-9"/></label>
+                <label><span>متن دکمه</span><input type="color" value={draft.buttonTextColor||'#111827'} onChange={event=>patchSlide({buttonTextColor:event.target.value})} className="w-full h-9"/></label>
+              </div>
+            </>}
+
+            <div className="pt-3 border-t flex gap-2"><button onClick={save} className="flex-1 py-2.5 rounded-xl bg-emerald-600 text-white font-black inline-flex items-center justify-center gap-1"><Save className="w-3.5 h-3.5"/>ذخیره</button><button onClick={removeCurrent} className="w-10 grid place-items-center rounded-xl bg-red-50 text-red-600"><Trash2 className="w-4 h-4"/></button></div>
           </div>}
         </aside>
       </div>

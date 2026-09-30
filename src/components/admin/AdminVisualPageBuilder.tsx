@@ -106,6 +106,32 @@ export const AdminVisualPageBuilder: React.FC<{onNavigate?:(view:string,param?:s
 
   const patch=(partial:Partial<PageSection>)=>setDraft(current=>current?{...current,...partial}:current);
 
+  const ensureRepeaterSlots=(count:number,current:PageSection|null=draft)=>{
+    if(!current)return[];
+    const items=[...(current.items||[])];
+    const shouldGrow=items.length>0||/promo|banner|testimonial|brand|manufacturer|service|feature|benefit|logo/i.test(current.sectionKey||'');
+    if(!shouldGrow)return items;
+    while(items.length<count){
+      items.push({
+        id:`item-${Date.now()}-${items.length+1}-${Math.random().toString(36).slice(2,6)}`,
+        title:'',
+        subtitle:'',
+        content:'',
+        imageUrl:'',
+        link:'shop',
+        buttonText:'مشاهده',
+        isVisible:true,
+        order:items.length+1
+      });
+    }
+    return items.map((item,index)=>({...item,order:index+1}));
+  };
+
+  const setDesktopColumns=(count:number)=>{
+    if(!draft)return;
+    setDraft({...draft,desktopColumns:count,items:ensureRepeaterSlots(count,draft)});
+  };
+
   const saveDraft=()=>{
     if(!draft) return;
     updateSection(page.slug,draft);
@@ -291,7 +317,7 @@ export const AdminVisualPageBuilder: React.FC<{onNavigate?:(view:string,param?:s
                   <label className="block"><span>حداکثر عرض px</span><input type="number" value={draft.maxWidthPx??1280} onChange={e=>patch({maxWidthPx:Number(e.target.value)})} className="w-full p-2 border rounded"/></label>
                 </>}
                 <div className="grid grid-cols-3 gap-2">
-                  <label><span>Desktop ستون</span><input type="number" min="1" max="12" value={draft.desktopColumns??3} onChange={e=>patch({desktopColumns:Number(e.target.value)})} className="w-full p-2 border rounded"/></label>
+                  <label><span>Desktop ستون</span><input type="number" min="1" max="12" value={draft.desktopColumns??3} onChange={e=>setDesktopColumns(Number(e.target.value))} className="w-full p-2 border rounded"/></label>
                   <label><span>Tablet ستون</span><input type="number" min="1" max="8" value={draft.tabletColumns??2} onChange={e=>patch({tabletColumns:Number(e.target.value)})} className="w-full p-2 border rounded"/></label>
                   <label><span>Mobile ستون</span><input type="number" min="1" max="4" value={draft.mobileColumns??1} onChange={e=>patch({mobileColumns:Number(e.target.value)})} className="w-full p-2 border rounded"/></label>
                 </div>

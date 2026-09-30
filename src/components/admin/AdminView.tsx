@@ -75,6 +75,7 @@ import { AdminIconLibrary } from './AdminIconLibrary';
 import { AdminVisualPageBuilder } from './AdminVisualPageBuilder';
 import { AdminCategoryStudio } from './AdminCategoryStudio';
 import { AdminPaymentGateways } from './AdminPaymentGateways';
+import { ProductClassificationFields } from './ProductClassificationFields';
 
 interface AdminViewProps {
   onExitToStore?: () => void;
@@ -152,7 +153,12 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
     partNumber: '',
     sku: '',
     brandManufacturer: 'Chery Genuine',
+    partManufacturerCompany: 'Chery Genuine',
+    vehicleManufacturerCompany: '',
+    vehicleBrandIds: ['kmc'],
+    vehicleModelIds: ['kmc-j7'],
     categorySlug: 'engine',
+    subcategorySlug: undefined,
     grade: 'genuine',
     price: 1500000,
     stock: 10,
@@ -333,7 +339,12 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
       nameFa: newProductForm.nameFa || '',
       nameEn: newProductForm.nameEn || '',
       categorySlug: newProductForm.categorySlug || 'engine',
-      brandManufacturer: newProductForm.brandManufacturer || 'Chery Genuine',
+      subcategorySlug: newProductForm.subcategorySlug,
+      brandManufacturer: newProductForm.partManufacturerCompany || newProductForm.brandManufacturer || 'Chery Genuine',
+      partManufacturerCompany: newProductForm.partManufacturerCompany || newProductForm.brandManufacturer || 'Chery Genuine',
+      vehicleManufacturerCompany: newProductForm.vehicleManufacturerCompany || '',
+      vehicleBrandIds: newProductForm.vehicleBrandIds || [],
+      vehicleModelIds: newProductForm.vehicleModelIds || [],
       grade: newProductForm.grade || 'genuine',
       price: Number(newProductForm.price) || 0,
       stock: Number(newProductForm.stock) || 0,
@@ -354,9 +365,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
       replacementInterval: 'هر ۵۰ هزار کیلومتر',
       installationTips: ['نصب توسط مکانیک مجرب'],
       genuineVsFakeNotes: 'هولوگرام شرکتی و بارکد ردیابی',
-      fitments: newProductForm.fitments || [
-        { id: 'fit-gen', brandId: 'kmc', brandName: 'KMC', modelId: 'kmc-j7', modelName: 'KMC J7', yearFrom: 1401, yearTo: 1404, engine: '1.5 Turbo' }
-      ],
+      fitments: newProductForm.fitments || [],
       seo: newProductForm.seo
     };
 
@@ -1518,173 +1527,11 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
       )}
 
       {/* =========================================================================
-          MODAL: ADD NEW PRODUCT (WITH SHORT AND FULL DESCRIPTION & RICH EDITOR)
-      ========================================================================= */}
-      {isNewProductModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
-          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-4xl w-full max-h-[90vh] overflow-y-auto space-y-4 text-right shadow-2xl">
-            <div className="flex items-center justify-between pb-3 border-b border-neutral-100">
-              <h3 className="font-bold text-base text-neutral-900">تعریف قطعه جدید در انبار</h3>
-              <button onClick={() => setIsNewProductModalOpen(false)} className="text-neutral-400 hover:text-neutral-700">✕</button>
-            </div>
-
-            <form onSubmit={handleCreateProduct} className="space-y-4 text-xs">
-              <div>
-                <label className="block text-neutral-600 mb-1 font-semibold">نام فارسی قطعه *:</label>
-                <input
-                  type="text"
-                  value={newProductForm.nameFa}
-                  onChange={e => setNewProductForm({ ...newProductForm, nameFa: e.target.value })}
-                  placeholder="مثال: رادیاتور آب موتور KMC J7 شرکتی"
-                  className="w-full p-2.5 border border-neutral-300 rounded-xl"
-                  required
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-neutral-600 mb-1 font-semibold">شماره فنی بین‌المللی OEM *:</label>
-                  <input
-                    type="text"
-                    value={newProductForm.oemNumber}
-                    onChange={e => setNewProductForm({ ...newProductForm, oemNumber: e.target.value })}
-                    placeholder="1026040GH010"
-                    className="w-full p-2.5 border border-neutral-300 rounded-xl font-mono uppercase"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-neutral-600 mb-1 font-semibold">برند سازنده قطعه:</label>
-                  <input
-                    type="text"
-                    value={newProductForm.brandManufacturer}
-                    onChange={e => setNewProductForm({ ...newProductForm, brandManufacturer: e.target.value })}
-                    placeholder="Chery Genuine / Bosch / KMC"
-                    className="w-full p-2.5 border border-neutral-300 rounded-xl"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-neutral-600 mb-1 font-semibold">دسته‌بندی قطعه:</label>
-                  <select
-                    value={newProductForm.categorySlug}
-                    onChange={e => setNewProductForm({ ...newProductForm, categorySlug: e.target.value })}
-                    className="w-full p-2.5 border border-neutral-300 rounded-xl"
-                  >
-                    {categories.map(c => (
-                      <option key={c.id} value={c.slug}>{c.nameFa}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-neutral-600 mb-1 font-semibold">گرید کیفی:</label>
-                  <select
-                    value={newProductForm.grade}
-                    onChange={e => setNewProductForm({ ...newProductForm, grade: e.target.value as any })}
-                    className="w-full p-2.5 border border-neutral-300 rounded-xl"
-                  >
-                    <option value="genuine">اصلی شرکتی (Genuine)</option>
-                    <option value="oem">وارداتی درجه یک (OEM)</option>
-                    <option value="aftermarket">افترمارکت استاندارد</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-neutral-600 mb-1 font-semibold">قیمت فروش (ریال):</label>
-                  <input
-                    type="number"
-                    value={newProductForm.price}
-                    onChange={e => setNewProductForm({ ...newProductForm, price: Number(e.target.value) })}
-                    className="w-full p-2.5 border border-neutral-300 rounded-xl font-mono"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-neutral-600 mb-1 font-semibold">موجودی انبار:</label>
-                  <input
-                    type="number"
-                    value={newProductForm.stock}
-                    onChange={e => setNewProductForm({ ...newProductForm, stock: Number(e.target.value) })}
-                    className="w-full p-2.5 border border-neutral-300 rounded-xl font-mono"
-                    required
-                  />
-                </div>
-              </div>
-
-              {/* Product Gallery Images (Upload, Add, Remove) */}
-              <div className="pt-2 border-t border-neutral-100">
-                <MultiImageUploadInput
-                  label="تصاویر و گالری کالا (آپلود عکس، حذف، شاخص کردن و پیش‌نمایش):"
-                  images={newProductForm.images || []}
-                  onChange={imgs => setNewProductForm({ ...newProductForm, images: imgs })}
-                  helperText="می‌توانید چندین تصویر آپلود کنید، تصاویر را حذف نمایید یا هر تصویر دلخواه را به عنوان عکس اصلی کالا تعیین کنید."
-                />
-              </div>
-
-              {/* Short Description */}
-              <div>
-                <label className="block text-neutral-600 mb-1 font-semibold">
-                  توضیحات کوتاه محصول (خلاصه ویژگی‌ها برای نمایش سریع و متای گوگل):
-                </label>
-                <textarea
-                  rows={2}
-                  value={newProductForm.shortDescription || ''}
-                  onChange={e => setNewProductForm({ ...newProductForm, shortDescription: e.target.value })}
-                  placeholder="خلاصه ۱ الی ۲ خطی از مزایا، کشور سازنده و مشخصه اصلی..."
-                  className="w-full p-2.5 border border-neutral-300 rounded-xl"
-                />
-              </div>
-
-              {/* Rich Long Description */}
-              <div>
-                <RichTextEditor
-                  label="توضیحات کامل و نقد و بررسی تخصصی قطعه (ویرایشگر حرفه‌ای)"
-                  value={newProductForm.description || ''}
-                  onChange={val => setNewProductForm({ ...newProductForm, description: val })}
-                  rows={6}
-                  placeholder="توضیحات کامل فنی، جنس آلیاژ، دستورالعمل نصب و سازگاری..."
-                />
-              </div>
-
-              <AdminEntitySeoPanel
-                entityType="product"
-                entityTitle={newProductForm.nameFa || ''}
-                value={newProductForm.seo}
-                images={newProductForm.images || []}
-                onChange={(seo) => setNewProductForm({ ...newProductForm, seo })}
-              />
-
-              <div className="flex gap-2 pt-4">
-                <button
-                  type="button"
-                  onClick={() => setIsNewProductModalOpen(false)}
-                  className="flex-1 py-2.5 bg-neutral-100 text-neutral-700 rounded-xl font-bold"
-                >
-                  انصراف
-                </button>
-                <button
-                  type="submit"
-                  className="flex-1 py-2.5 bg-red-600 text-white rounded-xl font-bold shadow-md hover:bg-red-700"
-                >
-                  ثبت قطعه در انبار
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* =========================================================================
           MODAL: EDIT PRODUCT (WITH SHORT AND FULL DESCRIPTION & RICH EDITOR)
       ========================================================================= */}
       {editingProduct && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
-          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-4xl w-full max-h-[90vh] overflow-y-auto space-y-4 text-right shadow-2xl">
+        <div className="fixed inset-0 z-[210] flex items-start justify-center px-3 sm:px-4 pt-4 sm:pt-8 pb-8 bg-black/60 backdrop-blur-xs overflow-y-auto">
+          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-5xl w-full max-h-[calc(100vh-3rem)] overflow-y-auto space-y-4 text-right shadow-2xl">
             <div className="flex items-center justify-between pb-3 border-b border-neutral-100">
               <h3 className="font-bold text-base text-neutral-900">ویرایش قطعه: {editingProduct.nameFa}</h3>
               <button onClick={() => setEditingProduct(null)} className="text-neutral-400 hover:text-neutral-700">✕</button>
@@ -1748,122 +1595,14 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
                 </div>
               </div>
 
-              {/* Category & Manufacturer Company */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-neutral-100">
-                <div>
-                  <label className="block text-neutral-600 mb-1 font-semibold">دسته‌بندی تخصصی قطعه *:</label>
-                  <select
-                    value={editingProduct.categorySlug}
-                    onChange={e => setEditingProduct({ ...editingProduct, categorySlug: e.target.value })}
-                    className="w-full p-2.5 border border-neutral-300 rounded-xl bg-white"
-                  >
-                    {categories.map(c => (
-                      <option key={c.id} value={c.slug}>{c.nameFa} ({c.nameEn})</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-neutral-600 mb-1 font-semibold">شرکت / برند سازنده قطعه (تولیدکننده) *:</label>
-                  <input
-                    type="text"
-                    value={editingProduct.brandManufacturer || ''}
-                    onChange={e => setEditingProduct({ ...editingProduct, brandManufacturer: e.target.value })}
-                    placeholder="مثال: چری شرکتی، مدیران خودرو، ایساکو، بوش..."
-                    className="w-full p-2.5 border border-neutral-300 rounded-xl"
-                    required
-                  />
-                  <div className="flex flex-wrap gap-1 mt-1.5">
-                    {['چری شرکتی', 'مدیران خودرو', 'کرمان موتور (KMC)', 'ایساکو', 'سایپا یدک', 'بوش (Bosch)', 'والئو (Valeo)', 'گتس (Gates)'].map(brandName => (
-                      <button
-                        type="button"
-                        key={brandName}
-                        onClick={() => setEditingProduct({ ...editingProduct, brandManufacturer: brandName })}
-                        className="text-[10px] px-2 py-0.5 rounded-lg bg-neutral-100 hover:bg-red-50 hover:text-red-700 text-neutral-600 transition-colors cursor-pointer"
-                      >
-                        {brandName}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              {/* Compatible Vehicle Models (Fitments) */}
-              <div className="pt-2 border-t border-neutral-100 space-y-2">
-                <div className="flex items-center justify-between">
-                  <label className="block text-neutral-700 font-bold">
-                    خودروهای سازگار با این قطعه (فیتمنت خودروها):
-                  </label>
-                  <span className="text-[11px] text-blue-700 font-bold bg-blue-50 px-2 py-0.5 rounded-lg border border-blue-200">
-                    {(editingProduct.fitments || []).length} خودرو انتخاب شده
-                  </span>
-                </div>
-                <p className="text-[11px] text-neutral-500">
-                  مشخص کنید این قطعه برای کدام خودرو یا خودروها کاربرد دارد (خریداران با فیلتر هوشمند خودرو این کالا را می‌بینند):
-                </p>
-                <div className="max-h-48 overflow-y-auto p-3 border border-neutral-200 rounded-2xl bg-neutral-50/50 space-y-3">
-                  {brands.map(brand => {
-                    const brandModels = models.filter(m => m.brandId === brand.id);
-                    if (brandModels.length === 0) return null;
-                    return (
-                      <div key={brand.id} className="space-y-1.5">
-                        <div className="font-bold text-[11px] text-neutral-800 flex items-center gap-1.5">
-                          <span className="w-1.5 h-1.5 rounded-full bg-red-600"></span>
-                          <span>{brand.nameFa} ({brand.nameEn}):</span>
-                        </div>
-                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
-                          {brandModels.map(m => {
-                            const isChecked = (editingProduct.fitments || []).some(f => f.modelId === m.id);
-                            return (
-                              <label
-                                key={m.id}
-                                className={`flex items-center gap-2 p-2 rounded-xl border text-[11px] cursor-pointer transition-colors ${
-                                  isChecked
-                                    ? 'bg-blue-50 border-blue-300 text-blue-900 font-bold'
-                                    : 'bg-white border-neutral-200 hover:border-neutral-300 text-neutral-700'
-                                }`}
-                              >
-                                <input
-                                  type="checkbox"
-                                  checked={isChecked}
-                                  onChange={e => {
-                                    const currentFitments = editingProduct.fitments || [];
-                                    if (e.target.checked) {
-                                      const newFitment = {
-                                        id: `fit-${m.id}-${Date.now()}`,
-                                        brandId: brand.id,
-                                        brandName: brand.nameFa,
-                                        modelId: m.id,
-                                        modelName: m.nameFa,
-                                        yearFrom: m.yearFrom,
-                                        yearTo: m.yearTo,
-                                        engine: m.engineSummary
-                                      };
-                                      setEditingProduct({
-                                        ...editingProduct,
-                                        fitments: [...currentFitments, newFitment],
-                                        vehicleModelIds: [...(editingProduct.vehicleModelIds || []), m.id]
-                                      });
-                                    } else {
-                                      setEditingProduct({
-                                        ...editingProduct,
-                                        fitments: currentFitments.filter(f => f.modelId !== m.id),
-                                        vehicleModelIds: (editingProduct.vehicleModelIds || []).filter(id => id !== m.id)
-                                      });
-                                    }
-                                  }}
-                                  className="rounded text-red-600 focus:ring-red-500"
-                                />
-                                <span>{m.nameFa}</span>
-                              </label>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
+              <ProductClassificationFields
+                value={editingProduct}
+                onChange={(next) => setEditingProduct({ ...editingProduct, ...next } as Product)}
+                categories={categories}
+                brands={brands}
+                models={models}
+                products={products}
+              />
 
               {/* Product Gallery Images (Upload, Add, Remove) */}
               <div className="pt-2 border-t border-neutral-100">
@@ -1933,8 +1672,8 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
           MODAL: ADD NEW PRODUCT TO INVENTORY
       ========================================================================= */}
       {isNewProductModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
-          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-4xl w-full max-h-[90vh] overflow-y-auto space-y-4 text-right shadow-2xl">
+        <div className="fixed inset-0 z-[210] flex items-start justify-center px-3 sm:px-4 pt-4 sm:pt-8 pb-8 bg-black/60 backdrop-blur-xs overflow-y-auto">
+          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-5xl w-full max-h-[calc(100vh-3rem)] overflow-y-auto space-y-4 text-right shadow-2xl">
             <div className="flex items-center justify-between pb-3 border-b border-neutral-100">
               <h3 className="font-bold text-base text-neutral-900 flex items-center gap-2">
                 <Package className="w-5 h-5 text-red-600" />
@@ -2005,122 +1744,14 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
                 </div>
               </div>
 
-              {/* Category & Manufacturer Company */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-neutral-100">
-                <div>
-                  <label className="block text-neutral-600 mb-1 font-semibold">دسته‌بندی تخصصی قطعه *:</label>
-                  <select
-                    value={newProductForm.categorySlug || 'engine'}
-                    onChange={e => setNewProductForm({ ...newProductForm, categorySlug: e.target.value })}
-                    className="w-full p-2.5 border border-neutral-300 rounded-xl bg-white"
-                  >
-                    {categories.map(c => (
-                      <option key={c.id} value={c.slug}>{c.nameFa} ({c.nameEn})</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-neutral-600 mb-1 font-semibold">شرکت / برند سازنده قطعه (تولیدکننده) *:</label>
-                  <input
-                    type="text"
-                    value={newProductForm.brandManufacturer || ''}
-                    onChange={e => setNewProductForm({ ...newProductForm, brandManufacturer: e.target.value })}
-                    placeholder="مثال: چری شرکتی، مدیران خودرو، کرمان موتور، بوش..."
-                    className="w-full p-2.5 border border-neutral-300 rounded-xl"
-                    required
-                  />
-                  <div className="flex flex-wrap gap-1 mt-1.5">
-                    {['چری شرکتی', 'مدیران خودرو', 'کرمان موتور (KMC)', 'ایساکو', 'سایپا یدک', 'بوش (Bosch)', 'والئو (Valeo)', 'گتس (Gates)'].map(brandName => (
-                      <button
-                        type="button"
-                        key={brandName}
-                        onClick={() => setNewProductForm({ ...newProductForm, brandManufacturer: brandName })}
-                        className="text-[10px] px-2 py-0.5 rounded-lg bg-neutral-100 hover:bg-red-50 hover:text-red-700 text-neutral-600 transition-colors cursor-pointer"
-                      >
-                        {brandName}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              {/* Compatible Vehicle Models (Fitments) */}
-              <div className="pt-2 border-t border-neutral-100 space-y-2">
-                <div className="flex items-center justify-between">
-                  <label className="block text-neutral-700 font-bold">
-                    خودروهای سازگار با این قطعه (وابستگی به مدل و کارخانه):
-                  </label>
-                  <span className="text-[11px] text-blue-700 font-bold bg-blue-50 px-2 py-0.5 rounded-lg border border-blue-200">
-                    {(newProductForm.fitments || []).length} خودرو انتخاب شده
-                  </span>
-                </div>
-                <p className="text-[11px] text-neutral-500">
-                  انتخاب کنید این محصول برای کدام خودروها مناسب است تا در جستجو و فیلترهای خودرویی دقیقاً برای آن خودروها پیشنهاد شود:
-                </p>
-                <div className="max-h-48 overflow-y-auto p-3 border border-neutral-200 rounded-2xl bg-neutral-50/50 space-y-3">
-                  {brands.map(brand => {
-                    const brandModels = models.filter(m => m.brandId === brand.id);
-                    if (brandModels.length === 0) return null;
-                    return (
-                      <div key={brand.id} className="space-y-1.5">
-                        <div className="font-bold text-[11px] text-neutral-800 flex items-center gap-1.5">
-                          <span className="w-1.5 h-1.5 rounded-full bg-red-600"></span>
-                          <span>{brand.nameFa} ({brand.nameEn}):</span>
-                        </div>
-                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
-                          {brandModels.map(m => {
-                            const isChecked = (newProductForm.fitments || []).some(f => f.modelId === m.id);
-                            return (
-                              <label
-                                key={m.id}
-                                className={`flex items-center gap-2 p-2 rounded-xl border text-[11px] cursor-pointer transition-colors ${
-                                  isChecked
-                                    ? 'bg-blue-50 border-blue-300 text-blue-900 font-bold'
-                                    : 'bg-white border-neutral-200 hover:border-neutral-300 text-neutral-700'
-                                }`}
-                              >
-                                <input
-                                  type="checkbox"
-                                  checked={isChecked}
-                                  onChange={e => {
-                                    const currentFitments = newProductForm.fitments || [];
-                                    if (e.target.checked) {
-                                      const newFitment = {
-                                        id: `fit-${m.id}-${Date.now()}`,
-                                        brandId: brand.id,
-                                        brandName: brand.nameFa,
-                                        modelId: m.id,
-                                        modelName: m.nameFa,
-                                        yearFrom: m.yearFrom,
-                                        yearTo: m.yearTo,
-                                        engine: m.engineSummary
-                                      };
-                                      setNewProductForm({
-                                        ...newProductForm,
-                                        fitments: [...currentFitments, newFitment],
-                                        vehicleModelIds: [...(newProductForm.vehicleModelIds || []), m.id]
-                                      });
-                                    } else {
-                                      setNewProductForm({
-                                        ...newProductForm,
-                                        fitments: currentFitments.filter(f => f.modelId !== m.id),
-                                        vehicleModelIds: (newProductForm.vehicleModelIds || []).filter(id => id !== m.id)
-                                      });
-                                    }
-                                  }}
-                                  className="rounded text-red-600 focus:ring-red-500"
-                                />
-                                <span>{m.nameFa}</span>
-                              </label>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
+              <ProductClassificationFields
+                value={newProductForm}
+                onChange={(next) => setNewProductForm(next)}
+                categories={categories}
+                brands={brands}
+                models={models}
+                products={products}
+              />
 
               {/* Product Gallery Images (Upload, Add, Remove) */}
               <div className="pt-2 border-t border-neutral-100">
@@ -2181,7 +1812,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
           MODAL: ADD NEW CATEGORY
       ========================================================================= */}
       {isCategoryModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+        <div className="fixed inset-0 z-[210] flex items-start justify-center px-3 sm:px-4 pt-4 sm:pt-8 pb-8 bg-black/60 backdrop-blur-xs overflow-y-auto">
           <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full space-y-4 text-right shadow-2xl">
             <div className="flex items-center justify-between pb-3 border-b border-neutral-100">
               <h3 className="font-bold text-base text-neutral-900">افزودن دسته‌بندی قطعات جدید</h3>
@@ -2337,7 +1968,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
           MODAL: EDIT CATEGORY (Image Upload, Remove, and Edit)
       ========================================================================= */}
       {editingCategory && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+        <div className="fixed inset-0 z-[210] flex items-start justify-center px-3 sm:px-4 pt-4 sm:pt-8 pb-8 bg-black/60 backdrop-blur-xs overflow-y-auto">
           <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-3xl w-full max-h-[90vh] overflow-y-auto space-y-4 text-right shadow-2xl">
             <div className="flex items-center justify-between pb-3 border-b border-neutral-100">
               <h3 className="font-bold text-base text-neutral-900">ویرایش دسته‌بندی قطعات و عکس</h3>
@@ -2489,7 +2120,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
           MODAL: ADD NEW CUSTOMER
       ========================================================================= */}
       {isCustomerModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+        <div className="fixed inset-0 z-[210] flex items-start justify-center px-3 sm:px-4 pt-4 sm:pt-8 pb-8 bg-black/60 backdrop-blur-xs overflow-y-auto">
           <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full space-y-4 text-right shadow-2xl">
             <div className="flex items-center justify-between pb-3 border-b border-neutral-100">
               <h3 className="font-bold text-base text-neutral-900">ثبت مشتری یا همکار جدید</h3>

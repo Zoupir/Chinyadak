@@ -658,6 +658,60 @@ const entityFromRow = (
   };
 };
 
+const nestedCategoryEntitiesFromRow = (row: any): SeoEntity[] => {
+  const rootData = parseJson<Record<string, any>>(row.data_json, {});
+  const updatedAt = new Date(row.updated_at || Date.now());
+  const result: SeoEntity[] = [];
+
+  const walk = (nodes: any[], ancestors: string[] = []) => {
+    for (const node of nodes || []) {
+      const id = String(node?.id || '').trim();
+      const slug = String(node?.slug || id).trim();
+      if (!id || !slug) continue;
+      const title = normalizeSeoText(String(node?.nameFa || node?.nameEn || slug));
+      const description = normalizeSeoText(String(node?.description || ''));
+      const bottom = String(node?.bottomDescription || '');
+      result.push({
+        type: 'category',
+        id: 'sub:' + id,
+        slug,
+        title,
+        url: entityUrl('category', slug),
+        description,
+        content: [description, bottom].filter(Boolean).join(' '),
+        image: String(node?.imageUrl || node?.iconUrl || '') || undefined,
+        taxonomy: [...ancestors, slug].filter(Boolean),
+        data: { ...node, parentRootId: String(row.id), parentRootSlug: String(row.slug || rootData.slug || '') },
+        updatedAt
+      });
+      if (Array.isArray(node?.subcategories) && node.subcategories.length) {
+        walk(node.subcategories, [...ancestors, slug]);
+      }
+    }
+  };
+
+  walk(Array.isArray(rootData?.subcategories) ? rootData.subcategories : [], [String(rootData?.slug || row.slug || '')].filter(Boolean));
+  return result;
+};
+
+const findNestedCategoryEntity = async (key: string): Promise<SeoEntity | null> => {
+  const lookup = key.startsWith('sub:') ? key : key;
+  const [rows] = await pool.query<Array<RowDataPacket & Record<string, any>>>(
+    'SELECT id, slug, name_fa, description, data_json, updated_at FROM categories WHERE is_active = 1'
+  );
+  for (const row of rows) {
+    const nested = nestedCategoryEntitiesFromRow(row);
+    const match = nested.find(entity =>
+      entity.id === lookup ||
+      entity.id === 'sub:' + lookup ||
+      entity.slug === lookup ||
+      entity.data?.id === lookup
+    );
+    if (match) return match;
+  }
+  return null;
+};
+
 export const loadEntity = async (type: SeoEntityType, idOrSlug: string): Promise<SeoEntity | null> => {
   const key = String(idOrSlug || '').trim();
   if (!key) return null;
@@ -670,7 +724,9 @@ export const loadEntity = async (type: SeoEntityType, idOrSlug: string): Promise
   else sql = 'SELECT id, slug, name_fa, data_json, updated_at FROM vehicle_models WHERE is_active = 1 AND (id = ? OR slug = ?) LIMIT 1';
 
   const [rows] = await pool.query<Array<RowDataPacket & Record<string, any>>>(sql, [key, key]);
-  return rows[0] ? entityFromRow(type, rows[0]) : null;
+  if (rows[0]) return entityFromRow(type, rows[0]);
+  if (type === 'category') return findNestedCategoryEntity(key);
+  return null;
 };
 
 export const loadAllEntities = async (limitPerType = 5000): Promise<SeoEntity[]> => {
@@ -685,6 +741,9 @@ export const loadAllEntities = async (limitPerType = 5000): Promise<SeoEntity[]>
   ];
   const results = await Promise.all(queries.map(async ([type, sql]) => {
     const [rows] = await pool.query<Array<RowDataPacket & Record<string, any>>>(sql);
+    if (type === 'category') {
+      return rows.flatMap(row => [entityFromRow(type, row), ...nestedCategoryEntitiesFromRow(row)]);
+    }
     return rows.map(row => entityFromRow(type, row));
   }));
   return results.flat();

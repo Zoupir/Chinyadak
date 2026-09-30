@@ -67,6 +67,10 @@ export const AdminCategoryStudio:React.FC = ()=>{
   },[selected,workingRoot]);
 
   const selectNode=(ref:NodeRef)=>{
+    if (draftRoot?.id === ref.rootId) {
+      setSelected(ref);
+      return;
+    }
     const nextRoot=categories.find(c=>c.id===ref.rootId);
     setSelected(ref);
     setDraftRoot(nextRoot?cloneCategory(nextRoot):null);
@@ -163,7 +167,11 @@ export const AdminCategoryStudio:React.FC = ()=>{
     </div>;
   });
 
-  const filteredRoots=categories.filter(c=>!query.trim()||c.nameFa.includes(query)||c.nameEn.toLowerCase().includes(query.toLowerCase())||c.slug.includes(query.toLowerCase()));
+  const categoryMatches=(node:any,q:string):boolean=>{
+    if(node.nameFa?.includes(q)||String(node.nameEn||'').toLowerCase().includes(q.toLowerCase())||String(node.slug||'').toLowerCase().includes(q.toLowerCase()))return true;
+    return (node.subcategories||[]).some((child:any)=>categoryMatches(child,q));
+  };
+  const filteredRoots=categories.filter(c=>!query.trim()||categoryMatches(c,query.trim()));
   const entityId=selected?.isRoot?selected.nodeId:`sub:${selected?.nodeId||''}`;
   const seoValue=(selectedNode as any)?.seo as SeoEntityDraft|undefined;
 
@@ -208,7 +216,7 @@ export const AdminCategoryStudio:React.FC = ()=>{
             <div className="flex gap-2">
               <button onClick={()=>addChild(selected)} className="px-3 py-2 rounded-xl bg-blue-50 text-blue-700 text-[10px] font-bold inline-flex gap-1 items-center"><Plus className="w-3.5 h-3.5"/>زیر‌دسته</button>
               <button onClick={deleteSelected} className="w-9 h-9 grid place-items-center rounded-xl bg-red-50 text-red-600"><Trash2 className="w-4 h-4"/></button>
-              <button onClick={save} className="px-4 py-2 rounded-xl bg-emerald-600 text-white text-[10px] font-black inline-flex gap-1 items-center"><Save className="w-3.5 h-3.5"/>ذخیره درخت</button>
+              <button onClick={save} className="px-4 py-2 rounded-xl bg-emerald-600 text-white text-[10px] font-black inline-flex gap-1 items-center"><Save className="w-3.5 h-3.5"/>ذخیره درخت و SEO</button>
             </div>
           </div>
 

@@ -139,6 +139,14 @@ export interface Product {
   categorySlug: string;
   subcategorySlug?: string;
   brandManufacturer: string; // e.g. Chery Genuine, Valeo, Bosch, Gates, Febi, KMC Original
+  /** Brand of the vehicle(s) this part is intended for. */
+  vehicleBrandIds?: string[];
+  /** Model IDs explicitly linked to this product. */
+  vehicleModelIds?: string[];
+  /** Vehicle manufacturing / assembly company, e.g. Kerman Motor. */
+  vehicleManufacturerCompany?: string;
+  /** Part manufacturing company, e.g. Bosch / Valeo / OEM supplier. */
+  partManufacturerCompany?: string;
   grade: QualityGrade;
   price: number;
   discountPrice?: number;
@@ -166,8 +174,6 @@ export interface Product {
   genuineVsFakeNotes: string;   // تفاوت نمونه اصلی و فیک
   
   fitments: VehicleFitment[];
-  vehicleModelIds?: string[]; // IDs of cars this product fits (e.g. ['kmc-j7', 'chery-tiggo7-pro'])
-  vehicleBrandIds?: string[]; // IDs of brands this product fits
   complementPartIds?: string[]; // Cross-sell: مثلا واترپمپ -> ترموستات، ضدیخ
   relatedPartIds?: string[];
   seo?: SeoEntityDraft;
@@ -358,6 +364,15 @@ export interface PaymentGatewayConfig {
   isActive: boolean;
   merchantId: string;
   terminalId?: string;
+  username?: string;
+  password?: string;
+  apiKey?: string;
+  merchantKey?: string;
+  terminalKey?: string;
+  endpoint?: string;
+  paymentUrl?: string;
+  callbackUrl?: string;
+  additionalConfig?: Record<string, string>;
   isSandbox: boolean;
   description: string;
 }
@@ -445,6 +460,22 @@ export interface ProductAttributeDefinition {
   defaultValue?: string;
 }
 
+export type SliderDevice = 'desktop' | 'tablet' | 'mobile';
+export type SliderElementKey = 'tag' | 'title' | 'subtitle' | 'button';
+
+export interface SliderElementPosition {
+  x: number; // percentage from left
+  y: number; // percentage from top
+  width?: number; // percentage of canvas width
+}
+
+export interface SliderDeviceLayout {
+  tag?: SliderElementPosition;
+  title?: SliderElementPosition;
+  subtitle?: SliderElementPosition;
+  button?: SliderElementPosition;
+}
+
 export interface SliderItem {
   id: string;
   title: string;
@@ -465,6 +496,13 @@ export interface SliderItem {
   buttonTextColor?: string;
   badgeBgColor?: string;
   badgeTextColor?: string;
+  responsiveLayout?: {
+    desktop?: SliderDeviceLayout;
+    tablet?: SliderDeviceLayout;
+    mobile?: SliderDeviceLayout;
+  };
+  inheritTabletFromDesktop?: boolean;
+  inheritMobileFromDesktop?: boolean;
 }
 
 export type AdminRole = 'super_admin' | 'content_manager' | 'order_manager' | 'inventory_manager';

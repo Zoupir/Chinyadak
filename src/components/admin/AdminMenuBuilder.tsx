@@ -135,8 +135,23 @@ export const AdminMenuBuilder: React.FC = () => {
       kind: 'product'
     }));
 
-    const categoryItems: LibraryOption[] = categories.flatMap(category => {
-      const root: LibraryOption = {
+    const categoryItems: LibraryOption[] = [];
+    const appendCategoryLibrary = (nodes: any[] = [], trail: string[] = []) => {
+      nodes.forEach(node => {
+        categoryItems.push({
+          key: `subcategory-${node.id}`,
+          sourceType: 'category',
+          sourceId: `sub:${node.id}`,
+          title: node.nameFa,
+          subtitle: trail.length ? trail.join(' ← ') : 'زیر‌دسته',
+          link: `category:${node.slug}`,
+          kind: 'category'
+        });
+        appendCategoryLibrary(node.subcategories || [], [...trail, node.nameFa]);
+      });
+    };
+    categories.forEach(category => {
+      categoryItems.push({
         key: `category-${category.id}`,
         sourceType: 'category',
         sourceId: category.id,
@@ -144,17 +159,8 @@ export const AdminMenuBuilder: React.FC = () => {
         subtitle: 'دسته اصلی',
         link: `category:${category.slug}`,
         kind: 'category'
-      };
-      const children: LibraryOption[] = (category.subcategories || []).map(sub => ({
-        key: `subcategory-${sub.id}`,
-        sourceType: 'category',
-        sourceId: `sub:${sub.id}`,
-        title: sub.nameFa,
-        subtitle: `زیرمجموعهٔ ${category.nameFa}`,
-        link: `category:${sub.slug}`,
-        kind: 'category'
-      }));
-      return [root, ...children];
+      });
+      appendCategoryLibrary(category.subcategories || [], [category.nameFa]);
     });
 
     const articleItems: LibraryOption[] = articles.map(article => ({

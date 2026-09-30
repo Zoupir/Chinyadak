@@ -414,7 +414,7 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
               style={{ borderRadius: `${sectionConfig('manufacturers')?.itemRadiusPx ?? 999}px` }}
             >
               <span style={{ width: 'var(--builder-image-size)', height: 'var(--builder-image-size)' }}>
-                {item.imageUrl ? <img src={item.imageUrl} alt={item.title || 'برند خودرو'} style={{ maxWidth: '100%', maxHeight: '100%' }} /> : <CarFront className="w-6 h-6" />}
+                {item.imageUrl ? <img src={item.imageUrl} alt={item.title || 'برند خودرو'} style={{ maxWidth: '100%', maxHeight: '100%' }} /> : <Car className="w-6 h-6" />}
               </span>
               <small>{item.title}</small>
             </button>

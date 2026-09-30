@@ -55,6 +55,20 @@ export interface VehicleTrim {
   displacement: string;
 }
 
+export interface CategoryChild {
+  id: string;
+  nameFa: string;
+  nameEn: string;
+  slug: string;
+  icon?: string;
+  iconUrl?: string;
+  imageUrl?: string;
+  description?: string;
+  bottomDescription?: string;
+  seo?: SeoEntityDraft;
+  subcategories?: CategoryChild[];
+}
+
 export interface Category {
   id: string;
   nameFa: string;
@@ -68,12 +82,7 @@ export interface Category {
   heroTitle?: string;
   heroSubtitle?: string;
   parentId?: string;
-  subcategories?: {
-    id: string;
-    nameFa: string;
-    nameEn: string;
-    slug: string;
-  }[];
+  subcategories?: CategoryChild[];
   seo?: SeoEntityDraft;
 }
 

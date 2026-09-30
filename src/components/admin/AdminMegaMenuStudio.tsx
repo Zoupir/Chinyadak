@@ -198,16 +198,23 @@ export const AdminMegaMenuStudio: React.FC = () => {
     const preserved=menus.filter(item=>!nestedIds.includes(item.id));
     const stamp=Date.now();
     const generated:MenuItem[]=[];
+    const appendChildren=(nodes:any[]=[],parentId:string,pathPrefix:string)=>{
+      nodes.forEach((node,nodeIndex)=>{
+        const nodeId=`mega-import-sub-${stamp}-${pathPrefix}-${node.id||nodeIndex}`;
+        generated.push({
+          id:nodeId,title:node.nameFa,originalTitle:node.nameFa,link:`category:${node.slug}`,
+          kind:'category',sourceType:'category',sourceId:`sub:${node.id}`,parentId,isVisible:true,icon:node.icon
+        });
+        appendChildren(node.subcategories||[],nodeId,`${pathPrefix}-${node.id||nodeIndex}`);
+      });
+    };
     categories.forEach((category,index)=>{
       const columnId=`mega-import-${stamp}-${index}`;
       generated.push({
         id:columnId,title:category.nameFa,originalTitle:category.nameFa,link:`category:${category.slug}`,
         kind:'category',sourceType:'category',sourceId:category.id,parentId:activeRoot.id,isVisible:true,icon:category.icon
       });
-      (category.subcategories||[]).forEach((sub,sidx)=>generated.push({
-        id:`mega-import-sub-${stamp}-${index}-${sidx}`,title:sub.nameFa,originalTitle:sub.nameFa,
-        link:`category:${sub.slug}`,kind:'category',sourceType:'category',sourceId:`sub:${sub.id}`,parentId:columnId,isVisible:true
-      }));
+      appendChildren(category.subcategories||[],columnId,String(index));
     });
     mutate([...preserved,...generated]);
     showToast('ساختار دسته‌بندی‌ها به مگامنو وارد شد.');

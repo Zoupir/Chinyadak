@@ -22,6 +22,8 @@ import {
 import { useStore } from '../../context/StoreContext';
 import { HeaderMenuKind, MenuItem, MenuSourceType } from '../../types';
 import { ImageUploadInput } from '../common/ImageUploadInput';
+import { IconPicker } from '../common/IconPicker';
+import { IconRenderer, iconClassFor } from '../common/IconRenderer';
 
 type LibraryTab = 'pages' | 'products' | 'categories' | 'articles' | 'brands' | 'models' | 'system' | 'custom';
 
@@ -103,6 +105,7 @@ export const AdminMenuBuilder: React.FC = () => {
   const [insertParentId, setInsertParentId] = useState<string | undefined>(undefined);
   const [customTitle, setCustomTitle] = useState('');
   const [customUrl, setCustomUrl] = useState('https://');
+  const [iconPickerItemId, setIconPickerItemId] = useState<string | null>(null);
   const libraryRef = useRef<HTMLDivElement>(null);
   const megaMigrationDoneRef = useRef(false);
 
@@ -624,7 +627,13 @@ export const AdminMenuBuilder: React.FC = () => {
                 </label>
                 <label>
                   <span>آیکن اختیاری</span>
-                  <input value={item.icon || ''} onChange={event => patchItem(item.id, { icon: event.target.value || undefined })} />
+                  <button type="button" onClick={() => setIconPickerItemId(item.id)} className="w-full min-h-9 px-2.5 border border-neutral-300 rounded-lg bg-white flex items-center justify-between gap-2 text-[10px]">
+                    <span className="flex items-center gap-2">
+                      <IconRenderer icon={item.icon || item.cssClass} className="w-4 h-4" />
+                      {item.icon ? (iconClassFor(item.icon) || item.icon) : 'انتخاب آیکن'}
+                    </span>
+                    <span className="text-blue-600 font-bold">کتابخانه</span>
+                  </button>
                 </label>
               </div>
 
@@ -876,6 +885,20 @@ export const AdminMenuBuilder: React.FC = () => {
           </div>
         </section>
       </div>
+      {iconPickerItemId && (
+        <div className="fixed inset-0 z-[180] bg-black/60 backdrop-blur-sm p-4 flex items-center justify-center">
+          <div className="w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+            <IconPicker
+              value={menus.find(item => item.id === iconPickerItemId)?.icon}
+              onChange={(iconName) => {
+                patchItem(iconPickerItemId, { icon: iconName });
+                setIconPickerItemId(null);
+              }}
+              onClose={() => setIconPickerItemId(null)}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 };

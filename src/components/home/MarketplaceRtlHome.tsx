@@ -591,9 +591,20 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
             }}
             onClick={() => goLink(item.link || 'shop')}
           >
-            <span>{item.subtitle || 'پیشنهاد ویژه'}</span>
-            <h3>{item.title || 'بنر فروشگاه'}</h3>
-            <small>{item.buttonText || 'خرید کنید'}</small>
+            {item.responsiveLayout ? (
+              <span className="marketplace-free-layout-layer" aria-hidden="true">
+                {item.badge && <span className="marketplace-free-layout-el marketplace-free-tag" style={freeLayoutStyle(item, 'tag', { x: 70, y: 16, width: 22 })}>{item.badge}</span>}
+                <h3 className="marketplace-free-layout-el marketplace-free-title marketplace-free-promo-title" style={freeLayoutStyle(item, 'title', { x: 55, y: 24, width: 38 })}>{item.title || 'بنر فروشگاه'}</h3>
+                {item.subtitle && <span className="marketplace-free-layout-el marketplace-free-subtitle marketplace-free-promo-subtitle" style={freeLayoutStyle(item, 'subtitle', { x: 58, y: 48, width: 34 })}>{item.subtitle}</span>}
+                <small className="marketplace-free-layout-el marketplace-free-button marketplace-free-promo-button" style={freeLayoutStyle(item, 'button', { x: 73, y: 70, width: 20 })}>{item.buttonText || 'خرید کنید'}</small>
+              </span>
+            ) : (
+              <>
+                <span>{item.subtitle || 'پیشنهاد ویژه'}</span>
+                <h3>{item.title || 'بنر فروشگاه'}</h3>
+                <small>{item.buttonText || 'خرید کنید'}</small>
+              </>
+            )}
           </button>
         ))}
       </section>
@@ -639,11 +650,20 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
               }}
               onClick={() => goLink(item.link || 'shop')}
             >
-              <div>
-                <span>{item.subtitle || 'پیشنهاد فروشگاه'}</span>
-                <h3>{item.title || 'بنر فروشگاه'}</h3>
-                {item.buttonText && <small>{item.buttonText}</small>}
-              </div>
+              {item.responsiveLayout ? (
+                <span className="marketplace-free-layout-layer" aria-hidden="true">
+                  {item.badge && <span className="marketplace-free-layout-el marketplace-free-tag" style={freeLayoutStyle(item, 'tag', { x: 68, y: 15, width: 22 })}>{item.badge}</span>}
+                  <h3 className="marketplace-free-layout-el marketplace-free-title marketplace-free-promo-title" style={freeLayoutStyle(item, 'title', { x: 54, y: 26, width: 40 })}>{item.title || 'بنر فروشگاه'}</h3>
+                  {item.subtitle && <span className="marketplace-free-layout-el marketplace-free-subtitle marketplace-free-promo-subtitle" style={freeLayoutStyle(item, 'subtitle', { x: 58, y: 50, width: 34 })}>{item.subtitle}</span>}
+                  {item.buttonText && <small className="marketplace-free-layout-el marketplace-free-button marketplace-free-promo-button" style={freeLayoutStyle(item, 'button', { x: 73, y: 72, width: 20 })}>{item.buttonText}</small>}
+                </span>
+              ) : (
+                <div>
+                  <span>{item.subtitle || 'پیشنهاد فروشگاه'}</span>
+                  <h3>{item.title || 'بنر فروشگاه'}</h3>
+                  {item.buttonText && <small>{item.buttonText}</small>}
+                </div>
+              )}
             </button>
           );
         })}

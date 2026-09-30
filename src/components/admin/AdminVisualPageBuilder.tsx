@@ -284,8 +284,12 @@ export const AdminVisualPageBuilder: React.FC<{onNavigate?:(view:string,param?:s
                   <button onClick={()=>patch({fullWidth:false,widthPercent:100,maxWidthPx:1280})} className={`p-2 rounded border ${!draft.fullWidth&&draft.widthPercent===100&&draft.maxWidthPx===1280?'bg-blue-600 text-white':''}`}>Boxed</button>
                   <button onClick={()=>patch({fullWidth:false,maxWidthPx:draft.maxWidthPx||1100})} className="p-2 rounded border">سفارشی</button>
                 </div></div>
-                {!draft.fullWidth&&<><label className="block"><span>عرض دسکتاپ: {draft.widthPercent??100}%</span><input type="range" min="20" max="100" value={draft.widthPercent??100} onChange={e=>patch({widthPercent:Number(e.target.value)})} className="w-full"/></label>
-                <label className="block"><span>حداکثر عرض px</span><input type="number" value={draft.maxWidthPx??1280} onChange={e=>patch({maxWidthPx:Number(e.target.value)})} className="w-full p-2 border rounded"/></label></>}
+                {!draft.fullWidth&&<>
+                  <label className="block"><span>عرض دسکتاپ: {draft.widthPercent??100}%</span><input type="range" min="20" max="100" value={draft.widthPercent??100} onChange={e=>patch({widthPercent:Number(e.target.value)})} className="w-full"/></label>
+                  <label className="block"><span>عرض تبلت: {draft.tabletWidthPercent??draft.widthPercent??100}%</span><input type="range" min="20" max="100" value={draft.tabletWidthPercent??draft.widthPercent??100} onChange={e=>patch({tabletWidthPercent:Number(e.target.value)})} className="w-full"/></label>
+                  <label className="block"><span>عرض موبایل: {draft.mobileWidthPercent??draft.widthPercent??100}%</span><input type="range" min="20" max="100" value={draft.mobileWidthPercent??draft.widthPercent??100} onChange={e=>patch({mobileWidthPercent:Number(e.target.value)})} className="w-full"/></label>
+                  <label className="block"><span>حداکثر عرض px</span><input type="number" value={draft.maxWidthPx??1280} onChange={e=>patch({maxWidthPx:Number(e.target.value)})} className="w-full p-2 border rounded"/></label>
+                </>}
                 <div className="grid grid-cols-3 gap-2">
                   <label><span>Desktop ستون</span><input type="number" min="1" max="12" value={draft.desktopColumns??3} onChange={e=>patch({desktopColumns:Number(e.target.value)})} className="w-full p-2 border rounded"/></label>
                   <label><span>Tablet ستون</span><input type="number" min="1" max="8" value={draft.tabletColumns??2} onChange={e=>patch({tabletColumns:Number(e.target.value)})} className="w-full p-2 border rounded"/></label>

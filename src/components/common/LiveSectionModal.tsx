@@ -44,7 +44,7 @@ export const LiveSectionModal: React.FC<LiveSectionModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
       <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-4xl w-full max-h-[90vh] overflow-y-auto space-y-4 text-right shadow-2xl">
         <div className="flex items-center justify-between pb-3 border-b border-neutral-100">
           <div className="flex items-center gap-2">
@@ -138,7 +138,7 @@ export const LiveSectionModal: React.FC<LiveSectionModalProps> = ({
               <p className="text-[10px] text-neutral-500 mt-1">عرض، ستون‌بندی، فاصله، رنگ، گردی، تعداد آیتم و اندازه تصاویر را بدون کدنویسی تنظیم کنید.</p>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
               <label>
                 <span className="block text-[10px] font-bold mb-1">نوع چیدمان</span>
                 <select value={form.layout || 'boxed'} onChange={e => setForm({ ...form, layout: e.target.value as PageSection['layout'] })} className="w-full p-2 border border-neutral-300 rounded-lg bg-white">
@@ -151,14 +151,20 @@ export const LiveSectionModal: React.FC<LiveSectionModalProps> = ({
               </label>
               <label>
                 <span className="block text-[10px] font-bold mb-1">ستون دسکتاپ</span>
-                <select value={form.desktopColumns || 3} onChange={e => setForm({ ...form, desktopColumns: Number(e.target.value) as PageSection['desktopColumns'] })} className="w-full p-2 border border-neutral-300 rounded-lg bg-white">
+                <select value={form.desktopColumns || 3} onChange={e => setForm({ ...form, desktopColumns: Number(e.target.value) })} className="w-full p-2 border border-neutral-300 rounded-lg bg-white">
                   {[1,2,3,4,5,6,7,8,9,10,11,12].map(n => <option key={n} value={n}>{n} ستون</option>)}
                 </select>
               </label>
               <label>
+                <span className="block text-[10px] font-bold mb-1">ستون تبلت</span>
+                <select value={form.tabletColumns || Math.min(form.desktopColumns || 3, 2)} onChange={e => setForm({ ...form, tabletColumns: Number(e.target.value) })} className="w-full p-2 border border-neutral-300 rounded-lg bg-white">
+                  {[1,2,3,4,5,6,7,8].map(n => <option key={n} value={n}>{n} ستون</option>)}
+                </select>
+              </label>
+              <label>
                 <span className="block text-[10px] font-bold mb-1">ستون موبایل</span>
-                <select value={form.mobileColumns || 1} onChange={e => setForm({ ...form, mobileColumns: Number(e.target.value) as PageSection['mobileColumns'] })} className="w-full p-2 border border-neutral-300 rounded-lg bg-white">
-                  {[1,2,3,4,5,6].map(n => <option key={n} value={n}>{n} ستون</option>)}
+                <select value={form.mobileColumns || 1} onChange={e => setForm({ ...form, mobileColumns: Number(e.target.value) })} className="w-full p-2 border border-neutral-300 rounded-lg bg-white">
+                  {[1,2,3,4].map(n => <option key={n} value={n}>{n} ستون</option>)}
                 </select>
               </label>
               <label>
@@ -173,7 +179,9 @@ export const LiveSectionModal: React.FC<LiveSectionModalProps> = ({
 
             <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
               {[
-                ['widthPercent','عرض %',20,100,100],
+                ['widthPercent','عرض دسکتاپ %',20,100,100],
+                ['tabletWidthPercent','عرض تبلت %',20,100,100],
+                ['mobileWidthPercent','عرض موبایل %',20,100,100],
                 ['maxWidthPx','حداکثر عرض px',0,2400,1280],
                 ['borderRadiusPx','گردی سکشن',0,80,12],
                 ['itemRadiusPx','گردی آیتم',0,80,10],

@@ -602,7 +602,10 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       requests.push(
         apiRequest<{ integrations: ApiIntegrationsConfig }>('/api/integrations')
           .then(result => { if (!cancelled) setApiIntegrations(result.integrations); })
-          .catch(error => console.error('Integration settings load failed:', error))
+          .catch(error => console.error('Integration settings load failed:', error)),
+        apiRequest<{ gateways: PaymentGatewayConfig[] }>('/api/integrations/payment-gateways')
+          .then(result => { if (!cancelled) setPaymentGateways(result.gateways); })
+          .catch(error => console.error('Secure payment gateway settings load failed:', error))
       );
     }
 
@@ -1206,15 +1209,19 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const persistPaymentGateways = (gateways: PaymentGatewayConfig[], message: string) => {
-    void apiRequest<{ paymentGateways: PaymentGatewayConfig[] }>('/api/cms/payment-gateways', {
+    void apiRequest<{ gateways: PaymentGatewayConfig[] }>('/api/integrations/payment-gateways', {
       method: 'PUT',
       body: JSON.stringify({ gateways })
-    }).then(({ paymentGateways: saved }) => {
+    }).then(({ gateways: saved }) => {
       setPaymentGateways(saved);
       showToast(message);
     }).catch(error => {
       console.error(error);
-      showToast('ذخیره تنظیمات نمایشی درگاه‌ها انجام نشد.', 'error');
+      const gatewayMessage =
+        error instanceof ApiError && error.code === 'ENCRYPTION_KEY_NOT_CONFIGURED'
+          ? 'APP_ENCRYPTION_KEY روی سرور تنظیم نشده و ذخیره امن اطلاعات درگاه ممکن نیست.'
+          : 'ذخیره امن تنظیمات درگاه‌ها انجام نشد.';
+      showToast(gatewayMessage, 'error');
     });
   };
 

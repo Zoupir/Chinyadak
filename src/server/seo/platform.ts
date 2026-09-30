@@ -625,7 +625,7 @@ const entityFromRow = (
   } else if (type === 'category') {
     title = String(data.nameFa || row.name_fa || '');
     description = String(data.description || row.description || '');
-    content = description;
+    content = [description, String(data.bottomDescription || ''), String(data.heroTitle || ''), String(data.heroSubtitle || '')].filter(Boolean).join(' ');
     image = String(data.imageUrl || data.iconUrl || '');
   } else if (type === 'page') {
     title = String(data.title || row.title || '');
@@ -634,7 +634,7 @@ const entityFromRow = (
   } else if (type === 'brand') {
     title = String(data.nameFa || row.name_fa || '');
     description = String(data.description || '');
-    content = description;
+    content = [description, String(data.bottomDescription || '')].filter(Boolean).join(' ');
     image = String(data.heroImage || data.logo || '');
   } else {
     title = String(data.nameFa || row.name_fa || '');

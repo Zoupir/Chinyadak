@@ -98,7 +98,45 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
       ['--builder-item-border' as any]: section.itemBorderColor || undefined,
       ['--builder-item-padding' as any]: section.itemPaddingPx !== undefined ? `${section.itemPaddingPx}px` : undefined,
       ['--builder-item-font-size' as any]: section.itemFontSizePx !== undefined ? `${section.itemFontSizePx}px` : undefined,
-      ['--builder-item-image-radius' as any]: section.itemImageRadiusPx !== undefined ? `${section.itemImageRadiusPx}px` : undefined
+      ['--builder-item-image-radius' as any]: section.itemImageRadiusPx !== undefined ? `${section.itemImageRadiusPx}px` : undefined,
+      ['--builder-margin-top' as any]: `${section.marginTopPx ?? 0}px`,
+      ['--builder-margin-bottom' as any]: `${section.marginBottomPx ?? 0}px`,
+      ['--builder-heading-size' as any]: section.headingFontSizePx !== undefined ? `${section.headingFontSizePx}px` : undefined,
+      ['--builder-subtitle-size' as any]: section.subtitleFontSizePx !== undefined ? `${section.subtitleFontSizePx}px` : undefined,
+      ['--builder-item-title-size' as any]: section.itemTitleFontSizePx !== undefined ? `${section.itemTitleFontSizePx}px` : undefined,
+      ['--builder-item-content-size' as any]: section.itemContentFontSizePx !== undefined ? `${section.itemContentFontSizePx}px` : undefined,
+      ['--builder-image-width' as any]: `${section.itemImageWidthPx ?? section.imageSizePx ?? 72}px`,
+      ['--builder-image-height' as any]: `${section.itemImageHeightPx ?? section.imageSizePx ?? 72}px`,
+      ['--builder-image-fit' as any]: section.itemImageFit || 'contain',
+      ['--builder-item-min-height' as any]: section.itemMinHeightPx !== undefined ? `${section.itemMinHeightPx}px` : undefined,
+      ['--builder-item-align' as any]: section.itemTextAlign || section.contentAlign || 'right',
+      ['--builder-mobile-item-min' as any]: `${section.mobileItemMinWidthPx ?? 240}px`
+    };
+  };
+
+  const itemVisualStyle = (key: string, item: PageSectionItem): React.CSSProperties => {
+    const section = sectionConfig(key);
+    return {
+      backgroundColor: item.backgroundColor || section?.itemBackgroundColor || undefined,
+      color: item.textColor || section?.itemTextColor || undefined,
+      borderColor: item.borderColor || section?.itemBorderColor || undefined,
+      borderRadius: `${item.borderRadiusPx ?? section?.itemRadiusPx ?? 10}px`,
+      padding: item.paddingPx !== undefined
+        ? `${item.paddingPx}px`
+        : section?.itemPaddingPx !== undefined ? `${section.itemPaddingPx}px` : undefined,
+      fontSize: item.fontSizePx !== undefined
+        ? `${item.fontSizePx}px`
+        : section?.itemFontSizePx !== undefined ? `${section.itemFontSizePx}px` : undefined,
+      minHeight: item.minHeightPx !== undefined
+        ? `${item.minHeightPx}px`
+        : section?.itemMinHeightPx !== undefined ? `${section.itemMinHeightPx}px` : undefined,
+      textAlign: item.textAlign || section?.itemTextAlign || undefined,
+      ['--item-image-width' as any]: `${item.imageWidthPx ?? section?.itemImageWidthPx ?? section?.imageSizePx ?? 72}px`,
+      ['--item-image-height' as any]: `${item.imageHeightPx ?? section?.itemImageHeightPx ?? section?.imageSizePx ?? 72}px`,
+      ['--item-image-fit' as any]: item.imageFit || section?.itemImageFit || 'contain',
+      ['--item-image-radius' as any]: `${item.imageRadiusPx ?? section?.itemImageRadiusPx ?? 0}px`,
+      ['--item-title-size' as any]: item.titleFontSizePx !== undefined ? `${item.titleFontSizePx}px` : undefined,
+      ['--item-content-size' as any]: item.contentFontSizePx !== undefined ? `${item.contentFontSizePx}px` : undefined
     };
   };
   const sortedItems = (key: string) =>
@@ -454,7 +492,7 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
       )}
 
       {sectionVisible('featured-categories') && (
-      <section className="marketplace-section marketplace-category-row" data-section-key="featured-categories" style={sectionStyle('featured-categories')}>
+      <section className="marketplace-section marketplace-category-row" data-section-key="featured-categories" data-mobile-display={sectionConfig('featured-categories')?.mobileDisplayMode || 'grid'} style={sectionStyle('featured-categories')}>
         <div className="marketplace-section-heading compact">
           <h2>{sectionConfig('featured-categories')?.title || 'دسته‌بندی‌های ویژه'}</h2>
         </div>
@@ -474,14 +512,7 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
               key={item.id}
               type="button"
               onClick={() => goLink(item.link || 'shop')}
-              style={{
-                backgroundColor:item.backgroundColor || undefined,
-                color:item.textColor || undefined,
-                borderColor:item.borderColor || undefined,
-                borderRadius:`${item.borderRadiusPx ?? sectionConfig('featured-categories')?.itemRadiusPx ?? 999}px`,
-                padding:item.paddingPx !== undefined ? `${item.paddingPx}px` : undefined,
-                fontSize:item.fontSizePx !== undefined ? `${item.fontSizePx}px` : undefined
-              }}
+              style={itemVisualStyle('featured-categories', item)}
             >
               <span className="marketplace-round-icon">
                 {item.imageUrl ? (
@@ -498,7 +529,7 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
       )}
 
       {sectionVisible('promo-small') && (
-      <section className="marketplace-section marketplace-promo-grid three builder-section-grid" data-section-key="promo-small" style={sectionStyle('promo-small')}>
+      <section className="marketplace-section marketplace-promo-grid three builder-section-grid" data-section-key="promo-small" data-mobile-display={sectionConfig('promo-small')?.mobileDisplayMode || 'grid'} style={sectionStyle('promo-small')}>
         {(sortedItems('promo-small').length ? sortedItems('promo-small') : [0, 1, 2].map((index) => ({
           id: `promo-fallback-${index}`,
           title: activeSlides[index]?.title || ['باتری و برق خودرو', 'رینگ، جلوبندی و تعلیق', 'پیشنهادهای محدود فروشگاه'][index],
@@ -517,8 +548,8 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
             type="button"
             className="marketplace-promo-card"
             style={{
-              ...(item.imageUrl || promoImage(index) ? { backgroundImage: `url(${item.imageUrl || promoImage(index)})` } : {}),
-              borderRadius: `${sectionConfig('promo-small')?.itemRadiusPx ?? 10}px`
+              ...itemVisualStyle('promo-small', item as PageSectionItem),
+              ...(item.imageUrl || promoImage(index) ? { backgroundImage: `url(${item.imageUrl || promoImage(index)})` } : {})
             }}
             onClick={() => goLink(item.link || 'shop')}
           >
@@ -544,7 +575,7 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
       )}
 
       {sectionVisible('featured-products') && (
-      <section className="marketplace-section" data-section-key="featured-products" style={sectionStyle('featured-products')}>
+      <section className="marketplace-section" data-section-key="featured-products" data-mobile-display={sectionConfig('featured-products')?.mobileDisplayMode || 'grid'} style={sectionStyle('featured-products')}>
         <div className="marketplace-section-heading">
           <div>
             <h2>{sectionConfig('featured-products')?.title || 'محصولات ویژه'}</h2>
@@ -560,7 +591,7 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
           <button type="button" className={featuredTab === 'service' ? 'active' : ''} onClick={() => setFeaturedTab('service')}>روغن و فیلترها</button>
           <button type="button" className={featuredTab === 'suspension' ? 'active' : ''} onClick={() => setFeaturedTab('suspension')}>جلوبندی و تعلیق</button>
         </div>
-        <div className="marketplace-product-grid">
+        <div className="marketplace-product-grid builder-section-grid">
           {visibleFeaturedProducts.slice(0, sectionConfig('featured-products')?.maxItems || visibleFeaturedProducts.length).map(product => (
             <ReferenceProductCard key={product.id} product={product} />
           ))}
@@ -588,7 +619,7 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
       )}
 
       {sectionVisible('manufacturers') && (
-      <section className="marketplace-section marketplace-brands" data-section-key="manufacturers" style={sectionStyle('manufacturers')}>
+      <section className="marketplace-section marketplace-brands" data-section-key="manufacturers" data-mobile-display={sectionConfig('manufacturers')?.mobileDisplayMode || 'grid'} style={sectionStyle('manufacturers')}>
         <div className="marketplace-section-heading compact">
           <h2>{sectionConfig('manufacturers')?.title || 'برندهای خودرو'}</h2>
           <button type="button" onClick={() => onNavigate('shop')}>مشاهده همه</button>
@@ -612,7 +643,7 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
                 if (item.link?.startsWith('car-brand:')) onNavigate('car-brand', item.link.split(':')[1]);
                 else goLink(item.link || 'shop');
               }}
-              style={{ borderRadius: `${sectionConfig('manufacturers')?.itemRadiusPx ?? 999}px` }}
+              style={itemVisualStyle('manufacturers', item)}
             >
               <span style={{ width: 'var(--builder-image-size)', height: 'var(--builder-image-size)' }}>
                 {item.imageUrl ? <img src={item.imageUrl} alt={item.title || 'برند خودرو'} style={{ maxWidth: '100%', maxHeight: '100%' }} /> : <Car className="w-6 h-6" />}
@@ -625,13 +656,13 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
       )}
 
       {sectionVisible('parts-brands') && (
-      <section className="marketplace-section marketplace-brand-tiles" data-section-key="parts-brands" style={sectionStyle('parts-brands')}>
+      <section className="marketplace-section marketplace-brand-tiles" data-section-key="parts-brands" data-mobile-display={sectionConfig('parts-brands')?.mobileDisplayMode || 'grid'} style={sectionStyle('parts-brands')}>
         <div className="marketplace-section-heading compact">
           <h2>{sectionConfig('parts-brands')?.title || 'برندهای محبوب قطعات'}</h2>
         </div>
-        <div className="marketplace-logo-tiles marketplace-logo-tiles-with-images">
+        <div className="marketplace-logo-tiles marketplace-logo-tiles-with-images builder-section-grid">
           {(settings.popularPartsBrands || []).filter(item => item.isVisible !== false).slice(0, sectionConfig('parts-brands')?.maxItems || 12).map((item) => (
-            <button key={item.id} type="button" onClick={() => goLink(item.link || 'shop')} style={{ borderRadius: `${sectionConfig('parts-brands')?.itemRadiusPx ?? 2}px` }}>
+            <button key={item.id} type="button" onClick={() => goLink(item.link || 'shop')} style={itemVisualStyle('parts-brands', item as PageSectionItem)}>
               {item.imageUrl ? (
                 <span className="marketplace-parts-brand-logo has-image">
                   <img src={item.imageUrl} alt={item.title} />
@@ -649,7 +680,7 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
       )}
 
       {sectionVisible('promo-medium') && (
-      <section className="marketplace-section marketplace-promo-grid two builder-section-grid" data-section-key="promo-medium" style={sectionStyle('promo-medium')}>
+      <section className="marketplace-section marketplace-promo-grid two builder-section-grid" data-section-key="promo-medium" data-mobile-display={sectionConfig('promo-medium')?.mobileDisplayMode || 'grid'} style={sectionStyle('promo-medium')}>
         {(sortedItems('promo-medium').length ? sortedItems('promo-medium') : [1, 2].map((index) => ({
           id: `medium-${index}`,
           title: index === 1 ? 'جلوبندی، تایر و سیستم تعلیق' : 'قطعات موتور و سرویس تخصصی',
@@ -668,8 +699,8 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
             type="button"
             className="marketplace-promo-card marketplace-promo-medium"
             style={{
-              ...(item.imageUrl || promoImage(index + 1) ? { backgroundImage: `url(${item.imageUrl || promoImage(index + 1)})` } : {}),
-              borderRadius: `${sectionConfig('promo-medium')?.itemRadiusPx ?? 12}px`
+              ...itemVisualStyle('promo-medium', item as PageSectionItem),
+              ...(item.imageUrl || promoImage(index + 1) ? { backgroundImage: `url(${item.imageUrl || promoImage(index + 1)})` } : {})
             }}
             onClick={() => goLink(item.link || 'shop')}
           >
@@ -693,7 +724,7 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
       )}
 
       {sectionVisible('weekly-deals') && (
-      <section className="marketplace-deals" data-section-key="weekly-deals" style={sectionStyle('weekly-deals')}>
+      <section className="marketplace-deals" data-section-key="weekly-deals" data-mobile-display={sectionConfig('weekly-deals')?.mobileDisplayMode || 'grid'} style={sectionStyle('weekly-deals')}>
         <div className="marketplace-section marketplace-deals-inner">
           <div className="marketplace-section-heading inverse">
             <div className="marketplace-deal-heading">
@@ -707,7 +738,7 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
             </div>
             <button type="button" onClick={() => onNavigate('shop')}>مشاهده همه</button>
           </div>
-          <div className="marketplace-product-grid">
+          <div className="marketplace-product-grid builder-section-grid">
             {deals.slice(0, sectionConfig('weekly-deals')?.maxItems || deals.length).map(product => (
               <ReferenceProductCard key={product.id} product={product} />
             ))}
@@ -717,7 +748,7 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
       )}
 
       {sectionVisible('promo-large') && (
-      <section className="marketplace-section marketplace-feature-banners builder-section-grid" data-section-key="promo-large" style={sectionStyle('promo-large')}>
+      <section className="marketplace-section marketplace-feature-banners builder-section-grid" data-section-key="promo-large" data-layout-variant={sectionConfig('promo-large')?.layoutVariant || 'mosaic'} data-mobile-display={sectionConfig('promo-large')?.mobileDisplayMode || 'grid'} style={sectionStyle('promo-large')}>
         {sortedItems('promo-large').map((item, index) => {
           const fallbackImages = [promoImage(0), promoImage(2), products[1]?.images?.[0] || '', products[2]?.images?.[0] || ''];
           const image = item.imageUrl || fallbackImages[index] || '';
@@ -727,8 +758,8 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
               type="button"
               className={index % 3 === 0 ? 'large' : 'small'}
               style={{
-                ...(image ? { backgroundImage: `linear-gradient(90deg, rgba(0,0,0,.24), rgba(0,0,0,.62)), url(${image})` } : {}),
-                borderRadius: `${sectionConfig('promo-large')?.itemRadiusPx ?? 12}px`
+                ...itemVisualStyle('promo-large', item),
+                ...(image ? { backgroundImage: `linear-gradient(90deg, rgba(0,0,0,.24), rgba(0,0,0,.62)), url(${image})` } : {})
               }}
               onClick={() => goLink(item.link || 'shop')}
             >
@@ -753,7 +784,7 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
       )}
 
       {sectionVisible('maintenance-products') && (
-      <section className="marketplace-section" data-section-key="maintenance-products" style={sectionStyle('maintenance-products')}>
+      <section className="marketplace-section" data-section-key="maintenance-products" data-mobile-display={sectionConfig('maintenance-products')?.mobileDisplayMode || 'grid'} style={sectionStyle('maintenance-products')}>
         <div className="marketplace-section-heading">
           <div>
             <h2>{sectionConfig('maintenance-products')?.title || 'قطعات مصرفی و سرویس دوره‌ای'}</h2>
@@ -764,7 +795,7 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
             <ChevronLeft className="w-4 h-4" />
           </button>
         </div>
-        <div className="marketplace-product-grid">
+        <div className="marketplace-product-grid builder-section-grid">
           {serviceParts.slice(0, sectionConfig('maintenance-products')?.maxItems || serviceParts.length).map(product => (
             <ReferenceProductCard key={product.id} product={product} />
           ))}
@@ -773,7 +804,7 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
       )}
 
       {sectionVisible('testimonials') && (
-      <section className="marketplace-testimonials" data-section-key="testimonials" style={sectionStyle('testimonials')}>
+      <section className="marketplace-testimonials" data-section-key="testimonials" data-mobile-display={sectionConfig('testimonials')?.mobileDisplayMode || 'grid'} style={sectionStyle('testimonials')}>
         <div className="marketplace-section">
           <div className="marketplace-section-heading compact center">
             <div>
@@ -783,7 +814,7 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
           </div>
           <div className="marketplace-testimonial-grid builder-section-grid">
             {sortedItems('testimonials').map(item => (
-              <article key={item.id} style={{ borderRadius: `${sectionConfig('testimonials')?.itemRadiusPx ?? 12}px` }}>
+              <article key={item.id} style={itemVisualStyle('testimonials', item)}>
                 <div className="marketplace-testimonial-head">
                   {item.imageUrl ? (
                     <img src={item.imageUrl} alt={item.title || 'نظر مشتری'} />
@@ -806,7 +837,7 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
       )}
 
       {sectionVisible('shipping-banner') && (
-      <section className="marketplace-section marketplace-shipping-banner" data-section-key="shipping-banner" style={sectionStyle('shipping-banner')}>
+      <section className="marketplace-section marketplace-shipping-banner" data-section-key="shipping-banner" data-mobile-display={sectionConfig('shipping-banner')?.mobileDisplayMode || 'grid'} style={sectionStyle('shipping-banner')}>
         <div>
           {!sectionConfig('shipping-banner')?.imageUrl && <Truck className="w-10 h-10" />}
           <span>{sectionConfig('shipping-banner')?.title || 'ارسال سریع'}</span>
@@ -817,7 +848,7 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
       )}
 
       {sectionVisible('articles') && (
-      <section className="marketplace-section marketplace-articles" data-section-key="articles" style={sectionStyle('articles')}>
+      <section className="marketplace-section marketplace-articles" data-section-key="articles" data-mobile-display={sectionConfig('articles')?.mobileDisplayMode || 'grid'} style={sectionStyle('articles')}>
         <div className="marketplace-section-heading">
           <div>
             <h2>{sectionConfig('articles')?.title || 'راهنما و مقالات'}</h2>
@@ -850,12 +881,12 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
       )}
 
       {sectionVisible('service-strip') && (
-      <section className="marketplace-service-strip builder-section-grid" data-section-key="service-strip" style={sectionStyle('service-strip')}>
+      <section className="marketplace-service-strip builder-section-grid" data-section-key="service-strip" data-mobile-display={sectionConfig('service-strip')?.mobileDisplayMode || 'grid'} style={sectionStyle('service-strip')}>
         {sortedItems('service-strip').map((item, index) => {
           const icons = [ShieldCheck, Sparkles, Truck, Headphones];
           const Comp = icons[index % icons.length];
           return (
-            <div key={item.id} style={{ borderRadius: `${sectionConfig('service-strip')?.itemRadiusPx ?? 8}px` }}>
+            <div key={item.id} style={itemVisualStyle('service-strip', item)}>
               <Comp className="w-7 h-7" />
               <span>
                 <strong>{item.title || 'مزیت فروشگاه'}</strong>

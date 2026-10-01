@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { useStore } from '../../context/StoreContext';
 import { SiteSettings } from '../../types';
 import { ImageUploadInput } from '../common/ImageUploadInput';
@@ -21,14 +21,18 @@ import {
   SlidersHorizontal,
   CheckCircle2,
   FileText,
-  LayoutTemplate
+  LayoutTemplate,
+  Download,
+  Upload,
+  RotateCcw
 } from 'lucide-react';
 
 export const AdminThemeTab: React.FC = () => {
-  const { settings, updateSettings, showToast } = useStore();
+  const { settings, updateSettings, showToast, pages, sliders, updatePage, updateSlider } = useStore();
 
   const [form, setForm] = useState<SiteSettings>({ ...settings });
   const [activeSubTab, setActiveSubTab] = useState<'identity' | 'theme' | 'colors' | 'typography' | 'seo' | 'loyalty'>('identity');
+  const restoreInputRef = useRef<HTMLInputElement>(null);
 
   const LAYOUT_PRESETS = [
     {
@@ -196,6 +200,85 @@ export const AdminThemeTab: React.FC = () => {
     showToast('تنظیمات قالب، رنگ‌ها و سئو ذخیره و بر کل وب‌سایت اعمال شد.');
   };
 
+  const downloadThemeBackup = () => {
+    const payload = {
+      format: 'yadak-store-theme-backup',
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      settings: form,
+      pages,
+      sliders
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `yadak-store-theme-${new Date().toISOString().slice(0,10)}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    showToast('نسخه پشتیبان تنظیمات قالب ساخته شد.');
+  };
+
+  const restoreThemeBackup = async (file?: File) => {
+    if (!file) return;
+    try {
+      const parsed = JSON.parse(await file.text());
+      if (parsed?.format !== 'yadak-store-theme-backup' || !parsed?.settings) {
+        showToast('فایل پشتیبان قالب معتبر نیست.', 'error');
+        return;
+      }
+      if (!window.confirm('تنظیمات قالب، برگه‌های Builder و اسلایدرها از این نسخه پشتیبان بازیابی شوند؟')) return;
+
+      setForm(parsed.settings);
+      updateSettings(parsed.settings);
+
+      if (Array.isArray(parsed.pages)) {
+        parsed.pages.forEach((page: any) => page?.id && updatePage(page));
+      }
+      if (Array.isArray(parsed.sliders)) {
+        parsed.sliders.forEach((slide: any) => slide?.id && updateSlider(slide));
+      }
+      showToast('بازیابی قالب شروع شد و تنظیمات ذخیره شدند.');
+    } catch {
+      showToast('خواندن فایل پشتیبان انجام نشد.', 'error');
+    } finally {
+      if (restoreInputRef.current) restoreInputRef.current.value = '';
+    }
+  };
+
+  const resetThemeAppearance = () => {
+    if (!window.confirm('ظاهر قالب به تنظیمات استاندارد Marketplace RTL برگردد؟ محصولات، سفارش‌ها و محتوای سایت حذف نمی‌شوند.')) return;
+    const reset: Partial<SiteSettings> = {
+      layoutPreset: 'marketplace-rtl',
+      themeMode: 'light',
+      siteBgColor: '#f5f6f7',
+      cardBgColor: '#ffffff',
+      headerBgColor: '#07558f',
+      footerBgColor: '#111111',
+      textColor: '#111827',
+      primaryColor: '#f59e0b',
+      primaryHover: '#d97706',
+      accentGlowColor: '#f59e0b',
+      fontFamily: 'Vazirmatn',
+      fontSize: 'normal',
+      baseFontSizePx: 16,
+      mobileProductColumns: 2,
+      mobileFooterColumns: 2,
+      mobileLogoAlign: 'right',
+      mobileLogoWidthPx: 118,
+      borderRadius: 'normal',
+      themeRadiusPx: 10,
+      headerStyle: 'primary',
+      containerWidth: 'normal'
+    };
+    const next = { ...form, ...reset };
+    setForm(next);
+    updateSettings(reset);
+    showToast('ظاهر قالب بدون حذف محتوا ریست شد.');
+  };
+
   return (
     <div className="space-y-6 text-right">
       
@@ -214,6 +297,25 @@ export const AdminThemeTab: React.FC = () => {
           <p className="text-xs text-neutral-500 mt-1">
             شخصی‌سازی آنی تمام رنگ‌های وب‌سایت، پس‌زمینه‌ها، رنگ درخشش زیر دکمه‌ها و متاتگ‌های رتبه‌بندی گوگل
           </p>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <input
+            ref={restoreInputRef}
+            type="file"
+            accept="application/json,.json"
+            className="hidden"
+            onChange={event => void restoreThemeBackup(event.target.files?.[0])}
+          />
+          <button type="button" onClick={downloadThemeBackup} className="px-3 py-2 rounded-xl border border-neutral-200 bg-white text-[10px] font-black inline-flex items-center gap-1.5">
+            <Download className="w-3.5 h-3.5" /> بکاپ قالب
+          </button>
+          <button type="button" onClick={() => restoreInputRef.current?.click()} className="px-3 py-2 rounded-xl border border-neutral-200 bg-white text-[10px] font-black inline-flex items-center gap-1.5">
+            <Upload className="w-3.5 h-3.5" /> بازیابی
+          </button>
+          <button type="button" onClick={resetThemeAppearance} className="px-3 py-2 rounded-xl bg-amber-50 text-amber-800 border border-amber-200 text-[10px] font-black inline-flex items-center gap-1.5">
+            <RotateCcw className="w-3.5 h-3.5" /> ریست ظاهر قالب
+          </button>
         </div>
 
         {/* Subtab Navigation */}
@@ -796,6 +898,18 @@ export const AdminThemeTab: React.FC = () => {
                 <label className="p-3 rounded-xl border border-neutral-200 bg-neutral-50">
                   <span className="block text-[11px] font-bold mb-2">تعداد محصولات پیشنهادی</span>
                   <input type="number" min={1} max={50} value={form.relatedProductsCount || 4} onChange={e => setForm({ ...form, relatedProductsCount: Math.max(1, Math.min(50, Number(e.target.value || 4))) })} className="w-full p-2 border border-neutral-300 rounded-lg text-xs bg-white text-center font-mono" />
+                </label>
+                <label className="p-3 rounded-xl border border-neutral-200 bg-neutral-50">
+                  <span className="block text-[11px] font-bold mb-2">جای لوگو در موبایل</span>
+                  <select value={form.mobileLogoAlign || 'right'} onChange={e => setForm({ ...form, mobileLogoAlign: e.target.value as 'left'|'center'|'right' })} className="w-full p-2 border border-neutral-300 rounded-lg text-xs bg-white">
+                    <option value="right">راست</option>
+                    <option value="center">وسط</option>
+                    <option value="left">چپ</option>
+                  </select>
+                </label>
+                <label className="p-3 rounded-xl border border-neutral-200 bg-neutral-50 sm:col-span-2">
+                  <span className="block text-[11px] font-bold mb-2">عرض لوگوی موبایل: {form.mobileLogoWidthPx || 118}px</span>
+                  <input type="range" min={60} max={220} step={2} value={form.mobileLogoWidthPx || 118} onChange={e => setForm({ ...form, mobileLogoWidthPx: Number(e.target.value) })} className="w-full accent-red-600" />
                 </label>
               </div>
             </div>

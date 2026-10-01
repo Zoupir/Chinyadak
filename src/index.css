@@ -7397,3 +7397,20 @@ html[data-layout="marketplace-rtl"] .marketplace-ref-footer-about > p {
     gap: 20px 14px !important;
   }
 }
+
+
+/* Builder V7.1 — neutralize the last inner reference-theme width caps. */
+html[data-layout="marketplace-rtl"] [data-section-key="featured-categories"] .marketplace-round-list,
+html[data-layout="marketplace-rtl"] [data-section-key="promo-small"].marketplace-promo-grid,
+html[data-layout="marketplace-rtl"] [data-section-key="promo-medium"].marketplace-promo-grid,
+html[data-layout="marketplace-rtl"] [data-section-key="promo-large"].marketplace-feature-banners,
+html[data-layout="marketplace-rtl"] [data-section-key="testimonials"] .marketplace-testimonial-grid,
+html[data-layout="marketplace-rtl"] [data-section-key="articles"] .marketplace-ref-article-grid {
+  width: 100% !important;
+  max-width: none !important;
+  margin-inline: 0 !important;
+}
+html[data-layout="marketplace-rtl"] [data-section-key="articles"] .marketplace-article-grid img {
+  width: min(100%, var(--builder-image-width, 100%)) !important;
+  margin-inline: auto !important;
+}

@@ -135,10 +135,13 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
       minHeight: item.minHeightPx !== undefined
         ? `${item.minHeightPx}px`
         : section?.itemMinHeightPx !== undefined ? `${section.itemMinHeightPx}px` : undefined,
-      textAlign: item.textAlign || section?.itemTextAlign || undefined,
+      textAlign: item.textAlignment || item.textAlign || section?.itemTextAlign || undefined,
       ['--item-image-width' as any]: `${(item as PageSectionItem).imageWidthPx ?? section?.itemImageWidthPx ?? section?.imageSizePx ?? 72}px`,
       ['--item-image-height' as any]: `${(item as PageSectionItem).imageHeightPx ?? section?.itemImageHeightPx ?? section?.imageSizePx ?? 72}px`,
-      ['--item-image-fit' as any]: (item as PageSectionItem).imageFit || section?.itemImageFit || 'contain',
+      ['--item-image-fit' as any]:
+        (item as PageSectionItem).imageMode === 'stretch' ? 'fill' :
+        ['cover','contain'].includes((item as PageSectionItem).imageMode || '') ? (item as PageSectionItem).imageMode :
+        (item as PageSectionItem).imageFit || section?.itemImageFit || 'contain',
       ['--item-image-radius' as any]: `${item.imageRadiusPx ?? section?.itemImageRadiusPx ?? 0}px`,
       ['--item-title-size' as any]: item.titleFontSizePx !== undefined ? `${item.titleFontSizePx}px` : undefined,
       ['--item-content-size' as any]: item.contentFontSizePx !== undefined ? `${item.contentFontSizePx}px` : undefined
@@ -663,19 +666,7 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
 
       {sectionVisible('promo-small') && (
       <section className="marketplace-section marketplace-promo-grid three builder-section-grid" data-section-key="promo-small" data-mobile-display={sectionConfig('promo-small')?.mobileDisplayMode || 'grid'} style={sectionStyle('promo-small')}>
-        {(sortedItems('promo-small').length ? sortedItems('promo-small') : [0, 1, 2].map((index) => ({
-          id: `promo-fallback-${index}`,
-          title: activeSlides[index]?.title || ['باتری و برق خودرو', 'رینگ، جلوبندی و تعلیق', 'پیشنهادهای محدود فروشگاه'][index],
-          subtitle: activeSlides[index]?.tag || (index === 0 ? 'پیشنهاد روز' : index === 1 ? 'محصولات منتخب' : 'فروش ویژه'),
-          buttonText: 'مشاهده محصولات',
-          link: activeSlides[index]?.link || 'shop',
-          imageUrl: promoImage(index),
-          badge: undefined,
-          responsiveLayout: undefined,
-          inheritTabletFromDesktop: true,
-          inheritMobileFromDesktop: true,
-          order: index + 1
-        }))).map((item, index) => (
+        {sortedItems('promo-small').map((item, index) => (
           <button
             key={item.id}
             type="button"
@@ -697,9 +688,9 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
               </span>
             ) : (
               <>
-                <span>{item.subtitle || 'پیشنهاد ویژه'}</span>
-                <h3>{item.title || 'بنر فروشگاه'}</h3>
-                <small>{item.buttonText || 'مشاهده محصولات'}</small>
+                {item.subtitle && <span style={{color:item.subtitleColor||item.textColor}}>{item.subtitle}</span>}
+                {item.title && <h3 style={{color:item.titleColor||item.textColor}}>{item.title}</h3>}
+                {item.buttonText && <small style={{backgroundColor:item.buttonBgColor,color:item.buttonTextColor}}>{item.buttonText}</small>}
               </>
             )}
           </button>
@@ -815,19 +806,7 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
 
       {sectionVisible('promo-medium') && (
       <section className="marketplace-section marketplace-promo-grid two builder-section-grid" data-section-key="promo-medium" data-mobile-display={sectionConfig('promo-medium')?.mobileDisplayMode || 'grid'} style={sectionStyle('promo-medium')}>
-        {(sortedItems('promo-medium').length ? sortedItems('promo-medium') : [1, 2].map((index) => ({
-          id: `medium-${index}`,
-          title: index === 1 ? 'جلوبندی، تایر و سیستم تعلیق' : 'قطعات موتور و سرویس تخصصی',
-          subtitle: index === 1 ? 'آماده برای جاده' : 'قطعات حیاتی موتور',
-          buttonText: 'خرید کنید',
-          link: activeSlides[index]?.link || 'shop',
-          imageUrl: promoImage(index),
-          badge: undefined,
-          responsiveLayout: undefined,
-          inheritTabletFromDesktop: true,
-          inheritMobileFromDesktop: true,
-          order: index
-        }))).map((item, index) => (
+        {sortedItems('promo-medium').map((item, index) => (
           <button
             key={item.id}
             type="button"
@@ -847,9 +826,9 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
               </span>
             ) : (
               <>
-                <span>{item.subtitle || 'پیشنهاد ویژه'}</span>
-                <h3>{item.title || 'بنر فروشگاه'}</h3>
-                <small>{item.buttonText || 'خرید کنید'}</small>
+                {item.subtitle && <span style={{color:item.subtitleColor||item.textColor}}>{item.subtitle}</span>}
+                {item.title && <h3 style={{color:item.titleColor||item.textColor}}>{item.title}</h3>}
+                {item.buttonText && <small style={{backgroundColor:item.buttonBgColor,color:item.buttonTextColor}}>{item.buttonText}</small>}
               </>
             )}
           </button>
@@ -906,9 +885,9 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
                 </span>
               ) : (
                 <div>
-                  <span>{item.subtitle || 'پیشنهاد فروشگاه'}</span>
-                  <h3>{item.title || 'بنر فروشگاه'}</h3>
-                  {item.buttonText && <small>{item.buttonText}</small>}
+                  {item.subtitle && <span style={{color:item.subtitleColor||item.textColor}}>{item.subtitle}</span>}
+                  {item.title && <h3 style={{color:item.titleColor||item.textColor}}>{item.title}</h3>}
+                  {item.buttonText && <small style={{backgroundColor:item.buttonBgColor,color:item.buttonTextColor}}>{item.buttonText}</small>}
                 </div>
               )}
             </button>
@@ -951,14 +930,14 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
               <article key={item.id} style={itemVisualStyle('testimonials', item)}>
                 <div className="marketplace-testimonial-head">
                   {item.imageUrl ? (
-                    <img src={item.imageUrl} alt={item.title || 'نظر مشتری'} />
+                    <img src={item.imageUrl} alt={item.title || 'تصویر مشتری'} />
                   ) : (
                     <span className="marketplace-testimonial-avatar" aria-hidden="true">
-                      {(item.title || 'م').trim().slice(0, 1)}
+                      {(item.title || '؟').trim().slice(0, 1)}
                     </span>
                   )}
                   <div>
-                    <small>{item.title || 'مشتری فروشگاه'}</small>
+                    <small>{item.title || ''}</small>
                     <strong>★★★★★</strong>
                   </div>
                 </div>
@@ -995,9 +974,9 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
         </div>
         <div className="marketplace-article-grid marketplace-ref-article-grid">
           <div className="marketplace-ref-article-intro">
-            <h3>راهنما و مقالات تخصصی</h3>
-            <p>مطالب کاربردی برای انتخاب قطعه، نگهداری خودرو و شناخت بهتر سیستم‌های فنی.</p>
-            <button type="button" onClick={() => onNavigate('blog')}>مشاهده همه مقالات</button>
+            <h3>{sectionConfig('articles')?.title || ''}</h3>
+            <p>{sectionConfig('articles')?.subtitle || ''}</p>
+            <button type="button" onClick={() => goLink(sectionConfig('articles')?.buttonLink || 'blog')}>{sectionConfig('articles')?.buttonText || 'مشاهده همه مقالات'}</button>
           </div>
           {articles.slice(0, sectionConfig('articles')?.maxItems || 3).map(article => (
             <button key={article.id} type="button" onClick={() => onNavigate('article', article.slug || article.id)}>

@@ -193,6 +193,15 @@ export const AdminVisualPageBuilder: React.FC<{onNavigate?:(view:string,param?:s
   };
 
   const removeItem=(id:string)=>draft&&patch({items:(draft.items||[]).filter(item=>item.id!==id)});
+  const moveItem=(id:string,dir:'up'|'down')=>{
+    if(!draft)return;
+    const items=[...(draft.items||[])].sort((a,b)=>a.order-b.order);
+    const index=items.findIndex(item=>item.id===id);
+    const target=dir==='up'?index-1:index+1;
+    if(index<0||target<0||target>=items.length)return;
+    [items[index],items[target]]=[items[target],items[index]];
+    patch({items:items.map((item,i)=>({...item,order:i+1}))});
+  };
   const addItem=()=>{
     const items=draft?.items||[];
     patch({items:[...items,{id:`item-${Date.now()}`,title:'آیتم جدید',subtitle:'',content:'',imageUrl:'',link:'shop',buttonText:'مشاهده',isVisible:true,order:items.length+1}]});
@@ -375,6 +384,9 @@ export const AdminVisualPageBuilder: React.FC<{onNavigate?:(view:string,param?:s
                 <div className="grid grid-cols-3 gap-1"><button onClick={()=>patch({contentAlign:'right'})} className="p-2 border rounded flex justify-center"><AlignRight className="w-4 h-4"/></button><button onClick={()=>patch({contentAlign:'center'})} className="p-2 border rounded flex justify-center"><AlignCenter className="w-4 h-4"/></button><button onClick={()=>patch({contentAlign:'left'})} className="p-2 border rounded flex justify-center"><AlignLeft className="w-4 h-4"/></button></div>
                 <div className="grid grid-cols-2 gap-2">
                   <label><span>فاصله آیتم‌ها</span><input type="number" value={draft.gapPx??16} onChange={e=>patch({gapPx:Number(e.target.value)})} className="w-full p-2 border rounded"/></label>
+                  <label><span>حداکثر آیتم قابل نمایش</span><input type="number" min="0" max="100" value={draft.maxItems??0} onChange={e=>patch({maxItems:Number(e.target.value)})} className="w-full p-2 border rounded"/></label>
+                  <label><span>اندازه پایه تصویر</span><input type="number" min="16" max="1200" value={draft.imageSizePx??72} onChange={e=>patch({imageSizePx:Number(e.target.value)})} className="w-full p-2 border rounded"/></label>
+                  <label><span>Opacity تصویر %</span><input type="number" min="0" max="100" value={draft.backgroundImageOpacity??100} onChange={e=>patch({backgroundImageOpacity:Number(e.target.value)})} className="w-full p-2 border rounded"/></label>
                   <label><span>حداقل ارتفاع آیتم</span><input type="number" value={draft.itemMinHeightPx??0} onChange={e=>patch({itemMinHeightPx:Number(e.target.value)})} className="w-full p-2 border rounded"/></label>
                   <label><span>حداقل عرض آیتم موبایل</span><input type="number" min="120" max="600" value={draft.mobileItemMinWidthPx??240} onChange={e=>patch({mobileItemMinWidthPx:Number(e.target.value)})} className="w-full p-2 border rounded"/></label>
                   <label><span>نمایش موبایل</span><select value={draft.mobileDisplayMode||'grid'} onChange={e=>patch({mobileDisplayMode:e.target.value as any})} className="w-full p-2 border rounded bg-white"><option value="grid">Grid</option><option value="scroll">اسکرول افقی</option></select></label>
@@ -409,9 +421,19 @@ export const AdminVisualPageBuilder: React.FC<{onNavigate?:(view:string,param?:s
                 <div className="flex items-center justify-between"><strong>Repeater Items</strong><button onClick={addItem} className="px-2 py-1.5 bg-blue-600 text-white rounded inline-flex gap-1 items-center"><Plus className="w-3 h-3"/>آیتم</button></div>
                 <div className="space-y-3">
                   {(draft.items||[]).map((item,index)=><div key={item.id} className="p-3 rounded-xl border bg-neutral-50 space-y-2">
-                    <div className="flex justify-between"><strong>آیتم {index+1}</strong><button onClick={()=>removeItem(item.id)} className="text-red-600"><Trash2 className="w-3.5 h-3.5"/></button></div>
+                    <div className="flex justify-between items-center gap-2">
+                      <strong>آیتم {index+1}</strong>
+                      <div className="flex items-center gap-1">
+                        <button onClick={()=>moveItem(item.id,'up')} disabled={index===0} className="p-1 border rounded disabled:opacity-30" title="بالا"><ArrowUp className="w-3 h-3"/></button>
+                        <button onClick={()=>moveItem(item.id,'down')} disabled={index===(draft.items||[]).length-1} className="p-1 border rounded disabled:opacity-30" title="پایین"><ArrowDown className="w-3 h-3"/></button>
+                        <button onClick={()=>updateItem(item.id,{isVisible:item.isVisible===false?true:false})} className="p-1 border rounded" title="نمایش/مخفی">{item.isVisible===false?<EyeOff className="w-3.5 h-3.5"/>:<Eye className="w-3.5 h-3.5"/>}</button>
+                        <button onClick={()=>removeItem(item.id)} className="p-1 text-red-600"><Trash2 className="w-3.5 h-3.5"/></button>
+                      </div>
+                    </div>
                     <input value={item.title||''} onChange={e=>updateItem(item.id,{title:e.target.value})} className="w-full p-2 border rounded" placeholder="عنوان"/>
                     <input value={item.subtitle||''} onChange={e=>updateItem(item.id,{subtitle:e.target.value})} className="w-full p-2 border rounded" placeholder="زیرعنوان"/>
+                    <input value={item.badge||''} onChange={e=>updateItem(item.id,{badge:e.target.value})} className="w-full p-2 border rounded" placeholder="Badge / برچسب"/>
+                    <textarea rows={3} value={item.content||''} onChange={e=>updateItem(item.id,{content:e.target.value})} className="w-full p-2 border rounded" placeholder="متن / توضیحات آیتم"/>
                     <ImageUploadInput value={item.imageUrl||''} onChange={url=>updateItem(item.id,{imageUrl:url})} aspectRatio="square" presetCategory="parts"/>
                     <div className="grid grid-cols-2 gap-2">
                       <label><span className="block text-[8px] mb-1">عرض تصویر</span><input type="number" value={item.imageWidthPx??draft.itemImageWidthPx??draft.imageSizePx??72} onChange={e=>updateItem(item.id,{imageWidthPx:Number(e.target.value)})} className="w-full p-2 border rounded"/></label>

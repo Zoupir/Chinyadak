@@ -1,4 +1,3 @@
-import { randomUUID } from 'crypto';
 import fs from 'fs/promises';
 import path from 'path';
 import { Router } from 'express';
@@ -36,6 +35,22 @@ const detectImageType = (buffer: Buffer): SupportedImage | null => {
   ) return { extension: 'gif', mime: 'image/gif' };
 
   return null;
+};
+
+const preserveOriginalFilename = (originalName: string, detected: SupportedImage): string | null => {
+  const decoded = String(originalName || '').normalize('NFC');
+  if (!decoded || decoded.length > 240) return null;
+  if (/[\u0000-\u001f\u007f]/.test(decoded)) return null;
+  if (decoded.includes('/') || decoded.includes('\\') || decoded === '.' || decoded === '..') return null;
+
+  const ext = path.extname(decoded).slice(1).toLowerCase();
+  const equivalent =
+    detected.extension === 'jpg'
+      ? ['jpg', 'jpeg']
+      : [detected.extension];
+
+  if (!equivalent.includes(ext)) return null;
+  return decoded;
 };
 
 const upload = multer({
@@ -218,12 +233,30 @@ mediaRouter.post(
     const targetDir = path.join(uploadDirectory(), category, year, month);
     await fs.mkdir(targetDir, { recursive: true });
 
-    const filename = `${randomUUID()}.${detected.extension}`;
+    const filename = preserveOriginalFilename(req.file.originalname, detected);
+    if (!filename) {
+      res.status(400).json({ error: 'MEDIA_FILENAME_INVALID_OR_EXTENSION_MISMATCH' });
+      return;
+    }
+
     const targetPath = path.join(targetDir, filename);
-    await fs.writeFile(targetPath, req.file.buffer, { flag: 'wx' });
+    try {
+      // Never rename the user's file. If the exact same filename already exists
+      // in the same category/year/month folder, reject instead of appending a suffix.
+      await fs.writeFile(targetPath, req.file.buffer, { flag: 'wx' });
+    } catch (error: any) {
+      if (error?.code === 'EEXIST') {
+        res.status(409).json({
+          error: 'MEDIA_FILENAME_EXISTS',
+          filename,
+          message: 'A file with the exact same name already exists in this folder.'
+        });
+        return;
+      }
+      throw error;
+    }
 
     const originalBase = path.basename(req.file.originalname, path.extname(req.file.originalname))
-      .replace(/[-_]+/g, ' ')
       .trim();
     const seo = await writeMediaSeo(targetPath, {
       alt: originalBase,

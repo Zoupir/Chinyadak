@@ -595,6 +595,9 @@ export interface SiteSettings {
   mobileProductColumns?: 1 | 2;
   mobileFooterColumns?: 1 | 2;
   relatedProductsCount?: number;
+  /** Mobile header logo placement and size. */
+  mobileLogoAlign?: 'left' | 'center' | 'right';
+  mobileLogoWidthPx?: number;
   borderRadius?: 'sharp' | 'normal' | 'rounded' | 'full';
   themeRadiusPx?: number;
   headerStyle?: 'light' | 'dark' | 'primary';

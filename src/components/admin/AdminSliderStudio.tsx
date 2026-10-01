@@ -195,7 +195,7 @@ export const AdminSliderStudio:React.FC=()=>{
     if(mode==='slides'){
       if(!draft)return;
       updateSlider(draft);
-      showToast('اسلاید و جانمایی Responsive ذخیره شد.');
+      showToast('اسلاید و جانمایی واکنش‌گرا ذخیره شد.');
       return;
     }
     if(!homePage||!activeBannerSection||!bannerDraft)return;
@@ -203,7 +203,7 @@ export const AdminSliderStudio:React.FC=()=>{
       ...activeBannerSection,
       items:(activeBannerSection.items||[]).map(item=>item.id===bannerDraft.id?bannerDraft:item)
     });
-    showToast('بنر و جانمایی Responsive ذخیره شد.');
+    showToast('بنر و جانمایی واکنش‌گرا ذخیره شد.');
   };
 
   const add=()=>{
@@ -325,13 +325,16 @@ export const AdminSliderStudio:React.FC=()=>{
     event.preventDefault();
     event.stopPropagation();
     const pos=elementPosition(owner,device,key);
+    const elementRect=event.currentTarget.parentElement?.getBoundingClientRect();
+    const canvasRect=canvasRef.current.getBoundingClientRect();
+    const measuredHeight=elementRect ? (elementRect.height/canvasRect.height)*100 : 8;
     setActiveElement(key);
     setResizing({
       key,
       startX:event.clientX,
       startY:event.clientY,
       startWidth:Number(pos.width||DEFAULT_POSITIONS[key].width||20),
-      startHeight:Number(pos.height||0)
+      startHeight:Number(pos.height||measuredHeight)
     });
     event.currentTarget.setPointerCapture(event.pointerId);
   };
@@ -343,8 +346,8 @@ export const AdminSliderStudio:React.FC=()=>{
     const deltaWidth=((resizing.startX-event.clientX)/rect.width)*100;
     const deltaHeight=((event.clientY-resizing.startY)/rect.height)*100;
     const width=clamp(resizing.startWidth+deltaWidth,6,95);
-    const height=resizing.startHeight>0?clamp(resizing.startHeight+deltaHeight,3,80):undefined;
-    setElementPosition(resizing.key,{...pos,width:Number(width.toFixed(2)),...(height?{height:Number(height.toFixed(2))}:{})});
+    const height=clamp(resizing.startHeight+deltaHeight,3,80);
+    setElementPosition(resizing.key,{...pos,width:Number(width.toFixed(2)),height:Number(height.toFixed(2))});
   };
 
   const stopResize=()=>setResizing(null);
@@ -401,7 +404,7 @@ export const AdminSliderStudio:React.FC=()=>{
     />;
     const alignment=slide?.textAlignment||banner?.textAlignment||'right';
     if(key==='tag'){
-      return <div onPointerDown={e=>startDrag(e,key)} onPointerMove={dragMove} onPointerUp={stopDrag} onPointerCancel={stopDrag} className={common} style={{...positionStyle(key),backgroundColor:slide?.badgeBgColor||banner?.badgeBgColor||'rgba(245,158,11,.2)',color:slide?.badgeTextColor||banner?.badgeTextColor||'#fbbf24',padding:'6px 9px',fontWeight:900,textAlign:alignment}}><Grip className="inline w-3 h-3 ml-1"/>{slide?.tag||banner?.badge}{handle}</div>;
+      return <div onPointerDown={e=>startDrag(e,key)} onPointerMove={dragMove} onPointerUp={stopDrag} onPointerCancel={stopDrag} className={common} style={{...positionStyle(key),backgroundColor:slide?.badgeBgColor||banner?.badgeBgColor||'#16a34a',color:slide?.badgeTextColor||banner?.badgeTextColor||'#ffffff',padding:'6px 9px',fontWeight:900,textAlign:alignment}}><Grip className="inline w-3 h-3 ml-1"/>{slide?.tag||banner?.badge}{handle}</div>;
     }
     if(key==='title'){
       return <div onPointerDown={e=>startDrag(e,key)} onPointerMove={dragMove} onPointerUp={stopDrag} onPointerCancel={stopDrag} className={common} style={{...positionStyle(key),color:slide?.titleColor||banner?.titleColor||'#fff',fontWeight:900,lineHeight:1.2,textAlign:alignment}}>{owner.title}{handle}</div>;

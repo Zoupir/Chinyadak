@@ -635,6 +635,10 @@ export interface SiteSettings {
   footerGridColumnsDesktop?: number;
   footerGridColumnsTablet?: number;
   footerGridColumnsMobile?: number;
+  footerGridRowsDesktop?: number;
+  footerGridRowsTablet?: number;
+  footerGridRowsMobile?: number;
+  footerLogoUrl?: string;
   footerLogoWidthPx?: number;
   footerHeadingFontSizePx?: number;
   footerTextFontSizePx?: number;
@@ -642,6 +646,9 @@ export interface SiteSettings {
   footerPaddingBottomPx?: number;
   footerTextColor?: string;
   footerHeadingColor?: string;
+  footerContactTitle?: string;
+  footerContactSubtitle?: string;
+  footerNewsletterPlaceholder?: string;
 
   // Official Invoice and Tax Information
   sellerName?: string;

@@ -64,7 +64,12 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
       backgroundImage: section.imageUrl
         ? `linear-gradient(rgba(0,0,0,${overlayAlpha}), rgba(0,0,0,${overlayAlpha})), url(${section.imageUrl})`
         : undefined,
-      backgroundSize: section.imageUrl ? 'cover' : undefined,
+      backgroundSize: section.imageUrl
+        ? section.imageMode === 'contain' ? 'contain'
+          : section.imageMode === 'full' ? '100% 100%'
+          : 'cover'
+        : undefined,
+      backgroundRepeat: section.imageUrl ? 'no-repeat' : undefined,
       backgroundPosition: section.imageUrl ? 'center' : undefined,
       color: section.textColor || undefined,
       borderRadius: section.borderRadiusPx !== undefined ? `${section.borderRadiusPx}px` : undefined,
@@ -549,7 +554,14 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
             className="marketplace-promo-card"
             style={{
               ...itemVisualStyle('promo-small', item as PageSectionItem),
-              ...(item.imageUrl || promoImage(index) ? { backgroundImage: `url(${item.imageUrl || promoImage(index)})` } : {})
+              ...(item.imageUrl || promoImage(index) ? {
+                backgroundImage: `url(${item.imageUrl || promoImage(index)})`,
+                backgroundRepeat: 'no-repeat',
+                backgroundPosition: 'center',
+                backgroundSize: (item.imageWidthPx !== undefined || item.imageHeightPx !== undefined || sectionConfig('promo-small')?.itemImageWidthPx !== undefined || sectionConfig('promo-small')?.itemImageHeightPx !== undefined)
+                  ? `${item.imageWidthPx ?? sectionConfig('promo-small')?.itemImageWidthPx ?? 'auto'}px ${item.imageHeightPx ?? sectionConfig('promo-small')?.itemImageHeightPx ?? 'auto'}px`
+                  : (item.imageFit || sectionConfig('promo-small')?.itemImageFit || 'cover')
+              } : {})
             }}
             onClick={() => goLink(item.link || 'shop')}
           >
@@ -701,7 +713,14 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
             className="marketplace-promo-card marketplace-promo-medium"
             style={{
               ...itemVisualStyle('promo-medium', item as PageSectionItem),
-              ...(item.imageUrl || promoImage(index + 1) ? { backgroundImage: `url(${item.imageUrl || promoImage(index + 1)})` } : {})
+              ...(item.imageUrl || promoImage(index + 1) ? {
+                backgroundImage: `url(${item.imageUrl || promoImage(index + 1)})`,
+                backgroundRepeat: 'no-repeat',
+                backgroundPosition: 'center',
+                backgroundSize: (item.imageWidthPx !== undefined || item.imageHeightPx !== undefined || sectionConfig('promo-medium')?.itemImageWidthPx !== undefined || sectionConfig('promo-medium')?.itemImageHeightPx !== undefined)
+                  ? `${item.imageWidthPx ?? sectionConfig('promo-medium')?.itemImageWidthPx ?? 'auto'}px ${item.imageHeightPx ?? sectionConfig('promo-medium')?.itemImageHeightPx ?? 'auto'}px`
+                  : (item.imageFit || sectionConfig('promo-medium')?.itemImageFit || 'cover')
+              } : {})
             }}
             onClick={() => goLink(item.link || 'shop')}
           >
@@ -760,7 +779,14 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
               className={index % 3 === 0 ? 'large' : 'small'}
               style={{
                 ...itemVisualStyle('promo-large', item),
-                ...(image ? { backgroundImage: `linear-gradient(90deg, rgba(0,0,0,.24), rgba(0,0,0,.62)), url(${image})` } : {})
+                ...(image ? {
+                  backgroundImage: `linear-gradient(90deg, rgba(0,0,0,.24), rgba(0,0,0,.62)), url(${image})`,
+                  backgroundRepeat: 'no-repeat',
+                  backgroundPosition: 'center',
+                  backgroundSize: (item.imageWidthPx !== undefined || item.imageHeightPx !== undefined || sectionConfig('promo-large')?.itemImageWidthPx !== undefined || sectionConfig('promo-large')?.itemImageHeightPx !== undefined)
+                    ? `${item.imageWidthPx ?? sectionConfig('promo-large')?.itemImageWidthPx ?? 'auto'}px ${item.imageHeightPx ?? sectionConfig('promo-large')?.itemImageHeightPx ?? 'auto'}px`
+                    : (item.imageFit || sectionConfig('promo-large')?.itemImageFit || 'cover')
+                } : {})
               }}
               onClick={() => goLink(item.link || 'shop')}
             >

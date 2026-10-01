@@ -144,10 +144,101 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
       ['--item-content-size' as any]: item.contentFontSizePx !== undefined ? `${item.contentFontSizePx}px` : undefined
     };
   };
-  const sortedItems = (key: string) =>
-    [...(sectionConfig(key)?.items || [])]
+  const sourceItemsFor = (
+    source: NonNullable<ReturnType<typeof sectionConfig>['contentSource']>,
+    limit: number
+  ): PageSectionItem[] => {
+    const max = Math.max(1, Math.min(100, limit || 12));
+    if (source === 'categories') {
+      return categories.slice(0, max).map((item, index) => ({
+        id: `source-category-${item.id}`,
+        title: item.nameFa,
+        subtitle: item.description || item.nameEn,
+        imageUrl: item.iconUrl || item.imageUrl || '',
+        link: `category:${item.slug}`,
+        isVisible: true,
+        order: index + 1
+      }));
+    }
+    if (source === 'brands') {
+      return brands.slice(0, max).map((item, index) => ({
+        id: `source-brand-${item.id}`,
+        title: item.nameFa,
+        subtitle: item.nameEn,
+        imageUrl: item.logo || '',
+        link: `car-brand:${item.slug || item.id}`,
+        isVisible: true,
+        order: index + 1
+      }));
+    }
+    if (source === 'products') {
+      return products.slice(0, max).map((item, index) => ({
+        id: `source-product-${item.id}`,
+        title: item.nameFa,
+        subtitle: item.shortDescription || item.oemNumber,
+        imageUrl: item.images?.[0] || '',
+        badge: item.oemNumber,
+        link: `product:${item.slug || item.id}`,
+        isVisible: true,
+        order: index + 1
+      }));
+    }
+    if (source === 'articles') {
+      return articles.slice(0, max).map((item, index) => ({
+        id: `source-article-${item.id}`,
+        title: item.title,
+        subtitle: item.summary,
+        imageUrl: item.imageUrl || '',
+        link: `article:${item.slug || item.id}`,
+        isVisible: true,
+        order: index + 1
+      }));
+    }
+    return [];
+  };
+
+  const sortedItems = (key: string) => {
+    const section = sectionConfig(key);
+    const source = section?.contentSource || 'manual';
+    const base = source === 'manual'
+      ? [...(section?.items || [])]
+      : sourceItemsFor(source, section?.contentSourceLimit || section?.maxItems || 12);
+    return base
       .filter(item => item.isVisible !== false)
       .sort((a, b) => a.order - b.order);
+  };
+
+  const bannerBackgroundStyle = (
+    item: PageSectionItem,
+    image: string,
+    withOverlay = false
+  ): React.CSSProperties => {
+    if (!image) return {};
+    const mode = item.imageMode || (item.imageFit === 'contain' ? 'contain' : 'cover');
+    const repeat =
+      mode === 'repeat' ? 'repeat' :
+      mode === 'repeat-x' ? 'repeat-x' :
+      mode === 'repeat-y' ? 'repeat-y' :
+      'no-repeat';
+    const size =
+      mode === 'stretch' ? '100% 100%' :
+      mode === 'original' || mode.startsWith('repeat') ? 'auto' :
+      mode;
+
+    return withOverlay
+      ? {
+          backgroundImage: `linear-gradient(90deg, rgba(0,0,0,.24), rgba(0,0,0,.62)), url(${image})`,
+          backgroundSize: `100% 100%, ${size}`,
+          backgroundRepeat: `no-repeat, ${repeat}`,
+          backgroundPosition: 'center, center'
+        }
+      : {
+          backgroundImage: `url(${image})`,
+          backgroundSize: size,
+          backgroundRepeat: repeat,
+          backgroundPosition: 'center'
+        };
+  };
 
   const freeLayoutStyle = (
     owner: any,
@@ -167,12 +258,48 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
       ['--free-d-x' as any]: String(desktop.x),
       ['--free-d-y' as any]: String(desktop.y),
       ['--free-d-w' as any]: String(desktop.width),
+      ['--free-d-h' as any]: desktop.height ? `${desktop.height}%` : 'auto',
+      ['--free-d-font' as any]: desktop.fontSizePx ? `${desktop.fontSizePx}px` : undefined,
+      ['--free-d-wrap' as any]: desktop.wrap === 'nowrap' ? 'nowrap' : 'normal',
       ['--free-t-x' as any]: String(tablet.x),
       ['--free-t-y' as any]: String(tablet.y),
       ['--free-t-w' as any]: String(tablet.width),
+      ['--free-t-h' as any]: tablet.height ? `${tablet.height}%` : 'auto',
+      ['--free-t-font' as any]: tablet.fontSizePx ? `${tablet.fontSizePx}px` : undefined,
+      ['--free-t-wrap' as any]: tablet.wrap === 'nowrap' ? 'nowrap' : 'normal',
       ['--free-m-x' as any]: String(mobile.x),
       ['--free-m-y' as any]: String(mobile.y),
-      ['--free-m-w' as any]: String(mobile.width)
+      ['--free-m-w' as any]: String(mobile.width),
+      ['--free-m-h' as any]: mobile.height ? `${mobile.height}%` : 'auto',
+      ['--free-m-font' as any]: mobile.fontSizePx ? `${mobile.fontSizePx}px` : undefined,
+      ['--free-m-wrap' as any]: mobile.wrap === 'nowrap' ? 'nowrap' : 'normal'
+    };
+  };
+
+  const freeElementStyle = (
+    owner: any,
+    key: 'tag' | 'title' | 'subtitle' | 'button',
+    fallback: { x: number; y: number; width: number }
+  ): React.CSSProperties => {
+    const base = freeLayoutStyle(owner, key, fallback);
+    const align = owner?.textAlignment || owner?.textAlign || 'right';
+    if (key === 'title') return { ...base, color: owner?.titleColor || owner?.textColor || undefined, textAlign: align, ['--free-color' as any]: owner?.titleColor || owner?.textColor || undefined };
+    if (key === 'subtitle') return { ...base, color: owner?.subtitleColor || owner?.textColor || undefined, textAlign: align, ['--free-color' as any]: owner?.subtitleColor || owner?.textColor || undefined };
+    if (key === 'button') return {
+      ...base,
+      backgroundColor: owner?.buttonBgColor || undefined,
+      color: owner?.buttonTextColor || undefined,
+      textAlign: 'center',
+      ['--free-bg' as any]: owner?.buttonBgColor || undefined,
+      ['--free-color' as any]: owner?.buttonTextColor || undefined
+    };
+    return {
+      ...base,
+      backgroundColor: owner?.badgeBgColor || undefined,
+      color: owner?.badgeTextColor || undefined,
+      textAlign: align,
+      ['--free-bg' as any]: owner?.badgeBgColor || undefined,
+      ['--free-color' as any]: owner?.badgeTextColor || undefined
     };
   };
 
@@ -340,7 +467,16 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
           onMouseEnter={() => setIsHeroHovered(true)}
           onMouseLeave={() => setIsHeroHovered(false)}
           style={{
-            ...(hero?.imageUrl || sectionConfig('hero')?.imageUrl ? { backgroundImage: `url(${hero?.imageUrl || sectionConfig('hero')?.imageUrl})` } : {}),
+            ...(hero?.imageUrl || sectionConfig('hero')?.imageUrl ? (() => {
+              const image = hero?.imageUrl || sectionConfig('hero')?.imageUrl || '';
+              const mode = hero?.imageMode || 'cover';
+              return {
+                backgroundImage: `url(${image})`,
+                backgroundSize: mode === 'stretch' ? '100% 100%' : (mode === 'original' || mode.startsWith('repeat')) ? 'auto' : mode,
+                backgroundRepeat: mode === 'repeat' ? 'repeat' : mode === 'repeat-x' ? 'repeat-x' : mode === 'repeat-y' ? 'repeat-y' : 'no-repeat',
+                backgroundPosition: 'center'
+              };
+            })() : {}),
             backgroundColor: hero?.bgColor || sectionConfig('hero')?.backgroundColor || undefined,
             borderRadius: `${sectionConfig('hero')?.borderRadiusPx ?? 0}px`
           }}
@@ -355,9 +491,7 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
                 <span
                   className="marketplace-free-layout-el marketplace-free-tag"
                   style={{
-                    ...freeLayoutStyle(hero, 'tag', { x: 70, y: 18, width: 20 }),
-                    backgroundColor: hero.badgeBgColor || undefined,
-                    color: hero.badgeTextColor || undefined
+                    ...freeElementStyle(hero, 'tag', { x: 70, y: 18, width: 20 })
                   }}
                 >
                   {hero?.tag || sectionConfig('hero')?.badge}
@@ -366,9 +500,7 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
               <h1
                 className="marketplace-free-layout-el marketplace-free-title"
                 style={{
-                  ...freeLayoutStyle(hero, 'title', { x: 58, y: 29, width: 34 }),
-                  color: hero.titleColor || undefined,
-                  textAlign: hero.textAlignment || 'right'
+                  ...freeElementStyle(hero, 'title', { x: 58, y: 29, width: 34 })
                 }}
               >
                 {hero?.title || sectionConfig('hero')?.title || 'قطعات مطمئن برای خودروی شما'}
@@ -376,9 +508,7 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
               <p
                 className="marketplace-free-layout-el marketplace-free-subtitle"
                 style={{
-                  ...freeLayoutStyle(hero, 'subtitle', { x: 60, y: 51, width: 32 }),
-                  color: hero.subtitleColor || undefined,
-                  textAlign: hero.textAlignment || 'right'
+                  ...freeElementStyle(hero, 'subtitle', { x: 60, y: 51, width: 32 })
                 }}
               >
                 {hero?.subtitle || sectionConfig('hero')?.subtitle || 'خرید تخصصی قطعات خودروهای چینی با تضمین اصالت، فیتمنت دقیق و ارسال سریع.'}
@@ -387,9 +517,7 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
                 type="button"
                 className="marketplace-free-layout-el marketplace-free-button"
                 style={{
-                  ...freeLayoutStyle(hero, 'button', { x: 75, y: 69, width: 17 }),
-                  backgroundColor: hero.buttonBgColor || undefined,
-                  color: hero.buttonTextColor || undefined
+                  ...freeElementStyle(hero, 'button', { x: 75, y: 69, width: 17 })
                 }}
                 onClick={() => goLink(hero?.link || sectionConfig('hero')?.buttonLink || 'shop')}
               >
@@ -554,25 +682,18 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
             className="marketplace-promo-card"
             style={{
               ...itemVisualStyle('promo-small', item as PageSectionItem),
-              ...(item.imageUrl || promoImage(index) ? {
-                backgroundImage: `url(${item.imageUrl || promoImage(index)})`,
-                backgroundRepeat: 'no-repeat',
-                backgroundPosition: 'center',
-                backgroundSize: ((item as PageSectionItem).imageWidthPx !== undefined || (item as PageSectionItem).imageHeightPx !== undefined || sectionConfig('promo-small')?.itemImageWidthPx !== undefined || sectionConfig('promo-small')?.itemImageHeightPx !== undefined)
-                  ? `${(item as PageSectionItem).imageWidthPx ?? sectionConfig('promo-small')?.itemImageWidthPx ?? 'auto'}px ${(item as PageSectionItem).imageHeightPx ?? sectionConfig('promo-small')?.itemImageHeightPx ?? 'auto'}px`
-                  : ((item as PageSectionItem).imageFit || sectionConfig('promo-small')?.itemImageFit || 'cover')
-              } : {})
+              ...bannerBackgroundStyle(item as PageSectionItem, item.imageUrl || promoImage(index))
             }}
             onClick={() => goLink(item.link || 'shop')}
           >
             {item.responsiveLayout ? (
               <span className="marketplace-free-layout-layer" aria-hidden="true">
                 {item.badge && (
-                  <span className="marketplace-free-layout-el marketplace-free-tag" style={freeLayoutStyle(item, 'tag', { x: 70, y: 16, width: 22 })}>{item.badge}</span>
+                  <span className="marketplace-free-layout-el marketplace-free-tag" style={freeElementStyle(item, 'tag', { x: 70, y: 16, width: 22 })}>{item.badge}</span>
                 )}
-                <h3 className="marketplace-free-layout-el marketplace-free-title marketplace-free-promo-title" style={freeLayoutStyle(item, 'title', { x: 55, y: 24, width: 38 })}>{item.title || 'بنر فروشگاه'}</h3>
-                {item.subtitle && <span className="marketplace-free-layout-el marketplace-free-subtitle marketplace-free-promo-subtitle" style={freeLayoutStyle(item, 'subtitle', { x: 58, y: 48, width: 34 })}>{item.subtitle}</span>}
-                <small className="marketplace-free-layout-el marketplace-free-button marketplace-free-promo-button" style={freeLayoutStyle(item, 'button', { x: 73, y: 70, width: 20 })}>{item.buttonText || 'مشاهده محصولات'}</small>
+                <h3 className="marketplace-free-layout-el marketplace-free-title marketplace-free-promo-title" style={freeElementStyle(item, 'title', { x: 55, y: 24, width: 38 })}>{item.title || 'بنر فروشگاه'}</h3>
+                {item.subtitle && <span className="marketplace-free-layout-el marketplace-free-subtitle marketplace-free-promo-subtitle" style={freeElementStyle(item, 'subtitle', { x: 58, y: 48, width: 34 })}>{item.subtitle}</span>}
+                <small className="marketplace-free-layout-el marketplace-free-button marketplace-free-promo-button" style={freeElementStyle(item, 'button', { x: 73, y: 70, width: 20 })}>{item.buttonText || 'مشاهده محصولات'}</small>
               </span>
             ) : (
               <>
@@ -713,23 +834,16 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
             className="marketplace-promo-card marketplace-promo-medium"
             style={{
               ...itemVisualStyle('promo-medium', item as PageSectionItem),
-              ...(item.imageUrl || promoImage(index + 1) ? {
-                backgroundImage: `url(${item.imageUrl || promoImage(index + 1)})`,
-                backgroundRepeat: 'no-repeat',
-                backgroundPosition: 'center',
-                backgroundSize: ((item as PageSectionItem).imageWidthPx !== undefined || (item as PageSectionItem).imageHeightPx !== undefined || sectionConfig('promo-medium')?.itemImageWidthPx !== undefined || sectionConfig('promo-medium')?.itemImageHeightPx !== undefined)
-                  ? `${(item as PageSectionItem).imageWidthPx ?? sectionConfig('promo-medium')?.itemImageWidthPx ?? 'auto'}px ${(item as PageSectionItem).imageHeightPx ?? sectionConfig('promo-medium')?.itemImageHeightPx ?? 'auto'}px`
-                  : ((item as PageSectionItem).imageFit || sectionConfig('promo-medium')?.itemImageFit || 'cover')
-              } : {})
+              ...bannerBackgroundStyle(item as PageSectionItem, item.imageUrl || promoImage(index + 1))
             }}
             onClick={() => goLink(item.link || 'shop')}
           >
             {item.responsiveLayout ? (
               <span className="marketplace-free-layout-layer" aria-hidden="true">
-                {item.badge && <span className="marketplace-free-layout-el marketplace-free-tag" style={freeLayoutStyle(item, 'tag', { x: 70, y: 16, width: 22 })}>{item.badge}</span>}
-                <h3 className="marketplace-free-layout-el marketplace-free-title marketplace-free-promo-title" style={freeLayoutStyle(item, 'title', { x: 55, y: 24, width: 38 })}>{item.title || 'بنر فروشگاه'}</h3>
-                {item.subtitle && <span className="marketplace-free-layout-el marketplace-free-subtitle marketplace-free-promo-subtitle" style={freeLayoutStyle(item, 'subtitle', { x: 58, y: 48, width: 34 })}>{item.subtitle}</span>}
-                <small className="marketplace-free-layout-el marketplace-free-button marketplace-free-promo-button" style={freeLayoutStyle(item, 'button', { x: 73, y: 70, width: 20 })}>{item.buttonText || 'خرید کنید'}</small>
+                {item.badge && <span className="marketplace-free-layout-el marketplace-free-tag" style={freeElementStyle(item, 'tag', { x: 70, y: 16, width: 22 })}>{item.badge}</span>}
+                <h3 className="marketplace-free-layout-el marketplace-free-title marketplace-free-promo-title" style={freeElementStyle(item, 'title', { x: 55, y: 24, width: 38 })}>{item.title || 'بنر فروشگاه'}</h3>
+                {item.subtitle && <span className="marketplace-free-layout-el marketplace-free-subtitle marketplace-free-promo-subtitle" style={freeElementStyle(item, 'subtitle', { x: 58, y: 48, width: 34 })}>{item.subtitle}</span>}
+                <small className="marketplace-free-layout-el marketplace-free-button marketplace-free-promo-button" style={freeElementStyle(item, 'button', { x: 73, y: 70, width: 20 })}>{item.buttonText || 'خرید کنید'}</small>
               </span>
             ) : (
               <>
@@ -779,23 +893,16 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
               className={index % 3 === 0 ? 'large' : 'small'}
               style={{
                 ...itemVisualStyle('promo-large', item),
-                ...(image ? {
-                  backgroundImage: `linear-gradient(90deg, rgba(0,0,0,.24), rgba(0,0,0,.62)), url(${image})`,
-                  backgroundRepeat: 'no-repeat',
-                  backgroundPosition: 'center',
-                  backgroundSize: ((item as PageSectionItem).imageWidthPx !== undefined || (item as PageSectionItem).imageHeightPx !== undefined || sectionConfig('promo-large')?.itemImageWidthPx !== undefined || sectionConfig('promo-large')?.itemImageHeightPx !== undefined)
-                    ? `${(item as PageSectionItem).imageWidthPx ?? sectionConfig('promo-large')?.itemImageWidthPx ?? 'auto'}px ${(item as PageSectionItem).imageHeightPx ?? sectionConfig('promo-large')?.itemImageHeightPx ?? 'auto'}px`
-                    : ((item as PageSectionItem).imageFit || sectionConfig('promo-large')?.itemImageFit || 'cover')
-                } : {})
+                ...bannerBackgroundStyle(item as PageSectionItem, image, true)
               }}
               onClick={() => goLink(item.link || 'shop')}
             >
               {item.responsiveLayout ? (
                 <span className="marketplace-free-layout-layer" aria-hidden="true">
-                  {item.badge && <span className="marketplace-free-layout-el marketplace-free-tag" style={freeLayoutStyle(item, 'tag', { x: 68, y: 15, width: 22 })}>{item.badge}</span>}
-                  <h3 className="marketplace-free-layout-el marketplace-free-title marketplace-free-promo-title" style={freeLayoutStyle(item, 'title', { x: 54, y: 26, width: 40 })}>{item.title || 'بنر فروشگاه'}</h3>
-                  {item.subtitle && <span className="marketplace-free-layout-el marketplace-free-subtitle marketplace-free-promo-subtitle" style={freeLayoutStyle(item, 'subtitle', { x: 58, y: 50, width: 34 })}>{item.subtitle}</span>}
-                  {item.buttonText && <small className="marketplace-free-layout-el marketplace-free-button marketplace-free-promo-button" style={freeLayoutStyle(item, 'button', { x: 73, y: 72, width: 20 })}>{item.buttonText}</small>}
+                  {item.badge && <span className="marketplace-free-layout-el marketplace-free-tag" style={freeElementStyle(item, 'tag', { x: 68, y: 15, width: 22 })}>{item.badge}</span>}
+                  <h3 className="marketplace-free-layout-el marketplace-free-title marketplace-free-promo-title" style={freeElementStyle(item, 'title', { x: 54, y: 26, width: 40 })}>{item.title || 'بنر فروشگاه'}</h3>
+                  {item.subtitle && <span className="marketplace-free-layout-el marketplace-free-subtitle marketplace-free-promo-subtitle" style={freeElementStyle(item, 'subtitle', { x: 58, y: 50, width: 34 })}>{item.subtitle}</span>}
+                  {item.buttonText && <small className="marketplace-free-layout-el marketplace-free-button marketplace-free-promo-button" style={freeElementStyle(item, 'button', { x: 73, y: 72, width: 20 })}>{item.buttonText}</small>}
                 </span>
               ) : (
                 <div>

@@ -31,7 +31,7 @@ import { formatToman } from '../../utils/formatters';
 import { ShareButton } from '../common/ShareButton';
 import { IconRenderer } from '../common/IconRenderer';
 import { MenuItem } from '../../types';
-import { buildRoutePath, parseRoutePath } from '../../utils/navigation';
+import { parseRoutePath } from '../../utils/navigation';
 
 interface HeaderProps {
   onOpenVehicleModal: () => void;
@@ -153,15 +153,11 @@ export const Header: React.FC<HeaderProps> = ({
       return;
     }
 
+    // App owns History API state. Header only resolves the menu target and
+    // delegates navigation; keeping a second history writer here caused URL and
+    // rendered-view state to diverge.
     const navigateInternal = (view: string, param?: string) => {
-      const target = buildRoutePath(view, param);
-      const current = window.location.pathname + window.location.search;
       onNavigate(view, param);
-      // Keep a real canonical path behind every menu item. This makes menu links
-      // reliable from every page and keeps reload/back-forward behavior correct.
-      if (current !== target && window.location.pathname !== target) {
-        window.history.replaceState({ view, param }, '', target);
-      }
     };
 
     if (raw.startsWith('/')) {

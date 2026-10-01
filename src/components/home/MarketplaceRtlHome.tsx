@@ -148,7 +148,7 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
     };
   };
   const sourceItemsFor = (
-    source: NonNullable<ReturnType<typeof sectionConfig>['contentSource']>,
+    source: 'manual' | 'categories' | 'brands' | 'products' | 'articles',
     limit: number
   ): PageSectionItem[] => {
     const max = Math.max(1, Math.min(100, limit || 12));

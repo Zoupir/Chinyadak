@@ -624,6 +624,25 @@ export interface SiteSettings {
   logoUrl?: string;
   faviconUrl?: string;
   sliders?: SliderItem[];
+  // Homepage hero-slider behavior.
+  heroSliderAutoplayMs?: number;
+  heroSliderNavigation?: 'dots' | 'arrows' | 'both' | 'none';
+  heroSliderAnimation?: 'fade' | 'slide' | 'zoom';
+  heroSliderPauseOnHover?: boolean;
+  heroSliderLoop?: boolean;
+
+  // Marketplace footer layout / typography.
+  footerGridColumnsDesktop?: number;
+  footerGridColumnsTablet?: number;
+  footerGridColumnsMobile?: number;
+  footerLogoWidthPx?: number;
+  footerHeadingFontSizePx?: number;
+  footerTextFontSizePx?: number;
+  footerPaddingTopPx?: number;
+  footerPaddingBottomPx?: number;
+  footerTextColor?: string;
+  footerHeadingColor?: string;
+
   // Official Invoice and Tax Information
   sellerName?: string;
   sellerEconomicCode?: string;
@@ -695,6 +714,13 @@ export interface PageSectionItem {
   borderRadiusPx?: number;
   paddingPx?: number;
   imageRadiusPx?: number;
+  imageWidthPx?: number;
+  imageHeightPx?: number;
+  imageFit?: 'cover' | 'contain';
+  titleFontSizePx?: number;
+  contentFontSizePx?: number;
+  minHeightPx?: number;
+  textAlign?: 'right' | 'center' | 'left';
 }
 
 export interface PageSection {
@@ -744,6 +770,21 @@ export interface PageSection {
   itemPaddingPx?: number;
   itemFontSizePx?: number;
   itemImageRadiusPx?: number;
+
+  // Professional responsive/visual controls shared by all page-builder sections.
+  marginTopPx?: number;
+  marginBottomPx?: number;
+  headingFontSizePx?: number;
+  subtitleFontSizePx?: number;
+  itemTitleFontSizePx?: number;
+  itemContentFontSizePx?: number;
+  itemImageWidthPx?: number;
+  itemImageHeightPx?: number;
+  itemImageFit?: 'cover' | 'contain';
+  itemMinHeightPx?: number;
+  itemTextAlign?: 'right' | 'center' | 'left';
+  mobileDisplayMode?: 'grid' | 'scroll';
+  mobileItemMinWidthPx?: number;
 
   /** Repeater content for testimonials, banners, feature cards and similar sections. */
   items?: PageSectionItem[];

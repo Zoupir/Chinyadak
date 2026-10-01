@@ -3,6 +3,7 @@ import { useStore } from '../../context/StoreContext';
 import { PageSection, PageSectionItem } from '../../types';
 import { RichTextEditor } from './RichTextEditor';
 import { ImageUploadInput } from './ImageUploadInput';
+import { LinkDestinationPicker } from './LinkDestinationPicker';
 import {
   AlignCenter,
   AlignLeft,
@@ -101,42 +102,18 @@ export const LiveSectionModal: React.FC<LiveSectionModalProps> = ({
     apply({ ...form, ...partial });
   };
 
-  const sourceItems = (source: NonNullable<PageSection['contentSource']>, limit = 12): PageSectionItem[] => {
-    const max = Math.max(1, Math.min(100, limit || 12));
-    if (source === 'categories') {
-      return categories.slice(0,max).map((item,index) => ({
-        id: `source-category-${item.id}`, title:item.nameFa, subtitle:item.description || item.nameEn,
-        imageUrl:item.iconUrl || item.imageUrl || '', link:`category:${item.slug}`, isVisible:true, order:index+1
-      }));
-    }
-    if (source === 'brands') {
-      return brands.slice(0,max).map((item,index) => ({
-        id:`source-brand-${item.id}`, title:item.nameFa, subtitle:item.nameEn,
-        imageUrl:item.logo || '', link:`car-brand:${item.slug}`, isVisible:true, order:index+1
-      }));
-    }
-    if (source === 'products') {
-      return products.slice(0,max).map((item,index) => ({
-        id:`source-product-${item.id}`, title:item.nameFa, subtitle:item.shortDescription || item.oemNumber,
-        imageUrl:item.images?.[0] || '', badge:item.oemNumber, link:`product:${item.slug || item.id}`, isVisible:true, order:index+1
-      }));
-    }
-    if (source === 'articles') {
-      return articles.slice(0,max).map((item,index) => ({
-        id:`source-article-${item.id}`, title:item.title, subtitle:item.summary,
-        imageUrl:item.imageUrl || '', link:`article:${item.slug || item.id}`, isVisible:true, order:index+1
-      }));
-    }
-    return [...(form.items || [])];
-  };
+  const contentPolicy = (() => {
+    const key = form.sectionKey || '';
+    if (key === 'featured-categories') return { kind:'fixed' as const, source:'categories' as const, title:'دسته‌بندی‌های قطعات', description:'این بخش مستقیماً از دسته‌بندی‌های ثبت‌شده فروشگاه خوانده می‌شود.' };
+    if (key === 'manufacturers') return { kind:'fixed' as const, source:'brands' as const, title:'برندهای خودرو', description:'این بخش مستقیماً از برندهای خودرو خوانده می‌شود.' };
+    if (['featured-products','weekly-deals','maintenance-products'].includes(key)) return { kind:'fixed' as const, source:'products' as const, title:'محصولات فروشگاه', description:'کارت‌ها از محصولات واقعی فروشگاه ساخته می‌شوند و استاتیک نیستند.' };
+    if (key === 'articles') return { kind:'fixed' as const, source:'articles' as const, title:'مقالات', description:'این بخش مستقیماً از مقالات منتشرشده خوانده می‌شود.' };
+    if (/promo|banner|testimonial|service-strip|parts-brands|shipping|hero/i.test(key)) return { kind:'manual' as const, source:'manual' as const, title:'آیتم‌های قابل ویرایش', description:'محتوای این بخش دستی است و هر آیتم از تب «آیتم‌ها» قابل ویرایش، حذف، افزودن و مرتب‌سازی است.' };
+    return { kind:'flexible' as const, source:(form.contentSource || 'manual') as NonNullable<PageSection['contentSource']>, title:'منبع محتوا', description:'انتخاب کنید محتوای این بخش دستی باشد یا به‌صورت زنده از اطلاعات فروشگاه خوانده شود.' };
+  })();
 
   const changeContentSource = (source: NonNullable<PageSection['contentSource']>) => {
-    if (source === 'manual') {
-      patch({ contentSource:'manual' });
-      return;
-    }
-    const limit = form.contentSourceLimit || form.maxItems || 12;
-    apply({ ...form, contentSource:source, contentSourceLimit:limit, items:sourceItems(source,limit) });
+    patch({ contentSource:source });
   };
 
   const ensureSlots = (count: number, base = form): PageSectionItem[] => {
@@ -268,35 +245,50 @@ export const LiveSectionModal: React.FC<LiveSectionModalProps> = ({
           <>
             <section className="bg-white rounded-2xl border border-blue-200 p-4 space-y-3">
               <div>
-                <strong className="text-xs">منبع محتوای سکشن</strong>
-                <p className="text-[9px] text-neutral-400 mt-1">می‌توانی نوع محتوای همین سکشن را عوض کنی؛ مثلاً دسته‌بندی‌ها را به برندها تبدیل کنی.</p>
+                <strong className="text-xs">{contentPolicy.title}</strong>
+                <p className="text-[9px] text-neutral-500 mt-1 leading-5">{contentPolicy.description}</p>
               </div>
-              <div className="grid grid-cols-2 gap-2">
-                <select
-                  value={form.contentSource || 'manual'}
-                  onChange={e => changeContentSource(e.target.value as NonNullable<PageSection['contentSource']>)}
-                  className="p-2.5 border rounded-xl bg-white text-xs"
-                >
-                  <option value="manual">دستی / آیتم‌های سفارشی</option>
-                  <option value="categories">دسته‌بندی قطعات</option>
-                  <option value="brands">برندهای خودرو</option>
-                  <option value="products">محصولات</option>
-                  <option value="articles">مقالات</option>
-                </select>
-                <input
-                  type="number"
-                  min={1}
-                  max={100}
-                  value={form.contentSourceLimit || form.maxItems || 12}
-                  onChange={e => {
-                    const limit=Math.max(1,Math.min(100,Number(e.target.value||12)));
-                    if ((form.contentSource || 'manual') === 'manual') patch({contentSourceLimit:limit});
-                    else apply({...form,contentSourceLimit:limit,items:sourceItems(form.contentSource!,limit)});
-                  }}
-                  className="p-2.5 border rounded-xl text-xs"
-                  title="تعداد آیتم از منبع"
-                />
-              </div>
+
+              {contentPolicy.kind === 'flexible' && (
+                <label className="block">
+                  <span className="block text-[9px] font-bold mb-1">محتوا از کجا خوانده شود؟</span>
+                  <select
+                    value={form.contentSource || 'manual'}
+                    onChange={e => changeContentSource(e.target.value as NonNullable<PageSection['contentSource']>)}
+                    className="w-full p-2.5 border rounded-xl bg-white text-xs"
+                  >
+                    <option value="manual">آیتم‌های دستی و قابل ویرایش</option>
+                    <option value="categories">دسته‌بندی‌های قطعات فروشگاه</option>
+                    <option value="brands">برندهای خودرو</option>
+                    <option value="products">محصولات فروشگاه</option>
+                    <option value="articles">مقالات و آموزش‌ها</option>
+                  </select>
+                </label>
+              )}
+
+              {contentPolicy.kind !== 'manual' && (
+                <label className="block">
+                  <span className="block text-[9px] font-bold mb-1">تعداد آیتمی که نمایش داده شود</span>
+                  <input
+                    type="number"
+                    min={1}
+                    max={100}
+                    value={form.contentSourceLimit || form.maxItems || 12}
+                    onChange={e => {
+                      const limit=Math.max(1,Math.min(100,Number(e.target.value||12)));
+                      patch({contentSource:contentPolicy.kind==='fixed'?contentPolicy.source:(form.contentSource||'manual'),contentSourceLimit:limit,maxItems:limit});
+                    }}
+                    className="w-full p-2.5 border rounded-xl text-xs"
+                  />
+                  <small className="block text-[8px] text-neutral-400 mt-1">مثلاً عدد ۸ یعنی فقط ۸ مورد اول در این بخش نمایش داده شود.</small>
+                </label>
+              )}
+
+              {contentPolicy.kind === 'manual' && (
+                <button type="button" onClick={()=>setTab('items')} className="w-full py-2.5 rounded-xl bg-blue-50 text-blue-700 border border-blue-200 text-[10px] font-black">
+                  ویرایش آیتم‌های این بخش
+                </button>
+              )}
             </section>
 
             <section className="bg-white rounded-2xl border border-neutral-200 p-4 space-y-3">
@@ -309,7 +301,7 @@ export const LiveSectionModal: React.FC<LiveSectionModalProps> = ({
                 <input value={form.subtitle || ''} onChange={e => patch({subtitle:e.target.value})} className="w-full p-2.5 border rounded-xl text-xs" />
               </label>
               <label className="block">
-                <span className="block text-[10px] font-bold mb-1">Badge</span>
+                <span className="block text-[10px] font-bold mb-1">برچسب</span>
                 <input value={form.badge || ''} onChange={e => patch({badge:e.target.value})} className="w-full p-2.5 border rounded-xl text-xs" />
               </label>
               <RichTextEditor label="متن کامل" value={form.content || ''} onChange={value => patch({content:value})} rows={5} />
@@ -327,9 +319,9 @@ export const LiveSectionModal: React.FC<LiveSectionModalProps> = ({
                 <div className="grid grid-cols-2 gap-2">
                   {[
                     ['side','کنار متن'],
-                    ['cover','پس‌زمینه Cover'],
-                    ['full','تمام تصویر'],
-                    ['contain','Contain']
+                    ['cover','پوشش کامل کادر'],
+                    ['full','کشیده‌شدن تا کل کادر'],
+                    ['contain','نمایش کامل بدون برش']
                   ].map(([id,label]) => (
                     <button
                       key={id}
@@ -346,7 +338,7 @@ export const LiveSectionModal: React.FC<LiveSectionModalProps> = ({
 
             <section className="bg-white rounded-2xl border border-neutral-200 p-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
               <label><span className="block text-[10px] font-bold mb-1">متن دکمه</span><input value={form.buttonText || ''} onChange={e => patch({buttonText:e.target.value})} className="w-full p-2.5 border rounded-xl text-xs" /></label>
-              <label><span className="block text-[10px] font-bold mb-1">لینک دکمه</span><input dir="ltr" value={form.buttonLink || ''} onChange={e => patch({buttonLink:e.target.value})} className="w-full p-2.5 border rounded-xl text-xs text-left font-mono" /></label>
+              <LinkDestinationPicker label="مقصد دکمه" value={form.buttonLink || ''} onChange={value=>patch({buttonLink:value})} />
             </section>
           </>
         )}
@@ -355,12 +347,12 @@ export const LiveSectionModal: React.FC<LiveSectionModalProps> = ({
           <>
             <section className="bg-white rounded-2xl border border-neutral-200 p-4 space-y-4">
               <div>
-                <strong className="text-xs">Container</strong>
+                <strong className="text-xs">کادر و عرض سکشن</strong>
                 <p className="text-[9px] text-neutral-400 mt-1">Full Width، Boxed یا اندازه سفارشی برای هر دستگاه.</p>
               </div>
               <div className="grid grid-cols-3 gap-2">
                 <button type="button" onClick={() => patch({fullWidth:true,widthPercent:100,tabletWidthPercent:100,mobileWidthPercent:100,maxWidthPx:0,layout:'full'})} className={`p-2.5 rounded-xl border text-[9px] font-black ${form.fullWidth ? 'bg-blue-600 text-white border-blue-600' : 'bg-white'}`}>تمام عرض</button>
-                <button type="button" onClick={() => patch({fullWidth:false,widthPercent:100,tabletWidthPercent:100,mobileWidthPercent:100,maxWidthPx:1280,layout:'boxed'})} className={`p-2.5 rounded-xl border text-[9px] font-black ${!form.fullWidth && (form.maxWidthPx || 1280) === 1280 ? 'bg-blue-600 text-white border-blue-600' : 'bg-white'}`}>Boxed</button>
+                <button type="button" onClick={() => patch({fullWidth:false,widthPercent:100,tabletWidthPercent:100,mobileWidthPercent:100,maxWidthPx:1280,layout:'boxed'})} className={`p-2.5 rounded-xl border text-[9px] font-black ${!form.fullWidth && (form.maxWidthPx || 1280) === 1280 ? 'bg-blue-600 text-white border-blue-600' : 'bg-white'}`}>داخل کادر</button>
                 <button type="button" onClick={() => patch({fullWidth:false,maxWidthPx:form.maxWidthPx || 1100})} className="p-2.5 rounded-xl border bg-white text-[9px] font-black">سفارشی</button>
               </div>
 
@@ -396,7 +388,7 @@ export const LiveSectionModal: React.FC<LiveSectionModalProps> = ({
                 <label>
                   <span className="block text-[9px] font-bold mb-1">نمایش موبایل</span>
                   <select value={form.mobileDisplayMode || 'grid'} onChange={e=>patch({mobileDisplayMode:e.target.value as PageSection['mobileDisplayMode']})} className="w-full p-2 border rounded-lg bg-white text-xs">
-                    <option value="grid">Grid ریسپانسیو</option>
+                    <option value="grid">شبکه ریسپانسیو</option>
                     <option value="scroll">اسکرول افقی</option>
                   </select>
                 </label>
@@ -484,7 +476,13 @@ export const LiveSectionModal: React.FC<LiveSectionModalProps> = ({
               <button type="button" onClick={addItem} className="px-3 py-2 rounded-xl bg-blue-600 text-white text-[9px] font-black inline-flex items-center gap-1"><Plus className="w-3.5 h-3.5" /> آیتم جدید</button>
             </div>
 
-            {(form.items || []).map((item,index) => (
+            {(form.contentSource && form.contentSource !== 'manual' && contentPolicy.kind !== 'manual') && (
+              <div className="p-4 rounded-2xl border border-amber-200 bg-amber-50 text-[9px] leading-5 text-amber-900">
+                این بخش در حالت محتوای زنده است؛ آیتم‌ها از اطلاعات واقعی فروشگاه خوانده می‌شوند. برای ویرایش تک‌تک آیتم‌ها، منبع را روی «آیتم‌های دستی» قرار دهید.
+              </div>
+            )}
+
+            {(!form.contentSource || form.contentSource === 'manual' || contentPolicy.kind === 'manual') && (form.items || []).map((item,index) => (
               <article
                 key={item.id}
                 draggable
@@ -506,13 +504,20 @@ export const LiveSectionModal: React.FC<LiveSectionModalProps> = ({
                 <div className="grid grid-cols-2 gap-2">
                   <input value={item.title || ''} onChange={e => updateItem(item.id,{title:e.target.value})} placeholder="عنوان" className="p-2 border rounded-lg text-[10px]" />
                   <input value={item.subtitle || ''} onChange={e => updateItem(item.id,{subtitle:e.target.value})} placeholder="زیرعنوان" className="p-2 border rounded-lg text-[10px]" />
+                  <input value={item.badge || ''} onChange={e => updateItem(item.id,{badge:e.target.value})} placeholder="برچسب" className="p-2 border rounded-lg text-[10px]" />
                   <input value={item.buttonText || ''} onChange={e => updateItem(item.id,{buttonText:e.target.value})} placeholder="متن دکمه" className="p-2 border rounded-lg text-[10px]" />
-                  <input dir="ltr" value={item.link || ''} onChange={e => updateItem(item.id,{link:e.target.value})} placeholder="link" className="p-2 border rounded-lg text-[10px] text-left font-mono" />
                 </div>
+                <LinkDestinationPicker label="مقصد این آیتم / دکمه" value={item.link || ''} onChange={value=>updateItem(item.id,{link:value})} />
                 <div className="grid grid-cols-3 gap-2">
-                  <label><span className="block text-[8px] font-bold mb-1">پس‌زمینه</span><input type="color" value={item.backgroundColor || form.itemBackgroundColor || '#ffffff'} onChange={e=>updateItem(item.id,{backgroundColor:e.target.value})} className="w-full h-8 p-1 border rounded" /></label>
-                  <label><span className="block text-[8px] font-bold mb-1">رنگ متن</span><input type="color" value={item.textColor || form.itemTextColor || '#111827'} onChange={e=>updateItem(item.id,{textColor:e.target.value})} className="w-full h-8 p-1 border rounded" /></label>
-                  <label><span className="block text-[8px] font-bold mb-1">فونت px</span><input type="number" min={8} max={40} value={item.fontSizePx || form.itemFontSizePx || 12} onChange={e=>updateItem(item.id,{fontSizePx:Number(e.target.value)})} className="w-full p-1.5 border rounded text-[9px]" /></label>
+                  <label><span className="block text-[8px] font-bold mb-1">پس‌زمینه کارت</span><input type="color" value={item.backgroundColor || form.itemBackgroundColor || '#ffffff'} onChange={e=>updateItem(item.id,{backgroundColor:e.target.value})} className="w-full h-8 p-1 border rounded" /></label>
+                  <label><span className="block text-[8px] font-bold mb-1">رنگ عمومی متن</span><input type="color" value={item.textColor || form.itemTextColor || '#111827'} onChange={e=>updateItem(item.id,{textColor:e.target.value})} className="w-full h-8 p-1 border rounded" /></label>
+                  <label><span className="block text-[8px] font-bold mb-1">فونت عمومی</span><input type="number" min={8} max={60} value={item.fontSizePx || form.itemFontSizePx || 12} onChange={e=>updateItem(item.id,{fontSizePx:Number(e.target.value)})} className="w-full p-1.5 border rounded text-[9px]" /></label>
+                  <label><span className="block text-[8px] font-bold mb-1">رنگ عنوان</span><input type="color" value={item.titleColor || item.textColor || '#ffffff'} onChange={e=>updateItem(item.id,{titleColor:e.target.value})} className="w-full h-8 p-1 border rounded" /></label>
+                  <label><span className="block text-[8px] font-bold mb-1">رنگ زیرعنوان</span><input type="color" value={item.subtitleColor || '#e5e7eb'} onChange={e=>updateItem(item.id,{subtitleColor:e.target.value})} className="w-full h-8 p-1 border rounded" /></label>
+                  <label><span className="block text-[8px] font-bold mb-1">رنگ دکمه</span><input type="color" value={item.buttonBgColor || '#f59e0b'} onChange={e=>updateItem(item.id,{buttonBgColor:e.target.value})} className="w-full h-8 p-1 border rounded" /></label>
+                  <label><span className="block text-[8px] font-bold mb-1">متن دکمه</span><input type="color" value={item.buttonTextColor || '#111827'} onChange={e=>updateItem(item.id,{buttonTextColor:e.target.value})} className="w-full h-8 p-1 border rounded" /></label>
+                  <label><span className="block text-[8px] font-bold mb-1">رنگ برچسب</span><input type="color" value={item.badgeBgColor || '#16a34a'} onChange={e=>updateItem(item.id,{badgeBgColor:e.target.value})} className="w-full h-8 p-1 border rounded" /></label>
+                  <label><span className="block text-[8px] font-bold mb-1">متن برچسب</span><input type="color" value={item.badgeTextColor || '#ffffff'} onChange={e=>updateItem(item.id,{badgeTextColor:e.target.value})} className="w-full h-8 p-1 border rounded" /></label>
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   <label><span className="block text-[8px] font-bold mb-1">گردی کارت</span><input type="number" min={0} max={200} value={item.borderRadiusPx ?? form.itemRadiusPx ?? 10} onChange={e=>updateItem(item.id,{borderRadiusPx:Number(e.target.value)})} className="w-full p-1.5 border rounded text-[9px]" /></label>
@@ -522,14 +527,15 @@ export const LiveSectionModal: React.FC<LiveSectionModalProps> = ({
                   <label><span className="block text-[8px] font-bold mb-1">عنوان px</span><input type="number" min={8} max={72} value={item.titleFontSizePx ?? form.itemTitleFontSizePx ?? 14} onChange={e=>updateItem(item.id,{titleFontSizePx:Number(e.target.value)})} className="w-full p-1.5 border rounded text-[9px]" /></label>
                   <label><span className="block text-[8px] font-bold mb-1">متن px</span><input type="number" min={8} max={60} value={item.contentFontSizePx ?? form.itemContentFontSizePx ?? 11} onChange={e=>updateItem(item.id,{contentFontSizePx:Number(e.target.value)})} className="w-full p-1.5 border rounded text-[9px]" /></label>
                   <label><span className="block text-[8px] font-bold mb-1">حداقل ارتفاع</span><input type="number" min={0} max={1200} value={item.minHeightPx ?? form.itemMinHeightPx ?? 0} onChange={e=>updateItem(item.id,{minHeightPx:Number(e.target.value)})} className="w-full p-1.5 border rounded text-[9px]" /></label>
-                  <label><span className="block text-[8px] font-bold mb-1">Fit</span><select value={item.imageFit || form.itemImageFit || 'contain'} onChange={e=>updateItem(item.id,{imageFit:e.target.value as 'cover'|'contain'})} className="w-full p-1.5 border rounded text-[9px] bg-white"><option value="contain">Contain</option><option value="cover">Cover</option></select></label>
+                  <label><span className="block text-[8px] font-bold mb-1">نمایش تصویر</span><select value={item.imageMode || (item.imageFit==='contain'?'contain':'cover')} onChange={e=>updateItem(item.id,{imageMode:e.target.value as PageSectionItem['imageMode']})} className="w-full p-1.5 border rounded text-[9px] bg-white"><option value="cover">پوشش کامل کادر</option><option value="contain">کامل بدون برش</option><option value="stretch">کشیده تا کل کادر</option><option value="original">اندازه اصلی</option><option value="repeat">تکرار کامل</option><option value="repeat-x">تکرار افقی</option><option value="repeat-y">تکرار عمودی</option></select></label>
+                  <label><span className="block text-[8px] font-bold mb-1">تراز متن</span><select value={item.textAlignment || item.textAlign || 'right'} onChange={e=>updateItem(item.id,{textAlignment:e.target.value as PageSectionItem['textAlignment']})} className="w-full p-1.5 border rounded text-[9px] bg-white"><option value="right">راست</option><option value="center">وسط</option><option value="left">چپ</option></select></label>
                 </div>
                 <ImageUploadInput label="تصویر / بنر" value={item.imageUrl || ''} onChange={url => updateItem(item.id,{imageUrl:url})} aspectRatio="banner" presetCategory="banners" />
                 <textarea rows={2} value={item.content || ''} onChange={e => updateItem(item.id,{content:e.target.value})} placeholder="متن آیتم" className="w-full p-2 border rounded-lg text-[10px]" />
               </article>
             ))}
 
-            {!(form.items || []).length && (
+            {(!form.contentSource || form.contentSource === 'manual' || contentPolicy.kind === 'manual') && !(form.items || []).length && (
               <button type="button" onClick={addItem} className="w-full py-10 border-2 border-dashed rounded-2xl text-neutral-400 text-[10px] font-bold">
                 <Plus className="w-5 h-5 mx-auto mb-2" /> اولین آیتم را اضافه کنید
               </button>

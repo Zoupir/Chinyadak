@@ -6741,3 +6741,54 @@ html[data-layout="marketplace-rtl"] .marketplace-feature-banners > button:has(.m
     font-size: max(14px, calc(var(--site-base-font-size) * .9)) !important;
   }
 }
+
+
+/* MOBILE LOGO ADMIN CONTROLS + FINAL SEARCH HEADER */
+html[data-layout="marketplace-rtl"] .marketplace-ref-search-wrap {
+  border-radius: 4px !important;
+  overflow: visible !important;
+}
+html[data-layout="marketplace-rtl"] .marketplace-ref-search {
+  width: 100% !important;
+  flex: 1 1 auto !important;
+}
+html[data-layout="marketplace-rtl"] .marketplace-ref-search input {
+  border-radius: 4px !important;
+}
+
+@media (max-width: 767px) {
+  html[data-layout="marketplace-rtl"] .marketplace-ref-mainbar-inner {
+    grid-template-columns: 40px minmax(0,1fr) auto !important;
+  }
+
+  html[data-layout="marketplace-rtl"] .marketplace-ref-mainbar-inner .marketplace-ref-logo {
+    width: var(--mobile-logo-width,118px) !important;
+    min-width: 0 !important;
+    max-width: min(var(--mobile-logo-width,118px),100%) !important;
+    height: 38px !important;
+    padding: 0 !important;
+    background: transparent !important;
+    border: 0 !important;
+    box-shadow: none !important;
+  }
+
+  html[data-layout="marketplace-rtl"] .marketplace-ref-mainbar-inner .marketplace-ref-logo img {
+    width: 100% !important;
+    max-width: var(--mobile-logo-width,118px) !important;
+    max-height: 36px !important;
+    object-fit: contain !important;
+  }
+
+  html[data-layout="marketplace-rtl"] .marketplace-ref-mainbar-inner[data-mobile-logo-align="right"] .marketplace-ref-logo {
+    justify-self: start !important;
+    justify-content: flex-start !important;
+  }
+  html[data-layout="marketplace-rtl"] .marketplace-ref-mainbar-inner[data-mobile-logo-align="center"] .marketplace-ref-logo {
+    justify-self: center !important;
+    justify-content: center !important;
+  }
+  html[data-layout="marketplace-rtl"] .marketplace-ref-mainbar-inner[data-mobile-logo-align="left"] .marketplace-ref-logo {
+    justify-self: end !important;
+    justify-content: flex-end !important;
+  }
+}

@@ -7326,3 +7326,74 @@ html[data-layout="marketplace-rtl"] .marketplace-hero-banner[data-slider-animati
     height: 34px;
   }
 }
+
+
+/* ==========================================================================
+   MARKETPLACE FOOTER CONTROL LAYER V7
+   ========================================================================== */
+html[data-layout="marketplace-rtl"] .marketplace-ref-footer {
+  background: var(--footer-bg, #111111) !important;
+  color: var(--footer-text, #b9c0c7) !important;
+}
+html[data-layout="marketplace-rtl"] .marketplace-ref-footer-main {
+  width: min(1280px, calc(100% - 32px)) !important;
+  max-width: 1280px !important;
+  display: grid !important;
+  grid-template-columns: repeat(var(--footer-cols-desktop, 5), minmax(0,1fr)) !important;
+  grid-template-rows: var(--footer-rows-desktop, none) !important;
+  gap: 30px !important;
+  padding-top: var(--footer-padding-top, 42px) !important;
+  padding-bottom: var(--footer-padding-bottom, 34px) !important;
+}
+html[data-layout="marketplace-rtl"] .marketplace-ref-footer-about,
+html[data-layout="marketplace-rtl"] .marketplace-ref-footer-contact {
+  grid-column: auto !important;
+  min-width: 0;
+}
+html[data-layout="marketplace-rtl"] .marketplace-ref-footer-logo {
+  width: min(100%, var(--footer-logo-width, 160px)) !important;
+  max-width: var(--footer-logo-width, 160px) !important;
+}
+html[data-layout="marketplace-rtl"] .marketplace-ref-footer-logo img {
+  width: 100% !important;
+  max-width: var(--footer-logo-width, 160px) !important;
+  height: auto !important;
+  object-fit: contain !important;
+}
+html[data-layout="marketplace-rtl"] .marketplace-ref-footer h4,
+html[data-layout="marketplace-rtl"] .marketplace-ref-footer-about > .marketplace-ref-footer-logo span {
+  color: var(--footer-heading, #fff) !important;
+  font-size: var(--footer-heading-size, 14px) !important;
+}
+html[data-layout="marketplace-rtl"] .marketplace-ref-footer p,
+html[data-layout="marketplace-rtl"] .marketplace-ref-footer a,
+html[data-layout="marketplace-rtl"] .marketplace-ref-footer button,
+html[data-layout="marketplace-rtl"] .marketplace-ref-footer small,
+html[data-layout="marketplace-rtl"] .marketplace-ref-footer span {
+  font-size: var(--footer-text-size, 12px);
+}
+html[data-layout="marketplace-rtl"] .marketplace-ref-footer-col > button,
+html[data-layout="marketplace-rtl"] .marketplace-ref-footer-contact p,
+html[data-layout="marketplace-rtl"] .marketplace-ref-footer-contact a,
+html[data-layout="marketplace-rtl"] .marketplace-ref-footer-contact small,
+html[data-layout="marketplace-rtl"] .marketplace-ref-footer-about > p {
+  color: var(--footer-text, #b9c0c7) !important;
+}
+
+@media (min-width: 701px) and (max-width: 1000px) {
+  html[data-layout="marketplace-rtl"] .marketplace-ref-footer-main {
+    grid-template-columns: repeat(var(--footer-cols-tablet, 2), minmax(0,1fr)) !important;
+    grid-template-rows: var(--footer-rows-tablet, none) !important;
+  }
+}
+
+@media (max-width: 700px) {
+  html[data-layout="marketplace-rtl"] .marketplace-ref-footer-main {
+    width: 100% !important;
+    padding-left: 14px !important;
+    padding-right: 14px !important;
+    grid-template-columns: repeat(var(--footer-cols-mobile, 1), minmax(0,1fr)) !important;
+    grid-template-rows: var(--footer-rows-mobile, none) !important;
+    gap: 20px 14px !important;
+  }
+}

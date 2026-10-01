@@ -396,6 +396,15 @@ export const AdminCarsTab: React.FC = () => {
                 <div className="p-4 bg-neutral-50 border-t border-neutral-100 flex items-center justify-between gap-2">
                   <span className="text-[10px] text-neutral-400 font-mono">اسلاگ: /{model.slug}</span>
                   <div className="flex items-center gap-1.5">
+                    <a
+                      href={`/car-model/${encodeURIComponent(model.slug || model.id)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="p-2 bg-white hover:bg-emerald-50 border border-neutral-200 text-emerald-700 rounded-xl transition-colors"
+                      title="نمایش مستقیم خودرو در صفحه جدید"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" />
+                    </a>
                     <button
                       onClick={() => handleEditModel(model)}
                       className="p-2 bg-white hover:bg-neutral-200 border border-neutral-200 text-neutral-700 rounded-xl text-xs font-bold transition-colors flex items-center gap-1"
@@ -459,6 +468,15 @@ export const AdminCarsTab: React.FC = () => {
                 <div className="pt-4 mt-4 border-t border-neutral-100 flex items-center justify-between">
                   <span className="text-[10px] text-neutral-400 font-mono">شناسه: {brand.id}</span>
                   <div className="flex items-center gap-1.5">
+                    <a
+                      href={`/brand/${encodeURIComponent(brand.slug || brand.id)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="p-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-xl transition-colors"
+                      title="نمایش مستقیم برند در صفحه جدید"
+                    >
+                      <ExternalLink className="w-4 h-4" />
+                    </a>
                     <button
                       onClick={() => handleEditBrand(brand)}
                       className="px-3 py-1.5 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 rounded-xl text-xs font-bold flex items-center gap-1 transition-colors"

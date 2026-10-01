@@ -467,6 +467,9 @@ export interface SliderElementPosition {
   x: number; // percentage from left
   y: number; // percentage from top
   width?: number; // percentage of canvas width
+  height?: number; // optional percentage of canvas height
+  fontSizePx?: number;
+  wrap?: 'wrap' | 'nowrap';
 }
 
 export interface SliderDeviceLayout {
@@ -510,6 +513,14 @@ export interface SliderItem {
   paddingPx?: number;
   fontSizePx?: number;
   imageRadiusPx?: number;
+  imageMode?: 'cover' | 'contain' | 'stretch' | 'repeat' | 'repeat-x' | 'repeat-y' | 'original';
+  titleColor?: string;
+  subtitleColor?: string;
+  buttonBgColor?: string;
+  buttonTextColor?: string;
+  badgeBgColor?: string;
+  badgeTextColor?: string;
+  textAlignment?: 'right' | 'center' | 'left';
 }
 
 export type AdminRole = 'super_admin' | 'content_manager' | 'order_manager' | 'inventory_manager';
@@ -728,6 +739,14 @@ export interface PageSectionItem {
   contentFontSizePx?: number;
   minHeightPx?: number;
   textAlign?: 'right' | 'center' | 'left';
+  imageMode?: 'cover' | 'contain' | 'stretch' | 'repeat' | 'repeat-x' | 'repeat-y' | 'original';
+  titleColor?: string;
+  subtitleColor?: string;
+  buttonBgColor?: string;
+  buttonTextColor?: string;
+  badgeBgColor?: string;
+  badgeTextColor?: string;
+  textAlignment?: 'right' | 'center' | 'left';
 }
 
 export interface PageSection {

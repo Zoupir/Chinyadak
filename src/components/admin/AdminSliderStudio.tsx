@@ -95,7 +95,14 @@ const DEFAULT_POSITIONS:Record<SliderElementKey,SliderElementPosition>={
   tag:{x:70,y:18,width:20,fontSizePx:10,wrap:'nowrap'},
   title:{x:58,y:29,width:34,fontSizePx:40,wrap:'wrap'},
   subtitle:{x:60,y:51,width:32,fontSizePx:13,wrap:'wrap'},
-  button:{x:75,y:69,width:17,fontSizePx:10,wrap:'nowrap'}
+  button:{x:75,y:69,width:17,fontSizePx:9,wrap:'nowrap'}
+};
+
+const BANNER_DEFAULT_POSITIONS:Record<SliderElementKey,SliderElementPosition>={
+  tag:{x:70,y:16,width:22,fontSizePx:10,wrap:'nowrap'},
+  title:{x:55,y:24,width:38,fontSizePx:19,wrap:'wrap'},
+  subtitle:{x:58,y:48,width:34,fontSizePx:10,wrap:'wrap'},
+  button:{x:73,y:70,width:20,fontSizePx:9,wrap:'nowrap'}
 };
 
 const clone=<T,>(value:T):T=>JSON.parse(JSON.stringify(value));
@@ -115,8 +122,13 @@ const effectiveLayout=(owner:SliderItem|PageSectionItem,device:SliderDevice):Sli
   return layouts[device]||layouts.desktop||{};
 };
 
-const elementPosition=(owner:SliderItem|PageSectionItem,device:SliderDevice,key:SliderElementKey):SliderElementPosition=>({
-  ...DEFAULT_POSITIONS[key],
+const elementPosition=(
+  owner:SliderItem|PageSectionItem,
+  device:SliderDevice,
+  key:SliderElementKey,
+  defaults:Record<SliderElementKey,SliderElementPosition>=DEFAULT_POSITIONS
+):SliderElementPosition=>({
+  ...defaults[key],
   ...(effectiveLayout(owner,device)[key]||{})
 });
 
@@ -177,6 +189,7 @@ export const AdminSliderStudio:React.FC=()=>{
 
   const owner:SliderItem|PageSectionItem|null=mode==='slides'?draft:bannerDraft;
   const activeBannerSection=bannerSelection?bannerSections.find(section=>section.id===bannerSelection.sectionId):undefined;
+  const activeDefaults=mode==='banners'?BANNER_DEFAULT_POSITIONS:DEFAULT_POSITIONS;
 
   const patchSlide=(partial:Partial<SliderItem>)=>setDraft(current=>current?{...current,...partial}:current);
   const patchBanner=(partial:Partial<PageSectionItem>)=>setBannerDraft(current=>current?{...current,...partial}:current);
@@ -300,7 +313,7 @@ export const AdminSliderStudio:React.FC=()=>{
     event.preventDefault();
     event.stopPropagation();
     const rect=canvasRef.current.getBoundingClientRect();
-    const pos=elementPosition(owner,device,key);
+    const pos=elementPosition(owner,device,key,activeDefaults);
     const px=rect.left+(pos.x/100)*rect.width;
     const py=rect.top+(pos.y/100)*rect.height;
     setActiveElement(key);
@@ -311,7 +324,7 @@ export const AdminSliderStudio:React.FC=()=>{
   const dragMove=(event:React.PointerEvent<HTMLDivElement>)=>{
     if(!dragging||!owner||!canvasRef.current)return;
     const rect=canvasRef.current.getBoundingClientRect();
-    const current=elementPosition(owner,device,dragging.key);
+    const current=elementPosition(owner,device,dragging.key,activeDefaults);
     const width=clamp(Number(current.width||DEFAULT_POSITIONS[dragging.key].width||20),8,90);
     const x=clamp(((event.clientX-dragging.offsetX-rect.left)/rect.width)*100,0,100-width);
     const y=clamp(((event.clientY-dragging.offsetY-rect.top)/rect.height)*100,0,92);
@@ -324,7 +337,7 @@ export const AdminSliderStudio:React.FC=()=>{
     if(!owner||!canvasRef.current)return;
     event.preventDefault();
     event.stopPropagation();
-    const pos=elementPosition(owner,device,key);
+    const pos=elementPosition(owner,device,key,activeDefaults);
     const elementRect=event.currentTarget.parentElement?.getBoundingClientRect();
     const canvasRect=canvasRef.current.getBoundingClientRect();
     const measuredHeight=elementRect ? (elementRect.height/canvasRect.height)*100 : 8;
@@ -333,7 +346,7 @@ export const AdminSliderStudio:React.FC=()=>{
       key,
       startX:event.clientX,
       startY:event.clientY,
-      startWidth:Number(pos.width||DEFAULT_POSITIONS[key].width||20),
+      startWidth:Number(pos.width||activeDefaults[key].width||20),
       startHeight:Number(pos.height||measuredHeight)
     });
     event.currentTarget.setPointerCapture(event.pointerId);
@@ -342,7 +355,7 @@ export const AdminSliderStudio:React.FC=()=>{
   const resizeMove=(event:React.PointerEvent<HTMLSpanElement>)=>{
     if(!resizing||!owner||!canvasRef.current)return;
     const rect=canvasRef.current.getBoundingClientRect();
-    const pos=elementPosition(owner,device,resizing.key);
+    const pos=elementPosition(owner,device,resizing.key,activeDefaults);
     const deltaWidth=((resizing.startX-event.clientX)/rect.width)*100;
     const deltaHeight=((event.clientY-resizing.startY)/rect.height)*100;
     const width=clamp(resizing.startWidth+deltaWidth,6,95);
@@ -354,15 +367,15 @@ export const AdminSliderStudio:React.FC=()=>{
 
   const positionStyle=(key:SliderElementKey):React.CSSProperties=>{
     if(!owner)return{};
-    const pos=elementPosition(owner,device,key);
+    const pos=elementPosition(owner,device,key,activeDefaults);
     return{
       position:'absolute',
       left:`${pos.x}%`,
       top:`${pos.y}%`,
-      width:`${pos.width||DEFAULT_POSITIONS[key].width}%`,
+      width:`${pos.width||activeDefaults[key].width}%`,
       height:pos.height?`${pos.height}%`:undefined,
-      fontSize:`${pos.fontSizePx||DEFAULT_POSITIONS[key].fontSizePx||12}px`,
-      whiteSpace:(pos.wrap||DEFAULT_POSITIONS[key].wrap)==='nowrap'?'nowrap':'normal',
+      fontSize:`${pos.fontSizePx||activeDefaults[key].fontSizePx||12}px`,
+      whiteSpace:(pos.wrap||activeDefaults[key].wrap)==='nowrap'?'nowrap':'normal',
       overflow:pos.height?'hidden':undefined,
       zIndex:4,
       touchAction:'none',
@@ -386,8 +399,41 @@ export const AdminSliderStudio:React.FC=()=>{
     return false;
   };
 
-  const width=device==='desktop'?'100%':device==='tablet'?'820px':'390px';
-  const previewHeight=device==='desktop'?430:device==='tablet'?430:560;
+  const activeBannerIndex=activeBannerSection&&bannerDraft
+    ? Math.max(0,(activeBannerSection.items||[]).findIndex(item=>item.id===bannerDraft.id))
+    : 0;
+  const bannerKey=activeBannerSection?.sectionKey || '';
+  const width=mode==='slides'
+    ? (device==='desktop'?'100%':device==='tablet'?'820px':'390px')
+    : device==='mobile'
+      ? '360px'
+      : device==='tablet'
+        ? (bannerKey==='promo-small'?'300px':bannerKey==='promo-medium'?'520px':bannerKey==='promo-large'&&activeBannerIndex%3===0?'620px':'320px')
+        : (bannerKey==='promo-small'?'360px':bannerKey==='promo-medium'?'520px':bannerKey==='promo-large'&&activeBannerIndex%3===0?'700px':'340px');
+  const previewHeight=mode==='slides'
+    ? (device==='desktop'?430:device==='tablet'?430:560)
+    : Math.max(150,Number(activeBannerSection?.itemMinHeightPx || (bannerKey==='promo-large'?220:178)));
+
+  const previewBackgroundStyle=():React.CSSProperties=>{
+    if(!owner?.imageUrl) return {};
+    const imageMode=owner.imageMode||'cover';
+    const imageSize=imageMode==='stretch'?'100% 100%':(imageMode==='original'||imageMode.startsWith('repeat'))?'auto':imageMode;
+    const imageRepeat=imageMode==='repeat'?'repeat':imageMode==='repeat-x'?'repeat-x':imageMode==='repeat-y'?'repeat-y':'no-repeat';
+    if(mode==='banners'&&bannerKey==='promo-large'){
+      return {
+        backgroundImage:`linear-gradient(90deg, rgba(0,0,0,.24), rgba(0,0,0,.62)), url(${owner.imageUrl})`,
+        backgroundSize:`100% 100%, ${imageSize}`,
+        backgroundRepeat:`no-repeat, ${imageRepeat}`,
+        backgroundPosition:'center, center'
+      };
+    }
+    return {
+      backgroundImage:`url(${owner.imageUrl})`,
+      backgroundSize:imageSize,
+      backgroundRepeat:imageRepeat,
+      backgroundPosition:'center'
+    };
+  };
 
   const renderElement=(key:SliderElementKey)=>{
     if(!owner||!visibleElement(key))return null;
@@ -491,17 +537,21 @@ export const AdminSliderStudio:React.FC=()=>{
                 className="relative overflow-hidden bg-neutral-900 shadow-2xl"
                 style={{
                   minHeight:`${previewHeight}px`,
-                  backgroundColor:mode==='slides'?(draft?.bgColor||'#111827'):'#111827',
-                  backgroundImage:owner.imageUrl?`url(${owner.imageUrl})`:undefined,
-                  backgroundSize:(owner.imageMode||'cover')==='stretch'?'100% 100%':(owner.imageMode||'cover')==='original'?'auto':(['repeat','repeat-x','repeat-y'].includes(owner.imageMode||''))?'auto':(owner.imageMode||'cover'),
-                  backgroundRepeat:(owner.imageMode||'cover')==='repeat'?'repeat':(owner.imageMode||'cover')==='repeat-x'?'repeat-x':(owner.imageMode||'cover')==='repeat-y'?'repeat-y':'no-repeat',
-                  backgroundPosition:'center'
+                  backgroundColor:mode==='slides'?(draft?.bgColor||'#111827'):(bannerDraft?.backgroundColor||'#111827'),
+                  ...previewBackgroundStyle()
                 }}
               >
-                {mode==='slides'&&draft?.gradientOverlay!==false&&<div className="absolute inset-0 bg-gradient-to-l from-black/80 via-black/40 to-black/5" style={{opacity:Math.max(.15,(draft?.overlayOpacity??60)/100)}}/>}
-                {mode==='banners'&&<div className="absolute inset-0 bg-gradient-to-l from-black/75 via-black/35 to-black/10"/>}
+                {mode==='slides'&&draft?.gradientOverlay!==false&&(
+                  <div
+                    className="absolute inset-0"
+                    style={{
+                      background:'linear-gradient(90deg, rgba(5,12,20,.08) 0%, rgba(5,12,20,.04) 40%, rgba(5,12,20,.48) 100%)',
+                      opacity:Math.max(0,Math.min(1,(draft?.overlayOpacity??60)/100))
+                    }}
+                  />
+                )}
                 {(['tag','title','subtitle','button'] as SliderElementKey[]).map(renderElement)}
-                <div className="absolute bottom-2 left-2 bg-black/55 text-white rounded-lg px-2 py-1 text-[8px] pointer-events-none">عنصر را با موس بکشید و رها کنید</div>
+                <div className="absolute bottom-2 left-2 bg-black/55 text-white rounded-lg px-2 py-1 text-[8px] pointer-events-none">عنصر را جابه‌جا کنید؛ مربع آبی گوشه برای تغییر اندازه است</div>
               </div>
             ):<div className="min-h-[430px] bg-white grid place-items-center text-xs text-neutral-400">یک مورد را انتخاب کنید.</div>}
           </div>
@@ -558,15 +608,15 @@ export const AdminSliderStudio:React.FC=()=>{
                 <option value="button">دکمه</option>
               </select>
               {(()=>{
-                const pos=elementPosition(owner,device,activeElement);
+                const pos=elementPosition(owner,device,activeElement,activeDefaults);
                 return <>
                   <div className="grid grid-cols-2 gap-2">
                     <label><span className="block text-[8px] font-bold mb-1">موقعیت افقی ٪</span><input type="number" min="0" max="100" value={Number(pos.x||0)} onChange={event=>setElementPosition(activeElement,{...pos,x:Number(event.target.value)})} className="w-full p-2 border rounded-lg font-mono"/></label>
                     <label><span className="block text-[8px] font-bold mb-1">موقعیت عمودی ٪</span><input type="number" min="0" max="100" value={Number(pos.y||0)} onChange={event=>setElementPosition(activeElement,{...pos,y:Number(event.target.value)})} className="w-full p-2 border rounded-lg font-mono"/></label>
-                    <label><span className="block text-[8px] font-bold mb-1">عرض ٪</span><input type="number" min="6" max="95" value={Number(pos.width||DEFAULT_POSITIONS[activeElement].width||20)} onChange={event=>setElementPosition(activeElement,{...pos,width:Number(event.target.value)})} className="w-full p-2 border rounded-lg font-mono"/></label>
+                    <label><span className="block text-[8px] font-bold mb-1">عرض ٪</span><input type="number" min="6" max="95" value={Number(pos.width||activeDefaults[activeElement].width||20)} onChange={event=>setElementPosition(activeElement,{...pos,width:Number(event.target.value)})} className="w-full p-2 border rounded-lg font-mono"/></label>
                     <label><span className="block text-[8px] font-bold mb-1">ارتفاع ٪ (اختیاری)</span><input type="number" min="0" max="80" value={Number(pos.height||0)} onChange={event=>setElementPosition(activeElement,{...pos,height:Number(event.target.value)||undefined})} className="w-full p-2 border rounded-lg font-mono"/></label>
-                    <label><span className="block text-[8px] font-bold mb-1">اندازه فونت</span><input type="number" min="7" max="100" value={Number(pos.fontSizePx||DEFAULT_POSITIONS[activeElement].fontSizePx||12)} onChange={event=>setElementPosition(activeElement,{...pos,fontSizePx:Number(event.target.value)})} className="w-full p-2 border rounded-lg font-mono"/></label>
-                    <label><span className="block text-[8px] font-bold mb-1">شکستن متن</span><select value={pos.wrap||DEFAULT_POSITIONS[activeElement].wrap||'wrap'} onChange={event=>setElementPosition(activeElement,{...pos,wrap:event.target.value as 'wrap'|'nowrap'})} className="w-full p-2 border rounded-lg bg-white"><option value="wrap">شکستن خودکار مجاز</option><option value="nowrap">همیشه یک‌خطی</option></select></label>
+                    <label><span className="block text-[8px] font-bold mb-1">اندازه فونت</span><input type="number" min="7" max="100" value={Number(pos.fontSizePx||activeDefaults[activeElement].fontSizePx||12)} onChange={event=>setElementPosition(activeElement,{...pos,fontSizePx:Number(event.target.value)})} className="w-full p-2 border rounded-lg font-mono"/></label>
+                    <label><span className="block text-[8px] font-bold mb-1">شکستن متن</span><select value={pos.wrap||activeDefaults[activeElement].wrap||'wrap'} onChange={event=>setElementPosition(activeElement,{...pos,wrap:event.target.value as 'wrap'|'nowrap'})} className="w-full p-2 border rounded-lg bg-white"><option value="wrap">شکستن خودکار مجاز</option><option value="nowrap">همیشه یک‌خطی</option></select></label>
                   </div>
                   <p className="text-[8px] text-neutral-500">همچنین می‌توانید خود عنصر را جابه‌جا کنید و مربع آبی گوشه آن را برای تغییر اندازه بکشید.</p>
                 </>;

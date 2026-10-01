@@ -436,6 +436,15 @@ export const AdminArticlesTab: React.FC = () => {
                     </div>
 
                     <div className="flex items-center gap-1">
+                      <a
+                        href={`/blog/${encodeURIComponent(cat.slug || cat.id)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
+                        title="نمایش مستقیم دسته مقالات در صفحه جدید"
+                      >
+                        <ExternalLink className="w-4 h-4" />
+                      </a>
                       <button
                         onClick={() => handleEditCategory(cat)}
                         className="p-1.5 text-neutral-500 hover:text-blue-600 rounded-lg hover:bg-blue-50 transition-colors cursor-pointer"

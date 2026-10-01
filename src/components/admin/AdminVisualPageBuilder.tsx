@@ -22,6 +22,7 @@ import {
 import { useStore } from '../../context/StoreContext';
 import type { PageSection, PageSectionItem, SeoEntityDraft, SitePage } from '../../types';
 import { ImageUploadInput } from '../common/ImageUploadInput';
+import { LinkDestinationPicker } from '../common/LinkDestinationPicker';
 import { RichTextEditor } from '../common/RichTextEditor';
 import { AdminEntitySeoPanel } from './AdminEntitySeoPanel';
 
@@ -358,16 +359,17 @@ export const AdminVisualPageBuilder: React.FC<{onNavigate?:(view:string,param?:s
               {inspectorTab==='content'&&<>
                 <label className="block"><span className="font-bold">عنوان</span><input value={draft.title} onChange={e=>patch({title:e.target.value})} className="w-full mt-1 p-2.5 border rounded-lg"/></label>
                 <label className="block"><span className="font-bold">زیرعنوان</span><input value={draft.subtitle||''} onChange={e=>patch({subtitle:e.target.value})} className="w-full mt-1 p-2.5 border rounded-lg"/></label>
-                <label className="block"><span className="font-bold">Badge</span><input value={draft.badge||''} onChange={e=>patch({badge:e.target.value})} className="w-full mt-1 p-2.5 border rounded-lg"/></label>
+                <label className="block"><span className="font-bold">برچسب</span><input value={draft.badge||''} onChange={e=>patch({badge:e.target.value})} className="w-full mt-1 p-2.5 border rounded-lg"/></label>
                 <RichTextEditor label="محتوا" value={draft.content||''} onChange={value=>patch({content:value})}/>
                 <ImageUploadInput label="تصویر" value={draft.imageUrl||''} onChange={url=>patch({imageUrl:url})} aspectRatio="banner" presetCategory="banners"/>
-                <div className="grid grid-cols-2 gap-2"><input value={draft.buttonText||''} onChange={e=>patch({buttonText:e.target.value})} className="p-2 border rounded-lg" placeholder="متن دکمه"/><input dir="ltr" value={draft.buttonLink||''} onChange={e=>patch({buttonLink:e.target.value})} className="p-2 border rounded-lg text-left" placeholder="link"/></div>
+                <input value={draft.buttonText||''} onChange={e=>patch({buttonText:e.target.value})} className="w-full p-2 border rounded-lg" placeholder="متن دکمه"/>
+                <LinkDestinationPicker label="مقصد دکمه" value={draft.buttonLink||''} onChange={value=>patch({buttonLink:value})} />
               </>}
 
               {inspectorTab==='layout'&&<>
-                <div><span className="font-bold block mb-1">Container</span><div className="grid grid-cols-3 gap-1">
+                <div><span className="font-bold block mb-1">کادر و عرض سکشن</span><div className="grid grid-cols-3 gap-1">
                   <button onClick={()=>patch({fullWidth:true,widthPercent:100,maxWidthPx:0})} className={`p-2 rounded border ${draft.fullWidth?'bg-blue-600 text-white':''}`}>تمام عرض</button>
-                  <button onClick={()=>patch({fullWidth:false,widthPercent:100,maxWidthPx:1280})} className={`p-2 rounded border ${!draft.fullWidth&&draft.widthPercent===100&&draft.maxWidthPx===1280?'bg-blue-600 text-white':''}`}>Boxed</button>
+                  <button onClick={()=>patch({fullWidth:false,widthPercent:100,maxWidthPx:1280})} className={`p-2 rounded border ${!draft.fullWidth&&draft.widthPercent===100&&draft.maxWidthPx===1280?'bg-blue-600 text-white':''}`}>داخل کادر</button>
                   <button onClick={()=>patch({fullWidth:false,maxWidthPx:draft.maxWidthPx||1100})} className="p-2 rounded border">سفارشی</button>
                 </div></div>
                 {!draft.fullWidth&&<>
@@ -377,9 +379,9 @@ export const AdminVisualPageBuilder: React.FC<{onNavigate?:(view:string,param?:s
                   <label className="block"><span>حداکثر عرض px</span><input type="number" value={draft.maxWidthPx??1280} onChange={e=>patch({maxWidthPx:Number(e.target.value)})} className="w-full p-2 border rounded"/></label>
                 </>}
                 <div className="grid grid-cols-3 gap-2">
-                  <label><span>Desktop ستون</span><input type="number" min="1" max="12" value={draft.desktopColumns??3} onChange={e=>setDesktopColumns(Number(e.target.value))} className="w-full p-2 border rounded"/></label>
-                  <label><span>Tablet ستون</span><input type="number" min="1" max="8" value={draft.tabletColumns??2} onChange={e=>patch({tabletColumns:Number(e.target.value)})} className="w-full p-2 border rounded"/></label>
-                  <label><span>Mobile ستون</span><input type="number" min="1" max="4" value={draft.mobileColumns??1} onChange={e=>patch({mobileColumns:Number(e.target.value)})} className="w-full p-2 border rounded"/></label>
+                  <label><span>ستون دسکتاپ</span><input type="number" min="1" max="12" value={draft.desktopColumns??3} onChange={e=>setDesktopColumns(Number(e.target.value))} className="w-full p-2 border rounded"/></label>
+                  <label><span>ستون تبلت</span><input type="number" min="1" max="8" value={draft.tabletColumns??2} onChange={e=>patch({tabletColumns:Number(e.target.value)})} className="w-full p-2 border rounded"/></label>
+                  <label><span>ستون موبایل</span><input type="number" min="1" max="4" value={draft.mobileColumns??1} onChange={e=>patch({mobileColumns:Number(e.target.value)})} className="w-full p-2 border rounded"/></label>
                 </div>
                 <div className="grid grid-cols-3 gap-1"><button onClick={()=>patch({contentAlign:'right'})} className="p-2 border rounded flex justify-center"><AlignRight className="w-4 h-4"/></button><button onClick={()=>patch({contentAlign:'center'})} className="p-2 border rounded flex justify-center"><AlignCenter className="w-4 h-4"/></button><button onClick={()=>patch({contentAlign:'left'})} className="p-2 border rounded flex justify-center"><AlignLeft className="w-4 h-4"/></button></div>
                 <div className="grid grid-cols-2 gap-2">
@@ -389,7 +391,7 @@ export const AdminVisualPageBuilder: React.FC<{onNavigate?:(view:string,param?:s
                   <label><span>Opacity تصویر %</span><input type="number" min="0" max="100" value={draft.backgroundImageOpacity??100} onChange={e=>patch({backgroundImageOpacity:Number(e.target.value)})} className="w-full p-2 border rounded"/></label>
                   <label><span>حداقل ارتفاع آیتم</span><input type="number" value={draft.itemMinHeightPx??0} onChange={e=>patch({itemMinHeightPx:Number(e.target.value)})} className="w-full p-2 border rounded"/></label>
                   <label><span>حداقل عرض آیتم موبایل</span><input type="number" min="120" max="600" value={draft.mobileItemMinWidthPx??240} onChange={e=>patch({mobileItemMinWidthPx:Number(e.target.value)})} className="w-full p-2 border rounded"/></label>
-                  <label><span>نمایش موبایل</span><select value={draft.mobileDisplayMode||'grid'} onChange={e=>patch({mobileDisplayMode:e.target.value as any})} className="w-full p-2 border rounded bg-white"><option value="grid">Grid</option><option value="scroll">اسکرول افقی</option></select></label>
+                  <label><span>نمایش موبایل</span><select value={draft.mobileDisplayMode||'grid'} onChange={e=>patch({mobileDisplayMode:e.target.value as any})} className="w-full p-2 border rounded bg-white"><option value="grid">شبکه</option><option value="scroll">اسکرول افقی</option></select></label>
                   <label><span>چیدمان اختصاصی</span><select value={draft.layoutVariant||'default'} onChange={e=>patch({layoutVariant:e.target.value as any})} className="w-full p-2 border rounded bg-white"><option value="default">پیش‌فرض</option><option value="uniform">یکنواخت</option><option value="mosaic">موزاییکی</option><option value="compact">فشرده</option></select></label>
                 </div>
               </>}
@@ -411,14 +413,14 @@ export const AdminVisualPageBuilder: React.FC<{onNavigate?:(view:string,param?:s
                 <div className="grid grid-cols-2 gap-2"><label><span>گردی سکشن</span><input type="number" value={draft.borderRadiusPx??0} onChange={e=>patch({borderRadiusPx:Number(e.target.value)})} className="w-full p-2 border rounded"/></label><label><span>گردی کارت</span><input type="number" value={draft.itemRadiusPx??10} onChange={e=>patch({itemRadiusPx:Number(e.target.value)})} className="w-full p-2 border rounded"/></label></div>
                 <label><span>حداقل ارتفاع</span><input type="number" value={draft.minHeightPx??0} onChange={e=>patch({minHeightPx:Number(e.target.value)})} className="w-full p-2 border rounded"/></label>
                 <div className="grid grid-cols-2 gap-2">
-                  <label><span>Fit تصویر آیتم</span><select value={draft.itemImageFit||'contain'} onChange={e=>patch({itemImageFit:e.target.value as any})} className="w-full p-2 border rounded bg-white"><option value="contain">Contain</option><option value="cover">Cover</option></select></label>
+                  <label><span>نحوه نمایش تصویر آیتم</span><select value={draft.itemImageFit||'contain'} onChange={e=>patch({itemImageFit:e.target.value as any})} className="w-full p-2 border rounded bg-white"><option value="contain">نمایش کامل بدون برش</option><option value="cover">پوشش کامل کادر</option></select></label>
                   <label><span>تراز متن آیتم</span><select value={draft.itemTextAlign||'right'} onChange={e=>patch({itemTextAlign:e.target.value as any})} className="w-full p-2 border rounded bg-white"><option value="right">راست</option><option value="center">وسط</option><option value="left">چپ</option></select></label>
                 </div>
-                <select value={draft.imageMode||'side'} onChange={e=>patch({imageMode:e.target.value as any})} className="w-full p-2 border rounded bg-white"><option value="side">تصویر کنار محتوا</option><option value="cover">پس‌زمینه Cover</option><option value="full">تمام تصویر</option><option value="contain">Contain</option><option value="banner">Banner</option></select>
+                <select value={draft.imageMode||'side'} onChange={e=>patch({imageMode:e.target.value as any})} className="w-full p-2 border rounded bg-white"><option value="side">تصویر کنار محتوا</option><option value="cover">پوشش کامل پس‌زمینه</option><option value="full">تمام تصویر</option><option value="contain">نمایش کامل بدون برش</option><option value="banner">بنری</option></select>
               </>}
 
               {inspectorTab==='items'&&<>
-                <div className="flex items-center justify-between"><strong>Repeater Items</strong><button onClick={addItem} className="px-2 py-1.5 bg-blue-600 text-white rounded inline-flex gap-1 items-center"><Plus className="w-3 h-3"/>آیتم</button></div>
+                <div className="flex items-center justify-between"><strong>آیتم‌های تکرارشونده</strong><button onClick={addItem} className="px-2 py-1.5 bg-blue-600 text-white rounded inline-flex gap-1 items-center"><Plus className="w-3 h-3"/>آیتم</button></div>
                 <div className="space-y-3">
                   {(draft.items||[]).map((item,index)=><div key={item.id} className="p-3 rounded-xl border bg-neutral-50 space-y-2">
                     <div className="flex justify-between items-center gap-2">
@@ -432,7 +434,7 @@ export const AdminVisualPageBuilder: React.FC<{onNavigate?:(view:string,param?:s
                     </div>
                     <input value={item.title||''} onChange={e=>updateItem(item.id,{title:e.target.value})} className="w-full p-2 border rounded" placeholder="عنوان"/>
                     <input value={item.subtitle||''} onChange={e=>updateItem(item.id,{subtitle:e.target.value})} className="w-full p-2 border rounded" placeholder="زیرعنوان"/>
-                    <input value={item.badge||''} onChange={e=>updateItem(item.id,{badge:e.target.value})} className="w-full p-2 border rounded" placeholder="Badge / برچسب"/>
+                    <input value={item.badge||''} onChange={e=>updateItem(item.id,{badge:e.target.value})} className="w-full p-2 border rounded" placeholder="برچسب"/>
                     <textarea rows={3} value={item.content||''} onChange={e=>updateItem(item.id,{content:e.target.value})} className="w-full p-2 border rounded" placeholder="متن / توضیحات آیتم"/>
                     <ImageUploadInput value={item.imageUrl||''} onChange={url=>updateItem(item.id,{imageUrl:url})} aspectRatio="square" presetCategory="parts"/>
                     <div className="grid grid-cols-2 gap-2">
@@ -441,13 +443,18 @@ export const AdminVisualPageBuilder: React.FC<{onNavigate?:(view:string,param?:s
                       <label><span className="block text-[8px] mb-1">گردی کارت</span><input type="number" value={item.borderRadiusPx??draft.itemRadiusPx??10} onChange={e=>updateItem(item.id,{borderRadiusPx:Number(e.target.value)})} className="w-full p-2 border rounded"/></label>
                       <label><span className="block text-[8px] mb-1">فونت عنوان</span><input type="number" value={item.titleFontSizePx??draft.itemTitleFontSizePx??14} onChange={e=>updateItem(item.id,{titleFontSizePx:Number(e.target.value)})} className="w-full p-2 border rounded"/></label>
                     </div>
-                    <div className="grid grid-cols-2 gap-2"><input value={item.buttonText||''} onChange={e=>updateItem(item.id,{buttonText:e.target.value})} className="p-2 border rounded" placeholder="دکمه"/><input dir="ltr" value={item.link||''} onChange={e=>updateItem(item.id,{link:e.target.value})} className="p-2 border rounded text-left" placeholder="link"/></div>
+                    <input value={item.buttonText||''} onChange={e=>updateItem(item.id,{buttonText:e.target.value})} className="w-full p-2 border rounded" placeholder="متن دکمه"/>
+                    <LinkDestinationPicker label="مقصد آیتم / دکمه" value={item.link||''} onChange={value=>updateItem(item.id,{link:value})} />
+                    <div className="grid grid-cols-2 gap-2">
+                      <label><span className="block text-[8px] mb-1">نمایش تصویر</span><select value={item.imageMode||(item.imageFit==='contain'?'contain':'cover')} onChange={e=>updateItem(item.id,{imageMode:e.target.value as PageSectionItem['imageMode']})} className="w-full p-2 border rounded bg-white"><option value="cover">پوشش کامل کادر</option><option value="contain">کامل بدون برش</option><option value="stretch">کشیده تا کل کادر</option><option value="original">اندازه اصلی</option><option value="repeat">تکرار کامل</option><option value="repeat-x">تکرار افقی</option><option value="repeat-y">تکرار عمودی</option></select></label>
+                      <label><span className="block text-[8px] mb-1">تراز متن</span><select value={item.textAlignment||item.textAlign||'right'} onChange={e=>updateItem(item.id,{textAlignment:e.target.value as PageSectionItem['textAlignment']})} className="w-full p-2 border rounded bg-white"><option value="right">راست</option><option value="center">وسط</option><option value="left">چپ</option></select></label>
+                    </div>
                   </div>)}
                 </div>
               </>}
 
               {inspectorTab==='seo'&&<AdminEntitySeoPanel entityType="page" entityId={page.id} entityTitle={page.title} value={seoDraft} images={page.sections.flatMap(section=>[section.imageUrl||'',...(section.items||[]).map(item=>item.imageUrl||'')]).filter(Boolean)} onChange={setSeoDraft}/>}
-              {inspectorTab==='seo'&&<button onClick={()=>updatePage({...page,seo:seoDraft})} className="w-full py-2.5 rounded-xl bg-emerald-600 text-white font-black">ذخیره SEO برگه</button>}
+              {inspectorTab==='seo'&&<button onClick={()=>updatePage({...page,seo:seoDraft})} className="w-full py-2.5 rounded-xl bg-emerald-600 text-white font-black">ذخیره سئوی برگه</button>}
 
               <div className="pt-3 border-t flex gap-2">
                 <button onClick={saveDraft} className="flex-1 py-2.5 rounded-xl bg-emerald-600 text-white font-black inline-flex items-center justify-center gap-1"><Save className="w-3.5 h-3.5"/>ذخیره سکشن</button>

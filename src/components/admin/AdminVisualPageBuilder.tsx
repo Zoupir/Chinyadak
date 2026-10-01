@@ -9,6 +9,7 @@ import {
   CopyPlus,
   Eye,
   EyeOff,
+  ExternalLink,
   Laptop,
   LayoutTemplate,
   Monitor,
@@ -234,6 +235,11 @@ export const AdminVisualPageBuilder: React.FC<{onNavigate?:(view:string,param?:s
     );
   };
 
+  const pagePreviewUrl =
+    page.slug === 'home' ? '/' :
+    page.slug === 'part-request' ? '/part-request' :
+    `/page/${encodeURIComponent(page.slug)}`;
+
   return (
     <div className="visual-page-builder -m-4 sm:-m-6 lg:-m-8 min-h-[calc(100vh-128px)] bg-[#eef1f4]">
       <div className="h-14 px-3 bg-neutral-950 text-white flex items-center justify-between gap-3 sticky top-16 z-20">
@@ -250,6 +256,9 @@ export const AdminVisualPageBuilder: React.FC<{onNavigate?:(view:string,param?:s
           <button onClick={()=>setDevice('mobile')} className={`p-2 rounded ${device==='mobile'?'bg-blue-600':'text-neutral-400'}`} title="موبایل"><Smartphone className="w-4 h-4"/></button>
         </div>
         <div className="flex items-center gap-2">
+          <a href={pagePreviewUrl} target="_blank" rel="noopener noreferrer" className="h-9 px-3 rounded-lg bg-neutral-800 text-[10px] font-bold inline-flex items-center gap-1.5">
+            <ExternalLink className="w-3.5 h-3.5" /> نمایش
+          </a>
           <button onClick={()=>{setIsLiveEditActive(true);onNavigate?.(page.slug==='home'?'home':page.slug==='part-request'?'part-request':'page',page.slug==='home'||page.slug==='part-request'?undefined:page.slug);}} className={`h-9 px-3 rounded-lg text-[10px] font-black ${isLiveEditActive?'bg-amber-500 text-black':'bg-neutral-800'}`}>ویرایش زنده در سایت</button>
           <button onClick={saveDraft} disabled={!draft} className="h-9 px-4 rounded-lg bg-emerald-600 text-white text-[10px] font-black inline-flex items-center gap-1"><Save className="w-3.5 h-3.5"/>ذخیره</button>
         </div>

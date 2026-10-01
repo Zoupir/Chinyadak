@@ -134,20 +134,39 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenAuthModal }) =
   const badges: FooterBadgeItem[] = settings.footerBadges || [];
 
   if (settings.layoutPreset === 'marketplace-rtl') {
+    const footerRows = (value?: number) => value && value > 0 ? `repeat(${value}, minmax(0, auto))` : 'none';
+    const footerStyle = {
+      ['--footer-cols-desktop' as any]: settings.footerGridColumnsDesktop || 5,
+      ['--footer-cols-tablet' as any]: settings.footerGridColumnsTablet || 2,
+      ['--footer-cols-mobile' as any]: settings.footerGridColumnsMobile || 1,
+      ['--footer-rows-desktop' as any]: footerRows(settings.footerGridRowsDesktop || 1),
+      ['--footer-rows-tablet' as any]: footerRows(settings.footerGridRowsTablet),
+      ['--footer-rows-mobile' as any]: footerRows(settings.footerGridRowsMobile),
+      ['--footer-logo-width' as any]: `${settings.footerLogoWidthPx || 160}px`,
+      ['--footer-heading-size' as any]: `${settings.footerHeadingFontSizePx || 14}px`,
+      ['--footer-text-size' as any]: `${settings.footerTextFontSizePx || 12}px`,
+      ['--footer-padding-top' as any]: `${settings.footerPaddingTopPx ?? 42}px`,
+      ['--footer-padding-bottom' as any]: `${settings.footerPaddingBottomPx ?? 34}px`,
+      ['--footer-bg' as any]: settings.footerBgColor || '#111111',
+      ['--footer-text' as any]: settings.footerTextColor || '#b9c0c7',
+      ['--footer-heading' as any]: settings.footerHeadingColor || '#ffffff'
+    } as React.CSSProperties;
+    const footerLogo = settings.footerLogoUrl || settings.logoUrl;
+
     return (
-      <footer className="marketplace-ref-footer" dir="rtl">
+      <footer className="marketplace-ref-footer" dir="rtl" style={footerStyle}>
         <div className="marketplace-ref-footer-main marketplace-ref-container">
           <div className="marketplace-ref-footer-about">
             <button type="button" className="marketplace-ref-footer-logo" onClick={() => onNavigate('home')}>
-              {settings.logoUrl ? (
-                <img src={settings.logoUrl} alt={settings.siteTitle} />
+              {footerLogo ? (
+                <img src={footerLogo} alt={settings.siteTitle} />
               ) : (
                 <span>{settings.footerAboutTitle || settings.siteTitle || 'فروشگاه'}</span>
               )}
             </button>
             <p>{settings.footerAboutText || 'فروشگاه تخصصی قطعات یدکی خودرو با تمرکز بر اصالت، تطبیق دقیق قطعه و ارسال مطمئن.'}</p>
             <div className="marketplace-ref-newsletter">
-              <input type="email" placeholder="ایمیل خود را وارد کنید" aria-label="ایمیل خبرنامه" />
+              <input type="email" placeholder={settings.footerNewsletterPlaceholder || 'ایمیل خود را وارد کنید'} aria-label="ایمیل خبرنامه" />
               <button type="button" aria-label="عضویت در خبرنامه">←</button>
             </div>
           </div>
@@ -162,11 +181,11 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenAuthModal }) =
           ))}
 
           <div className="marketplace-ref-footer-contact">
-            <h4>ارتباط با ما</h4>
+            <h4>{settings.footerContactTitle || 'ارتباط با ما'}</h4>
             {settings.address && <p><MapPin className="w-4 h-4" /><span>{settings.address}</span></p>}
             {settings.contactPhone && <a href={`tel:${settings.contactPhone}`}><Phone className="w-4 h-4" /><span>{settings.contactPhone}</span></a>}
             {settings.supportEmail && <a href={`mailto:${settings.supportEmail}`}><Mail className="w-4 h-4" /><span>{settings.supportEmail}</span></a>}
-            <small>پشتیبانی و مشاوره تخصصی پیش از خرید</small>
+            <small>{settings.footerContactSubtitle || 'پشتیبانی و مشاوره تخصصی پیش از خرید'}</small>
           </div>
         </div>
 

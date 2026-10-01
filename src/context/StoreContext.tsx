@@ -135,6 +135,19 @@ const PART_REQUEST_SECTION_DEFAULTS: PageSection[] = [
 
 const upgradeLegacyHomeSection = (section: PageSection): PageSection => {
   const key = section.sectionKey;
+  if (!section.contentSource) {
+    const liveSource =
+      key === 'featured-categories' ? 'categories' :
+      key === 'manufacturers' ? 'brands' :
+      ['featured-products','weekly-deals','maintenance-products'].includes(key || '') ? 'products' :
+      key === 'articles' ? 'articles' :
+      'manual';
+    section = {
+      ...section,
+      contentSource: liveSource as PageSection['contentSource'],
+      contentSourceLimit: section.contentSourceLimit || section.maxItems
+    };
+  }
   if (key === 'hero' && (!section.fullWidth || section.maxWidthPx !== 0)) {
     return {
       ...section,

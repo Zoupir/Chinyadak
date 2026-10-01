@@ -348,7 +348,7 @@ export const LiveSectionModal: React.FC<LiveSectionModalProps> = ({
             <section className="bg-white rounded-2xl border border-neutral-200 p-4 space-y-4">
               <div>
                 <strong className="text-xs">کادر و عرض سکشن</strong>
-                <p className="text-[9px] text-neutral-400 mt-1">Full Width، Boxed یا اندازه سفارشی برای هر دستگاه.</p>
+                <p className="text-[9px] text-neutral-400 mt-1">تمام‌عرض، داخل کادر یا اندازه سفارشی را جداگانه برای هر دستگاه تعیین کنید.</p>
               </div>
               <div className="grid grid-cols-3 gap-2">
                 <button type="button" onClick={() => patch({fullWidth:true,widthPercent:100,tabletWidthPercent:100,mobileWidthPercent:100,maxWidthPx:0,layout:'full'})} className={`p-2.5 rounded-xl border text-[9px] font-black ${form.fullWidth ? 'bg-blue-600 text-white border-blue-600' : 'bg-white'}`}>تمام عرض</button>
@@ -368,13 +368,13 @@ export const LiveSectionModal: React.FC<LiveSectionModalProps> = ({
 
             <section className="bg-white rounded-2xl border border-neutral-200 p-4 space-y-4">
               <div>
-                <strong className="text-xs">Responsive Grid</strong>
+                <strong className="text-xs">شبکه ریسپانسیو</strong>
                 <p className="text-[9px] text-neutral-400 mt-1">با افزایش ستون دسکتاپ در سکشن‌های بنری، Slot خالی جدید هم خودکار ساخته می‌شود.</p>
               </div>
               <div className="grid grid-cols-3 gap-2">
-                <label><span className="block text-[9px] font-bold mb-1">Desktop</span><select value={form.desktopColumns || 3} onChange={e => setColumns('desktop',Number(e.target.value))} className="w-full p-2 border rounded-lg bg-white text-xs">{Array.from({length:12},(_,i)=>i+1).map(n=><option key={n} value={n}>{n}</option>)}</select></label>
-                <label><span className="block text-[9px] font-bold mb-1">Tablet</span><select value={form.tabletColumns || Math.min(form.desktopColumns || 3,2)} onChange={e => setColumns('tablet',Number(e.target.value))} className="w-full p-2 border rounded-lg bg-white text-xs">{Array.from({length:8},(_,i)=>i+1).map(n=><option key={n} value={n}>{n}</option>)}</select></label>
-                <label><span className="block text-[9px] font-bold mb-1">Mobile</span><select value={form.mobileColumns || 1} onChange={e => setColumns('mobile',Number(e.target.value))} className="w-full p-2 border rounded-lg bg-white text-xs">{[1,2,3,4].map(n=><option key={n} value={n}>{n}</option>)}</select></label>
+                <label><span className="block text-[9px] font-bold mb-1">دسکتاپ</span><select value={form.desktopColumns || 3} onChange={e => setColumns('desktop',Number(e.target.value))} className="w-full p-2 border rounded-lg bg-white text-xs">{Array.from({length:12},(_,i)=>i+1).map(n=><option key={n} value={n}>{n}</option>)}</select></label>
+                <label><span className="block text-[9px] font-bold mb-1">تبلت</span><select value={form.tabletColumns || Math.min(form.desktopColumns || 3,2)} onChange={e => setColumns('tablet',Number(e.target.value))} className="w-full p-2 border rounded-lg bg-white text-xs">{Array.from({length:8},(_,i)=>i+1).map(n=><option key={n} value={n}>{n}</option>)}</select></label>
+                <label><span className="block text-[9px] font-bold mb-1">موبایل</span><select value={form.mobileColumns || 1} onChange={e => setColumns('mobile',Number(e.target.value))} className="w-full p-2 border rounded-lg bg-white text-xs">{[1,2,3,4].map(n=><option key={n} value={n}>{n}</option>)}</select></label>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 {numberField('فاصله آیتم‌ها','gapPx',0,100,16)}
@@ -418,14 +418,14 @@ export const LiveSectionModal: React.FC<LiveSectionModalProps> = ({
               <label><span className="block text-[10px] font-bold mb-1">رنگ متن</span><input type="color" value={form.textColor || '#111827'} onChange={e => patch({textColor:e.target.value})} className="w-full h-11 p-1 border rounded-xl" /></label>
               {numberField('گردی سکشن','borderRadiusPx',0,100,0)}
               {numberField('گردی کارت‌ها','itemRadiusPx',0,100,10)}
-              {numberField('Padding بالا','paddingTopPx',0,250,28)}
-              {numberField('Padding پایین','paddingBottomPx',0,250,28)}
-              {numberField('Padding طرفین','paddingInlinePx',0,300,20)}
+              {numberField('فاصله داخلی بالا','paddingTopPx',0,250,28)}
+              {numberField('فاصله داخلی پایین','paddingBottomPx',0,250,28)}
+              {numberField('فاصله داخلی طرفین','paddingInlinePx',0,300,20)}
               {numberField('فاصله بالا از سکشن قبل','marginTopPx',0,250,0)}
               {numberField('فاصله پایین','marginBottomPx',0,250,0)}
               {numberField('اندازه عنوان سکشن','headingFontSizePx',10,80,18)}
               {numberField('اندازه زیرعنوان سکشن','subtitleFontSizePx',8,48,11)}
-              {numberField('Opacity تصویر %','backgroundImageOpacity',0,100,100)}
+              {numberField('شفافیت تصویر ٪','backgroundImageOpacity',0,100,100)}
             </section>
 
             <section className="bg-white rounded-2xl border border-violet-200 p-4 space-y-3">
@@ -437,7 +437,7 @@ export const LiveSectionModal: React.FC<LiveSectionModalProps> = ({
                 <label><span className="block text-[9px] font-bold mb-1">پس‌زمینه آیتم</span><input type="color" value={form.itemBackgroundColor || '#ffffff'} onChange={e=>patch({itemBackgroundColor:e.target.value})} className="w-full h-10 p-1 border rounded-xl" /></label>
                 <label><span className="block text-[9px] font-bold mb-1">رنگ متن آیتم</span><input type="color" value={form.itemTextColor || '#111827'} onChange={e=>patch({itemTextColor:e.target.value})} className="w-full h-10 p-1 border rounded-xl" /></label>
                 <label><span className="block text-[9px] font-bold mb-1">رنگ حاشیه</span><input type="color" value={form.itemBorderColor || '#e5e7eb'} onChange={e=>patch({itemBorderColor:e.target.value})} className="w-full h-10 p-1 border rounded-xl" /></label>
-                {numberField('Padding آیتم','itemPaddingPx',0,120,12)}
+                {numberField('فاصله داخلی آیتم','itemPaddingPx',0,120,12)}
                 {numberField('اندازه فونت عمومی آیتم','itemFontSizePx',8,60,12)}
                 {numberField('اندازه عنوان آیتم','itemTitleFontSizePx',8,72,14)}
                 {numberField('اندازه متن آیتم','itemContentFontSizePx',8,60,11)}
@@ -446,7 +446,7 @@ export const LiveSectionModal: React.FC<LiveSectionModalProps> = ({
                 {numberField('گردی تصویر آیتم','itemImageRadiusPx',0,200,8)}
               </div>
               <div className="grid grid-cols-2 gap-3">
-                <label><span className="block text-[9px] font-bold mb-1">Fit تصویر</span><select value={form.itemImageFit || 'contain'} onChange={e=>patch({itemImageFit:e.target.value as 'cover'|'contain'})} className="w-full p-2 border rounded-lg bg-white text-xs"><option value="contain">Contain</option><option value="cover">Cover</option></select></label>
+                <label><span className="block text-[9px] font-bold mb-1">نحوه نمایش تصویر</span><select value={form.itemImageFit || 'contain'} onChange={e=>patch({itemImageFit:e.target.value as 'cover'|'contain'})} className="w-full p-2 border rounded-lg bg-white text-xs"><option value="contain">نمایش کامل بدون برش</option><option value="cover">پوشش کامل کادر</option></select></label>
                 <label><span className="block text-[9px] font-bold mb-1">تراز متن آیتم</span><select value={form.itemTextAlign || 'right'} onChange={e=>patch({itemTextAlign:e.target.value as 'right'|'center'|'left'})} className="w-full p-2 border rounded-lg bg-white text-xs"><option value="right">راست</option><option value="center">وسط</option><option value="left">چپ</option></select></label>
               </div>
             </section>

@@ -361,7 +361,7 @@ export const AdminVisualPageBuilder: React.FC<{onNavigate?:(view:string,param?:s
 
         <aside className="bg-white border-r border-neutral-200 overflow-y-auto">
           <div className="grid grid-cols-5 border-b sticky top-0 bg-white z-10">
-            {(['content','layout','style','items','seo'] as InspectorTab[]).map(tab=><button key={tab} onClick={()=>setInspectorTab(tab)} className={`py-3 text-[8px] font-black ${inspectorTab===tab?'text-blue-600 border-b-2 border-blue-600':'text-neutral-500'}`}>{tab==='content'?'محتوا':tab==='layout'?'چیدمان':tab==='style'?'استایل':tab==='items'?'آیتم‌ها':'سئو'}</button>)}
+            {(['content','layout','style','items','seo'] as InspectorTab[]).map(tab=><button key={tab} onClick={()=>setInspectorTab(tab)} className={`py-3 text-[8px] font-black ${inspectorTab===tab?'text-blue-600 border-b-2 border-blue-600':'text-neutral-500'}`}>{tab==='content'?'محتوا':tab==='layout'?'چیدمان':tab==='style'?'ظاهر':tab==='items'?'آیتم‌ها':'سئو'}</button>)}
           </div>
 
           {!draft ? <div className="p-6 text-xs text-neutral-400">یک سکشن را انتخاب کن.</div> : (

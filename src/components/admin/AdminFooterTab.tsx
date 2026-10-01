@@ -33,7 +33,7 @@ export const AdminFooterTab: React.FC = () => {
   const { settings, updateSettings, showToast, categories, pages } = useStore();
 
   // Active subtab
-  const [activeSubtab, setActiveSubtab] = useState<'features' | 'about' | 'columns' | 'badges' | 'html'>('columns');
+  const [activeSubtab, setActiveSubtab] = useState<'features' | 'about' | 'columns' | 'badges' | 'layout' | 'html'>('columns');
 
   // Form states
   const [footerAboutTitle, setFooterAboutTitle] = useState(settings.footerAboutTitle || settings.siteTitle || 'فروشگاه اینترنتی');
@@ -41,6 +41,26 @@ export const AdminFooterTab: React.FC = () => {
   const [footerCopyrightText, setFooterCopyrightText] = useState(settings.footerCopyrightText || '');
   const [footerCustomHtml, setFooterCustomHtml] = useState(settings.footerCustomHtml || '');
   const [showHtmlPreview, setShowHtmlPreview] = useState(true);
+
+  // Footer layout / visual controls
+  const [footerGridColumnsDesktop, setFooterGridColumnsDesktop] = useState(settings.footerGridColumnsDesktop || 5);
+  const [footerGridColumnsTablet, setFooterGridColumnsTablet] = useState(settings.footerGridColumnsTablet || 2);
+  const [footerGridColumnsMobile, setFooterGridColumnsMobile] = useState(settings.footerGridColumnsMobile || 1);
+  const [footerGridRowsDesktop, setFooterGridRowsDesktop] = useState(settings.footerGridRowsDesktop || 1);
+  const [footerGridRowsTablet, setFooterGridRowsTablet] = useState(settings.footerGridRowsTablet || 0);
+  const [footerGridRowsMobile, setFooterGridRowsMobile] = useState(settings.footerGridRowsMobile || 0);
+  const [footerLogoUrl, setFooterLogoUrl] = useState(settings.footerLogoUrl || settings.logoUrl || '');
+  const [footerLogoWidthPx, setFooterLogoWidthPx] = useState(settings.footerLogoWidthPx || 160);
+  const [footerHeadingFontSizePx, setFooterHeadingFontSizePx] = useState(settings.footerHeadingFontSizePx || 14);
+  const [footerTextFontSizePx, setFooterTextFontSizePx] = useState(settings.footerTextFontSizePx || 12);
+  const [footerPaddingTopPx, setFooterPaddingTopPx] = useState(settings.footerPaddingTopPx || 42);
+  const [footerPaddingBottomPx, setFooterPaddingBottomPx] = useState(settings.footerPaddingBottomPx || 34);
+  const [footerBgColor, setFooterBgColor] = useState(settings.footerBgColor || '#111111');
+  const [footerTextColor, setFooterTextColor] = useState(settings.footerTextColor || '#b9c0c7');
+  const [footerHeadingColor, setFooterHeadingColor] = useState(settings.footerHeadingColor || '#ffffff');
+  const [footerContactTitle, setFooterContactTitle] = useState(settings.footerContactTitle || 'ارتباط با ما');
+  const [footerContactSubtitle, setFooterContactSubtitle] = useState(settings.footerContactSubtitle || 'پشتیبانی و مشاوره تخصصی پیش از خرید');
+  const [footerNewsletterPlaceholder, setFooterNewsletterPlaceholder] = useState(settings.footerNewsletterPlaceholder || 'ایمیل خود را وارد کنید');
 
   // Features
   const [footerShowFeatures, setFooterShowFeatures] = useState(settings.footerShowFeatures !== false);
@@ -166,7 +186,25 @@ export const AdminFooterTab: React.FC = () => {
       footerFeatures: features,
       footerColumns: columns,
       footerShowBadges,
-      footerBadges: badges
+      footerBadges: badges,
+      footerGridColumnsDesktop,
+      footerGridColumnsTablet,
+      footerGridColumnsMobile,
+      footerGridRowsDesktop,
+      footerGridRowsTablet,
+      footerGridRowsMobile,
+      footerLogoUrl,
+      footerLogoWidthPx,
+      footerHeadingFontSizePx,
+      footerTextFontSizePx,
+      footerPaddingTopPx,
+      footerPaddingBottomPx,
+      footerBgColor,
+      footerTextColor,
+      footerHeadingColor,
+      footerContactTitle,
+      footerContactSubtitle,
+      footerNewsletterPlaceholder
     });
     showToast('تنظیمات فوتر، ستون‌ها و نمادهای اعتماد با موفقیت ذخیره گردید.');
   };
@@ -475,6 +513,18 @@ export const AdminFooterTab: React.FC = () => {
         </button>
 
         <button
+          onClick={() => setActiveSubtab('layout')}
+          className={`px-4 py-2 rounded-xl font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+            activeSubtab === 'layout'
+              ? 'bg-neutral-900 text-white shadow-xs'
+              : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200'
+          }`}
+        >
+          <Sliders className="w-4 h-4 text-violet-500" />
+          <span>چیدمان و استایل فوتر</span>
+        </button>
+
+        <button
           onClick={() => setActiveSubtab('html')}
           className={`px-4 py-2 rounded-xl font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
             activeSubtab === 'html'
@@ -486,6 +536,45 @@ export const AdminFooterTab: React.FC = () => {
           <span>ویرایشگر کد اختصاصی HTML</span>
         </button>
       </div>
+
+      {/* =========================================================================
+          FOOTER LAYOUT / TYPOGRAPHY / COLORS
+      ========================================================================= */}
+      {activeSubtab === 'layout' && (
+        <div className="space-y-6">
+          <div className="rounded-2xl border border-violet-200 bg-violet-50/30 p-5 space-y-5">
+            <div>
+              <h4 className="font-black text-sm text-neutral-900">شبکه و ابعاد فوتر</h4>
+              <p className="text-[10px] text-neutral-500 mt-1">تعداد ستون‌ها و ردیف‌ها برای دسکتاپ، تبلت و موبایل مستقل است.</p>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-xs">
+              <label><span className="block font-bold mb-1">ستون دسکتاپ</span><input type="number" min="1" max="8" value={footerGridColumnsDesktop} onChange={e=>setFooterGridColumnsDesktop(Number(e.target.value))} className="w-full p-2.5 border rounded-xl"/></label>
+              <label><span className="block font-bold mb-1">ستون تبلت</span><input type="number" min="1" max="6" value={footerGridColumnsTablet} onChange={e=>setFooterGridColumnsTablet(Number(e.target.value))} className="w-full p-2.5 border rounded-xl"/></label>
+              <label><span className="block font-bold mb-1">ستون موبایل</span><input type="number" min="1" max="3" value={footerGridColumnsMobile} onChange={e=>setFooterGridColumnsMobile(Number(e.target.value))} className="w-full p-2.5 border rounded-xl"/></label>
+              <label><span className="block font-bold mb-1">ردیف دسکتاپ</span><input type="number" min="0" max="6" value={footerGridRowsDesktop} onChange={e=>setFooterGridRowsDesktop(Number(e.target.value))} className="w-full p-2.5 border rounded-xl"/></label>
+              <label><span className="block font-bold mb-1">ردیف تبلت</span><input type="number" min="0" max="8" value={footerGridRowsTablet} onChange={e=>setFooterGridRowsTablet(Number(e.target.value))} className="w-full p-2.5 border rounded-xl"/></label>
+              <label><span className="block font-bold mb-1">ردیف موبایل</span><input type="number" min="0" max="12" value={footerGridRowsMobile} onChange={e=>setFooterGridRowsMobile(Number(e.target.value))} className="w-full p-2.5 border rounded-xl"/></label>
+              <label><span className="block font-bold mb-1">Padding بالا</span><input type="number" min="0" max="200" value={footerPaddingTopPx} onChange={e=>setFooterPaddingTopPx(Number(e.target.value))} className="w-full p-2.5 border rounded-xl"/></label>
+              <label><span className="block font-bold mb-1">Padding پایین</span><input type="number" min="0" max="200" value={footerPaddingBottomPx} onChange={e=>setFooterPaddingBottomPx(Number(e.target.value))} className="w-full p-2.5 border rounded-xl"/></label>
+              <label><span className="block font-bold mb-1">عرض لوگو px</span><input type="number" min="40" max="500" value={footerLogoWidthPx} onChange={e=>setFooterLogoWidthPx(Number(e.target.value))} className="w-full p-2.5 border rounded-xl"/></label>
+              <label><span className="block font-bold mb-1">فونت تیتر px</span><input type="number" min="9" max="36" value={footerHeadingFontSizePx} onChange={e=>setFooterHeadingFontSizePx(Number(e.target.value))} className="w-full p-2.5 border rounded-xl"/></label>
+              <label><span className="block font-bold mb-1">فونت متن px</span><input type="number" min="8" max="30" value={footerTextFontSizePx} onChange={e=>setFooterTextFontSizePx(Number(e.target.value))} className="w-full p-2.5 border rounded-xl"/></label>
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-neutral-200 p-5 space-y-4">
+            <h4 className="font-black text-sm">رنگ‌ها و هویت بصری</h4>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+              <label><span className="block font-bold mb-1">پس‌زمینه فوتر</span><input type="color" value={footerBgColor} onChange={e=>setFooterBgColor(e.target.value)} className="w-full h-11 p-1 border rounded-xl"/></label>
+              <label><span className="block font-bold mb-1">رنگ متن</span><input type="color" value={footerTextColor} onChange={e=>setFooterTextColor(e.target.value)} className="w-full h-11 p-1 border rounded-xl"/></label>
+              <label><span className="block font-bold mb-1">رنگ تیترها</span><input type="color" value={footerHeadingColor} onChange={e=>setFooterHeadingColor(e.target.value)} className="w-full h-11 p-1 border rounded-xl"/></label>
+            </div>
+            <ImageUploadInput label="لوگوی اختصاصی فوتر" value={footerLogoUrl} onChange={setFooterLogoUrl} aspectRatio="banner" presetCategory="logos" />
+          </div>
+
+          <button onClick={handleSaveAll} className="px-6 py-2.5 rounded-xl bg-violet-600 text-white text-xs font-black">ذخیره چیدمان و استایل فوتر</button>
+        </div>
+      )}
 
       {/* =========================================================================
           SUBTAB 1: COLUMNS AND LINKS BUILDER
@@ -798,6 +887,11 @@ export const AdminFooterTab: React.FC = () => {
               />
             </div>
 
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <label><span className="block text-[10px] font-bold mb-1">عنوان تماس</span><input value={footerContactTitle} onChange={e=>setFooterContactTitle(e.target.value)} className="w-full p-2.5 border rounded-xl"/></label>
+              <label><span className="block text-[10px] font-bold mb-1">زیرمتن تماس</span><input value={footerContactSubtitle} onChange={e=>setFooterContactSubtitle(e.target.value)} className="w-full p-2.5 border rounded-xl"/></label>
+              <label><span className="block text-[10px] font-bold mb-1">Placeholder خبرنامه</span><input value={footerNewsletterPlaceholder} onChange={e=>setFooterNewsletterPlaceholder(e.target.value)} className="w-full p-2.5 border rounded-xl"/></label>
+            </div>
             <button
               onClick={handleSaveAll}
               className="px-6 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold shadow-md cursor-pointer"

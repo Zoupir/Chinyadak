@@ -26,6 +26,7 @@ import type {
   SliderItem
 } from '../../types';
 import { ImageUploadInput } from '../common/ImageUploadInput';
+import { LinkDestinationPicker } from '../common/LinkDestinationPicker';
 
 type StudioMode = 'slides' | 'banners';
 
@@ -82,10 +83,10 @@ const makeBannerItem=(order:number):PageSectionItem=>({
 });
 
 const DEFAULT_POSITIONS:Record<SliderElementKey,SliderElementPosition>={
-  tag:{x:70,y:18,width:20},
-  title:{x:58,y:29,width:34},
-  subtitle:{x:60,y:51,width:32},
-  button:{x:75,y:69,width:17}
+  tag:{x:70,y:18,width:20,fontSizePx:10,wrap:'nowrap'},
+  title:{x:58,y:29,width:34,fontSizePx:40,wrap:'wrap'},
+  subtitle:{x:60,y:51,width:32,fontSizePx:13,wrap:'wrap'},
+  button:{x:75,y:69,width:17,fontSizePx:10,wrap:'nowrap'}
 };
 
 const clone=<T,>(value:T):T=>JSON.parse(JSON.stringify(value));
@@ -139,6 +140,7 @@ export const AdminSliderStudio:React.FC=()=>{
   const [device,setDevice]=useState<SliderDevice>('desktop');
   const [activeElement,setActiveElement]=useState<SliderElementKey>('title');
   const [dragging,setDragging]=useState<{key:SliderElementKey;offsetX:number;offsetY:number}|null>(null);
+  const [resizing,setResizing]=useState<{key:SliderElementKey;startX:number;startY:number;startWidth:number;startHeight:number}|null>(null);
   const canvasRef=useRef<HTMLDivElement>(null);
 
   React.useEffect(()=>{
@@ -309,6 +311,35 @@ export const AdminSliderStudio:React.FC=()=>{
 
   const stopDrag=()=>setDragging(null);
 
+  const startResize=(event:React.PointerEvent<HTMLSpanElement>,key:SliderElementKey)=>{
+    if(!owner||!canvasRef.current)return;
+    event.preventDefault();
+    event.stopPropagation();
+    const pos=elementPosition(owner,device,key);
+    setActiveElement(key);
+    setResizing({
+      key,
+      startX:event.clientX,
+      startY:event.clientY,
+      startWidth:Number(pos.width||DEFAULT_POSITIONS[key].width||20),
+      startHeight:Number(pos.height||0)
+    });
+    event.currentTarget.setPointerCapture(event.pointerId);
+  };
+
+  const resizeMove=(event:React.PointerEvent<HTMLSpanElement>)=>{
+    if(!resizing||!owner||!canvasRef.current)return;
+    const rect=canvasRef.current.getBoundingClientRect();
+    const pos=elementPosition(owner,device,resizing.key);
+    const deltaWidth=((resizing.startX-event.clientX)/rect.width)*100;
+    const deltaHeight=((event.clientY-resizing.startY)/rect.height)*100;
+    const width=clamp(resizing.startWidth+deltaWidth,6,95);
+    const height=resizing.startHeight>0?clamp(resizing.startHeight+deltaHeight,3,80):undefined;
+    setElementPosition(resizing.key,{...pos,width:Number(width.toFixed(2)),...(height?{height:Number(height.toFixed(2))}:{})});
+  };
+
+  const stopResize=()=>setResizing(null);
+
   const positionStyle=(key:SliderElementKey):React.CSSProperties=>{
     if(!owner)return{};
     const pos=elementPosition(owner,device,key);
@@ -317,6 +348,10 @@ export const AdminSliderStudio:React.FC=()=>{
       left:`${pos.x}%`,
       top:`${pos.y}%`,
       width:`${pos.width||DEFAULT_POSITIONS[key].width}%`,
+      height:pos.height?`${pos.height}%`:undefined,
+      fontSize:`${pos.fontSizePx||DEFAULT_POSITIONS[key].fontSizePx||12}px`,
+      whiteSpace:(pos.wrap||DEFAULT_POSITIONS[key].wrap)==='nowrap'?'nowrap':'normal',
+      overflow:pos.height?'hidden':undefined,
       zIndex:4,
       touchAction:'none',
       cursor:dragging?.key===key?'grabbing':'grab'
@@ -347,16 +382,25 @@ export const AdminSliderStudio:React.FC=()=>{
     const slide=mode==='slides'?owner as SliderItem:null;
     const banner=mode==='banners'?owner as PageSectionItem:null;
     const common=`absolute select-none rounded-lg ${activeElement===key?'ring-2 ring-blue-400 ring-offset-2 ring-offset-transparent':''}`;
+    const handle=<span
+      className="absolute -left-2 -bottom-2 w-4 h-4 rounded-sm bg-blue-500 border-2 border-white shadow cursor-sw-resize z-20"
+      onPointerDown={event=>startResize(event,key)}
+      onPointerMove={resizeMove}
+      onPointerUp={stopResize}
+      onPointerCancel={stopResize}
+      title="برای تغییر اندازه بکشید"
+    />;
+    const alignment=slide?.textAlignment||banner?.textAlignment||'right';
     if(key==='tag'){
-      return <div onPointerDown={e=>startDrag(e,key)} onPointerMove={dragMove} onPointerUp={stopDrag} onPointerCancel={stopDrag} className={common} style={{...positionStyle(key),backgroundColor:slide?.badgeBgColor||'rgba(245,158,11,.2)',color:slide?.badgeTextColor||'#fbbf24',padding:'6px 9px',fontSize:10,fontWeight:900}}><Grip className="inline w-3 h-3 ml-1"/>{slide?.tag||banner?.badge}</div>;
+      return <div onPointerDown={e=>startDrag(e,key)} onPointerMove={dragMove} onPointerUp={stopDrag} onPointerCancel={stopDrag} className={common} style={{...positionStyle(key),backgroundColor:slide?.badgeBgColor||banner?.badgeBgColor||'rgba(245,158,11,.2)',color:slide?.badgeTextColor||banner?.badgeTextColor||'#fbbf24',padding:'6px 9px',fontWeight:900,textAlign:alignment}}><Grip className="inline w-3 h-3 ml-1"/>{slide?.tag||banner?.badge}{handle}</div>;
     }
     if(key==='title'){
-      return <div onPointerDown={e=>startDrag(e,key)} onPointerMove={dragMove} onPointerUp={stopDrag} onPointerCancel={stopDrag} className={common} style={{...positionStyle(key),color:slide?.titleColor||'#fff',fontWeight:900,fontSize:device==='mobile'?24:40,lineHeight:1.2,textAlign:slide?.textAlignment||'right'}}>{owner.title}</div>;
+      return <div onPointerDown={e=>startDrag(e,key)} onPointerMove={dragMove} onPointerUp={stopDrag} onPointerCancel={stopDrag} className={common} style={{...positionStyle(key),color:slide?.titleColor||banner?.titleColor||'#fff',fontWeight:900,lineHeight:1.2,textAlign:alignment}}>{owner.title}{handle}</div>;
     }
     if(key==='subtitle'){
-      return <div onPointerDown={e=>startDrag(e,key)} onPointerMove={dragMove} onPointerUp={stopDrag} onPointerCancel={stopDrag} className={common} style={{...positionStyle(key),color:slide?.subtitleColor||'#e5e7eb',fontSize:device==='mobile'?11:13,lineHeight:1.9,textAlign:slide?.textAlignment||'right'}}>{owner.subtitle}</div>;
+      return <div onPointerDown={e=>startDrag(e,key)} onPointerMove={dragMove} onPointerUp={stopDrag} onPointerCancel={stopDrag} className={common} style={{...positionStyle(key),color:slide?.subtitleColor||banner?.subtitleColor||'#e5e7eb',lineHeight:1.9,textAlign:alignment}}>{owner.subtitle}{handle}</div>;
     }
-    return <div onPointerDown={e=>startDrag(e,key)} onPointerMove={dragMove} onPointerUp={stopDrag} onPointerCancel={stopDrag} className={common} style={{...positionStyle(key),backgroundColor:slide?.buttonBgColor||'#f59e0b',color:slide?.buttonTextColor||'#111827',padding:'10px 12px',fontSize:10,fontWeight:900,textAlign:'center'}}>{owner.buttonText}</div>;
+    return <div onPointerDown={e=>startDrag(e,key)} onPointerMove={dragMove} onPointerUp={stopDrag} onPointerCancel={stopDrag} className={common} style={{...positionStyle(key),backgroundColor:slide?.buttonBgColor||banner?.buttonBgColor||'#f59e0b',color:slide?.buttonTextColor||banner?.buttonTextColor||'#111827',padding:'10px 12px',fontWeight:900,textAlign:'center'}}>{owner.buttonText}{handle}</div>;
   };
 
   return (
@@ -364,12 +408,12 @@ export const AdminSliderStudio:React.FC=()=>{
       <div className="min-h-14 px-4 py-2 bg-neutral-950 text-white sticky top-16 z-20 flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <div>
-            <strong className="text-sm">Slider & Banner Studio</strong>
-            <span className="text-[9px] text-neutral-400 mr-2">Drag & Drop واقعی متن و CTA</span>
+            <strong className="text-sm">استودیو اسلایدر و بنر</strong>
+            <span className="text-[9px] text-neutral-400 mr-2">ویرایش دیداری با کشیدن، رها کردن و تغییر اندازه</span>
           </div>
           <div className="flex items-center gap-1 bg-neutral-800 p-1 rounded-lg">
-            <button onClick={()=>setMode('slides')} className={`px-3 py-2 rounded text-[9px] font-black ${mode==='slides'?'bg-blue-600':'text-neutral-400'}`}>Hero Slides</button>
-            <button onClick={()=>setMode('banners')} className={`px-3 py-2 rounded text-[9px] font-black ${mode==='banners'?'bg-blue-600':'text-neutral-400'}`}>Home Banners</button>
+            <button onClick={()=>setMode('slides')} className={`px-3 py-2 rounded text-[9px] font-black ${mode==='slides'?'bg-blue-600':'text-neutral-400'}`}>اسلایدهای اصلی</button>
+            <button onClick={()=>setMode('banners')} className={`px-3 py-2 rounded text-[9px] font-black ${mode==='banners'?'bg-blue-600':'text-neutral-400'}`}>بنرهای صفحه اصلی</button>
           </div>
         </div>
 
@@ -437,7 +481,8 @@ export const AdminSliderStudio:React.FC=()=>{
                   minHeight:`${previewHeight}px`,
                   backgroundColor:mode==='slides'?(draft?.bgColor||'#111827'):'#111827',
                   backgroundImage:owner.imageUrl?`url(${owner.imageUrl})`:undefined,
-                  backgroundSize:'cover',
+                  backgroundSize:(owner.imageMode||'cover')==='stretch'?'100% 100%':(owner.imageMode||'cover')==='original'?'auto':(['repeat','repeat-x','repeat-y'].includes(owner.imageMode||''))?'auto':(owner.imageMode||'cover'),
+                  backgroundRepeat:(owner.imageMode||'cover')==='repeat'?'repeat':(owner.imageMode||'cover')==='repeat-x'?'repeat-x':(owner.imageMode||'cover')==='repeat-y'?'repeat-y':'no-repeat',
                   backgroundPosition:'center'
                 }}
               >
@@ -453,7 +498,7 @@ export const AdminSliderStudio:React.FC=()=>{
         <aside className="bg-white border-r p-4 overflow-y-auto">
           {!owner?<p className="text-xs text-neutral-400">موردی انتخاب نشده.</p>:<div className="space-y-4 text-[10px]">
             <div className="flex justify-between items-center">
-              <div><strong className="text-sm">{mode==='slides'?'تنظیمات اسلاید':'تنظیمات بنر'}</strong><span className="block text-[8px] text-neutral-400 mt-1">{device==='desktop'?'Desktop':device==='tablet'?'Tablet':'Mobile'} Layout</span></div>
+              <div><strong className="text-sm">{mode==='slides'?'تنظیمات اسلاید':'تنظیمات بنر'}</strong><span className="block text-[8px] text-neutral-400 mt-1">{device==='desktop'?'چیدمان دسکتاپ':device==='tablet'?'چیدمان تبلت':'چیدمان موبایل'}</span></div>
               {mode==='slides'&&draft&&<button onClick={()=>patchSlide({isActive:!draft.isActive})} className={`px-2 py-1.5 rounded-lg ${draft.isActive?'bg-emerald-50 text-emerald-700':'bg-neutral-100'}`}>{draft.isActive?<Eye className="w-4 h-4"/>:<EyeOff className="w-4 h-4"/>}</button>}
             </div>
 
@@ -468,41 +513,70 @@ export const AdminSliderStudio:React.FC=()=>{
             <label className="block"><span className="font-bold">توضیح</span><textarea rows={3} value={owner.subtitle||''} onChange={event=>patchOwner({subtitle:event.target.value})} className="w-full mt-1 p-2.5 border rounded-lg"/></label>
             <div className="grid grid-cols-2 gap-2">
               {mode==='slides'
-                ? <input value={(draft as SliderItem)?.tag||''} onChange={event=>patchSlide({tag:event.target.value})} className="p-2 border rounded" placeholder="Badge"/>
+                ? <input value={(draft as SliderItem)?.tag||''} onChange={event=>patchSlide({tag:event.target.value})} className="p-2 border rounded" placeholder="برچسب"/>
                 : <input value={(bannerDraft as PageSectionItem)?.badge||''} onChange={event=>patchBanner({badge:event.target.value})} className="p-2 border rounded" placeholder="Badge"/>
               }
-              <input value={owner.buttonText||''} onChange={event=>patchOwner({buttonText:event.target.value})} className="p-2 border rounded" placeholder="CTA"/>
+              <input value={owner.buttonText||''} onChange={event=>patchOwner({buttonText:event.target.value})} className="p-2 border rounded" placeholder="متن دکمه"/>
             </div>
-            <input dir="ltr" value={mode==='slides'?(draft as SliderItem)?.link||'':(bannerDraft as PageSectionItem)?.link||''} onChange={event=>mode==='slides'?patchSlide({link:event.target.value}):patchBanner({link:event.target.value})} className="w-full p-2 border rounded text-left" placeholder="link"/>
+            <LinkDestinationPicker
+              label="مقصد دکمه یا بنر"
+              value={mode==='slides'?(draft as SliderItem)?.link||'':(bannerDraft as PageSectionItem)?.link||''}
+              onChange={value=>mode==='slides'?patchSlide({link:value}):patchBanner({link:value})}
+            />
             <ImageUploadInput label={mode==='slides'?'تصویر اسلاید':'تصویر بنر'} value={owner.imageUrl||''} onChange={url=>patchOwner({imageUrl:url})} aspectRatio="banner" presetCategory="banners"/>
+            <label className="block">
+              <span className="font-bold">نحوه نمایش تصویر</span>
+              <select value={owner.imageMode||'cover'} onChange={event=>patchOwner({imageMode:event.target.value as any})} className="w-full mt-1 p-2.5 border rounded-lg bg-white">
+                <option value="cover">پوشش کامل کادر</option>
+                <option value="contain">نمایش کامل تصویر بدون برش</option>
+                <option value="stretch">کشیده‌شدن تا اندازه کادر</option>
+                <option value="original">اندازه اصلی تصویر</option>
+                <option value="repeat">تکرار در هر دو جهت</option>
+                <option value="repeat-x">تکرار افقی</option>
+                <option value="repeat-y">تکرار عمودی</option>
+              </select>
+            </label>
 
             <section className="p-3 rounded-xl border border-blue-200 bg-blue-50/20 space-y-3">
               <strong className="block text-[9px]">جانمایی دقیق عنصر انتخاب‌شده</strong>
               <select value={activeElement} onChange={event=>setActiveElement(event.target.value as SliderElementKey)} className="w-full p-2 border rounded-lg bg-white">
-                <option value="tag">Badge</option>
+                <option value="tag">برچسب</option>
                 <option value="title">عنوان</option>
                 <option value="subtitle">توضیح</option>
                 <option value="button">دکمه</option>
               </select>
-              <div className="grid grid-cols-3 gap-2">
-                {(['x','y','width'] as const).map(field=>{
-                  const pos=elementPosition(owner,device,activeElement);
-                  const label=field==='x'?'X %':field==='y'?'Y %':'Width %';
-                  return <label key={field}><span className="block text-[8px] font-bold mb-1">{label}</span><input type="number" min="0" max={field==='width'?90:100} value={Number(pos[field]||0)} onChange={event=>setElementPosition(activeElement,{...pos,[field]:Number(event.target.value)})} className="w-full p-2 border rounded-lg font-mono"/></label>;
-                })}
+              {(()=>{
+                const pos=elementPosition(owner,device,activeElement);
+                return <>
+                  <div className="grid grid-cols-2 gap-2">
+                    <label><span className="block text-[8px] font-bold mb-1">موقعیت افقی ٪</span><input type="number" min="0" max="100" value={Number(pos.x||0)} onChange={event=>setElementPosition(activeElement,{...pos,x:Number(event.target.value)})} className="w-full p-2 border rounded-lg font-mono"/></label>
+                    <label><span className="block text-[8px] font-bold mb-1">موقعیت عمودی ٪</span><input type="number" min="0" max="100" value={Number(pos.y||0)} onChange={event=>setElementPosition(activeElement,{...pos,y:Number(event.target.value)})} className="w-full p-2 border rounded-lg font-mono"/></label>
+                    <label><span className="block text-[8px] font-bold mb-1">عرض ٪</span><input type="number" min="6" max="95" value={Number(pos.width||DEFAULT_POSITIONS[activeElement].width||20)} onChange={event=>setElementPosition(activeElement,{...pos,width:Number(event.target.value)})} className="w-full p-2 border rounded-lg font-mono"/></label>
+                    <label><span className="block text-[8px] font-bold mb-1">ارتفاع ٪ (اختیاری)</span><input type="number" min="0" max="80" value={Number(pos.height||0)} onChange={event=>setElementPosition(activeElement,{...pos,height:Number(event.target.value)||undefined})} className="w-full p-2 border rounded-lg font-mono"/></label>
+                    <label><span className="block text-[8px] font-bold mb-1">اندازه فونت</span><input type="number" min="7" max="100" value={Number(pos.fontSizePx||DEFAULT_POSITIONS[activeElement].fontSizePx||12)} onChange={event=>setElementPosition(activeElement,{...pos,fontSizePx:Number(event.target.value)})} className="w-full p-2 border rounded-lg font-mono"/></label>
+                    <label><span className="block text-[8px] font-bold mb-1">شکستن متن</span><select value={pos.wrap||DEFAULT_POSITIONS[activeElement].wrap||'wrap'} onChange={event=>setElementPosition(activeElement,{...pos,wrap:event.target.value as 'wrap'|'nowrap'})} className="w-full p-2 border rounded-lg bg-white"><option value="wrap">شکستن خودکار مجاز</option><option value="nowrap">همیشه یک‌خطی</option></select></label>
+                  </div>
+                  <p className="text-[8px] text-neutral-500">همچنین می‌توانید خود عنصر را جابه‌جا کنید و مربع آبی گوشه آن را برای تغییر اندازه بکشید.</p>
+                </>;
+              })()}
+            </section>
+
+            <section className="p-3 rounded-xl border space-y-3">
+              <strong className="block text-[9px]">رنگ و تراز عناصر</strong>
+              <div><span className="font-bold block mb-1">تراز متن</span><div className="grid grid-cols-3 gap-1"><button onClick={()=>patchOwner({textAlignment:'right'})} className={`p-2 border rounded flex justify-center ${owner.textAlignment==='right'?'bg-blue-50 border-blue-500':''}`}><AlignRight className="w-4 h-4"/></button><button onClick={()=>patchOwner({textAlignment:'center'})} className={`p-2 border rounded flex justify-center ${owner.textAlignment==='center'?'bg-blue-50 border-blue-500':''}`}><AlignCenter className="w-4 h-4"/></button><button onClick={()=>patchOwner({textAlignment:'left'})} className={`p-2 border rounded flex justify-center ${owner.textAlignment==='left'?'bg-blue-50 border-blue-500':''}`}><AlignLeft className="w-4 h-4"/></button></div></div>
+              <div className="grid grid-cols-2 gap-2">
+                <label><span>رنگ عنوان</span><input type="color" value={owner.titleColor||'#ffffff'} onChange={event=>patchOwner({titleColor:event.target.value})} className="w-full h-9"/></label>
+                <label><span>رنگ توضیح</span><input type="color" value={owner.subtitleColor||'#e5e7eb'} onChange={event=>patchOwner({subtitleColor:event.target.value})} className="w-full h-9"/></label>
+                <label><span>پس‌زمینه دکمه</span><input type="color" value={owner.buttonBgColor||'#f59e0b'} onChange={event=>patchOwner({buttonBgColor:event.target.value})} className="w-full h-9"/></label>
+                <label><span>رنگ متن دکمه</span><input type="color" value={owner.buttonTextColor||'#111827'} onChange={event=>patchOwner({buttonTextColor:event.target.value})} className="w-full h-9"/></label>
+                <label><span>پس‌زمینه برچسب</span><input type="color" value={owner.badgeBgColor||'#16a34a'} onChange={event=>patchOwner({badgeBgColor:event.target.value})} className="w-full h-9"/></label>
+                <label><span>رنگ متن برچسب</span><input type="color" value={owner.badgeTextColor||'#ffffff'} onChange={event=>patchOwner({badgeTextColor:event.target.value})} className="w-full h-9"/></label>
               </div>
             </section>
 
             {mode==='slides'&&draft&&<>
-              <div><span className="font-bold block mb-1">تراز متن</span><div className="grid grid-cols-3 gap-1"><button onClick={()=>patchSlide({textAlignment:'right'})} className={`p-2 border rounded flex justify-center ${draft.textAlignment==='right'?'bg-blue-50 border-blue-500':''}`}><AlignRight className="w-4 h-4"/></button><button onClick={()=>patchSlide({textAlignment:'center'})} className={`p-2 border rounded flex justify-center ${draft.textAlignment==='center'?'bg-blue-50 border-blue-500':''}`}><AlignCenter className="w-4 h-4"/></button><button onClick={()=>patchSlide({textAlignment:'left'})} className={`p-2 border rounded flex justify-center ${draft.textAlignment==='left'?'bg-blue-50 border-blue-500':''}`}><AlignLeft className="w-4 h-4"/></button></div></div>
-              <label><span>شدت Overlay: {draft.overlayOpacity??60}%</span><input type="range" min="0" max="100" value={draft.overlayOpacity??60} onChange={event=>patchSlide({overlayOpacity:Number(event.target.value)})} className="w-full"/></label>
+              <label><span>شدت لایه تیره: {draft.overlayOpacity??60}%</span><input type="range" min="0" max="100" value={draft.overlayOpacity??60} onChange={event=>patchSlide({overlayOpacity:Number(event.target.value)})} className="w-full"/></label>
               <label className="flex items-center justify-between p-2 border rounded-lg"><span>گرادیان روی تصویر</span><input type="checkbox" checked={draft.gradientOverlay!==false} onChange={event=>patchSlide({gradientOverlay:event.target.checked})}/></label>
-              <div className="grid grid-cols-2 gap-2">
-                <label><span>عنوان</span><input type="color" value={draft.titleColor||'#ffffff'} onChange={event=>patchSlide({titleColor:event.target.value})} className="w-full h-9"/></label>
-                <label><span>توضیح</span><input type="color" value={draft.subtitleColor||'#e5e7eb'} onChange={event=>patchSlide({subtitleColor:event.target.value})} className="w-full h-9"/></label>
-                <label><span>دکمه</span><input type="color" value={draft.buttonBgColor||'#f59e0b'} onChange={event=>patchSlide({buttonBgColor:event.target.value})} className="w-full h-9"/></label>
-                <label><span>متن دکمه</span><input type="color" value={draft.buttonTextColor||'#111827'} onChange={event=>patchSlide({buttonTextColor:event.target.value})} className="w-full h-9"/></label>
-              </div>
             </>}
 
             <div className="pt-3 border-t flex gap-2"><button onClick={save} className="flex-1 py-2.5 rounded-xl bg-emerald-600 text-white font-black inline-flex items-center justify-center gap-1"><Save className="w-3.5 h-3.5"/>ذخیره</button><button onClick={removeCurrent} className="w-10 grid place-items-center rounded-xl bg-red-50 text-red-600"><Trash2 className="w-4 h-4"/></button></div>

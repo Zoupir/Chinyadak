@@ -354,6 +354,7 @@ interface StoreContextType {
 
   // Store Settings (Theme, Font, Color, Contact, Shipping)
   settings: SiteSettings;
+  isStoreReady: boolean;
   updateSettings: (newSettings: Partial<SiteSettings>) => void;
 
   // Payment Gateways
@@ -486,6 +487,8 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   // Settings
   const [settings, setSettings] = useState<SiteSettings>(INITIAL_SETTINGS);
+  // Prevent rendering a wrong/default template before the persisted CMS settings arrive.
+  const [isStoreReady, setIsStoreReady] = useState(false);
 
   // Payment Gateways
   const [paymentGateways, setPaymentGateways] = useState<PaymentGatewayConfig[]>([]);
@@ -652,6 +655,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         setPages(normalizeBuilderPages(cmsData.pages));
         if (cmsData.settings) setSettings({ ...INITIAL_SETTINGS, ...cmsData.settings });
         setPaymentGateways(cmsData.paymentGateways);
+        setIsStoreReady(true);
       })
       .catch(error => {
         console.error('Public store data load failed:', error);
@@ -667,6 +671,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           setSettings(INITIAL_SETTINGS);
           setPaymentGateways(INITIAL_PAYMENT_GATEWAYS);
         }
+        if (!cancelled) setIsStoreReady(true);
       });
 
     return () => {
@@ -2267,6 +2272,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       isLiveEditActive,
       setIsLiveEditActive,
       settings,
+      isStoreReady,
       updateSettings,
       paymentGateways,
       updatePaymentGateway,

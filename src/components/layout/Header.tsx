@@ -31,7 +31,7 @@ import { formatToman } from '../../utils/formatters';
 import { ShareButton } from '../common/ShareButton';
 import { IconRenderer } from '../common/IconRenderer';
 import { MenuItem } from '../../types';
-import { parseRoutePath } from '../../utils/navigation';
+import { buildRoutePath, parseRoutePath } from '../../utils/navigation';
 
 interface HeaderProps {
   onOpenVehicleModal: () => void;
@@ -153,9 +153,20 @@ export const Header: React.FC<HeaderProps> = ({
       return;
     }
 
+    const navigateInternal = (view: string, param?: string) => {
+      const target = buildRoutePath(view, param);
+      const current = window.location.pathname + window.location.search;
+      onNavigate(view, param);
+      // Keep a real canonical path behind every menu item. This makes menu links
+      // reliable from every page and keeps reload/back-forward behavior correct.
+      if (current !== target && window.location.pathname !== target) {
+        window.history.replaceState({ view, param }, '', target);
+      }
+    };
+
     if (raw.startsWith('/')) {
       const route = parseRoutePath(raw);
-      onNavigate(route.view, route.param);
+      navigateInternal(route.view, route.param);
       closeMenus();
       return;
     }
@@ -167,7 +178,7 @@ export const Header: React.FC<HeaderProps> = ({
         model: 'car-model',
         categories: 'category'
       };
-      onNavigate(aliases[candidate] || candidate, rest.join(':') || undefined);
+      navigateInternal(aliases[candidate] || candidate, rest.join(':') || undefined);
       closeMenus();
       return;
     }
@@ -175,9 +186,9 @@ export const Header: React.FC<HeaderProps> = ({
     const normalized = raw.replace(/^#\/?/, '').replace(/^\/+/, '');
     if (normalized.includes('/')) {
       const route = parseRoutePath('/' + normalized);
-      onNavigate(route.view, route.param);
+      navigateInternal(route.view, route.param);
     } else {
-      onNavigate(normalized || 'home');
+      navigateInternal(normalized || 'home');
     }
     closeMenus();
   };
@@ -474,7 +485,11 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
 
         <div className="marketplace-ref-mainbar">
-          <div className="marketplace-ref-container marketplace-ref-mainbar-inner">
+          <div
+            className="marketplace-ref-container marketplace-ref-mainbar-inner"
+            data-mobile-logo-align={settings.mobileLogoAlign || 'right'}
+            style={{ ['--mobile-logo-width' as any]: `${Math.max(60, Math.min(220, Number(settings.mobileLogoWidthPx || 118)))}px` }}
+          >
             <button
               type="button"
               className="marketplace-ref-hamburger"
@@ -494,21 +509,13 @@ export const Header: React.FC<HeaderProps> = ({
             </button>
 
             <div className="marketplace-ref-search-wrap">
-              <button
-                type="button"
-                className={`marketplace-ref-search-category ${isMegaMenuOpen ? 'active' : ''}`}
-                onClick={() => setIsMegaMenuOpen(prev => !prev)}
-                aria-expanded={isMegaMenuOpen}
-              >
-                <span>دسته‌بندی قطعات</span>
-                <ChevronDown className="w-3.5 h-3.5" />
-              </button>
               <div className="marketplace-ref-search">
                 <SearchAutocomplete
                   onSelectProduct={(id) => onNavigate('product', id)}
                   onSelectModel={(id) => onNavigate('car-model', id)}
                   onSelectCategory={(slug) => onNavigate('category', slug)}
                   onSelectArticle={(id) => onNavigate('article', id)}
+                  onSelectBrand={(slug) => onNavigate('car-brand', slug)}
                   onRequestPart={(q) => onNavigate('part-request', q)}
                 />
               </div>

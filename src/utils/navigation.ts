@@ -21,7 +21,7 @@ export const buildRoutePath = (view: string, param?: string): string => {
   if (view === 'invoice') return `/invoice/${encodeURIComponent(param || '')}`;
   if (view === 'compare') return '/compare';
   if (view === 'part-request') return param ? `/part-request/${encodeURIComponent(param)}` : '/part-request';
-  if (view === 'blog') return '/blog';
+  if (view === 'blog') return param ? `/blog/${encodeURIComponent(param)}` : '/blog';
   if (view === 'article') return `/article/${encodeURIComponent(param || '')}`;
   if (view === 'page') return `/page/${encodeURIComponent(param || 'about')}`;
   if (view === 'about') return '/about';

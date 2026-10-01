@@ -693,25 +693,25 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
         { id: 'products', label: 'محصولات و انبار', icon: Package, count: products.length },
         { id: 'cars', label: 'خودروها و برندها', icon: Car, count: models.length },
         { id: 'categories', label: 'دسته‌بندی قطعات', icon: Layers, count: categories.length },
-        { id: 'bulk', label: 'ویرایش گروهی (Bulk)', icon: Sliders }
+        { id: 'bulk', label: 'ویرایش گروهی', icon: Sliders }
       ]
     },
     {
       groupTitle: 'فروش و مشتریان',
       items: [
         { id: 'orders', label: 'سفارش‌ها و صدور فاکتور', icon: FileCheck2, count: orders.length },
-        { id: 'customers', label: 'مشتریان و همکاران (CRM)', icon: Users, count: customers.length },
+        { id: 'customers', label: 'مشتریان و همکاران', icon: Users, count: customers.length },
         { id: 'sandbox', label: 'درگاه آزمایشی شاپرک', icon: Receipt }
       ]
     },
     {
       groupTitle: 'محتوا و وب‌سایت',
       items: [
-        { id: 'pages', label: 'Visual Builder صفحات', icon: LayoutTemplate, count: pages.length },
+        { id: 'pages', label: 'صفحه‌ساز دیداری', icon: LayoutTemplate, count: pages.length },
         { id: 'articles', label: 'مقالات و آموزش‌ها', icon: BookOpen, count: articles.length },
         { id: 'sliders', label: 'اسلایدرها و بنرها', icon: Compass, count: sliders.length },
         { id: 'menus_attrs', label: 'فهرست اصلی', icon: Menu },
-        { id: 'mega_menu', label: 'Mega Menu Studio', icon: PanelsTopLeft },
+        { id: 'mega_menu', label: 'استودیو مگامنو', icon: PanelsTopLeft },
         { id: 'media', label: 'کتابخانه رسانه', icon: ImageIcon },
         { id: 'icons', label: 'کتابخانه آیکن', icon: Sparkles },
         { id: 'footer', label: 'مدیریت فوتر و اینماد', icon: PanelsTopLeft }
@@ -720,7 +720,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
     {
       groupTitle: 'سئو و رشد',
       items: [
-        { id: 'seo', label: 'TakRank SEO', icon: Sparkles }
+        { id: 'seo', label: 'سئوی TakRank', icon: Sparkles }
       ]
     },
     {

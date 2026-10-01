@@ -117,6 +117,16 @@ export const AdminVisualPageBuilder: React.FC<{onNavigate?:(view:string,param?:s
   }
 
   const patch=(partial:Partial<PageSection>)=>setDraft(current=>current?{...current,...partial}:current);
+  const contentPolicyFor = (section: PageSection) => {
+    const key = section.sectionKey || '';
+    if (key === 'featured-categories') return { kind:'fixed' as const, source:'categories' as const, title:'دسته‌بندی‌های قطعات' };
+    if (key === 'manufacturers') return { kind:'fixed' as const, source:'brands' as const, title:'برندهای خودرو' };
+    if (['featured-products','weekly-deals','maintenance-products'].includes(key)) return { kind:'fixed' as const, source:'products' as const, title:'محصولات فروشگاه' };
+    if (key === 'articles') return { kind:'fixed' as const, source:'articles' as const, title:'مقالات و آموزش‌ها' };
+    if (/promo|banner|testimonial|service-strip|parts-brands|shipping|hero/i.test(key)) return { kind:'manual' as const, source:'manual' as const, title:'آیتم‌های دستی و قابل ویرایش' };
+    return { kind:'flexible' as const, source:(section.contentSource || 'manual') as NonNullable<PageSection['contentSource']>, title:'منبع محتوا' };
+  };
+
 
   const ensureRepeaterSlots=(count:number,current:PageSection|null=draft)=>{
     if(!current)return[];
@@ -357,6 +367,34 @@ export const AdminVisualPageBuilder: React.FC<{onNavigate?:(view:string,param?:s
           {!draft ? <div className="p-6 text-xs text-neutral-400">یک سکشن را انتخاب کن.</div> : (
             <div className="p-4 space-y-4 text-[10px]">
               {inspectorTab==='content'&&<>
+                {(()=>{
+                  const policy=contentPolicyFor(draft);
+                  return <div className="p-3 rounded-xl border border-blue-200 bg-blue-50/30 space-y-2">
+                    <strong className="block text-[10px]">{policy.title}</strong>
+                    {policy.kind==='manual' ? (
+                      <div className="space-y-2">
+                        <p className="text-[8px] text-neutral-500 leading-5">محتوای این سکشن از آیتم‌های قابل ویرایش ساخته می‌شود. برای تغییر هر کارت، بنر یا نظر مشتری از تب «آیتم‌ها» استفاده کنید.</p>
+                        <button type="button" onClick={()=>setInspectorTab('items')} className="w-full py-2 rounded-lg bg-blue-600 text-white text-[9px] font-black">رفتن به آیتم‌ها</button>
+                      </div>
+                    ) : policy.kind==='fixed' ? (
+                      <div className="grid grid-cols-[1fr_100px] gap-2 items-end">
+                        <p className="text-[8px] text-neutral-500 leading-5">این سکشن به‌صورت زنده از اطلاعات واقعی فروشگاه خوانده می‌شود.</p>
+                        <label><span className="block text-[8px] mb-1">تعداد نمایش</span><input type="number" min="1" max="100" value={draft.contentSourceLimit||draft.maxItems||12} onChange={e=>patch({contentSource:policy.source,contentSourceLimit:Number(e.target.value),maxItems:Number(e.target.value)})} className="w-full p-2 border rounded-lg"/></label>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-[1fr_100px] gap-2">
+                        <select value={draft.contentSource||'manual'} onChange={e=>patch({contentSource:e.target.value as PageSection['contentSource']})} className="w-full p-2 border rounded-lg bg-white">
+                          <option value="manual">آیتم‌های دستی</option>
+                          <option value="categories">دسته‌بندی‌های قطعات</option>
+                          <option value="brands">برندهای خودرو</option>
+                          <option value="products">محصولات</option>
+                          <option value="articles">مقالات</option>
+                        </select>
+                        <input type="number" min="1" max="100" value={draft.contentSourceLimit||draft.maxItems||12} onChange={e=>patch({contentSourceLimit:Number(e.target.value),maxItems:Number(e.target.value)})} className="w-full p-2 border rounded-lg"/>
+                      </div>
+                    )}
+                  </div>;
+                })()}
                 <label className="block"><span className="font-bold">عنوان</span><input value={draft.title} onChange={e=>patch({title:e.target.value})} className="w-full mt-1 p-2.5 border rounded-lg"/></label>
                 <label className="block"><span className="font-bold">زیرعنوان</span><input value={draft.subtitle||''} onChange={e=>patch({subtitle:e.target.value})} className="w-full mt-1 p-2.5 border rounded-lg"/></label>
                 <label className="block"><span className="font-bold">برچسب</span><input value={draft.badge||''} onChange={e=>patch({badge:e.target.value})} className="w-full mt-1 p-2.5 border rounded-lg"/></label>

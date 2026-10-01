@@ -1027,6 +1027,15 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
                         </td>
                         <td className="p-3 text-left">
                           <div className="flex items-center justify-end gap-1.5">
+                            <a
+                              href={`/product/${encodeURIComponent(p.slug || p.id)}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg"
+                              title="نمایش محصول در صفحه جدید"
+                            >
+                              <ExternalLink className="w-4 h-4" />
+                            </a>
                             <button
                               onClick={() => setEditingProduct(p)}
                               className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg"

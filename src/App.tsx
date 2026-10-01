@@ -31,7 +31,7 @@ interface RouteState {
 }
 
 const AppContent: React.FC = () => {
-  const { toast, products, categories, models, brands, articles, settings } = useStore();
+  const { toast, products, categories, models, brands, articles, settings, isStoreReady } = useStore();
   const [route, setRoute] = useState<RouteState>(() => {
     if (typeof window === 'undefined') return { view: 'home' };
     const legacy = parseLegacyHash(window.location.hash);
@@ -45,6 +45,7 @@ const AppContent: React.FC = () => {
 
   // Apply admin-controlled identity/theme variables to the whole storefront.
   useEffect(() => {
+    if (!isStoreReady) return;
     const root = document.documentElement;
     const baseFontSize = Math.max(12, Math.min(24, Number(settings.baseFontSizePx || 16)));
 
@@ -85,7 +86,8 @@ const AppContent: React.FC = () => {
     settings.footerBgColor,
     settings.textColor,
     settings.fontFamily,
-    settings.faviconUrl
+    settings.faviconUrl,
+    isStoreReady
   ]);
 
   // Scroll to top on navigation
@@ -221,6 +223,20 @@ const AppContent: React.FC = () => {
     setAuthModalMode(mode);
     setIsAuthModalOpen(true);
   };
+
+  if (!isStoreReady) {
+    return (
+      <div className="min-h-screen bg-[#f4f6f8] flex items-center justify-center" aria-label="در حال بارگذاری فروشگاه">
+        <div className="w-full max-w-5xl px-5 animate-pulse">
+          <div className="h-16 rounded-xl bg-neutral-200" />
+          <div className="mt-4 h-[420px] rounded-2xl bg-neutral-200" />
+          <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-3">
+            {Array.from({ length: 4 }).map((_, index) => <div key={index} className="h-32 rounded-xl bg-neutral-200" />)}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // Dedicated Full-Screen Enterprise Admin Layout
   if (route.view === 'admin') {

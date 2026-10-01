@@ -90,7 +90,13 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
       ['--builder-section-radius' as any]: section.borderRadiusPx !== undefined ? `${section.borderRadiusPx}px` : undefined,
       ['--builder-min-height' as any]: section.minHeightPx ? `${section.minHeightPx}px` : undefined,
       ['--builder-bg' as any]: section.backgroundColor || undefined,
-      ['--builder-text' as any]: section.textColor || undefined
+      ['--builder-text' as any]: section.textColor || undefined,
+      ['--builder-item-bg' as any]: section.itemBackgroundColor || undefined,
+      ['--builder-item-text' as any]: section.itemTextColor || undefined,
+      ['--builder-item-border' as any]: section.itemBorderColor || undefined,
+      ['--builder-item-padding' as any]: section.itemPaddingPx !== undefined ? `${section.itemPaddingPx}px` : undefined,
+      ['--builder-item-font-size' as any]: section.itemFontSizePx !== undefined ? `${section.itemFontSizePx}px` : undefined,
+      ['--builder-item-image-radius' as any]: section.itemImageRadiusPx !== undefined ? `${section.itemImageRadiusPx}px` : undefined
     };
   };
   const sortedItems = (key: string) =>
@@ -417,17 +423,39 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
         <div className="marketplace-section-heading compact">
           <h2>{sectionConfig('featured-categories')?.title || 'دسته‌بندی‌های ویژه'}</h2>
         </div>
-        <div className="marketplace-round-list">
-          {categories.slice(0, sectionConfig('featured-categories')?.maxItems || 9).map(cat => (
-            <button key={cat.id} type="button" onClick={() => onNavigate('category', cat.slug)}>
+        <div className="marketplace-round-list builder-section-grid">
+          {(sortedItems('featured-categories').length
+            ? sortedItems('featured-categories')
+            : categories.slice(0, sectionConfig('featured-categories')?.maxItems || 9).map((cat,index) => ({
+                id:cat.id,
+                title:cat.nameFa,
+                imageUrl:cat.iconUrl || cat.imageUrl,
+                link:`category:${cat.slug}`,
+                order:index+1,
+                isVisible:true
+              }))
+          ).slice(0, sectionConfig('featured-categories')?.maxItems || 100).map(item => (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => goLink(item.link || 'shop')}
+              style={{
+                backgroundColor:item.backgroundColor || undefined,
+                color:item.textColor || undefined,
+                borderColor:item.borderColor || undefined,
+                borderRadius:`${item.borderRadiusPx ?? sectionConfig('featured-categories')?.itemRadiusPx ?? 999}px`,
+                padding:item.paddingPx !== undefined ? `${item.paddingPx}px` : undefined,
+                fontSize:item.fontSizePx !== undefined ? `${item.fontSizePx}px` : undefined
+              }}
+            >
               <span className="marketplace-round-icon">
-                {cat.iconUrl || cat.imageUrl ? (
-                  <img src={cat.iconUrl || cat.imageUrl} alt={cat.nameFa} />
+                {item.imageUrl ? (
+                  <img src={item.imageUrl} alt={item.title || ''} style={{borderRadius:`${item.imageRadiusPx ?? sectionConfig('featured-categories')?.itemImageRadiusPx ?? 0}px`}} />
                 ) : (
                   <Wrench className="w-6 h-6" />
                 )}
               </span>
-              <strong>{cat.nameFa}</strong>
+              <strong>{item.title}</strong>
             </button>
           ))}
         </div>

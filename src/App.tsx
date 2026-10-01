@@ -37,6 +37,10 @@ const AppContent: React.FC = () => {
     const legacy = parseLegacyHash(window.location.hash);
     return legacy || parseRoutePath(window.location.pathname);
   });
+  // Increments on every explicit navigation, even when the target route is the
+  // current route. This intentionally re-initializes the page when Home/logo or
+  // the active menu item is clicked again.
+  const [routeRevision, setRouteRevision] = useState(0);
   const [isVehicleModalOpen, setIsVehicleModalOpen] = useState(false);
   const [isCartDrawerOpen, setIsCartDrawerOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
@@ -93,7 +97,7 @@ const AppContent: React.FC = () => {
   // Scroll to top on navigation
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
-  }, [route]);
+  }, [route, routeRevision]);
 
   // TakRank SEO Native owns browser metadata during History API navigation.
   // Initial page-load metadata is injected server-side for crawlers; this keeps
@@ -191,6 +195,7 @@ const AppContent: React.FC = () => {
 
     const handlePopState = () => {
       setRoute(parseRoutePath(window.location.pathname));
+      setRouteRevision(current => current + 1);
     };
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
@@ -217,6 +222,7 @@ const AppContent: React.FC = () => {
       window.history.pushState({}, '', targetPath);
     }
     setRoute({ view, param: canonicalParam });
+    setRouteRevision(current => current + 1);
   };
 
   const handleOpenAuthModal = (mode: 'login' | 'register' = 'login') => {
@@ -308,7 +314,7 @@ const AppContent: React.FC = () => {
       />
 
       {/* Main View Container */}
-      <main className="flex-1">
+      <main key={`${route.view}:${route.param || ''}:${routeRevision}`} className="flex-1">
         {route.view === 'home' && (
           <HomeView
             onNavigate={handleNavigate}
@@ -401,6 +407,7 @@ const AppContent: React.FC = () => {
 
         {route.view === 'blog' && (
           <BlogView
+            initialCategory={route.param}
             onNavigate={handleNavigate}
           />
         )}

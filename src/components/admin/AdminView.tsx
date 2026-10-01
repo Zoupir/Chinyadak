@@ -212,6 +212,12 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
 
   // Bulk Edit Table State
   const [bulkUpdates, setBulkUpdates] = useState<Record<string, { price: number; stock: number }>>({});
+  const [selectedBulkIds, setSelectedBulkIds] = useState<Set<string>>(new Set());
+  const [bulkPriceMode, setBulkPriceMode] = useState<'percent' | 'fixed'>('percent');
+  const [bulkPriceDirection, setBulkPriceDirection] = useState<'increase' | 'decrease'>('increase');
+  const [bulkPriceValue, setBulkPriceValue] = useState(0);
+  const [bulkStockDirection, setBulkStockDirection] = useState<'increase' | 'decrease'>('increase');
+  const [bulkStockValue, setBulkStockValue] = useState(0);
 
   // Theme Settings Form Local State
   const [themeForm, setThemeForm] = useState(settings);
@@ -303,9 +309,54 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
       ...prev,
       [id]: {
         price: prev[id]?.price ?? (products.find(p => p.id === id)?.price || 0),
-        stock
+        stock: Math.max(0, stock)
       }
     }));
+  };
+
+  const applyBulkOperationToSelection = (scope: 'selected' | 'all') => {
+    const ids = scope === 'all'
+      ? products.map(product => product.id)
+      : Array.from(selectedBulkIds);
+
+    if (!ids.length) {
+      showToast('ابتدا حداقل یک محصول را انتخاب کنید.', 'error');
+      return;
+    }
+
+    setBulkUpdates(prev => {
+      const next = { ...prev };
+      for (const id of ids) {
+        const product = products.find(item => item.id === id);
+        if (!product) continue;
+
+        const currentPrice = next[id]?.price ?? product.price;
+        const currentStock = next[id]?.stock ?? product.stock;
+
+        let price = currentPrice;
+        if (bulkPriceValue > 0) {
+          const delta = bulkPriceMode === 'percent'
+            ? currentPrice * (bulkPriceValue / 100)
+            : bulkPriceValue;
+          price = bulkPriceDirection === 'increase' ? currentPrice + delta : currentPrice - delta;
+        }
+
+        let stock = currentStock;
+        if (bulkStockValue > 0) {
+          stock = bulkStockDirection === 'increase'
+            ? currentStock + bulkStockValue
+            : currentStock - bulkStockValue;
+        }
+
+        next[id] = {
+          price: Math.max(0, Math.round(price)),
+          stock: Math.max(0, Math.round(stock))
+        };
+      }
+      return next;
+    });
+
+    showToast(`تغییرات روی ${ids.length.toLocaleString('fa-IR')} محصول در پیش‌نمایش اعمال شد. برای ذخیره نهایی «اعمال تغییرات» را بزنید.`, 'info');
   };
 
   const handleApplyBulkUpdates = () => {
@@ -1315,67 +1366,135 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
 
           {/* TAB 15: BULK EDIT */}
           {activeTab === 'bulk' && (
-            <div className="bg-white rounded-3xl border border-neutral-200 p-6 sm:p-8 shadow-xs space-y-6">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-neutral-100 gap-4">
-                <div>
-                  <h2 className="text-lg font-black text-neutral-900 flex items-center gap-2">
-                    <Sliders className="w-5 h-5 text-red-600" />
-                    <span>ویرایش سریع و دسته‌ای قیمت‌ها و موجودی کالاها</span>
-                  </h2>
-                  <p className="text-xs text-neutral-500 mt-0.5">
-                    تغییر آنی قیمت فروش و تعداد موجودی در انبار بدون نیاز به باز کردن فرم تک تک قطعات
-                  </p>
+            <div className="space-y-5">
+              <section className="bg-white rounded-3xl border border-neutral-200 p-5 sm:p-6 shadow-xs space-y-5">
+                <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 pb-4 border-b border-neutral-100">
+                  <div>
+                    <h2 className="text-lg font-black text-neutral-900 flex items-center gap-2">
+                      <Sliders className="w-5 h-5 text-red-600" />
+                      ویرایش گروهی حرفه‌ای قیمت و موجودی
+                    </h2>
+                    <p className="text-xs text-neutral-500 mt-1">
+                      ابتدا محصولات را انتخاب کن؛ سپس قیمت را درصدی یا مبلغ ثابت افزایش/کاهش بده و موجودی را هم جمعی تغییر بده. هر ردیف همچنان جداگانه قابل ویرایش است.
+                    </p>
+                  </div>
+                  <button
+                    onClick={handleApplyBulkUpdates}
+                    className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black flex items-center gap-1.5 self-start shadow-md"
+                  >
+                    <Check className="w-4 h-4" />
+                    ذخیره نهایی ({Object.keys(bulkUpdates).length.toLocaleString('fa-IR')})
+                  </button>
                 </div>
 
-                <button
-                  onClick={handleApplyBulkUpdates}
-                  className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 self-start shadow-md"
-                >
-                  <Check className="w-4 h-4" />
-                  <span>اعمال تغییرات دسته‌ای ({Object.keys(bulkUpdates).length})</span>
-                </button>
-              </div>
+                <div className="grid grid-cols-1 lg:grid-cols-[1fr_1fr_auto] gap-3 items-end">
+                  <div className="p-4 rounded-2xl border border-blue-200 bg-blue-50/30 space-y-3">
+                    <strong className="text-xs text-blue-950">تغییر گروهی قیمت</strong>
+                    <div className="grid grid-cols-3 gap-2">
+                      <select value={bulkPriceDirection} onChange={e => setBulkPriceDirection(e.target.value as 'increase'|'decrease')} className="p-2.5 border rounded-xl bg-white text-xs">
+                        <option value="increase">افزایش</option>
+                        <option value="decrease">کاهش</option>
+                      </select>
+                      <select value={bulkPriceMode} onChange={e => setBulkPriceMode(e.target.value as 'percent'|'fixed')} className="p-2.5 border rounded-xl bg-white text-xs">
+                        <option value="percent">درصدی</option>
+                        <option value="fixed">مبلغ ثابت</option>
+                      </select>
+                      <input type="number" min={0} value={bulkPriceValue} onChange={e => setBulkPriceValue(Math.max(0,Number(e.target.value)))} className="p-2.5 border rounded-xl bg-white text-xs font-mono" placeholder={bulkPriceMode==='percent'?'مثلاً ۱۰٪':'مبلغ ریال'} />
+                    </div>
+                  </div>
 
-              <div className="overflow-x-auto">
-                <table className="w-full text-xs text-right divide-y divide-neutral-200">
-                  <thead className="bg-neutral-50 font-bold text-neutral-700">
-                    <tr>
-                      <th className="p-3">نام قطعه</th>
-                      <th className="p-3">شماره فنی OEM</th>
-                      <th className="p-3">قیمت فعلی</th>
-                      <th className="p-3 w-40">قیمت جدید (ریال)</th>
-                      <th className="p-3">موجودی فعلی</th>
-                      <th className="p-3 w-32">موجودی جدید</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-neutral-100">
-                    {products.map(p => (
-                      <tr key={p.id} className="hover:bg-neutral-50/50">
-                        <td className="p-3 font-bold text-neutral-900">{p.nameFa}</td>
-                        <td className="p-3 font-mono text-neutral-600">{p.oemNumber}</td>
-                        <td className="p-3 font-mono font-bold text-neutral-900">{formatToman(p.price)}</td>
-                        <td className="p-3">
+                  <div className="p-4 rounded-2xl border border-violet-200 bg-violet-50/30 space-y-3">
+                    <strong className="text-xs text-violet-950">تغییر گروهی موجودی</strong>
+                    <div className="grid grid-cols-2 gap-2">
+                      <select value={bulkStockDirection} onChange={e => setBulkStockDirection(e.target.value as 'increase'|'decrease')} className="p-2.5 border rounded-xl bg-white text-xs">
+                        <option value="increase">افزایش تعداد</option>
+                        <option value="decrease">کاهش تعداد</option>
+                      </select>
+                      <input type="number" min={0} value={bulkStockValue} onChange={e => setBulkStockValue(Math.max(0,Number(e.target.value)))} className="p-2.5 border rounded-xl bg-white text-xs font-mono" placeholder="تعداد" />
+                    </div>
+                  </div>
+
+                  <div className="flex lg:flex-col gap-2">
+                    <button type="button" onClick={() => applyBulkOperationToSelection('selected')} className="px-4 py-2.5 rounded-xl bg-neutral-900 text-white text-[10px] font-black">
+                      اعمال روی انتخاب‌شده‌ها ({selectedBulkIds.size.toLocaleString('fa-IR')})
+                    </button>
+                    <button type="button" onClick={() => applyBulkOperationToSelection('all')} className="px-4 py-2.5 rounded-xl bg-amber-500 text-neutral-950 text-[10px] font-black">
+                      اعمال روی همه {products.length.toLocaleString('fa-IR')} محصول
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  <button type="button" onClick={() => setSelectedBulkIds(new Set(products.map(p => p.id)))} className="px-3 py-2 rounded-xl border bg-white text-[10px] font-bold">انتخاب همه</button>
+                  <button type="button" onClick={() => setSelectedBulkIds(new Set())} className="px-3 py-2 rounded-xl border bg-white text-[10px] font-bold">لغو انتخاب</button>
+                  <button type="button" onClick={() => setBulkUpdates({})} className="px-3 py-2 rounded-xl border bg-white text-[10px] font-bold text-red-600">پاک کردن تغییرات پیش‌نمایش</button>
+                </div>
+              </section>
+
+              <section className="bg-white rounded-3xl border border-neutral-200 shadow-xs overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs text-right divide-y divide-neutral-200">
+                    <thead className="bg-neutral-50 font-bold text-neutral-700">
+                      <tr>
+                        <th className="p-3 w-10">
                           <input
-                            type="number"
-                            defaultValue={p.price}
-                            onChange={e => handleBulkPriceChange(p.id, Number(e.target.value))}
-                            className="w-full p-2 border border-neutral-300 rounded-lg font-mono text-xs"
+                            type="checkbox"
+                            checked={products.length > 0 && selectedBulkIds.size === products.length}
+                            onChange={e => setSelectedBulkIds(e.target.checked ? new Set(products.map(p => p.id)) : new Set())}
                           />
-                        </td>
-                        <td className="p-3 font-mono font-bold">{p.stock}</td>
-                        <td className="p-3">
-                          <input
-                            type="number"
-                            defaultValue={p.stock}
-                            onChange={e => handleBulkStockChange(p.id, Number(e.target.value))}
-                            className="w-full p-2 border border-neutral-300 rounded-lg font-mono text-xs"
-                          />
-                        </td>
+                        </th>
+                        <th className="p-3">نام قطعه</th>
+                        <th className="p-3">OEM</th>
+                        <th className="p-3">قیمت فعلی</th>
+                        <th className="p-3 w-44">قیمت جدید (ریال)</th>
+                        <th className="p-3">موجودی فعلی</th>
+                        <th className="p-3 w-32">موجودی جدید</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody className="divide-y divide-neutral-100">
+                      {products.map(p => {
+                        const edited = bulkUpdates[p.id];
+                        return (
+                          <tr key={p.id} className={`hover:bg-neutral-50/60 ${selectedBulkIds.has(p.id)?'bg-blue-50/30':''}`}>
+                            <td className="p-3">
+                              <input
+                                type="checkbox"
+                                checked={selectedBulkIds.has(p.id)}
+                                onChange={e => {
+                                  const next = new Set(selectedBulkIds);
+                                  e.target.checked ? next.add(p.id) : next.delete(p.id);
+                                  setSelectedBulkIds(next);
+                                }}
+                              />
+                            </td>
+                            <td className="p-3 font-bold text-neutral-900">{p.nameFa}</td>
+                            <td className="p-3 font-mono text-neutral-600">{p.oemNumber}</td>
+                            <td className="p-3 font-mono font-bold text-neutral-900">{formatToman(p.price)}</td>
+                            <td className="p-3">
+                              <input
+                                type="number"
+                                value={edited?.price ?? p.price}
+                                onChange={e => handleBulkPriceChange(p.id, Math.max(0,Number(e.target.value)))}
+                                className={`w-full p-2 border rounded-lg font-mono text-xs ${edited?'border-blue-400 bg-blue-50/30':'border-neutral-300'}`}
+                              />
+                            </td>
+                            <td className="p-3 font-mono font-bold">{p.stock}</td>
+                            <td className="p-3">
+                              <input
+                                type="number"
+                                min={0}
+                                value={edited?.stock ?? p.stock}
+                                onChange={e => handleBulkStockChange(p.id, Number(e.target.value))}
+                                className={`w-full p-2 border rounded-lg font-mono text-xs ${edited?'border-violet-400 bg-violet-50/30':'border-neutral-300'}`}
+                              />
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
             </div>
           )}
 

@@ -6623,7 +6623,7 @@ html[data-layout="marketplace-rtl"] .marketplace-rtl-home.is-live-editing [data-
 
 
 /* ========================================================================
-   VISUAL COMPOSITION V6 — saved drag/drop positions for slides + banners
+   VISUAL COMPOSITION V7 — exact live-editor parity for slides + banners
 ========================================================================= */
 html[data-layout="marketplace-rtl"] .marketplace-free-layout-layer {
   position: absolute;
@@ -6633,27 +6633,35 @@ html[data-layout="marketplace-rtl"] .marketplace-free-layout-layer {
 }
 
 html[data-layout="marketplace-rtl"] .marketplace-free-layout-el {
+  --free-active-font: var(--free-d-font);
+  --free-active-wrap: var(--free-d-wrap, normal);
+  --free-active-height: var(--free-d-h, auto);
   position: absolute !important;
   left: calc(var(--free-d-x, 0) * 1%) !important;
   top: calc(var(--free-d-y, 0) * 1%) !important;
   width: calc(var(--free-d-w, 20) * 1%) !important;
+  height: var(--free-active-height) !important;
   margin: 0 !important;
   z-index: 4;
   max-width: none !important;
   box-sizing: border-box;
+  white-space: var(--free-active-wrap) !important;
+  overflow: visible;
+  overflow-wrap: normal;
+  word-break: normal;
 }
 
 html[data-layout="marketplace-rtl"] .marketplace-free-title {
-  color: #fff;
+  color: var(--free-color, #fff) !important;
   font-weight: 950;
-  font-size: clamp(26px, 3.4vw, 50px);
+  font-size: var(--free-active-font, clamp(26px, 3.4vw, 50px)) !important;
   line-height: 1.08;
   text-shadow: 0 2px 12px rgba(0,0,0,.34);
 }
 
 html[data-layout="marketplace-rtl"] .marketplace-free-subtitle {
-  color: #f3f4f6;
-  font-size: 13px;
+  color: var(--free-color, #f3f4f6) !important;
+  font-size: var(--free-active-font, 13px) !important;
   line-height: 1.9;
   text-shadow: 0 2px 10px rgba(0,0,0,.25);
 }
@@ -6664,10 +6672,10 @@ html[data-layout="marketplace-rtl"] .marketplace-free-tag {
   justify-content: center;
   min-height: 28px;
   padding: 5px 9px !important;
-  background: rgba(22,163,74,.92);
-  color: #fff !important;
+  background: var(--free-bg, rgba(22,163,74,.92)) !important;
+  color: var(--free-color, #fff) !important;
   border-radius: 4px;
-  font-size: 10px !important;
+  font-size: var(--free-active-font, 10px) !important;
   font-weight: 900;
   line-height: 1.2;
 }
@@ -6680,27 +6688,29 @@ html[data-layout="marketplace-rtl"] .marketplace-free-button {
   min-height: 36px;
   padding: 8px 11px !important;
   border-radius: 3px !important;
-  background: #fff;
-  color: #111827;
-  font-size: 9px !important;
+  background: var(--free-bg, #fff) !important;
+  color: var(--free-color, #111827) !important;
+  font-size: var(--free-active-font, 9px) !important;
   font-weight: 900;
   line-height: 1.2;
   pointer-events: auto;
 }
 
 html[data-layout="marketplace-rtl"] .marketplace-free-promo-title {
-  font-size: max(18px, calc(var(--site-base-font-size) * 1.18)) !important;
+  color: var(--free-color, #fff) !important;
+  font-size: var(--free-active-font, max(18px, calc(var(--site-base-font-size) * 1.18))) !important;
   line-height: 1.25 !important;
 }
 
 html[data-layout="marketplace-rtl"] .marketplace-free-promo-subtitle {
-  font-size: 10px !important;
-  color: #f3f4f6 !important;
+  font-size: var(--free-active-font, 10px) !important;
+  color: var(--free-color, #f3f4f6) !important;
 }
 
 html[data-layout="marketplace-rtl"] .marketplace-free-promo-button {
-  background: #fff !important;
-  color: #111827 !important;
+  background: var(--free-bg, #fff) !important;
+  color: var(--free-color, #111827) !important;
+  font-size: var(--free-active-font, 9px) !important;
 }
 
 html[data-layout="marketplace-rtl"] .marketplace-promo-card:has(.marketplace-free-layout-layer),
@@ -6710,6 +6720,9 @@ html[data-layout="marketplace-rtl"] .marketplace-feature-banners > button:has(.m
 
 @media (max-width: 1024px) {
   html[data-layout="marketplace-rtl"] .marketplace-free-layout-el {
+    --free-active-font: var(--free-t-font, var(--free-d-font));
+    --free-active-wrap: var(--free-t-wrap, var(--free-d-wrap, normal));
+    --free-active-height: var(--free-t-h, var(--free-d-h, auto));
     left: calc(var(--free-t-x, var(--free-d-x, 0)) * 1%) !important;
     top: calc(var(--free-t-y, var(--free-d-y, 0)) * 1%) !important;
     width: calc(var(--free-t-w, var(--free-d-w, 20)) * 1%) !important;
@@ -6718,27 +6731,16 @@ html[data-layout="marketplace-rtl"] .marketplace-feature-banners > button:has(.m
 
 @media (max-width: 640px) {
   html[data-layout="marketplace-rtl"] .marketplace-free-layout-el {
+    --free-active-font: var(--free-m-font, var(--free-d-font));
+    --free-active-wrap: var(--free-m-wrap, var(--free-d-wrap, normal));
+    --free-active-height: var(--free-m-h, var(--free-d-h, auto));
     left: calc(var(--free-m-x, var(--free-d-x, 0)) * 1%) !important;
     top: calc(var(--free-m-y, var(--free-d-y, 0)) * 1%) !important;
     width: calc(var(--free-m-w, var(--free-d-w, 20)) * 1%) !important;
   }
 
-  html[data-layout="marketplace-rtl"] .marketplace-free-title {
-    font-size: clamp(20px, 7vw, 32px);
-  }
-
-  html[data-layout="marketplace-rtl"] .marketplace-free-subtitle {
-    font-size: 10px;
-    line-height: 1.65;
-  }
-
   html[data-layout="marketplace-rtl"] .marketplace-free-button {
     min-height: 32px;
-    font-size: 8px !important;
-  }
-
-  html[data-layout="marketplace-rtl"] .marketplace-free-promo-title {
-    font-size: max(14px, calc(var(--site-base-font-size) * .9)) !important;
   }
 }
 

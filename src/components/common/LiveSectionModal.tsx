@@ -226,7 +226,7 @@ export const LiveSectionModal: React.FC<LiveSectionModalProps> = ({
         {([
           ['content','محتوا',LayoutPanelLeft],
           ['layout','چیدمان',Columns3],
-          ['style','استایل',SlidersHorizontal],
+          ['style','ظاهر',SlidersHorizontal],
           ['items','آیتم‌ها',ImageIcon]
         ] as Array<[InspectorTab,string,React.ElementType]>).map(([id,label,Icon]) => (
           <button
@@ -388,7 +388,7 @@ export const LiveSectionModal: React.FC<LiveSectionModalProps> = ({
                 <label>
                   <span className="block text-[9px] font-bold mb-1">نمایش موبایل</span>
                   <select value={form.mobileDisplayMode || 'grid'} onChange={e=>patch({mobileDisplayMode:e.target.value as PageSection['mobileDisplayMode']})} className="w-full p-2 border rounded-lg bg-white text-xs">
-                    <option value="grid">شبکه ریسپانسیو</option>
+                    <option value="grid">شبکه واکنش‌گرا</option>
                     <option value="scroll">پیمایش افقی</option>
                   </select>
                 </label>
@@ -430,7 +430,7 @@ export const LiveSectionModal: React.FC<LiveSectionModalProps> = ({
 
             <section className="bg-white rounded-2xl border border-violet-200 p-4 space-y-3">
               <div>
-                <strong className="text-xs">استایل بخش داخلی / کارت‌های سکشن</strong>
+                <strong className="text-xs">ظاهر بخش داخلی / کارت‌های سکشن</strong>
                 <p className="text-[9px] text-neutral-400 mt-1">این تنظیمات روی تمام آیتم‌های داخل سکشن اعمال می‌شود؛ هر آیتم پایین‌تر تنظیم مستقل خودش را هم دارد.</p>
               </div>
               <div className="grid grid-cols-2 gap-3">

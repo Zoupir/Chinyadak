@@ -686,6 +686,15 @@ export interface PageSectionItem {
   };
   inheritTabletFromDesktop?: boolean;
   inheritMobileFromDesktop?: boolean;
+
+  /** Per-item visual controls used by the live/visual builder. */
+  backgroundColor?: string;
+  textColor?: string;
+  borderColor?: string;
+  fontSizePx?: number;
+  borderRadiusPx?: number;
+  paddingPx?: number;
+  imageRadiusPx?: number;
 }
 
 export interface PageSection {

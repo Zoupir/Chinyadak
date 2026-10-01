@@ -514,13 +514,6 @@ export interface SliderItem {
   fontSizePx?: number;
   imageRadiusPx?: number;
   imageMode?: 'cover' | 'contain' | 'stretch' | 'repeat' | 'repeat-x' | 'repeat-y' | 'original';
-  titleColor?: string;
-  subtitleColor?: string;
-  buttonBgColor?: string;
-  buttonTextColor?: string;
-  badgeBgColor?: string;
-  badgeTextColor?: string;
-  textAlignment?: 'right' | 'center' | 'left';
 }
 
 export type AdminRole = 'super_admin' | 'content_manager' | 'order_manager' | 'inventory_manager';

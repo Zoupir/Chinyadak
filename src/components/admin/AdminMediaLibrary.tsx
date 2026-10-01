@@ -278,10 +278,10 @@ export const AdminMediaLibrary: React.FC = () => {
                   <strong className="text-xs text-emerald-950">SEO تصویر</strong>
                   <p className="text-[9px] text-emerald-700 mt-1">این اطلاعات مثل Media Library وردپرس روی خود رسانه ذخیره می‌شود.</p>
                 </div>
-                <label className="block"><span className="text-[9px] font-bold">ALT Text</span><input value={seoForm.alt} onChange={e => setSeoForm({...seoForm,alt:e.target.value})} className="w-full mt-1 p-2.5 border rounded-xl text-xs bg-white" /></label>
-                <label className="block"><span className="text-[9px] font-bold">Title</span><input value={seoForm.title} onChange={e => setSeoForm({...seoForm,title:e.target.value})} className="w-full mt-1 p-2.5 border rounded-xl text-xs bg-white" /></label>
-                <label className="block"><span className="text-[9px] font-bold">Caption</span><textarea rows={2} value={seoForm.caption} onChange={e => setSeoForm({...seoForm,caption:e.target.value})} className="w-full mt-1 p-2.5 border rounded-xl text-xs bg-white" /></label>
-                <label className="block"><span className="text-[9px] font-bold">Description</span><textarea rows={4} value={seoForm.description} onChange={e => setSeoForm({...seoForm,description:e.target.value})} className="w-full mt-1 p-2.5 border rounded-xl text-xs bg-white" /></label>
+                <label className="block"><span className="text-[9px] font-bold">متن جایگزین تصویر (ALT)</span><input value={seoForm.alt} onChange={e => setSeoForm({...seoForm,alt:e.target.value})} className="w-full mt-1 p-2.5 border rounded-xl text-xs bg-white" /></label>
+                <label className="block"><span className="text-[9px] font-bold">عنوان تصویر (Title)</span><input value={seoForm.title} onChange={e => setSeoForm({...seoForm,title:e.target.value})} className="w-full mt-1 p-2.5 border rounded-xl text-xs bg-white" /></label>
+                <label className="block"><span className="text-[9px] font-bold">توضیح کوتاه / Caption</span><textarea rows={2} value={seoForm.caption} onChange={e => setSeoForm({...seoForm,caption:e.target.value})} className="w-full mt-1 p-2.5 border rounded-xl text-xs bg-white" /></label>
+                <label className="block"><span className="text-[9px] font-bold">توضیح کامل تصویر</span><textarea rows={4} value={seoForm.description} onChange={e => setSeoForm({...seoForm,description:e.target.value})} className="w-full mt-1 p-2.5 border rounded-xl text-xs bg-white" /></label>
                 <button onClick={() => void saveSeo()} disabled={savingSeo} className="w-full py-2.5 rounded-xl bg-emerald-600 disabled:bg-emerald-300 text-white font-black text-xs">{savingSeo ? 'در حال ذخیره...' : 'ذخیره SEO رسانه'}</button>
               </div>
 

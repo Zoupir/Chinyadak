@@ -379,13 +379,6 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
       ? fillProducts(products.filter(product => ['suspension', 'brakes', 'steering'].includes(product.categorySlug || '')), 8)
       : fillProducts(products.filter(product => ['engine', 'turbo', 'cooling'].includes(product.categorySlug || '') || product.isFeatured), 8);
 
-  const promoImage = (index: number) =>
-    activeSlides[index]?.imageUrl ||
-    products[index]?.images?.[0] ||
-    categories[index]?.imageUrl ||
-    hero?.imageUrl ||
-    '';
-
   const handleLiveEditCapture = (event: React.MouseEvent<HTMLDivElement>) => {
     if (!isLiveEditActive || !adminAuth.isAuthenticated) return;
     const target = event.target as HTMLElement;
@@ -402,7 +395,7 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
   };
 
   const goLink = (link?: string) => {
-    if (!link) return onNavigate('shop');
+    if (!link) return;
     if (/^https?:\/\//i.test(link)) {
       window.open(link, '_blank', 'noopener,noreferrer');
       return;
@@ -534,7 +527,7 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
                 style={{
                   ...freeElementStyle(hero, 'button', { x: 75, y: 69, width: 17 })
                 }}
-                onClick={() => goLink(hero?.link || sectionConfig('hero')?.buttonLink || 'shop')}
+                onClick={() => goLink(hero?.link || sectionConfig('hero')?.buttonLink)}
               >
                 {hero?.buttonText ?? sectionConfig('hero')?.buttonText ?? ''}
                 <ArrowLeft className="w-4 h-4" />
@@ -551,7 +544,7 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
               <button
                 type="button"
                 style={{ backgroundColor: hero?.buttonBgColor || undefined, color: hero?.buttonTextColor || undefined }}
-                onClick={() => goLink(hero?.link || sectionConfig('hero')?.buttonLink || 'shop')}
+                onClick={() => goLink(hero?.link || sectionConfig('hero')?.buttonLink)}
               >
                 {hero?.buttonText ?? sectionConfig('hero')?.buttonText ?? ''}
                 <ArrowLeft className="w-4 h-4" />
@@ -659,7 +652,7 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
             <button
               key={item.id}
               type="button"
-              onClick={() => goLink(item.link || 'shop')}
+              onClick={() => goLink(item.link)}
               style={itemVisualStyle('featured-categories', item)}
             >
               <span className="marketplace-round-icon">
@@ -687,7 +680,7 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
               ...itemVisualStyle('promo-small', item as PageSectionItem),
               ...bannerBackgroundStyle(item as PageSectionItem, item.imageUrl || '')
             }}
-            onClick={() => goLink(item.link || 'shop')}
+            onClick={() => goLink(item.link)}
           >
             {item.responsiveLayout ? (
               <span className="marketplace-free-layout-layer" aria-hidden="true">
@@ -750,7 +743,7 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
         <div>
           {sectionConfig('wide-banner-1')?.subtitle && <span>{sectionConfig('wide-banner-1')?.subtitle}</span>}
           {sectionConfig('wide-banner-1')?.title && <h2>{sectionConfig('wide-banner-1')?.title}</h2>}
-          {sectionConfig('wide-banner-1')?.buttonText && <button type="button" onClick={() => goLink(sectionConfig('wide-banner-1')?.buttonLink || 'shop')}>{sectionConfig('wide-banner-1')?.buttonText}</button>}
+          {sectionConfig('wide-banner-1')?.buttonText && <button type="button" onClick={() => goLink(sectionConfig('wide-banner-1')?.buttonLink)}>{sectionConfig('wide-banner-1')?.buttonText}</button>}
         </div>
       </section>
       )}
@@ -778,7 +771,7 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
               type="button"
               onClick={() => {
                 if (item.link?.startsWith('car-brand:')) onNavigate('car-brand', item.link.split(':')[1]);
-                else goLink(item.link || 'shop');
+                else goLink(item.link);
               }}
               style={itemVisualStyle('manufacturers', item)}
             >
@@ -799,7 +792,7 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
         </div>
         <div className="marketplace-logo-tiles marketplace-logo-tiles-with-images builder-section-grid">
           {(settings.popularPartsBrands || []).filter(item => item.isVisible !== false).slice(0, sectionConfig('parts-brands')?.maxItems || 12).map((item) => (
-            <button key={item.id} type="button" onClick={() => goLink(item.link || 'shop')} style={itemVisualStyle('parts-brands', item as PageSectionItem)}>
+            <button key={item.id} type="button" onClick={() => goLink(item.link)} style={itemVisualStyle('parts-brands', item as PageSectionItem)}>
               {item.imageUrl ? (
                 <span className="marketplace-parts-brand-logo has-image">
                   <img src={item.imageUrl} alt={item.title} />
@@ -827,7 +820,7 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
               ...itemVisualStyle('promo-medium', item as PageSectionItem),
               ...bannerBackgroundStyle(item as PageSectionItem, item.imageUrl || '')
             }}
-            onClick={() => goLink(item.link || 'shop')}
+            onClick={() => goLink(item.link)}
           >
             {item.responsiveLayout ? (
               <span className="marketplace-free-layout-layer" aria-hidden="true">
@@ -875,8 +868,7 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
       {sectionVisible('promo-large') && (
       <section className="marketplace-section marketplace-feature-banners builder-section-grid" data-section-key="promo-large" data-layout-variant={sectionConfig('promo-large')?.layoutVariant || 'mosaic'} data-mobile-display={sectionConfig('promo-large')?.mobileDisplayMode || 'grid'} style={sectionStyle('promo-large')}>
         {sortedItems('promo-large').map((item, index) => {
-          const fallbackImages = [promoImage(0), promoImage(2), products[1]?.images?.[0] || '', products[2]?.images?.[0] || ''];
-          const image = item.imageUrl || fallbackImages[index] || '';
+          const image = item.imageUrl || '';
           return (
             <button
               key={item.id}
@@ -886,7 +878,7 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
                 ...itemVisualStyle('promo-large', item),
                 ...bannerBackgroundStyle(item as PageSectionItem, image, true)
               }}
-              onClick={() => goLink(item.link || 'shop')}
+              onClick={() => goLink(item.link)}
             >
               {item.responsiveLayout ? (
                 <span className="marketplace-free-layout-layer" aria-hidden="true">
@@ -933,8 +925,8 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
         <div className="marketplace-section">
           <div className="marketplace-section-heading compact center">
             <div>
-              <h2>{sectionConfig('testimonials')?.title || 'نظر مشتریان ما'}</h2>
-              <p>{sectionConfig('testimonials')?.subtitle || 'تجربه خرید از فروشگاه تخصصی قطعات'}</p>
+              <h2>{sectionConfig('testimonials')?.title ?? ''}</h2>
+              <p>{sectionConfig('testimonials')?.subtitle ?? ''}</p>
             </div>
           </div>
           <div className="marketplace-testimonial-grid builder-section-grid">
@@ -965,8 +957,8 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
       <section className="marketplace-section marketplace-shipping-banner" data-section-key="shipping-banner" data-mobile-display={sectionConfig('shipping-banner')?.mobileDisplayMode || 'grid'} style={sectionStyle('shipping-banner')}>
         <div>
           {!sectionConfig('shipping-banner')?.imageUrl && <Truck className="w-10 h-10" />}
-          <span>{sectionConfig('shipping-banner')?.title || 'ارسال سریع'}</span>
-          <strong>{sectionConfig('shipping-banner')?.subtitle || 'برای سفارش‌های واجد شرایط'}</strong>
+          <span>{sectionConfig('shipping-banner')?.title ?? ''}</span>
+          <strong>{sectionConfig('shipping-banner')?.subtitle ?? ''}</strong>
         </div>
         {!sectionConfig('shipping-banner')?.imageUrl && <PackageCheck className="marketplace-shipping-art" />}
       </section>
@@ -988,7 +980,7 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
           <div className="marketplace-ref-article-intro">
             <h3>{sectionConfig('articles')?.title || ''}</h3>
             <p>{sectionConfig('articles')?.subtitle || ''}</p>
-            <button type="button" onClick={() => goLink(sectionConfig('articles')?.buttonLink || 'blog')}>{sectionConfig('articles')?.buttonText || 'مشاهده همه مقالات'}</button>
+            {sectionConfig('articles')?.buttonText && <button type="button" onClick={() => goLink(sectionConfig('articles')?.buttonLink)}>{sectionConfig('articles')?.buttonText}</button>}
           </div>
           {articles.slice(0, sectionConfig('articles')?.maxItems || 3).map(article => (
             <button key={article.id} type="button" onClick={() => onNavigate('article', article.slug || article.id)}>
@@ -1014,7 +1006,7 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
             <div key={item.id} style={itemVisualStyle('service-strip', item)}>
               <Comp className="w-7 h-7" />
               <span>
-                <strong>{item.title || 'مزیت فروشگاه'}</strong>
+                <strong>{item.title || ''}</strong>
                 <small>{item.content || item.subtitle || ''}</small>
               </span>
             </div>

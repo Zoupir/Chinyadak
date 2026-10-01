@@ -211,6 +211,7 @@ export const AdminVisualPageBuilder: React.FC<{onNavigate?:(view:string,param?:s
         className={`visual-builder-section relative cursor-pointer transition-all ${isSelected?'ring-2 ring-blue-500 ring-offset-2':'hover:ring-1 hover:ring-blue-300'} ${source.isVisible===false?'opacity-45':''}`}
         style={{
           width:`${width}%`,maxWidth:max,marginInline:'auto',
+          marginTop:`${source.marginTopPx??0}px`,marginBottom:`${source.marginBottomPx??0}px`,
           backgroundColor:source.backgroundColor||'#fff',color:source.textColor||'#111827',
           borderRadius:`${source.borderRadiusPx||0}px`,
           paddingTop:`${Math.min(source.paddingTopPx??28,70)}px`,paddingBottom:`${Math.min(source.paddingBottomPx??28,70)}px`,
@@ -223,20 +224,51 @@ export const AdminVisualPageBuilder: React.FC<{onNavigate?:(view:string,param?:s
         <div className={`flex gap-5 ${source.imageMode==='side'&&source.imageUrl?'items-center':''} ${source.imageMode==='side'&&source.imageUrl?'flex-row':''}`}>
           <div className="flex-1 min-w-0 pt-6">
             {source.badge&&<span className="inline-block px-2 py-1 rounded-full bg-amber-100 text-amber-800 text-[8px] font-bold">{source.badge}</span>}
-            <h2 className="font-black text-lg mt-2">{source.title}</h2>
-            {source.subtitle&&<p className="text-[10px] opacity-70 mt-1">{source.subtitle}</p>}
+            <h2 className="font-black mt-2" style={{fontSize:`${source.headingFontSizePx??18}px`}}>{source.title}</h2>
+            {source.subtitle&&<p className="opacity-70 mt-1" style={{fontSize:`${source.subtitleFontSizePx??10}px`}}>{source.subtitle}</p>}
             {source.content&&<div className="text-[9px] leading-6 opacity-80 mt-3 line-clamp-4" dangerouslySetInnerHTML={{__html:source.content}}/>}
             {source.buttonText&&<button className="mt-3 px-3 py-2 rounded-lg bg-neutral-900 text-white text-[8px] font-bold">{source.buttonText}</button>}
           </div>
           {source.imageUrl&&source.imageMode!=='cover'&&<img src={source.imageUrl} alt="" className="max-w-[42%] max-h-40 object-contain rounded-xl"/>}
         </div>
         {items.length>0&&(
-          <div className="grid mt-5" style={{gridTemplateColumns:`repeat(${previewColumns(source)},minmax(0,1fr))`,gap:`${source.gapPx??16}px`}}>
+          <div
+            className="grid mt-5"
+            style={{
+              display: device==='mobile' && source.mobileDisplayMode==='scroll' ? 'flex' : 'grid',
+              overflowX: device==='mobile' && source.mobileDisplayMode==='scroll' ? 'auto' : undefined,
+              gridTemplateColumns:device==='mobile' && source.mobileDisplayMode==='scroll' ? undefined : `repeat(${previewColumns(source)},minmax(0,1fr))`,
+              gap:`${source.gapPx??16}px`
+            }}
+          >
             {items.slice(0,source.maxItems&&source.maxItems>0?source.maxItems:items.length).map(item=>(
-              <div key={item.id} className="p-3 rounded-xl border border-black/10 bg-white/80 text-neutral-900 min-w-0">
-                {item.imageUrl&&<img src={item.imageUrl} alt="" className="w-full h-20 object-contain mb-2"/>}
-                <strong className="block text-[9px] truncate">{item.title}</strong>
-                {item.subtitle&&<span className="block text-[8px] text-neutral-500 mt-1 truncate">{item.subtitle}</span>}
+              <div
+                key={item.id}
+                className="border min-w-0"
+                style={{
+                  flex:device==='mobile' && source.mobileDisplayMode==='scroll' ? `0 0 ${source.mobileItemMinWidthPx??240}px` : undefined,
+                  backgroundColor:item.backgroundColor||source.itemBackgroundColor||'rgba(255,255,255,.82)',
+                  color:item.textColor||source.itemTextColor||'#111827',
+                  borderColor:item.borderColor||source.itemBorderColor||'rgba(0,0,0,.1)',
+                  borderRadius:`${item.borderRadiusPx??source.itemRadiusPx??10}px`,
+                  padding:`${item.paddingPx??source.itemPaddingPx??12}px`,
+                  minHeight:`${item.minHeightPx??source.itemMinHeightPx??0}px`,
+                  textAlign:item.textAlign||source.itemTextAlign||'right'
+                }}
+              >
+                {item.imageUrl&&<img
+                  src={item.imageUrl}
+                  alt=""
+                  className="mb-2 max-w-full"
+                  style={{
+                    width:`${item.imageWidthPx??source.itemImageWidthPx??source.imageSizePx??72}px`,
+                    height:`${item.imageHeightPx??source.itemImageHeightPx??source.imageSizePx??72}px`,
+                    objectFit:item.imageFit||source.itemImageFit||'contain',
+                    borderRadius:`${item.imageRadiusPx??source.itemImageRadiusPx??0}px`
+                  }}
+                />}
+                <strong className="block truncate" style={{fontSize:`${item.titleFontSizePx??source.itemTitleFontSizePx??12}px`}}>{item.title}</strong>
+                {item.subtitle&&<span className="block text-neutral-500 mt-1 truncate" style={{fontSize:`${item.contentFontSizePx??source.itemContentFontSizePx??9}px`}}>{item.subtitle}</span>}
               </div>
             ))}
           </div>

@@ -286,23 +286,35 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
   ): React.CSSProperties => {
     const base = freeLayoutStyle(owner, key, fallback);
     const align = owner?.textAlignment || owner?.textAlign || 'right';
-    if (key === 'title') return { ...base, color: owner?.titleColor || owner?.textColor || undefined, textAlign: align, ['--free-color' as any]: owner?.titleColor || owner?.textColor || undefined };
-    if (key === 'subtitle') return { ...base, color: owner?.subtitleColor || owner?.textColor || undefined, textAlign: align, ['--free-color' as any]: owner?.subtitleColor || owner?.textColor || undefined };
-    if (key === 'button') return {
-      ...base,
-      backgroundColor: owner?.buttonBgColor || undefined,
-      color: owner?.buttonTextColor || undefined,
-      textAlign: 'center',
-      ['--free-bg' as any]: owner?.buttonBgColor || undefined,
-      ['--free-color' as any]: owner?.buttonTextColor || undefined
-    };
+    if (key === 'title') {
+      const color=owner?.titleColor || owner?.textColor || '#ffffff';
+      return { ...base, color, textAlign: align, ['--free-color' as any]: color };
+    }
+    if (key === 'subtitle') {
+      const color=owner?.subtitleColor || '#e5e7eb';
+      return { ...base, color, textAlign: align, ['--free-color' as any]: color };
+    }
+    if (key === 'button') {
+      const backgroundColor=owner?.buttonBgColor || '#f59e0b';
+      const color=owner?.buttonTextColor || '#111827';
+      return {
+        ...base,
+        backgroundColor,
+        color,
+        textAlign: 'center',
+        ['--free-bg' as any]: backgroundColor,
+        ['--free-color' as any]: color
+      };
+    }
+    const backgroundColor=owner?.badgeBgColor || '#16a34a';
+    const color=owner?.badgeTextColor || '#ffffff';
     return {
       ...base,
-      backgroundColor: owner?.badgeBgColor || undefined,
-      color: owner?.badgeTextColor || undefined,
+      backgroundColor,
+      color,
       textAlign: align,
-      ['--free-bg' as any]: owner?.badgeBgColor || undefined,
-      ['--free-color' as any]: owner?.badgeTextColor || undefined
+      ['--free-bg' as any]: backgroundColor,
+      ['--free-color' as any]: color
     };
   };
 
@@ -506,7 +518,7 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
                   ...freeElementStyle(hero, 'title', { x: 58, y: 29, width: 34 })
                 }}
               >
-                {hero?.title || sectionConfig('hero')?.title || 'قطعات مطمئن برای خودروی شما'}
+                {hero?.title ?? sectionConfig('hero')?.title ?? ''}
               </h1>
               <p
                 className="marketplace-free-layout-el marketplace-free-subtitle"
@@ -514,7 +526,7 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
                   ...freeElementStyle(hero, 'subtitle', { x: 60, y: 51, width: 32 })
                 }}
               >
-                {hero?.subtitle || sectionConfig('hero')?.subtitle || 'خرید تخصصی قطعات خودروهای چینی با تضمین اصالت، فیتمنت دقیق و ارسال سریع.'}
+                {hero?.subtitle ?? sectionConfig('hero')?.subtitle ?? ''}
               </p>
               <button
                 type="button"
@@ -524,7 +536,7 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
                 }}
                 onClick={() => goLink(hero?.link || sectionConfig('hero')?.buttonLink || 'shop')}
               >
-                {hero?.buttonText || sectionConfig('hero')?.buttonText || 'مشاهده محصولات'}
+                {hero?.buttonText ?? sectionConfig('hero')?.buttonText ?? ''}
                 <ArrowLeft className="w-4 h-4" />
               </button>
             </div>
@@ -533,7 +545,7 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
               <span
                 className="marketplace-kicker"
                 style={{ backgroundColor: hero?.badgeBgColor || undefined, color: hero?.badgeTextColor || undefined }}
-              >{hero?.tag || sectionConfig('hero')?.badge || 'پیشنهاد ویژه قطعات خودرو'}</span>
+              >{hero?.tag ?? sectionConfig('hero')?.badge ?? ''}</span>
               <h1 style={{ color: hero?.titleColor || undefined }}>{hero?.title || sectionConfig('hero')?.title || 'قطعات مطمئن برای خودروی شما'}</h1>
               <p style={{ color: hero?.subtitleColor || undefined }}>{hero?.subtitle || sectionConfig('hero')?.subtitle || 'خرید تخصصی قطعات خودروهای چینی با تضمین اصالت، فیتمنت دقیق و ارسال سریع.'}</p>
               <button
@@ -541,7 +553,7 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
                 style={{ backgroundColor: hero?.buttonBgColor || undefined, color: hero?.buttonTextColor || undefined }}
                 onClick={() => goLink(hero?.link || sectionConfig('hero')?.buttonLink || 'shop')}
               >
-                {hero?.buttonText || sectionConfig('hero')?.buttonText || 'مشاهده محصولات'}
+                {hero?.buttonText ?? sectionConfig('hero')?.buttonText ?? ''}
                 <ArrowLeft className="w-4 h-4" />
               </button>
             </div>
@@ -673,7 +685,7 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
             className="marketplace-promo-card"
             style={{
               ...itemVisualStyle('promo-small', item as PageSectionItem),
-              ...bannerBackgroundStyle(item as PageSectionItem, item.imageUrl || promoImage(index))
+              ...bannerBackgroundStyle(item as PageSectionItem, item.imageUrl || '')
             }}
             onClick={() => goLink(item.link || 'shop')}
           >
@@ -682,15 +694,15 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
                 {item.badge && (
                   <span className="marketplace-free-layout-el marketplace-free-tag" style={freeElementStyle(item, 'tag', { x: 70, y: 16, width: 22 })}>{item.badge}</span>
                 )}
-                <h3 className="marketplace-free-layout-el marketplace-free-title marketplace-free-promo-title" style={freeElementStyle(item, 'title', { x: 55, y: 24, width: 38 })}>{item.title || 'بنر فروشگاه'}</h3>
+                <h3 className="marketplace-free-layout-el marketplace-free-title marketplace-free-promo-title" style={freeElementStyle(item, 'title', { x: 55, y: 24, width: 38 })}>{item.title || ''}</h3>
                 {item.subtitle && <span className="marketplace-free-layout-el marketplace-free-subtitle marketplace-free-promo-subtitle" style={freeElementStyle(item, 'subtitle', { x: 58, y: 48, width: 34 })}>{item.subtitle}</span>}
-                <small className="marketplace-free-layout-el marketplace-free-button marketplace-free-promo-button" style={freeElementStyle(item, 'button', { x: 73, y: 70, width: 20 })}>{item.buttonText || 'مشاهده محصولات'}</small>
+                <small className="marketplace-free-layout-el marketplace-free-button marketplace-free-promo-button" style={freeElementStyle(item, 'button', { x: 73, y: 70, width: 20 })}>{item.buttonText || ''}</small>
               </span>
             ) : (
               <>
-                {item.subtitle && <span style={{color:item.subtitleColor||item.textColor}}>{item.subtitle}</span>}
-                {item.title && <h3 style={{color:item.titleColor||item.textColor}}>{item.title}</h3>}
-                {item.buttonText && <small style={{backgroundColor:item.buttonBgColor,color:item.buttonTextColor}}>{item.buttonText}</small>}
+                {item.subtitle && <span style={{color:item.subtitleColor||'#e5e7eb'}}>{item.subtitle}</span>}
+                {item.title && <h3 style={{color:item.titleColor||item.textColor||'#ffffff'}}>{item.title}</h3>}
+                {item.buttonText && <small style={{backgroundColor:item.buttonBgColor||'#f59e0b',color:item.buttonTextColor||'#111827'}}>{item.buttonText}</small>}
               </>
             )}
           </button>
@@ -730,15 +742,15 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
         data-mobile-display={sectionConfig('wide-banner-1')?.mobileDisplayMode || 'grid'}
         style={{
           ...sectionStyle('wide-banner-1'),
-          ...(sectionConfig('wide-banner-1')?.imageUrl || promoImage(1)
-            ? { backgroundImage: `url(${sectionConfig('wide-banner-1')?.imageUrl || promoImage(1)})` }
+          ...(sectionConfig('wide-banner-1')?.imageUrl
+            ? { backgroundImage: `url(${sectionConfig('wide-banner-1')?.imageUrl})` }
             : {})
         }}
       >
         <div>
-          <span>{sectionConfig('wide-banner-1')?.subtitle || 'سیستم ترمز و ایمنی'}</span>
-          <h2>{sectionConfig('wide-banner-1')?.title || 'برای توقف مطمئن، قطعه مطمئن انتخاب کنید'}</h2>
-          <button type="button" onClick={() => goLink(sectionConfig('wide-banner-1')?.buttonLink || 'shop')}>{sectionConfig('wide-banner-1')?.buttonText || 'مشاهده محصولات'}</button>
+          {sectionConfig('wide-banner-1')?.subtitle && <span>{sectionConfig('wide-banner-1')?.subtitle}</span>}
+          {sectionConfig('wide-banner-1')?.title && <h2>{sectionConfig('wide-banner-1')?.title}</h2>}
+          {sectionConfig('wide-banner-1')?.buttonText && <button type="button" onClick={() => goLink(sectionConfig('wide-banner-1')?.buttonLink || 'shop')}>{sectionConfig('wide-banner-1')?.buttonText}</button>}
         </div>
       </section>
       )}
@@ -813,22 +825,22 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
             className="marketplace-promo-card marketplace-promo-medium"
             style={{
               ...itemVisualStyle('promo-medium', item as PageSectionItem),
-              ...bannerBackgroundStyle(item as PageSectionItem, item.imageUrl || promoImage(index + 1))
+              ...bannerBackgroundStyle(item as PageSectionItem, item.imageUrl || '')
             }}
             onClick={() => goLink(item.link || 'shop')}
           >
             {item.responsiveLayout ? (
               <span className="marketplace-free-layout-layer" aria-hidden="true">
                 {item.badge && <span className="marketplace-free-layout-el marketplace-free-tag" style={freeElementStyle(item, 'tag', { x: 70, y: 16, width: 22 })}>{item.badge}</span>}
-                <h3 className="marketplace-free-layout-el marketplace-free-title marketplace-free-promo-title" style={freeElementStyle(item, 'title', { x: 55, y: 24, width: 38 })}>{item.title || 'بنر فروشگاه'}</h3>
+                <h3 className="marketplace-free-layout-el marketplace-free-title marketplace-free-promo-title" style={freeElementStyle(item, 'title', { x: 55, y: 24, width: 38 })}>{item.title || ''}</h3>
                 {item.subtitle && <span className="marketplace-free-layout-el marketplace-free-subtitle marketplace-free-promo-subtitle" style={freeElementStyle(item, 'subtitle', { x: 58, y: 48, width: 34 })}>{item.subtitle}</span>}
-                <small className="marketplace-free-layout-el marketplace-free-button marketplace-free-promo-button" style={freeElementStyle(item, 'button', { x: 73, y: 70, width: 20 })}>{item.buttonText || 'خرید کنید'}</small>
+                <small className="marketplace-free-layout-el marketplace-free-button marketplace-free-promo-button" style={freeElementStyle(item, 'button', { x: 73, y: 70, width: 20 })}>{item.buttonText || ''}</small>
               </span>
             ) : (
               <>
-                {item.subtitle && <span style={{color:item.subtitleColor||item.textColor}}>{item.subtitle}</span>}
-                {item.title && <h3 style={{color:item.titleColor||item.textColor}}>{item.title}</h3>}
-                {item.buttonText && <small style={{backgroundColor:item.buttonBgColor,color:item.buttonTextColor}}>{item.buttonText}</small>}
+                {item.subtitle && <span style={{color:item.subtitleColor||'#e5e7eb'}}>{item.subtitle}</span>}
+                {item.title && <h3 style={{color:item.titleColor||item.textColor||'#ffffff'}}>{item.title}</h3>}
+                {item.buttonText && <small style={{backgroundColor:item.buttonBgColor||'#f59e0b',color:item.buttonTextColor||'#111827'}}>{item.buttonText}</small>}
               </>
             )}
           </button>
@@ -879,15 +891,15 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
               {item.responsiveLayout ? (
                 <span className="marketplace-free-layout-layer" aria-hidden="true">
                   {item.badge && <span className="marketplace-free-layout-el marketplace-free-tag" style={freeElementStyle(item, 'tag', { x: 68, y: 15, width: 22 })}>{item.badge}</span>}
-                  <h3 className="marketplace-free-layout-el marketplace-free-title marketplace-free-promo-title" style={freeElementStyle(item, 'title', { x: 54, y: 26, width: 40 })}>{item.title || 'بنر فروشگاه'}</h3>
+                  <h3 className="marketplace-free-layout-el marketplace-free-title marketplace-free-promo-title" style={freeElementStyle(item, 'title', { x: 54, y: 26, width: 40 })}>{item.title || ''}</h3>
                   {item.subtitle && <span className="marketplace-free-layout-el marketplace-free-subtitle marketplace-free-promo-subtitle" style={freeElementStyle(item, 'subtitle', { x: 58, y: 50, width: 34 })}>{item.subtitle}</span>}
                   {item.buttonText && <small className="marketplace-free-layout-el marketplace-free-button marketplace-free-promo-button" style={freeElementStyle(item, 'button', { x: 73, y: 72, width: 20 })}>{item.buttonText}</small>}
                 </span>
               ) : (
                 <div>
-                  {item.subtitle && <span style={{color:item.subtitleColor||item.textColor}}>{item.subtitle}</span>}
-                  {item.title && <h3 style={{color:item.titleColor||item.textColor}}>{item.title}</h3>}
-                  {item.buttonText && <small style={{backgroundColor:item.buttonBgColor,color:item.buttonTextColor}}>{item.buttonText}</small>}
+                  {item.subtitle && <span style={{color:item.subtitleColor||'#e5e7eb'}}>{item.subtitle}</span>}
+                  {item.title && <h3 style={{color:item.titleColor||item.textColor||'#ffffff'}}>{item.title}</h3>}
+                  {item.buttonText && <small style={{backgroundColor:item.buttonBgColor||'#f59e0b',color:item.buttonTextColor||'#111827'}}>{item.buttonText}</small>}
                 </div>
               )}
             </button>

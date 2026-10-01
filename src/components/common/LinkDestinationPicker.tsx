@@ -72,11 +72,11 @@ export const LinkDestinationPicker: React.FC<LinkDestinationPickerProps> = ({
       { id: 'shop', title: 'فروشگاه / همه محصولات', value: 'shop', type: 'shop' }
     ];
 
-    pages.forEach(page => rows.push({
+    pages.filter(page => page.slug !== 'home').forEach(page => rows.push({
       id: `page-${page.id}`,
       title: page.title,
       subtitle: `/${page.slug}`,
-      value: `page:${page.slug}`,
+      value: page.slug === 'part-request' ? 'part-request' : `page:${page.slug}`,
       type: 'page'
     }));
 
@@ -163,6 +163,7 @@ export const LinkDestinationPicker: React.FC<LinkDestinationPickerProps> = ({
         type="button"
         onClick={() => {
           setCustom(value);
+          setType(selected?.type || (value && !selected ? 'custom' : 'product'));
           setOpen(true);
         }}
         className="w-full min-h-10 px-3 py-2 border border-neutral-300 rounded-xl bg-white text-right flex items-center justify-between gap-3 hover:border-blue-500"

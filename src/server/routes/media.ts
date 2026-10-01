@@ -37,8 +37,22 @@ const detectImageType = (buffer: Buffer): SupportedImage | null => {
   return null;
 };
 
+const decodeTransportFilename = (originalName: string): string => {
+  const raw = String(originalName || '');
+  // Some multipart clients expose UTF-8 filenames as latin1 mojibake.
+  // Repair only when the tell-tale mojibake markers are present; otherwise keep
+  // the original JavaScript string byte-for-byte as far as the filesystem API allows.
+  if (/[ÃÂØÙ]/.test(raw)) {
+    try {
+      const repaired = Buffer.from(raw, 'latin1').toString('utf8');
+      if (repaired && !repaired.includes('\uFFFD')) return repaired;
+    } catch {}
+  }
+  return raw;
+};
+
 const preserveOriginalFilename = (originalName: string, detected: SupportedImage): string | null => {
-  const decoded = String(originalName || '').normalize('NFC');
+  const decoded = decodeTransportFilename(originalName);
   if (!decoded || decoded.length > 240) return null;
   if (/[\u0000-\u001f\u007f]/.test(decoded)) return null;
   if (decoded.includes('/') || decoded.includes('\\') || decoded === '.' || decoded === '..') return null;

@@ -136,9 +136,9 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
         ? `${item.minHeightPx}px`
         : section?.itemMinHeightPx !== undefined ? `${section.itemMinHeightPx}px` : undefined,
       textAlign: item.textAlign || section?.itemTextAlign || undefined,
-      ['--item-image-width' as any]: `${item.imageWidthPx ?? section?.itemImageWidthPx ?? section?.imageSizePx ?? 72}px`,
-      ['--item-image-height' as any]: `${item.imageHeightPx ?? section?.itemImageHeightPx ?? section?.imageSizePx ?? 72}px`,
-      ['--item-image-fit' as any]: item.imageFit || section?.itemImageFit || 'contain',
+      ['--item-image-width' as any]: `${(item as PageSectionItem).imageWidthPx ?? section?.itemImageWidthPx ?? section?.imageSizePx ?? 72}px`,
+      ['--item-image-height' as any]: `${(item as PageSectionItem).imageHeightPx ?? section?.itemImageHeightPx ?? section?.imageSizePx ?? 72}px`,
+      ['--item-image-fit' as any]: (item as PageSectionItem).imageFit || section?.itemImageFit || 'contain',
       ['--item-image-radius' as any]: `${item.imageRadiusPx ?? section?.itemImageRadiusPx ?? 0}px`,
       ['--item-title-size' as any]: item.titleFontSizePx !== undefined ? `${item.titleFontSizePx}px` : undefined,
       ['--item-content-size' as any]: item.contentFontSizePx !== undefined ? `${item.contentFontSizePx}px` : undefined
@@ -558,9 +558,9 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
                 backgroundImage: `url(${item.imageUrl || promoImage(index)})`,
                 backgroundRepeat: 'no-repeat',
                 backgroundPosition: 'center',
-                backgroundSize: (item.imageWidthPx !== undefined || item.imageHeightPx !== undefined || sectionConfig('promo-small')?.itemImageWidthPx !== undefined || sectionConfig('promo-small')?.itemImageHeightPx !== undefined)
-                  ? `${item.imageWidthPx ?? sectionConfig('promo-small')?.itemImageWidthPx ?? 'auto'}px ${item.imageHeightPx ?? sectionConfig('promo-small')?.itemImageHeightPx ?? 'auto'}px`
-                  : (item.imageFit || sectionConfig('promo-small')?.itemImageFit || 'cover')
+                backgroundSize: ((item as PageSectionItem).imageWidthPx !== undefined || (item as PageSectionItem).imageHeightPx !== undefined || sectionConfig('promo-small')?.itemImageWidthPx !== undefined || sectionConfig('promo-small')?.itemImageHeightPx !== undefined)
+                  ? `${(item as PageSectionItem).imageWidthPx ?? sectionConfig('promo-small')?.itemImageWidthPx ?? 'auto'}px ${(item as PageSectionItem).imageHeightPx ?? sectionConfig('promo-small')?.itemImageHeightPx ?? 'auto'}px`
+                  : ((item as PageSectionItem).imageFit || sectionConfig('promo-small')?.itemImageFit || 'cover')
               } : {})
             }}
             onClick={() => goLink(item.link || 'shop')}
@@ -717,9 +717,9 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
                 backgroundImage: `url(${item.imageUrl || promoImage(index + 1)})`,
                 backgroundRepeat: 'no-repeat',
                 backgroundPosition: 'center',
-                backgroundSize: (item.imageWidthPx !== undefined || item.imageHeightPx !== undefined || sectionConfig('promo-medium')?.itemImageWidthPx !== undefined || sectionConfig('promo-medium')?.itemImageHeightPx !== undefined)
-                  ? `${item.imageWidthPx ?? sectionConfig('promo-medium')?.itemImageWidthPx ?? 'auto'}px ${item.imageHeightPx ?? sectionConfig('promo-medium')?.itemImageHeightPx ?? 'auto'}px`
-                  : (item.imageFit || sectionConfig('promo-medium')?.itemImageFit || 'cover')
+                backgroundSize: ((item as PageSectionItem).imageWidthPx !== undefined || (item as PageSectionItem).imageHeightPx !== undefined || sectionConfig('promo-medium')?.itemImageWidthPx !== undefined || sectionConfig('promo-medium')?.itemImageHeightPx !== undefined)
+                  ? `${(item as PageSectionItem).imageWidthPx ?? sectionConfig('promo-medium')?.itemImageWidthPx ?? 'auto'}px ${(item as PageSectionItem).imageHeightPx ?? sectionConfig('promo-medium')?.itemImageHeightPx ?? 'auto'}px`
+                  : ((item as PageSectionItem).imageFit || sectionConfig('promo-medium')?.itemImageFit || 'cover')
               } : {})
             }}
             onClick={() => goLink(item.link || 'shop')}
@@ -783,9 +783,9 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
                   backgroundImage: `linear-gradient(90deg, rgba(0,0,0,.24), rgba(0,0,0,.62)), url(${image})`,
                   backgroundRepeat: 'no-repeat',
                   backgroundPosition: 'center',
-                  backgroundSize: (item.imageWidthPx !== undefined || item.imageHeightPx !== undefined || sectionConfig('promo-large')?.itemImageWidthPx !== undefined || sectionConfig('promo-large')?.itemImageHeightPx !== undefined)
-                    ? `${item.imageWidthPx ?? sectionConfig('promo-large')?.itemImageWidthPx ?? 'auto'}px ${item.imageHeightPx ?? sectionConfig('promo-large')?.itemImageHeightPx ?? 'auto'}px`
-                    : (item.imageFit || sectionConfig('promo-large')?.itemImageFit || 'cover')
+                  backgroundSize: ((item as PageSectionItem).imageWidthPx !== undefined || (item as PageSectionItem).imageHeightPx !== undefined || sectionConfig('promo-large')?.itemImageWidthPx !== undefined || sectionConfig('promo-large')?.itemImageHeightPx !== undefined)
+                    ? `${(item as PageSectionItem).imageWidthPx ?? sectionConfig('promo-large')?.itemImageWidthPx ?? 'auto'}px ${(item as PageSectionItem).imageHeightPx ?? sectionConfig('promo-large')?.itemImageHeightPx ?? 'auto'}px`
+                    : ((item as PageSectionItem).imageFit || sectionConfig('promo-large')?.itemImageFit || 'cover')
                 } : {})
               }}
               onClick={() => goLink(item.link || 'shop')}

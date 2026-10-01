@@ -96,7 +96,7 @@ const AppContent: React.FC = () => {
 
   // Scroll to top on navigation
   useEffect(() => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo({ top: 0, behavior: 'auto' });
   }, [route, routeRevision]);
 
   // TakRank SEO Native owns browser metadata during History API navigation.

@@ -16,6 +16,7 @@ import {
 import { useStore } from '../../context/StoreContext';
 import { formatToman } from '../../utils/formatters';
 import { LiveSectionModal } from '../common/LiveSectionModal';
+import type { PageSectionItem } from '../../types';
 
 interface MarketplaceRtlHomeProps {
   onNavigate: (view: string, param?: string) => void;
@@ -426,7 +427,7 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
         <div className="marketplace-round-list builder-section-grid">
           {(sortedItems('featured-categories').length
             ? sortedItems('featured-categories')
-            : categories.slice(0, sectionConfig('featured-categories')?.maxItems || 9).map((cat,index) => ({
+            : categories.slice(0, sectionConfig('featured-categories')?.maxItems || 9).map((cat,index): PageSectionItem => ({
                 id:cat.id,
                 title:cat.nameFa,
                 imageUrl:cat.iconUrl || cat.imageUrl,

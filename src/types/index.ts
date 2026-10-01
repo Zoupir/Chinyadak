@@ -785,6 +785,7 @@ export interface PageSection {
   itemTextAlign?: 'right' | 'center' | 'left';
   mobileDisplayMode?: 'grid' | 'scroll';
   mobileItemMinWidthPx?: number;
+  layoutVariant?: 'default' | 'uniform' | 'mosaic' | 'compact';
 
   /** Repeater content for testimonials, banners, feature cards and similar sections. */
   items?: PageSectionItem[];

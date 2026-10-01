@@ -347,6 +347,15 @@ export const AdminArticlesTab: React.FC = () => {
                     </td>
                     <td className="p-3 text-left">
                       <div className="flex items-center justify-end gap-1.5">
+                        <a
+                          href={`/article/${encodeURIComponent(art.slug || art.id)}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
+                          title="نمایش مقاله در صفحه جدید"
+                        >
+                          <ExternalLink className="w-4 h-4" />
+                        </a>
                         <button
                           onClick={() => handleEdit(art)}
                           className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"

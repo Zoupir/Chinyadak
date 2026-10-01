@@ -118,7 +118,11 @@ export const MediaPickerModal: React.FC<MediaPickerModalProps> = ({
     } catch (error) {
       setUploadError(
         error instanceof MediaUploadError
-          ? `آپلود انجام نشد: ${error.code}`
+          ? error.code === 'MEDIA_FILENAME_EXISTS'
+            ? 'فایلی دقیقاً با همین نام در پوشه همین ماه وجود دارد. چون نام فایل نباید تغییر کند، ابتدا فایل قبلی را حذف کنید یا نام فایل را خودتان قبل از آپلود تغییر دهید.'
+            : error.code === 'MEDIA_FILENAME_INVALID_OR_EXTENSION_MISMATCH'
+              ? 'نام فایل یا پسوند آن معتبر نیست. نام فارسی و فاصله مجاز است؛ فقط مسیر و کاراکترهای کنترلی مجاز نیستند.'
+              : `آپلود انجام نشد: ${error.code}`
           : 'آپلود رسانه انجام نشد.'
       );
     } finally {

@@ -1,14 +1,28 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useStore } from '../../context/StoreContext';
 import { BookOpen, Clock, User, ArrowLeft, Layers, Sparkles, Filter, Wrench, ShieldCheck } from 'lucide-react';
 
 interface BlogViewProps {
   onNavigate: (view: string, param?: string) => void;
+  initialCategory?: string;
 }
 
-export const BlogView: React.FC<BlogViewProps> = ({ onNavigate }) => {
+export const BlogView: React.FC<BlogViewProps> = ({ onNavigate, initialCategory }) => {
   const { articles, articleCategories } = useStore();
-  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+
+  const resolvedCategory = useMemo(() => {
+    if (!initialCategory) return 'all';
+    const match = articleCategories.find(c =>
+      c.id === initialCategory || c.slug === initialCategory || c.name === initialCategory
+    );
+    return match?.id || 'all';
+  }, [initialCategory, articleCategories]);
+
+  const [selectedCategory, setSelectedCategory] = useState<string>(resolvedCategory);
+
+  useEffect(() => {
+    setSelectedCategory(resolvedCategory);
+  }, [resolvedCategory]);
 
   const filteredArticles = selectedCategory === 'all'
     ? articles
@@ -35,7 +49,7 @@ export const BlogView: React.FC<BlogViewProps> = ({ onNavigate }) => {
       {/* Category Filter Tabs */}
       <div className="flex flex-wrap items-center justify-center gap-2 pb-2">
         <button
-          onClick={() => setSelectedCategory('all')}
+          onClick={() => onNavigate('blog')}
           className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
             selectedCategory === 'all'
               ? 'bg-neutral-900 text-white shadow-md'
@@ -51,7 +65,7 @@ export const BlogView: React.FC<BlogViewProps> = ({ onNavigate }) => {
           return (
             <button
               key={cat.id}
-              onClick={() => setSelectedCategory(cat.id)}
+              onClick={() => onNavigate('blog', cat.slug || cat.id)}
               className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
                 isSelected
                   ? 'bg-red-600 text-white shadow-md shadow-red-600/20'
@@ -151,7 +165,7 @@ export const BlogView: React.FC<BlogViewProps> = ({ onNavigate }) => {
           <BookOpen className="w-12 h-12 text-neutral-300 mx-auto" />
           <p className="text-sm font-bold text-neutral-700">مقاله‌ای در این دسته‌بندی یافت نشد.</p>
           <button
-            onClick={() => setSelectedCategory('all')}
+            onClick={() => onNavigate('blog')}
             className="text-xs text-red-600 font-bold hover:underline"
           >
             مشاهده تمام مقالات

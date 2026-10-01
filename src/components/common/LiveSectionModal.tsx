@@ -368,8 +368,8 @@ export const LiveSectionModal: React.FC<LiveSectionModalProps> = ({
 
             <section className="bg-white rounded-2xl border border-neutral-200 p-4 space-y-4">
               <div>
-                <strong className="text-xs">شبکه ریسپانسیو</strong>
-                <p className="text-[9px] text-neutral-400 mt-1">با افزایش ستون دسکتاپ در سکشن‌های بنری، Slot خالی جدید هم خودکار ساخته می‌شود.</p>
+                <strong className="text-xs">شبکه واکنش‌گرا</strong>
+                <p className="text-[9px] text-neutral-400 mt-1">با افزایش ستون دسکتاپ در سکشن‌های بنری، جایگاه خالی جدید هم خودکار ساخته می‌شود.</p>
               </div>
               <div className="grid grid-cols-3 gap-2">
                 <label><span className="block text-[9px] font-bold mb-1">دسکتاپ</span><select value={form.desktopColumns || 3} onChange={e => setColumns('desktop',Number(e.target.value))} className="w-full p-2 border rounded-lg bg-white text-xs">{Array.from({length:12},(_,i)=>i+1).map(n=><option key={n} value={n}>{n}</option>)}</select></label>
@@ -389,7 +389,7 @@ export const LiveSectionModal: React.FC<LiveSectionModalProps> = ({
                   <span className="block text-[9px] font-bold mb-1">نمایش موبایل</span>
                   <select value={form.mobileDisplayMode || 'grid'} onChange={e=>patch({mobileDisplayMode:e.target.value as PageSection['mobileDisplayMode']})} className="w-full p-2 border rounded-lg bg-white text-xs">
                     <option value="grid">شبکه ریسپانسیو</option>
-                    <option value="scroll">اسکرول افقی</option>
+                    <option value="scroll">پیمایش افقی</option>
                   </select>
                 </label>
                 <label>
@@ -431,7 +431,7 @@ export const LiveSectionModal: React.FC<LiveSectionModalProps> = ({
             <section className="bg-white rounded-2xl border border-violet-200 p-4 space-y-3">
               <div>
                 <strong className="text-xs">استایل بخش داخلی / کارت‌های سکشن</strong>
-                <p className="text-[9px] text-neutral-400 mt-1">این تنظیمات روی تمام آیتم‌های داخل سکشن اعمال می‌شود؛ هر آیتم پایین‌تر Override مستقل هم دارد.</p>
+                <p className="text-[9px] text-neutral-400 mt-1">این تنظیمات روی تمام آیتم‌های داخل سکشن اعمال می‌شود؛ هر آیتم پایین‌تر تنظیم مستقل خودش را هم دارد.</p>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <label><span className="block text-[9px] font-bold mb-1">پس‌زمینه آیتم</span><input type="color" value={form.itemBackgroundColor || '#ffffff'} onChange={e=>patch({itemBackgroundColor:e.target.value})} className="w-full h-10 p-1 border rounded-xl" /></label>
@@ -455,7 +455,7 @@ export const LiveSectionModal: React.FC<LiveSectionModalProps> = ({
               <label className="flex items-center justify-between gap-3">
                 <span>
                   <strong className="block text-xs">نمایش سکشن</strong>
-                  <small className="text-[9px] text-neutral-400">مخفی‌کردن هم فوراً در Preview اعمال می‌شود.</small>
+                  <small className="text-[9px] text-neutral-400">مخفی‌کردن هم فوراً در پیش‌نمایش اعمال می‌شود.</small>
                 </span>
                 <button type="button" onClick={() => patch({isVisible:!form.isVisible})} className={`px-3 py-2 rounded-xl text-[9px] font-black inline-flex items-center gap-1 ${form.isVisible ? 'bg-emerald-50 text-emerald-700' : 'bg-neutral-100 text-neutral-500'}`}>
                   {form.isVisible ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}

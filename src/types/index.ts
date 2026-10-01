@@ -503,6 +503,13 @@ export interface SliderItem {
   };
   inheritTabletFromDesktop?: boolean;
   inheritMobileFromDesktop?: boolean;
+  backgroundColor?: string;
+  textColor?: string;
+  borderColor?: string;
+  borderRadiusPx?: number;
+  paddingPx?: number;
+  fontSizePx?: number;
+  imageRadiusPx?: number;
 }
 
 export type AdminRole = 'super_admin' | 'content_manager' | 'order_manager' | 'inventory_manager';
@@ -720,6 +727,14 @@ export interface PageSection {
   imageSizePx?: number;
   backgroundImageOpacity?: number;
   itemAspectRatio?: 'square' | 'landscape' | 'portrait' | 'auto';
+  contentSource?: 'manual' | 'categories' | 'brands' | 'products' | 'articles';
+  contentSourceLimit?: number;
+  itemBackgroundColor?: string;
+  itemTextColor?: string;
+  itemBorderColor?: string;
+  itemPaddingPx?: number;
+  itemFontSizePx?: number;
+  itemImageRadiusPx?: number;
 
   /** Repeater content for testimonials, banners, feature cards and similar sections. */
   items?: PageSectionItem[];

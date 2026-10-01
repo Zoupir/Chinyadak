@@ -3,6 +3,7 @@ import {
   ArrowLeft,
   Car,
   ChevronLeft,
+  ChevronRight,
   Clock3,
   Headphones,
   PackageCheck,
@@ -134,14 +135,32 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
 
   const [heroIndex, setHeroIndex] = useState(0);
   const [liveSectionId, setLiveSectionId] = useState<string | null>(null);
+  const [isHeroHovered, setIsHeroHovered] = useState(false);
+  const heroNavigation = settings.heroSliderNavigation || 'dots';
+  const heroAnimation = settings.heroSliderAnimation || 'fade';
+  const heroAutoplayMs = Math.max(1500, Number(settings.heroSliderAutoplayMs || 6500));
+  const heroLoop = settings.heroSliderLoop !== false;
+
+  const moveHero = (delta: number) => {
+    if (activeSlides.length <= 1) return;
+    setHeroIndex(current => {
+      const next = current + delta;
+      if (heroLoop) return (next + activeSlides.length) % activeSlides.length;
+      return Math.max(0, Math.min(activeSlides.length - 1, next));
+    });
+  };
 
   useEffect(() => {
     if (activeSlides.length <= 1) return;
+    if (settings.heroSliderPauseOnHover !== false && isHeroHovered) return;
     const timer = window.setInterval(() => {
-      setHeroIndex(current => (current + 1) % activeSlides.length);
-    }, 6500);
+      setHeroIndex(current => {
+        if (!heroLoop && current >= activeSlides.length - 1) return current;
+        return (current + 1) % activeSlides.length;
+      });
+    }, heroAutoplayMs);
     return () => window.clearInterval(timer);
-  }, [activeSlides.length]);
+  }, [activeSlides.length, heroAutoplayMs, heroLoop, isHeroHovered, settings.heroSliderPauseOnHover]);
 
   useEffect(() => {
     if (heroIndex >= activeSlides.length) setHeroIndex(0);
@@ -272,7 +291,11 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
       {sectionVisible('hero') && (
       <section className="marketplace-hero-shell" data-section-key="hero" style={sectionStyle('hero')}>
         <div
+          key={hero?.id || heroIndex}
           className="marketplace-hero-banner"
+          data-slider-animation={heroAnimation}
+          onMouseEnter={() => setIsHeroHovered(true)}
+          onMouseLeave={() => setIsHeroHovered(false)}
           style={{
             ...(hero?.imageUrl || sectionConfig('hero')?.imageUrl ? { backgroundImage: `url(${hero?.imageUrl || sectionConfig('hero')?.imageUrl})` } : {}),
             backgroundColor: hero?.bgColor || sectionConfig('hero')?.backgroundColor || undefined,
@@ -350,7 +373,18 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
             </div>
           )}
 
-          {activeSlides.length > 1 && (
+          {activeSlides.length > 1 && (heroNavigation === 'arrows' || heroNavigation === 'both') && (
+            <div className="marketplace-hero-arrows" aria-label="کنترل اسلایدر">
+              <button type="button" onClick={() => moveHero(-1)} disabled={!heroLoop && heroIndex === 0} aria-label="اسلاید قبلی">
+                <ChevronRight className="w-5 h-5" />
+              </button>
+              <button type="button" onClick={() => moveHero(1)} disabled={!heroLoop && heroIndex === activeSlides.length - 1} aria-label="اسلاید بعدی">
+                <ChevronLeft className="w-5 h-5" />
+              </button>
+            </div>
+          )}
+
+          {activeSlides.length > 1 && (heroNavigation === 'dots' || heroNavigation === 'both') && (
             <div className="marketplace-hero-dots" aria-label="اسلایدهای صفحه اصلی">
               {activeSlides.map((slide, index) => (
                 <button

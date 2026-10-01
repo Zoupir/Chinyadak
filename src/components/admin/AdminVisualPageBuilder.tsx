@@ -329,7 +329,7 @@ export const AdminVisualPageBuilder: React.FC<{onNavigate?:(view:string,param?:s
             {sortedSections.map((section,index)=>(
               <button key={section.id} onClick={()=>setSectionId(section.id)} className={`w-full p-2.5 rounded-lg border text-right flex items-center gap-2 ${selected?.id===section.id?'bg-blue-50 border-blue-400':'bg-white border-neutral-200'}`}>
                 <div className="w-6 h-6 rounded bg-neutral-100 grid place-items-center text-[9px] font-bold">{index+1}</div>
-                <div className="min-w-0 flex-1"><strong className="block text-[9px] truncate">{section.title||'بدون عنوان'}</strong><span className="text-[7px] text-neutral-400">{section.fullWidth?'Full width':`${section.widthPercent??100}% / ${section.maxWidthPx||1280}px`}</span></div>
+                <div className="min-w-0 flex-1"><strong className="block text-[9px] truncate">{section.title||'بدون عنوان'}</strong><span className="text-[7px] text-neutral-400">{section.fullWidth?'تمام عرض':`${section.widthPercent??100}% / ${section.maxWidthPx||1280}px`}</span></div>
                 <div className="flex">
                   <span onClick={e=>{e.stopPropagation();move(section.id,'up')}} className="p-1"><ArrowUp className="w-3 h-3"/></span>
                   <span onClick={e=>{e.stopPropagation();move(section.id,'down')}} className="p-1"><ArrowDown className="w-3 h-3"/></span>
@@ -351,7 +351,7 @@ export const AdminVisualPageBuilder: React.FC<{onNavigate?:(view:string,param?:s
 
         <aside className="bg-white border-r border-neutral-200 overflow-y-auto">
           <div className="grid grid-cols-5 border-b sticky top-0 bg-white z-10">
-            {(['content','layout','style','items','seo'] as InspectorTab[]).map(tab=><button key={tab} onClick={()=>setInspectorTab(tab)} className={`py-3 text-[8px] font-black ${inspectorTab===tab?'text-blue-600 border-b-2 border-blue-600':'text-neutral-500'}`}>{tab==='content'?'محتوا':tab==='layout'?'چیدمان':tab==='style'?'استایل':tab==='items'?'آیتم‌ها':'SEO'}</button>)}
+            {(['content','layout','style','items','seo'] as InspectorTab[]).map(tab=><button key={tab} onClick={()=>setInspectorTab(tab)} className={`py-3 text-[8px] font-black ${inspectorTab===tab?'text-blue-600 border-b-2 border-blue-600':'text-neutral-500'}`}>{tab==='content'?'محتوا':tab==='layout'?'چیدمان':tab==='style'?'استایل':tab==='items'?'آیتم‌ها':'سئو'}</button>)}
           </div>
 
           {!draft ? <div className="p-6 text-xs text-neutral-400">یک سکشن را انتخاب کن.</div> : (
@@ -388,7 +388,7 @@ export const AdminVisualPageBuilder: React.FC<{onNavigate?:(view:string,param?:s
                   <label><span>فاصله آیتم‌ها</span><input type="number" value={draft.gapPx??16} onChange={e=>patch({gapPx:Number(e.target.value)})} className="w-full p-2 border rounded"/></label>
                   <label><span>حداکثر آیتم قابل نمایش</span><input type="number" min="0" max="100" value={draft.maxItems??0} onChange={e=>patch({maxItems:Number(e.target.value)})} className="w-full p-2 border rounded"/></label>
                   <label><span>اندازه پایه تصویر</span><input type="number" min="16" max="1200" value={draft.imageSizePx??72} onChange={e=>patch({imageSizePx:Number(e.target.value)})} className="w-full p-2 border rounded"/></label>
-                  <label><span>Opacity تصویر %</span><input type="number" min="0" max="100" value={draft.backgroundImageOpacity??100} onChange={e=>patch({backgroundImageOpacity:Number(e.target.value)})} className="w-full p-2 border rounded"/></label>
+                  <label><span>شفافیت تصویر ٪</span><input type="number" min="0" max="100" value={draft.backgroundImageOpacity??100} onChange={e=>patch({backgroundImageOpacity:Number(e.target.value)})} className="w-full p-2 border rounded"/></label>
                   <label><span>حداقل ارتفاع آیتم</span><input type="number" value={draft.itemMinHeightPx??0} onChange={e=>patch({itemMinHeightPx:Number(e.target.value)})} className="w-full p-2 border rounded"/></label>
                   <label><span>حداقل عرض آیتم موبایل</span><input type="number" min="120" max="600" value={draft.mobileItemMinWidthPx??240} onChange={e=>patch({mobileItemMinWidthPx:Number(e.target.value)})} className="w-full p-2 border rounded"/></label>
                   <label><span>نمایش موبایل</span><select value={draft.mobileDisplayMode||'grid'} onChange={e=>patch({mobileDisplayMode:e.target.value as any})} className="w-full p-2 border rounded bg-white"><option value="grid">شبکه</option><option value="scroll">اسکرول افقی</option></select></label>
@@ -398,8 +398,8 @@ export const AdminVisualPageBuilder: React.FC<{onNavigate?:(view:string,param?:s
 
               {inspectorTab==='style'&&<>
                 <div className="grid grid-cols-2 gap-2"><label><span>پس‌زمینه</span><input type="color" value={draft.backgroundColor||'#ffffff'} onChange={e=>patch({backgroundColor:e.target.value})} className="w-full h-10"/></label><label><span>رنگ متن</span><input type="color" value={draft.textColor||'#111827'} onChange={e=>patch({textColor:e.target.value})} className="w-full h-10"/></label></div>
-                <div className="grid grid-cols-2 gap-2"><label><span>Padding بالا</span><input type="number" value={draft.paddingTopPx??28} onChange={e=>patch({paddingTopPx:Number(e.target.value)})} className="w-full p-2 border rounded"/></label><label><span>Padding پایین</span><input type="number" value={draft.paddingBottomPx??28} onChange={e=>patch({paddingBottomPx:Number(e.target.value)})} className="w-full p-2 border rounded"/></label></div>
-                <label><span>Padding افقی</span><input type="number" value={draft.paddingInlinePx??20} onChange={e=>patch({paddingInlinePx:Number(e.target.value)})} className="w-full p-2 border rounded"/></label>
+                <div className="grid grid-cols-2 gap-2"><label><span>فاصله داخلی بالا</span><input type="number" value={draft.paddingTopPx??28} onChange={e=>patch({paddingTopPx:Number(e.target.value)})} className="w-full p-2 border rounded"/></label><label><span>فاصله داخلی پایین</span><input type="number" value={draft.paddingBottomPx??28} onChange={e=>patch({paddingBottomPx:Number(e.target.value)})} className="w-full p-2 border rounded"/></label></div>
+                <label><span>فاصله داخلی افقی</span><input type="number" value={draft.paddingInlinePx??20} onChange={e=>patch({paddingInlinePx:Number(e.target.value)})} className="w-full p-2 border rounded"/></label>
                 <div className="grid grid-cols-2 gap-2">
                   <label><span>فاصله بالا</span><input type="number" value={draft.marginTopPx??0} onChange={e=>patch({marginTopPx:Number(e.target.value)})} className="w-full p-2 border rounded"/></label>
                   <label><span>فاصله پایین</span><input type="number" value={draft.marginBottomPx??0} onChange={e=>patch({marginBottomPx:Number(e.target.value)})} className="w-full p-2 border rounded"/></label>

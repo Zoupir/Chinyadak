@@ -387,8 +387,28 @@ export const LiveSectionModal: React.FC<LiveSectionModalProps> = ({
               <div className="grid grid-cols-2 gap-3">
                 {numberField('فاصله آیتم‌ها','gapPx',0,100,16)}
                 {numberField('حداکثر آیتم','maxItems',0,100,0)}
-                {numberField('اندازه تصویر','imageSizePx',16,500,72)}
-                {numberField('حداقل ارتفاع','minHeightPx',0,1200,0)}
+                {numberField('اندازه پایه تصویر','imageSizePx',16,500,72)}
+                {numberField('حداقل ارتفاع سکشن','minHeightPx',0,1200,0)}
+                {numberField('حداقل ارتفاع آیتم','itemMinHeightPx',0,1200,0)}
+                {numberField('حداقل عرض آیتم موبایل','mobileItemMinWidthPx',120,600,240)}
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <label>
+                  <span className="block text-[9px] font-bold mb-1">نمایش موبایل</span>
+                  <select value={form.mobileDisplayMode || 'grid'} onChange={e=>patch({mobileDisplayMode:e.target.value as PageSection['mobileDisplayMode']})} className="w-full p-2 border rounded-lg bg-white text-xs">
+                    <option value="grid">Grid ریسپانسیو</option>
+                    <option value="scroll">اسکرول افقی</option>
+                  </select>
+                </label>
+                <label>
+                  <span className="block text-[9px] font-bold mb-1">نوع چیدمان اختصاصی</span>
+                  <select value={form.layoutVariant || 'default'} onChange={e=>patch({layoutVariant:e.target.value as PageSection['layoutVariant']})} className="w-full p-2 border rounded-lg bg-white text-xs">
+                    <option value="default">پیش‌فرض</option>
+                    <option value="uniform">یکنواخت</option>
+                    <option value="mosaic">موزاییکی</option>
+                    <option value="compact">فشرده</option>
+                  </select>
+                </label>
               </div>
               <div className="grid grid-cols-3 gap-2">
                 <button type="button" onClick={() => patch({contentAlign:'right'})} className={`p-2 rounded-lg border grid place-items-center ${form.contentAlign === 'right' ? 'bg-blue-50 border-blue-500' : 'bg-white'}`}><AlignRight className="w-4 h-4" /></button>
@@ -408,7 +428,11 @@ export const LiveSectionModal: React.FC<LiveSectionModalProps> = ({
               {numberField('گردی کارت‌ها','itemRadiusPx',0,100,10)}
               {numberField('Padding بالا','paddingTopPx',0,250,28)}
               {numberField('Padding پایین','paddingBottomPx',0,250,28)}
-              {numberField('Padding طرفین','paddingInlinePx',0,200,20)}
+              {numberField('Padding طرفین','paddingInlinePx',0,300,20)}
+              {numberField('فاصله بالا از سکشن قبل','marginTopPx',0,250,0)}
+              {numberField('فاصله پایین','marginBottomPx',0,250,0)}
+              {numberField('اندازه عنوان سکشن','headingFontSizePx',10,80,18)}
+              {numberField('اندازه زیرعنوان سکشن','subtitleFontSizePx',8,48,11)}
               {numberField('Opacity تصویر %','backgroundImageOpacity',0,100,100)}
             </section>
 
@@ -421,9 +445,17 @@ export const LiveSectionModal: React.FC<LiveSectionModalProps> = ({
                 <label><span className="block text-[9px] font-bold mb-1">پس‌زمینه آیتم</span><input type="color" value={form.itemBackgroundColor || '#ffffff'} onChange={e=>patch({itemBackgroundColor:e.target.value})} className="w-full h-10 p-1 border rounded-xl" /></label>
                 <label><span className="block text-[9px] font-bold mb-1">رنگ متن آیتم</span><input type="color" value={form.itemTextColor || '#111827'} onChange={e=>patch({itemTextColor:e.target.value})} className="w-full h-10 p-1 border rounded-xl" /></label>
                 <label><span className="block text-[9px] font-bold mb-1">رنگ حاشیه</span><input type="color" value={form.itemBorderColor || '#e5e7eb'} onChange={e=>patch({itemBorderColor:e.target.value})} className="w-full h-10 p-1 border rounded-xl" /></label>
-                {numberField('Padding آیتم','itemPaddingPx',0,80,12)}
-                {numberField('اندازه فونت آیتم','itemFontSizePx',8,40,12)}
-                {numberField('گردی تصویر آیتم','itemImageRadiusPx',0,80,8)}
+                {numberField('Padding آیتم','itemPaddingPx',0,120,12)}
+                {numberField('اندازه فونت عمومی آیتم','itemFontSizePx',8,60,12)}
+                {numberField('اندازه عنوان آیتم','itemTitleFontSizePx',8,72,14)}
+                {numberField('اندازه متن آیتم','itemContentFontSizePx',8,60,11)}
+                {numberField('عرض تصویر آیتم','itemImageWidthPx',16,1200,72)}
+                {numberField('ارتفاع تصویر آیتم','itemImageHeightPx',16,1200,72)}
+                {numberField('گردی تصویر آیتم','itemImageRadiusPx',0,200,8)}
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <label><span className="block text-[9px] font-bold mb-1">Fit تصویر</span><select value={form.itemImageFit || 'contain'} onChange={e=>patch({itemImageFit:e.target.value as 'cover'|'contain'})} className="w-full p-2 border rounded-lg bg-white text-xs"><option value="contain">Contain</option><option value="cover">Cover</option></select></label>
+                <label><span className="block text-[9px] font-bold mb-1">تراز متن آیتم</span><select value={form.itemTextAlign || 'right'} onChange={e=>patch({itemTextAlign:e.target.value as 'right'|'center'|'left'})} className="w-full p-2 border rounded-lg bg-white text-xs"><option value="right">راست</option><option value="center">وسط</option><option value="left">چپ</option></select></label>
               </div>
             </section>
 
@@ -483,8 +515,14 @@ export const LiveSectionModal: React.FC<LiveSectionModalProps> = ({
                   <label><span className="block text-[8px] font-bold mb-1">فونت px</span><input type="number" min={8} max={40} value={item.fontSizePx || form.itemFontSizePx || 12} onChange={e=>updateItem(item.id,{fontSizePx:Number(e.target.value)})} className="w-full p-1.5 border rounded text-[9px]" /></label>
                 </div>
                 <div className="grid grid-cols-2 gap-2">
-                  <label><span className="block text-[8px] font-bold mb-1">گردی کارت</span><input type="number" min={0} max={100} value={item.borderRadiusPx ?? form.itemRadiusPx ?? 10} onChange={e=>updateItem(item.id,{borderRadiusPx:Number(e.target.value)})} className="w-full p-1.5 border rounded text-[9px]" /></label>
-                  <label><span className="block text-[8px] font-bold mb-1">Padding</span><input type="number" min={0} max={80} value={item.paddingPx ?? form.itemPaddingPx ?? 12} onChange={e=>updateItem(item.id,{paddingPx:Number(e.target.value)})} className="w-full p-1.5 border rounded text-[9px]" /></label>
+                  <label><span className="block text-[8px] font-bold mb-1">گردی کارت</span><input type="number" min={0} max={200} value={item.borderRadiusPx ?? form.itemRadiusPx ?? 10} onChange={e=>updateItem(item.id,{borderRadiusPx:Number(e.target.value)})} className="w-full p-1.5 border rounded text-[9px]" /></label>
+                  <label><span className="block text-[8px] font-bold mb-1">Padding</span><input type="number" min={0} max={120} value={item.paddingPx ?? form.itemPaddingPx ?? 12} onChange={e=>updateItem(item.id,{paddingPx:Number(e.target.value)})} className="w-full p-1.5 border rounded text-[9px]" /></label>
+                  <label><span className="block text-[8px] font-bold mb-1">عرض تصویر</span><input type="number" min={16} max={1200} value={item.imageWidthPx ?? form.itemImageWidthPx ?? form.imageSizePx ?? 72} onChange={e=>updateItem(item.id,{imageWidthPx:Number(e.target.value)})} className="w-full p-1.5 border rounded text-[9px]" /></label>
+                  <label><span className="block text-[8px] font-bold mb-1">ارتفاع تصویر</span><input type="number" min={16} max={1200} value={item.imageHeightPx ?? form.itemImageHeightPx ?? form.imageSizePx ?? 72} onChange={e=>updateItem(item.id,{imageHeightPx:Number(e.target.value)})} className="w-full p-1.5 border rounded text-[9px]" /></label>
+                  <label><span className="block text-[8px] font-bold mb-1">عنوان px</span><input type="number" min={8} max={72} value={item.titleFontSizePx ?? form.itemTitleFontSizePx ?? 14} onChange={e=>updateItem(item.id,{titleFontSizePx:Number(e.target.value)})} className="w-full p-1.5 border rounded text-[9px]" /></label>
+                  <label><span className="block text-[8px] font-bold mb-1">متن px</span><input type="number" min={8} max={60} value={item.contentFontSizePx ?? form.itemContentFontSizePx ?? 11} onChange={e=>updateItem(item.id,{contentFontSizePx:Number(e.target.value)})} className="w-full p-1.5 border rounded text-[9px]" /></label>
+                  <label><span className="block text-[8px] font-bold mb-1">حداقل ارتفاع</span><input type="number" min={0} max={1200} value={item.minHeightPx ?? form.itemMinHeightPx ?? 0} onChange={e=>updateItem(item.id,{minHeightPx:Number(e.target.value)})} className="w-full p-1.5 border rounded text-[9px]" /></label>
+                  <label><span className="block text-[8px] font-bold mb-1">Fit</span><select value={item.imageFit || form.itemImageFit || 'contain'} onChange={e=>updateItem(item.id,{imageFit:e.target.value as 'cover'|'contain'})} className="w-full p-1.5 border rounded text-[9px] bg-white"><option value="contain">Contain</option><option value="cover">Cover</option></select></label>
                 </div>
                 <ImageUploadInput label="تصویر / بنر" value={item.imageUrl || ''} onChange={url => updateItem(item.id,{imageUrl:url})} aspectRatio="banner" presetCategory="banners" />
                 <textarea rows={2} value={item.content || ''} onChange={e => updateItem(item.id,{content:e.target.value})} placeholder="متن آیتم" className="w-full p-2 border rounded-lg text-[10px]" />

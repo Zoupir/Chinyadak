@@ -99,14 +99,14 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
       ['--builder-item-padding' as any]: section.itemPaddingPx !== undefined ? `${section.itemPaddingPx}px` : undefined,
       ['--builder-item-font-size' as any]: section.itemFontSizePx !== undefined ? `${section.itemFontSizePx}px` : undefined,
       ['--builder-item-image-radius' as any]: section.itemImageRadiusPx !== undefined ? `${section.itemImageRadiusPx}px` : undefined,
-      ['--builder-margin-top' as any]: `${section.marginTopPx ?? 0}px`,
-      ['--builder-margin-bottom' as any]: `${section.marginBottomPx ?? 0}px`,
+      ['--builder-margin-top' as any]: section.marginTopPx !== undefined ? `${section.marginTopPx}px` : undefined,
+      ['--builder-margin-bottom' as any]: section.marginBottomPx !== undefined ? `${section.marginBottomPx}px` : undefined,
       ['--builder-heading-size' as any]: section.headingFontSizePx !== undefined ? `${section.headingFontSizePx}px` : undefined,
       ['--builder-subtitle-size' as any]: section.subtitleFontSizePx !== undefined ? `${section.subtitleFontSizePx}px` : undefined,
       ['--builder-item-title-size' as any]: section.itemTitleFontSizePx !== undefined ? `${section.itemTitleFontSizePx}px` : undefined,
       ['--builder-item-content-size' as any]: section.itemContentFontSizePx !== undefined ? `${section.itemContentFontSizePx}px` : undefined,
-      ['--builder-image-width' as any]: `${section.itemImageWidthPx ?? section.imageSizePx ?? 72}px`,
-      ['--builder-image-height' as any]: `${section.itemImageHeightPx ?? section.imageSizePx ?? 72}px`,
+      ['--builder-image-width' as any]: (section.itemImageWidthPx ?? section.imageSizePx) !== undefined ? `${section.itemImageWidthPx ?? section.imageSizePx}px` : undefined,
+      ['--builder-image-height' as any]: (section.itemImageHeightPx ?? section.imageSizePx) !== undefined ? `${section.itemImageHeightPx ?? section.imageSizePx}px` : undefined,
       ['--builder-image-fit' as any]: section.itemImageFit || 'contain',
       ['--builder-item-min-height' as any]: section.itemMinHeightPx !== undefined ? `${section.itemMinHeightPx}px` : undefined,
       ['--builder-item-align' as any]: section.itemTextAlign || section.contentAlign || 'right',
@@ -603,6 +603,7 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
       <section
         className="marketplace-wide-banner"
         data-section-key="wide-banner-1"
+        data-mobile-display={sectionConfig('wide-banner-1')?.mobileDisplayMode || 'grid'}
         style={{
           ...sectionStyle('wide-banner-1'),
           ...(sectionConfig('wide-banner-1')?.imageUrl || promoImage(1)

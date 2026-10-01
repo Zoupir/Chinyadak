@@ -207,7 +207,7 @@ export const AdminSliderStudio:React.FC=()=>{
     }
     const section=activeBannerSection||bannerSections[0];
     if(!homePage||!section){
-      showToast('ابتدا در Visual Builder یک سکشن بنری مثل promo-small یا banner بسازید.','error');
+      showToast('ابتدا در صفحه‌ساز دیداری یک سکشن بنری بسازید.','error');
       return;
     }
     const item=makeBannerItem((section.items||[]).length+1);
@@ -514,7 +514,7 @@ export const AdminSliderStudio:React.FC=()=>{
             <div className="grid grid-cols-2 gap-2">
               {mode==='slides'
                 ? <input value={(draft as SliderItem)?.tag||''} onChange={event=>patchSlide({tag:event.target.value})} className="p-2 border rounded" placeholder="برچسب"/>
-                : <input value={(bannerDraft as PageSectionItem)?.badge||''} onChange={event=>patchBanner({badge:event.target.value})} className="p-2 border rounded" placeholder="Badge"/>
+                : <input value={(bannerDraft as PageSectionItem)?.badge||''} onChange={event=>patchBanner({badge:event.target.value})} className="p-2 border rounded" placeholder="برچسب"/>
               }
               <input value={owner.buttonText||''} onChange={event=>patchOwner({buttonText:event.target.value})} className="p-2 border rounded" placeholder="متن دکمه"/>
             </div>

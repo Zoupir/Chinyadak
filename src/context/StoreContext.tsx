@@ -113,7 +113,7 @@ const HOME_SECTION_DEFAULTS: PageSection[] = [
     { id: 'testimonial-4', title: 'تعمیرکار', content: 'برای قطعه کمیاب خیلی سریع استعلام انجام شد.', isVisible: true, order: 4 }
   ]},
   { id: 'home-shipping-banner', sectionKey: 'shipping-banner', title: 'ارسال سریع', subtitle: 'برای سفارش‌های واجد شرایط', isVisible: true, order: 13, layout: 'full', desktopColumns: 1, mobileColumns: 1, borderRadiusPx: 3, widthPercent: 100, maxWidthPx: 1040, minHeightPx: 128 },
-  { id: 'home-articles', sectionKey: 'articles', title: 'راهنما و مقالات', subtitle: 'آموزش، نگهداری و انتخاب صحیح قطعات خودرو', isVisible: true, order: 14, layout: 'grid', desktopColumns: 3, mobileColumns: 2, borderRadiusPx: 0, itemRadiusPx: 2, gapPx: 10, maxItems: 3, widthPercent: 100, maxWidthPx: 1280 },
+  { id: 'home-articles', sectionKey: 'articles', title: 'راهنما و مقالات', subtitle: 'آموزش، نگهداری و انتخاب صحیح قطعات خودرو', buttonText: 'مشاهده همه مقالات', buttonLink: 'blog', isVisible: true, order: 14, layout: 'grid', desktopColumns: 3, mobileColumns: 2, borderRadiusPx: 0, itemRadiusPx: 2, gapPx: 10, maxItems: 3, widthPercent: 100, maxWidthPx: 1280 },
   { id: 'home-service-strip', sectionKey: 'service-strip', title: 'مزایای فروشگاه', isVisible: true, order: 15, layout: 'grid', desktopColumns: 4, mobileColumns: 2, borderRadiusPx: 0, itemRadiusPx: 0, gapPx: 10, fullWidth: true, widthPercent: 100, maxWidthPx: 0, items: [
     { id: 'service-1', title: 'تضمین اصالت', content: 'کنترل اصالت و کیفیت قطعه', isVisible: true, order: 1 },
     { id: 'service-2', title: 'ارزش خرید', content: 'قیمت‌گذاری شفاف و رقابتی', isVisible: true, order: 2 },
@@ -212,8 +212,14 @@ const upgradeLegacyHomeSection = (section: PageSection): PageSection => {
   if (key === 'shipping-banner' && (section.maxWidthPx == null || section.maxWidthPx === 1280)) {
     return { ...section, widthPercent: 100, maxWidthPx: 1040, minHeightPx: section.minHeightPx || 128, borderRadiusPx: section.borderRadiusPx ?? 3 };
   }
-  if (key === 'articles' && section.mobileColumns === 1) {
-    return { ...section, mobileColumns: 2, maxItems: section.maxItems || 3 };
+  if (key === 'articles') {
+    return {
+      ...section,
+      mobileColumns: section.mobileColumns === 1 ? 2 : section.mobileColumns,
+      maxItems: section.maxItems || 3,
+      buttonText: section.buttonText ?? 'مشاهده همه مقالات',
+      buttonLink: section.buttonLink ?? 'blog'
+    };
   }
   return section;
 };

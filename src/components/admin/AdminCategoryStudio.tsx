@@ -9,7 +9,8 @@ import {
   Plus,
   Save,
   Search,
-  Trash2
+  Trash2,
+  ExternalLink
 } from 'lucide-react';
 import { useStore } from '../../context/StoreContext';
 import type { Category, CategoryChild, SeoEntityDraft } from '../../types';
@@ -161,6 +162,14 @@ export const AdminCategoryStudio:React.FC = ()=>{
           <span className="truncate text-[10px] font-bold">{node.nameFa}</span>
           <small className="text-[8px] text-neutral-400">/{node.slug}</small>
         </button>
+        <a
+          href={`/category/${encodeURIComponent(node.slug)}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={e=>e.stopPropagation()}
+          className="opacity-0 group-hover:opacity-100 w-6 h-6 grid place-items-center rounded bg-emerald-50 text-emerald-700"
+          title="نمایش مستقیم دسته"
+        ><ExternalLink className="w-3 h-3"/></a>
         <button onClick={()=>addChild(ref)} className="opacity-0 group-hover:opacity-100 w-6 h-6 grid place-items-center rounded bg-blue-50 text-blue-600"><Plus className="w-3 h-3"/></button>
       </div>
       {has&&open&&renderTree(node.subcategories||[],rootId,depth+1)}
@@ -198,6 +207,13 @@ export const AdminCategoryStudio:React.FC = ()=>{
               >
                 <button onClick={()=>has&&setOpenIds(prev=>{const n=new Set(prev);open?n.delete(cat.id):n.add(cat.id);return n;})} className="w-5 h-5 grid place-items-center">{has?(open?<ChevronDown className="w-3.5 h-3.5"/>:<ChevronLeft className="w-3.5 h-3.5"/>):null}</button>
                 <button onClick={()=>selectNode(ref)} className="min-w-0 flex-1 text-right flex items-center gap-2"><IconRenderer icon={display.icon} className="w-4 h-4"/><strong className="truncate text-[10px]">{display.nameFa}</strong></button>
+                <a
+                  href={`/category/${encodeURIComponent(display.slug)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-6 h-6 grid place-items-center rounded bg-emerald-50 text-emerald-700"
+                  title="نمایش مستقیم دسته"
+                ><ExternalLink className="w-3 h-3"/></a>
                 <button onClick={()=>addChild(ref)} className="w-6 h-6 grid place-items-center rounded bg-blue-500 text-white"><Plus className="w-3 h-3"/></button>
               </div>
               {has&&open&&renderTree((display.subcategories||[]) as CategoryChild[],cat.id,1)}
@@ -214,6 +230,13 @@ export const AdminCategoryStudio:React.FC = ()=>{
               <p className="text-[9px] text-neutral-400 mt-1">سطح {selected.depth+1} • /category/{selectedNode.slug}</p>
             </div>
             <div className="flex gap-2">
+              <a
+                href={`/category/${encodeURIComponent(selectedNode.slug)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-9 h-9 grid place-items-center rounded-xl bg-emerald-50 text-emerald-700"
+                title="نمایش مستقیم در صفحه جدید"
+              ><ExternalLink className="w-4 h-4"/></a>
               <button onClick={()=>addChild(selected)} className="px-3 py-2 rounded-xl bg-blue-50 text-blue-700 text-[10px] font-bold inline-flex gap-1 items-center"><Plus className="w-3.5 h-3.5"/>زیر‌دسته</button>
               <button onClick={deleteSelected} className="w-9 h-9 grid place-items-center rounded-xl bg-red-50 text-red-600"><Trash2 className="w-4 h-4"/></button>
               <button onClick={save} className="px-4 py-2 rounded-xl bg-emerald-600 text-white text-[10px] font-black inline-flex gap-1 items-center"><Save className="w-3.5 h-3.5"/>ذخیره درخت و SEO</button>

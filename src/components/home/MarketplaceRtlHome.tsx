@@ -129,12 +129,12 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
   const [liveSectionId, setLiveSectionId] = useState<string | null>(null);
 
   useEffect(() => {
-    if (activeSlides.length <= 1 || sectionConfig('hero')?.imageUrl) return;
+    if (activeSlides.length <= 1) return;
     const timer = window.setInterval(() => {
       setHeroIndex(current => (current + 1) % activeSlides.length);
     }, 6500);
     return () => window.clearInterval(timer);
-  }, [activeSlides.length, sectionConfig('hero')?.imageUrl]);
+  }, [activeSlides.length]);
 
   useEffect(() => {
     if (heroIndex >= activeSlides.length) setHeroIndex(0);
@@ -267,14 +267,18 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
         <div
           className="marketplace-hero-banner"
           style={{
-            ...(sectionConfig('hero')?.imageUrl || hero?.imageUrl ? { backgroundImage: `url(${sectionConfig('hero')?.imageUrl || hero?.imageUrl})` } : {}),
+            ...(hero?.imageUrl || sectionConfig('hero')?.imageUrl ? { backgroundImage: `url(${hero?.imageUrl || sectionConfig('hero')?.imageUrl})` } : {}),
+            backgroundColor: hero?.bgColor || sectionConfig('hero')?.backgroundColor || undefined,
             borderRadius: `${sectionConfig('hero')?.borderRadiusPx ?? 0}px`
           }}
         >
-          <div className="marketplace-hero-overlay" />
+          <div
+            className="marketplace-hero-overlay"
+            style={{ opacity: hero?.gradientOverlay === false ? 0 : Math.max(0, Math.min(1, Number(hero?.overlayOpacity ?? 60) / 100)) }}
+          />
           {hero?.responsiveLayout ? (
             <div className="marketplace-free-layout-layer" aria-label="محتوای اسلاید">
-              {(sectionConfig('hero')?.badge || hero?.tag) && (
+              {(hero?.tag || sectionConfig('hero')?.badge) && (
                 <span
                   className="marketplace-free-layout-el marketplace-free-tag"
                   style={{
@@ -283,7 +287,7 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
                     color: hero.badgeTextColor || undefined
                   }}
                 >
-                  {sectionConfig('hero')?.badge || hero?.tag}
+                  {hero?.tag || sectionConfig('hero')?.badge}
                 </span>
               )}
               <h1
@@ -294,7 +298,7 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
                   textAlign: hero.textAlignment || 'right'
                 }}
               >
-                {sectionConfig('hero')?.title || hero?.title || 'قطعات مطمئن برای خودروی شما'}
+                {hero?.title || sectionConfig('hero')?.title || 'قطعات مطمئن برای خودروی شما'}
               </h1>
               <p
                 className="marketplace-free-layout-el marketplace-free-subtitle"
@@ -304,7 +308,7 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
                   textAlign: hero.textAlignment || 'right'
                 }}
               >
-                {sectionConfig('hero')?.subtitle || hero?.subtitle || 'خرید تخصصی قطعات خودروهای چینی با تضمین اصالت، فیتمنت دقیق و ارسال سریع.'}
+                {hero?.subtitle || sectionConfig('hero')?.subtitle || 'خرید تخصصی قطعات خودروهای چینی با تضمین اصالت، فیتمنت دقیق و ارسال سریع.'}
               </p>
               <button
                 type="button"
@@ -314,25 +318,32 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
                   backgroundColor: hero.buttonBgColor || undefined,
                   color: hero.buttonTextColor || undefined
                 }}
-                onClick={() => goLink(sectionConfig('hero')?.buttonLink || hero?.link || 'shop')}
+                onClick={() => goLink(hero?.link || sectionConfig('hero')?.buttonLink || 'shop')}
               >
-                {sectionConfig('hero')?.buttonText || hero?.buttonText || 'مشاهده محصولات'}
+                {hero?.buttonText || sectionConfig('hero')?.buttonText || 'مشاهده محصولات'}
                 <ArrowLeft className="w-4 h-4" />
               </button>
             </div>
           ) : (
-            <div className="marketplace-hero-content">
-              <span className="marketplace-kicker">{sectionConfig('hero')?.badge || hero?.tag || 'پیشنهاد ویژه قطعات خودرو'}</span>
-              <h1>{sectionConfig('hero')?.title || hero?.title || 'قطعات مطمئن برای خودروی شما'}</h1>
-              <p>{sectionConfig('hero')?.subtitle || hero?.subtitle || 'خرید تخصصی قطعات خودروهای چینی با تضمین اصالت، فیتمنت دقیق و ارسال سریع.'}</p>
-              <button type="button" onClick={() => goLink(sectionConfig('hero')?.buttonLink || hero?.link || 'shop')}>
-                {sectionConfig('hero')?.buttonText || hero?.buttonText || 'مشاهده محصولات'}
+            <div className="marketplace-hero-content" style={{ textAlign: hero?.textAlignment || sectionConfig('hero')?.contentAlign || 'right' }}>
+              <span
+                className="marketplace-kicker"
+                style={{ backgroundColor: hero?.badgeBgColor || undefined, color: hero?.badgeTextColor || undefined }}
+              >{hero?.tag || sectionConfig('hero')?.badge || 'پیشنهاد ویژه قطعات خودرو'}</span>
+              <h1 style={{ color: hero?.titleColor || undefined }}>{hero?.title || sectionConfig('hero')?.title || 'قطعات مطمئن برای خودروی شما'}</h1>
+              <p style={{ color: hero?.subtitleColor || undefined }}>{hero?.subtitle || sectionConfig('hero')?.subtitle || 'خرید تخصصی قطعات خودروهای چینی با تضمین اصالت، فیتمنت دقیق و ارسال سریع.'}</p>
+              <button
+                type="button"
+                style={{ backgroundColor: hero?.buttonBgColor || undefined, color: hero?.buttonTextColor || undefined }}
+                onClick={() => goLink(hero?.link || sectionConfig('hero')?.buttonLink || 'shop')}
+              >
+                {hero?.buttonText || sectionConfig('hero')?.buttonText || 'مشاهده محصولات'}
                 <ArrowLeft className="w-4 h-4" />
               </button>
             </div>
           )}
 
-          {activeSlides.length > 1 && !sectionConfig('hero')?.imageUrl && (
+          {activeSlides.length > 1 && (
             <div className="marketplace-hero-dots" aria-label="اسلایدهای صفحه اصلی">
               {activeSlides.map((slide, index) => (
                 <button

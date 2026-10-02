@@ -605,6 +605,8 @@ html[data-layout="marketplace-rtl"] .header-brands-menu {
 }
 
 html[data-layout="marketplace-rtl"] .marketplace-rtl-home {
+  display: flex;
+  flex-direction: column;
   background: #f4f5f6;
   padding-bottom: 0;
 }

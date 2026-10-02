@@ -22,6 +22,7 @@ import { seoRouter } from './src/server/routes/seo';
 import { uploadDirectory } from './src/server/media';
 import { checkDatabase } from './src/server/db';
 import { config } from './src/server/config';
+import { auditMutationMiddleware } from './src/server/audit';
 import {
   buildHtmlSitemap,
   buildSitemapChunkXml,
@@ -138,6 +139,7 @@ const apiLimiter = rateLimit({
   legacyHeaders: false
 });
 app.use('/api', apiLimiter);
+app.use('/api', auditMutationMiddleware);
 
 app.use('/api/auth', authRouter);
 app.use('/api/catalog', catalogRouter);

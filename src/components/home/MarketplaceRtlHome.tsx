@@ -285,42 +285,6 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
   };
 
 
-
-    owner: any,
-    key: 'tag' | 'title' | 'subtitle' | 'button',
-    fallback: { x: number; y: number; width: number }
-  ): React.CSSProperties => {
-    const layouts = owner?.responsiveLayout || {};
-    const desktop = { ...fallback, ...(layouts.desktop?.[key] || {}) };
-    const tablet = owner?.inheritTabletFromDesktop === false
-      ? { ...desktop, ...(layouts.tablet?.[key] || {}) }
-      : desktop;
-    const mobile = owner?.inheritMobileFromDesktop === false
-      ? { ...desktop, ...(layouts.mobile?.[key] || {}) }
-      : desktop;
-
-    return {
-      ['--free-d-x' as any]: String(desktop.x),
-      ['--free-d-y' as any]: String(desktop.y),
-      ['--free-d-w' as any]: String(desktop.width),
-      ['--free-d-h' as any]: desktop.height ? `${desktop.height}%` : 'auto',
-      ['--free-d-font' as any]: desktop.fontSizePx ? `${desktop.fontSizePx}px` : undefined,
-      ['--free-d-wrap' as any]: desktop.wrap === 'nowrap' ? 'nowrap' : 'normal',
-      ['--free-t-x' as any]: String(tablet.x),
-      ['--free-t-y' as any]: String(tablet.y),
-      ['--free-t-w' as any]: String(tablet.width),
-      ['--free-t-h' as any]: tablet.height ? `${tablet.height}%` : 'auto',
-      ['--free-t-font' as any]: tablet.fontSizePx ? `${tablet.fontSizePx}px` : undefined,
-      ['--free-t-wrap' as any]: tablet.wrap === 'nowrap' ? 'nowrap' : 'normal',
-      ['--free-m-x' as any]: String(mobile.x),
-      ['--free-m-y' as any]: String(mobile.y),
-      ['--free-m-w' as any]: String(mobile.width),
-      ['--free-m-h' as any]: mobile.height ? `${mobile.height}%` : 'auto',
-      ['--free-m-font' as any]: mobile.fontSizePx ? `${mobile.fontSizePx}px` : undefined,
-      ['--free-m-wrap' as any]: mobile.wrap === 'nowrap' ? 'nowrap' : 'normal'
-    };
-  };
-
   const bannerBackgroundStyle = (
     item: PageSectionItem,
     image: string,

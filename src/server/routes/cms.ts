@@ -5,6 +5,7 @@ import { pool, type ResultSetHeader, type RowDataPacket } from '../db';
 
 interface JsonRow extends RowDataPacket {
   id: string;
+  revision?: number;
   data_json: any;
 }
 
@@ -45,7 +46,7 @@ cmsRouter.get('/bundle', async (_req, res) => {
       "SELECT id, data_json FROM sliders ORDER BY sort_order ASC, updated_at DESC"
     ),
     pool.query<JsonRow[]>(
-      "SELECT id, data_json FROM site_pages ORDER BY is_system DESC, updated_at DESC"
+      "SELECT id, revision, data_json FROM site_pages ORDER BY is_system DESC, updated_at DESC"
     ),
     pool.query<SettingRow[]>(
       "SELECT setting_key, setting_value FROM app_settings WHERE setting_key IN ('site_settings','payment_gateways')"
@@ -60,7 +61,11 @@ cmsRouter.get('/bundle', async (_req, res) => {
     articles: articleRows.map(row => ({ ...parseJson<any>(row.data_json, {}), id: row.id })),
     articleCategories: articleCategoryRows.map(row => ({ ...parseJson<any>(row.data_json, {}), id: row.id })),
     sliders: sliderRows.map(row => ({ ...parseJson<any>(row.data_json, {}), id: row.id })),
-    pages: pageRows.map(row => ({ ...parseJson<any>(row.data_json, {}), id: row.id })),
+    pages: pageRows.map(row => ({
+      ...parseJson<any>(row.data_json, {}),
+      id: row.id,
+      revision: Number(row.revision || 1)
+    })),
     settings: settings.get('site_settings') || null,
     paymentGateways: settings.get('payment_gateways') || []
   });
@@ -181,15 +186,30 @@ cmsRouter.put('/article-categories/:id', requireAdminPermission('canManageArticl
 });
 
 cmsRouter.delete('/article-categories/:id', requireAdminPermission('canManageArticles'), async (req, res) => {
-  const [result] = await pool.execute<ResultSetHeader>(
-    'DELETE FROM article_categories WHERE id = ?',
-    [req.params.id]
-  );
-  if (!result.affectedRows) {
-    res.status(404).json({ error: 'ARTICLE_CATEGORY_NOT_FOUND' });
-    return;
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
+    await connection.execute(
+      'UPDATE articles SET category_id = NULL, updated_at = NOW() WHERE category_id = ?',
+      [req.params.id]
+    );
+    const [result] = await connection.execute<ResultSetHeader>(
+      'DELETE FROM article_categories WHERE id = ?',
+      [req.params.id]
+    );
+    if (!result.affectedRows) {
+      await connection.rollback();
+      res.status(404).json({ error: 'ARTICLE_CATEGORY_NOT_FOUND' });
+      return;
+    }
+    await connection.commit();
+    res.json({ ok: true });
+  } catch (error) {
+    await connection.rollback();
+    throw error;
+  } finally {
+    connection.release();
   }
-  res.json({ ok: true });
 });
 
 cmsRouter.post('/sliders', requireAdminPermission('canManageSliders'), async (req, res) => {
@@ -278,22 +298,67 @@ cmsRouter.put('/pages/:id', requireAdminPermission('canManageSettings'), async (
   const page = { ...req.body, id: String(req.params.id) };
   page.slug = String(page.slug || '').trim();
   page.title = String(page.title || '').trim();
-  if (!page.slug || !page.title) {
+  if (!page.slug || !page.title || page.slug.length > 190 || page.title.length > 255) {
     res.status(400).json({ error: 'PAGE_DATA_INVALID' });
     return;
   }
+  if (!Array.isArray(page.sections) || page.sections.length > 100) {
+    res.status(400).json({ error: 'PAGE_SECTIONS_INVALID' });
+    return;
+  }
 
-  await pool.execute(
-    `INSERT INTO site_pages (id, slug, title, is_system, data_json)
-     VALUES (?, ?, ?, ?, ?)
-     ON DUPLICATE KEY UPDATE
-       slug = VALUES(slug),
-       title = VALUES(title),
-       is_system = VALUES(is_system),
-       data_json = VALUES(data_json),
-       updated_at = NOW()`,
-    [page.id, page.slug, page.title, page.isSystem ? 1 : 0, asJson(page)]
+  const [rows] = await pool.query<Array<RowDataPacket & { revision: number }>>(
+    'SELECT revision FROM site_pages WHERE id = ? LIMIT 1',
+    [page.id]
   );
+
+  try {
+    if (rows[0]) {
+      const currentRevision = Number(rows[0].revision || 1);
+      const expectedRevision = Number(page.revision);
+      if (!Number.isInteger(expectedRevision) || expectedRevision !== currentRevision) {
+        res.status(409).json({
+          error: 'PAGE_EDIT_CONFLICT',
+          currentRevision
+        });
+        return;
+      }
+
+      page.revision = currentRevision + 1;
+      const [result] = await pool.execute<ResultSetHeader>(
+        `UPDATE site_pages
+         SET slug = ?, title = ?, is_system = ?, revision = ?, data_json = ?, updated_at = NOW()
+         WHERE id = ? AND revision = ?`,
+        [
+          page.slug,
+          page.title,
+          page.isSystem ? 1 : 0,
+          page.revision,
+          asJson(page),
+          page.id,
+          currentRevision
+        ]
+      );
+      if (!result.affectedRows) {
+        res.status(409).json({ error: 'PAGE_EDIT_CONFLICT' });
+        return;
+      }
+    } else {
+      page.revision = 1;
+      await pool.execute(
+        `INSERT INTO site_pages (id, slug, title, is_system, revision, data_json)
+         VALUES (?, ?, ?, ?, 1, ?)`,
+        [page.id, page.slug, page.title, page.isSystem ? 1 : 0, asJson(page)]
+      );
+    }
+  } catch (error: any) {
+    if (error?.code === 'ER_DUP_ENTRY') {
+      res.status(409).json({ error: 'PAGE_SLUG_EXISTS' });
+      return;
+    }
+    throw error;
+  }
+
   res.json({ page });
 });
 

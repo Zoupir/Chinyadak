@@ -1,32 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useStore } from '../../context/StoreContext';
 import { SearchAutocomplete } from '../search/SearchAutocomplete';
-import { 
-  Wrench, 
-  Car, 
-  ShoppingBag, 
-  Heart, 
-  Layers, 
-  PhoneCall, 
-  Truck, 
-  HelpCircle, 
-  ChevronDown, 
-  SlidersHorizontal,
-  ShieldAlert,
-  Search,
-  CheckCircle2,
-  Settings,
-  Sparkles,
-  ArrowRightLeft,
-  User,
-  LogOut,
-  Edit3,
-  ExternalLink,
-  ShieldCheck,
-  Share2,
-  Menu as MenuIcon,
-  X
-} from 'lucide-react';
+import { Wrench, Car, ShoppingBag, Heart, Layers, PhoneCall, Truck, ChevronDown, Settings, Sparkles, ArrowRightLeft, User, LogOut, Edit3, ShieldCheck, Menu as MenuIcon, X } from 'lucide-react';
 import { formatToman } from '../../utils/formatters';
 import { ShareButton } from '../common/ShareButton';
 import { IconRenderer } from '../common/IconRenderer';

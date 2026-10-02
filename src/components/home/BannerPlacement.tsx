@@ -5,6 +5,7 @@ interface BannerPlacementProps {
   placement: BannerPlacementConfig;
   showEmptyState?: boolean;
   onNavigate: (view: string, param?: string) => void;
+  layoutOrder?: number;
 }
 
 const navigateTo = (link: string, onNavigate: BannerPlacementProps['onNavigate']) => {
@@ -52,7 +53,7 @@ const BannerCard: React.FC<{ item: BannerCreative; onNavigate: BannerPlacementPr
   </button>
 );
 
-export const BannerPlacement: React.FC<BannerPlacementProps> = ({ placement, showEmptyState = false, onNavigate }) => {
+export const BannerPlacement: React.FC<BannerPlacementProps> = ({ placement, layoutOrder, showEmptyState = false, onNavigate }) => {
   const items = [...placement.items].filter(item => item.isVisible && item.desktopImageUrl).sort((a, b) => a.order - b.order);
   if (!placement.isVisible || (!items.length && !showEmptyState)) return null;
   const columns = Math.max(1, Math.min(4, Number(placement.desktopColumns || 1)));
@@ -60,12 +61,13 @@ export const BannerPlacement: React.FC<BannerPlacementProps> = ({ placement, sho
   const containerStyle: React.CSSProperties = {
     width: placement.widthMode === 'full' ? '100%' : 'min(100%, 1280px)',
     marginInline: 'auto',
+    order: layoutOrder,
     ['--banner-gap' as any]: `${Math.max(0, Math.min(32, Number(placement.gapPx || 0)))}px`,
     ['--banner-desktop-columns' as any]: String(columns),
     ['--banner-mobile-columns' as any]: String(mobileColumns)
   };
   return (
-    <section className="banner-placement" data-section-key={placement.key} data-banner-placement={placement.key} style={containerStyle} aria-label={placement.title}>
+    <section className="banner-placement" data-section-key={placement.key} data-banner-placement={placement.key} data-banner-width={placement.widthMode || 'container'} style={containerStyle} aria-label={placement.title}>
       {items.map(item => <BannerCard key={item.id} item={item} ratio={placement.desktopAspectRatio} mobileRatio={placement.mobileAspectRatio} onNavigate={onNavigate} />)}
       {!items.length && showEmptyState && <div className="banner-placement-empty">{placement.title} — برای افزودن تصویر، از بخش «جایگاه‌های بنر» استفاده کنید.</div>}
     </section>

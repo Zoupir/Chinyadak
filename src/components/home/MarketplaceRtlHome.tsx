@@ -20,6 +20,7 @@ import { LiveSectionModal } from '../common/LiveSectionModal';
 import type { PageSection, PageSectionItem } from '../../types';
 import { BannerPlacement } from './BannerPlacement';
 import { resolveBannerPlacements } from '../../utils/bannerPlacements';
+import { resolveHomeLayoutOrder } from '../../utils/homeLayout';
 
 interface MarketplaceRtlHomeProps {
   onNavigate: (view: string, param?: string) => void;
@@ -59,6 +60,8 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
   const sectionConfig = (key: string) => homeSections.find(section => section.sectionKey === key);
   const bannerPlacements = useMemo(() => resolveBannerPlacements(settings.bannerPlacements, homeSections, sliders), [settings.bannerPlacements, homeSections, sliders]);
   const bannerPlacementFor = (key: string) => bannerPlacements.find(placement => placement.key === key);
+  const layoutOrder = useMemo(() => resolveHomeLayoutOrder(settings.homeLayoutOrder, homeSections), [settings.homeLayoutOrder, homeSections]);
+  const layoutRank = (key: string) => Math.max(0, layoutOrder.indexOf(key)) + 1;
   const customSections = homeSections
     .filter(section => Boolean(section.sectionKey) && !MARKETPLACE_BUILT_IN_SECTION_KEYS.has(section.sectionKey!))
     .sort((a, b) => a.order - b.order);
@@ -92,7 +95,7 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
       backgroundRepeat: section.imageUrl ? backgroundRepeat(section.imageMode) : undefined,
       backgroundPosition: section.imageUrl ? 'center' : undefined,
       color: section.textColor || undefined,
-      order: section.order,
+      order: layoutRank(key),
       borderRadius: section.borderRadiusPx !== undefined ? `${section.borderRadiusPx}px` : undefined,
       paddingTop: section.paddingTopPx !== undefined ? `${section.paddingTopPx}px` : undefined,
       paddingBottom: section.paddingBottomPx !== undefined ? `${section.paddingBottomPx}px` : undefined,
@@ -542,6 +545,7 @@ const handleLiveEditCapture = (event: React.MouseEvent<HTMLDivElement>) => {
       className={`marketplace-rtl-home ${isLiveEditActive && adminAuth.isAuthenticated ? 'is-live-editing' : ''}`}
       dir="rtl"
       onClickCapture={handleLiveEditCapture}
+      style={{ display: 'flex', flexDirection: 'column', alignItems: 'stretch' }}
     >
       {isLiveEditActive && adminAuth.isAuthenticated && (
         <div className="marketplace-live-edit-toolbar">
@@ -755,7 +759,7 @@ const handleLiveEditCapture = (event: React.MouseEvent<HTMLDivElement>) => {
       )}
 
       {bannerPlacementFor('promo-small') && (
-        <BannerPlacement placement={bannerPlacementFor('promo-small')!} showEmptyState={isLiveEditActive && adminAuth.isAuthenticated} onNavigate={onNavigate} />
+        <BannerPlacement placement={bannerPlacementFor('promo-small')!} layoutOrder={layoutRank('promo-small')} showEmptyState={isLiveEditActive && adminAuth.isAuthenticated} onNavigate={onNavigate} />
       )}
 
       {sectionVisible('featured-products') && (
@@ -784,7 +788,7 @@ const handleLiveEditCapture = (event: React.MouseEvent<HTMLDivElement>) => {
       )}
 
       {bannerPlacementFor('wide-banner-1') && (
-        <BannerPlacement placement={bannerPlacementFor('wide-banner-1')!} showEmptyState={isLiveEditActive && adminAuth.isAuthenticated} onNavigate={onNavigate} />
+        <BannerPlacement placement={bannerPlacementFor('wide-banner-1')!} layoutOrder={layoutRank('wide-banner-1')} showEmptyState={isLiveEditActive && adminAuth.isAuthenticated} onNavigate={onNavigate} />
       )}
 
       {sectionVisible('manufacturers') && (
@@ -849,7 +853,7 @@ const handleLiveEditCapture = (event: React.MouseEvent<HTMLDivElement>) => {
       )}
 
       {bannerPlacementFor('promo-medium') && (
-        <BannerPlacement placement={bannerPlacementFor('promo-medium')!} showEmptyState={isLiveEditActive && adminAuth.isAuthenticated} onNavigate={onNavigate} />
+        <BannerPlacement placement={bannerPlacementFor('promo-medium')!} layoutOrder={layoutRank('promo-medium')} showEmptyState={isLiveEditActive && adminAuth.isAuthenticated} onNavigate={onNavigate} />
       )}
 
       {sectionVisible('weekly-deals') && (
@@ -884,7 +888,7 @@ const handleLiveEditCapture = (event: React.MouseEvent<HTMLDivElement>) => {
       )}
 
       {bannerPlacementFor('promo-large') && (
-        <BannerPlacement placement={bannerPlacementFor('promo-large')!} showEmptyState={isLiveEditActive && adminAuth.isAuthenticated} onNavigate={onNavigate} />
+        <BannerPlacement placement={bannerPlacementFor('promo-large')!} layoutOrder={layoutRank('promo-large')} showEmptyState={isLiveEditActive && adminAuth.isAuthenticated} onNavigate={onNavigate} />
       )}
 
       {sectionVisible('maintenance-products') && (

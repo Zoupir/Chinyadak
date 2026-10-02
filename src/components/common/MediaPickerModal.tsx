@@ -140,9 +140,9 @@ export const MediaPickerModal: React.FC<MediaPickerModalProps> = ({
   if (!isOpen) return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-[240] bg-black/65 backdrop-blur-sm p-3 sm:p-6 flex items-center justify-center" onClick={onClose}>
-      <div className="w-[96vw] max-w-[1440px] h-[88vh] max-h-[820px] bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col" onClick={event => event.stopPropagation()}>
-        <header className="h-16 px-4 sm:px-6 border-b border-neutral-200 flex items-center justify-between gap-4 shrink-0">
+    <div className="fixed inset-0 z-[99999] bg-black/65 backdrop-blur-sm p-1 sm:p-3 lg:p-6 flex items-center justify-center" onClick={onClose}>
+      <div role="dialog" aria-modal="true" aria-label={title} className="w-[calc(100vw-0.5rem)] sm:w-[96vw] max-w-[1440px] h-[calc(100dvh-0.5rem)] sm:h-[88dvh] max-h-[820px] min-h-0 bg-white rounded-xl sm:rounded-2xl shadow-2xl overflow-hidden flex flex-col" onClick={event => event.stopPropagation()}>
+        <header className="min-h-14 sm:h-16 px-3 sm:px-6 py-2 sm:py-0 border-b border-neutral-200 flex items-center justify-between gap-2 sm:gap-4 shrink-0">
           <div>
             <h2 className="font-black text-base">{title}</h2>
             <p className="text-[10px] text-neutral-500 mt-0.5">کتابخانه رسانه، آپلود جدید یا لینک مستقیم</p>
@@ -152,7 +152,7 @@ export const MediaPickerModal: React.FC<MediaPickerModalProps> = ({
           </button>
         </header>
 
-        <div className="px-4 sm:px-6 border-b border-neutral-200 flex items-center gap-1 shrink-0">
+        <div className="px-2 sm:px-6 border-b border-neutral-200 flex items-center gap-1 shrink-0 overflow-x-auto">
           {([
             ['library', 'کتابخانه رسانه'],
             ['upload', 'بارگذاری فایل جدید'],
@@ -162,7 +162,7 @@ export const MediaPickerModal: React.FC<MediaPickerModalProps> = ({
               key={id}
               type="button"
               onClick={() => setTab(id)}
-              className={`px-4 py-3 text-xs font-bold border-b-2 ${tab === id ? 'border-blue-600 text-blue-700' : 'border-transparent text-neutral-500'}`}
+              className={`px-3 sm:px-4 py-3 text-[10px] sm:text-xs font-bold border-b-2 whitespace-nowrap ${tab === id ? 'border-blue-600 text-blue-700' : 'border-transparent text-neutral-500'}`}
             >
               {label}
             </button>
@@ -291,7 +291,7 @@ export const MediaPickerModal: React.FC<MediaPickerModalProps> = ({
         )}
 
         {tab === 'upload' && (
-          <div className="flex-1 p-6 sm:p-10 grid place-items-center">
+          <div className="min-h-0 flex-1 overflow-y-auto p-3 sm:p-6 lg:p-10 grid place-items-center">
             <div className="w-full max-w-3xl">
               <input ref={fileRef} type="file" accept="image/*" multiple className="hidden" onChange={e => e.target.files && void uploadFiles(e.target.files)} />
               <button
@@ -300,7 +300,7 @@ export const MediaPickerModal: React.FC<MediaPickerModalProps> = ({
                 onClick={() => fileRef.current?.click()}
                 onDragOver={e => e.preventDefault()}
                 onDrop={e => { e.preventDefault(); void uploadFiles(e.dataTransfer.files); }}
-                className="w-full min-h-[320px] border-2 border-dashed border-neutral-300 hover:border-blue-500 rounded-3xl bg-neutral-50 flex flex-col items-center justify-center gap-4 text-neutral-600 disabled:opacity-50"
+                className="w-full min-h-[min(320px,45dvh)] border-2 border-dashed border-neutral-300 hover:border-blue-500 rounded-3xl bg-neutral-50 flex flex-col items-center justify-center gap-4 text-neutral-600 disabled:opacity-50"
               >
                 {uploading ? <Loader2 className="w-12 h-12 animate-spin text-blue-600" /> : <Upload className="w-12 h-12 text-blue-600" />}
                 <div>
@@ -314,7 +314,7 @@ export const MediaPickerModal: React.FC<MediaPickerModalProps> = ({
         )}
 
         {tab === 'url' && allowUrl && (
-          <div className="flex-1 p-6 sm:p-10 grid place-items-center">
+          <div className="min-h-0 flex-1 overflow-y-auto p-3 sm:p-6 lg:p-10 grid place-items-center">
             <div className="w-full max-w-xl space-y-3">
               <label className="text-xs font-bold">آدرس مستقیم تصویر</label>
               <input dir="ltr" value={directUrl} onChange={e => setDirectUrl(e.target.value)} className="w-full p-3 border rounded-xl text-left font-mono text-xs" placeholder="https://..." />

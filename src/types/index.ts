@@ -617,6 +617,8 @@ export interface BannerPlacementConfig {
 }
 
 export interface SiteSettings {
+  /** Saved visual order for homepage sections and independent banner placements. */
+  homeLayoutOrder?: string[];
   siteTitle: string;
   siteSlogan: string;
   contactPhone: string;

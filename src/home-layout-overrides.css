@@ -1,0 +1,36 @@
+
+/* Homepage visual ordering and true viewport-wide banner placements. */
+html[data-layout="marketplace-rtl"] .marketplace-rtl-home {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: stretch !important;
+}
+html[data-layout="marketplace-rtl"] .marketplace-rtl-home > .marketplace-live-edit-toolbar {
+  order: 0;
+}
+html[data-layout="marketplace-rtl"] .marketplace-rtl-home > .banner-placement[data-banner-width="full"] {
+  width: 100vw !important;
+  max-width: 100vw !important;
+  position: relative;
+  left: 50%;
+  transform: translateX(-50%);
+  box-sizing: border-box !important;
+}
+html[data-layout="marketplace-rtl"] .marketplace-ref-footer-bottom {
+  width: 100vw !important;
+  max-width: 100vw !important;
+  margin-inline: calc(50% - 50vw) !important;
+}
+html[data-layout="marketplace-rtl"] .marketplace-ref-footer-bottom .marketplace-ref-container,
+html[data-layout="marketplace-rtl"] .marketplace-ref-footer[data-bottom-align="right"] .marketplace-ref-footer-bottom .marketplace-ref-container,
+html[data-layout="marketplace-rtl"] .marketplace-ref-footer[data-bottom-align="left"] .marketplace-ref-footer-bottom .marketplace-ref-container {
+  width: 100% !important;
+  max-width: none !important;
+  margin-inline: auto !important;
+  align-items: center !important;
+  text-align: center !important;
+}
+html[data-layout="marketplace-rtl"] .marketplace-ref-footer-copyright {
+  align-self: center !important;
+  text-align: center !important;
+}

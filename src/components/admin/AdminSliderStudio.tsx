@@ -27,6 +27,7 @@ import type {
 } from '../../types';
 import { ImageUploadInput } from '../common/ImageUploadInput';
 import { LinkDestinationPicker } from '../common/LinkDestinationPicker';
+import { ConfirmDialog } from '../common/ConfirmDialog';
 
 type StudioMode = 'slides' | 'banners';
 
@@ -141,6 +142,8 @@ export const AdminSliderStudio:React.FC=()=>{
     reorderSliders,
     pages,
     updateSection,
+    settings,
+    updateSettings,
     showToast
   }=useStore();
 
@@ -162,6 +165,7 @@ export const AdminSliderStudio:React.FC=()=>{
   const [activeElement,setActiveElement]=useState<SliderElementKey>('title');
   const [dragging,setDragging]=useState<{key:SliderElementKey;offsetX:number;offsetY:number}|null>(null);
   const [resizing,setResizing]=useState<{key:SliderElementKey;startX:number;startY:number;startWidth:number;startHeight:number}|null>(null);
+  const [deletePending,setDeletePending]=useState(false);
   const canvasRef=useRef<HTMLDivElement>(null);
 
   React.useEffect(()=>{
@@ -239,22 +243,31 @@ export const AdminSliderStudio:React.FC=()=>{
   };
 
   const removeCurrent=()=>{
+    if(mode==='slides'&&!draft)return;
+    if(mode==='banners'&&(!homePage||!activeBannerSection||!bannerDraft))return;
+    setDeletePending(true);
+  };
+
+  const confirmRemoveCurrent=()=>{
     if(mode==='slides'){
       if(!draft)return;
-      if(!window.confirm('اسلاید حذف شود؟'))return;
       deleteSlider(draft.id);
-      setSelectedId('');
-      setDraft(null);
+      const remaining=ordered.filter(item=>item.id!==draft.id);
+      setSelectedId(remaining[0]?.id||'');
+      setDraft(remaining[0]?clone(remaining[0]):null);
+      setDeletePending(false);
       return;
     }
     if(!homePage||!activeBannerSection||!bannerDraft)return;
-    if(!window.confirm('این بنر حذف شود؟'))return;
+    const remaining=(activeBannerSection.items||[]).filter(item=>item.id!==bannerDraft.id);
     updateSection(homePage.slug,{
       ...activeBannerSection,
-      items:(activeBannerSection.items||[]).filter(item=>item.id!==bannerDraft.id)
+      items:remaining
     });
-    setBannerSelection(null);
-    setBannerDraft(null);
+    const next=remaining[0];
+    setBannerSelection(next?{sectionId:activeBannerSection.id,itemId:next.id}:null);
+    setBannerDraft(next?clone(next):null);
+    setDeletePending(false);
   };
 
   const moveSlide=(id:string,dir:'up'|'down')=>{
@@ -577,6 +590,76 @@ export const AdminSliderStudio:React.FC=()=>{
               {mode==='slides'&&draft&&<button onClick={()=>patchSlide({isActive:!draft.isActive})} className={`px-2 py-1.5 rounded-lg ${draft.isActive?'bg-emerald-50 text-emerald-700':'bg-neutral-100'}`}>{draft.isActive?<Eye className="w-4 h-4"/>:<EyeOff className="w-4 h-4"/>}</button>}
             </div>
 
+            {mode==='slides'&&(
+              <section className="p-3 rounded-xl border border-violet-200 bg-violet-50/30 space-y-3">
+                <div>
+                  <strong className="block text-[10px] text-violet-950">رفتار عمومی اسلایدر</strong>
+                  <p className="text-[8px] text-violet-700 mt-1">این تنظیمات روی کل اسلایدر صفحه اصلی اعمال می‌شوند.</p>
+                </div>
+                <label className="block">
+                  <span className="block text-[8px] font-bold mb-1">زمان تعویض خودکار اسلاید</span>
+                  <div className="grid grid-cols-[1fr_72px] gap-2 items-center">
+                    <input
+                      type="range"
+                      min="1500"
+                      max="20000"
+                      step="500"
+                      value={Math.max(1500,Number(settings.heroSliderAutoplayMs||6500))}
+                      onChange={event=>updateSettings({heroSliderAutoplayMs:Number(event.target.value)})}
+                      className="w-full"
+                    />
+                    <input
+                      type="number"
+                      min="1500"
+                      max="60000"
+                      step="500"
+                      value={Math.max(1500,Number(settings.heroSliderAutoplayMs||6500))}
+                      onChange={event=>updateSettings({heroSliderAutoplayMs:Math.max(1500,Number(event.target.value||6500))})}
+                      className="w-full p-2 border rounded-lg font-mono"
+                    />
+                  </div>
+                  <small className="block mt-1 text-[8px] text-neutral-500">میلی‌ثانیه؛ مثلاً ۶۵۰۰ یعنی ۶٫۵ ثانیه.</small>
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  <label>
+                    <span className="block text-[8px] font-bold mb-1">کنترل تعویض اسلاید</span>
+                    <select
+                      value={settings.heroSliderNavigation||'dots'}
+                      onChange={event=>updateSettings({heroSliderNavigation:event.target.value as 'dots'|'arrows'|'both'|'none'})}
+                      className="w-full p-2 border rounded-lg bg-white"
+                    >
+                      <option value="dots">نقطه‌ها</option>
+                      <option value="arrows">فلش‌ها</option>
+                      <option value="both">فلش و نقطه</option>
+                      <option value="none">بدون کنترل</option>
+                    </select>
+                  </label>
+                  <label>
+                    <span className="block text-[8px] font-bold mb-1">انیمیشن تعویض</span>
+                    <select
+                      value={settings.heroSliderAnimation||'fade'}
+                      onChange={event=>updateSettings({heroSliderAnimation:event.target.value as 'fade'|'slide'|'zoom'})}
+                      className="w-full p-2 border rounded-lg bg-white"
+                    >
+                      <option value="fade">محو شدن</option>
+                      <option value="slide">حرکت اسلایدی</option>
+                      <option value="zoom">بزرگ‌نمایی نرم</option>
+                    </select>
+                  </label>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <label className="p-2 rounded-lg border bg-white flex items-center justify-between gap-2">
+                    <span className="font-bold">توقف هنگام رفتن موس روی اسلاید</span>
+                    <input type="checkbox" checked={settings.heroSliderPauseOnHover!==false} onChange={event=>updateSettings({heroSliderPauseOnHover:event.target.checked})}/>
+                  </label>
+                  <label className="p-2 rounded-lg border bg-white flex items-center justify-between gap-2">
+                    <span className="font-bold">تکرار پیوسته اسلایدها</span>
+                    <input type="checkbox" checked={settings.heroSliderLoop!==false} onChange={event=>updateSettings({heroSliderLoop:event.target.checked})}/>
+                  </label>
+                </div>
+              </section>
+            )}
+
             {device!=='desktop'&&(
               <label className="flex items-center justify-between p-3 rounded-xl border bg-neutral-50">
                 <span><strong className="block text-[9px]">ارث‌بری از دسکتاپ</strong><small className="text-[8px] text-neutral-400">خاموش = جانمایی مستقل برای این دستگاه</small></span>
@@ -697,6 +780,18 @@ export const AdminSliderStudio:React.FC=()=>{
           </div>}
         </aside>
       </div>
+
+      <ConfirmDialog
+        open={deletePending}
+        title={mode==='slides'?'حذف اسلاید':'حذف بنر'}
+        message={mode==='slides'
+          ? `اسلاید «${draft?.title||'بدون عنوان'}» حذف شود؟`
+          : `بنر «${bannerDraft?.title||'بدون عنوان'}» حذف شود؟`}
+        confirmLabel={mode==='slides'?'حذف اسلاید':'حذف بنر'}
+        danger
+        onCancel={()=>setDeletePending(false)}
+        onConfirm={confirmRemoveCurrent}
+      />
     </div>
   );
 };

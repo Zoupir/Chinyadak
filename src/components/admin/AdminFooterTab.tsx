@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useStore } from '../../context/StoreContext';
+import { sanitizeEmbedHtml } from '../../utils/sanitizeHtml';
 import { FooterColumn, FooterFeatureItem, FooterLink, FooterBadgeItem } from '../../types';
 import { ImageUploadInput } from '../common/ImageUploadInput';
 import { LinkDestinationPicker } from '../common/LinkDestinationPicker';
@@ -775,7 +776,7 @@ export const AdminFooterTab: React.FC = () => {
                 {/* Preview Box */}
                 <div className="p-4 bg-neutral-900 rounded-xl text-center flex items-center justify-center min-h-[100px]">
                   {b.htmlCode ? (
-                    <div dangerouslySetInnerHTML={{ __html: b.htmlCode }} />
+                    <div dangerouslySetInnerHTML={{ __html: sanitizeEmbedHtml(b.htmlCode) }} />
                   ) : b.imageUrl ? (
                     <img src={b.imageUrl} alt={b.title} className="h-16 w-auto object-contain mx-auto" />
                   ) : (
@@ -1010,7 +1011,7 @@ export const AdminFooterTab: React.FC = () => {
               </div>
               <div className="p-6 bg-neutral-900 border border-neutral-800 rounded-2xl min-h-[260px] text-white flex items-center justify-center">
                 {footerCustomHtml ? (
-                  <div dangerouslySetInnerHTML={{ __html: footerCustomHtml }} />
+                  <div dangerouslySetInnerHTML={{ __html: sanitizeEmbedHtml(footerCustomHtml) }} />
                 ) : (
                   <span className="text-neutral-500 text-xs">هیچ کدی برای پیش‌نمایش وارد نشده است.</span>
                 )}

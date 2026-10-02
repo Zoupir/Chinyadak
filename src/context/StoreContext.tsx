@@ -2179,7 +2179,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const createOrder = async (
     orderData: Omit<Order, 'id' | 'orderNumber' | 'date'> & { loyaltyPointsToRedeem?: number }
   ): Promise<Order> => {
-    const response = await apiRequest<{ order: Order }>('/api/orders', {
+    const response = await apiRequest<{ order: Order; paymentToken: string }>('/api/orders', {
       method: 'POST',
       body: JSON.stringify({
         customer: orderData.customer,
@@ -2193,9 +2193,10 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       })
     });
 
-    setOrders(prev => [response.order, ...prev.filter(item => item.id !== response.order.id)]);
-    showToast(`سفارش ${response.order.orderNumber} در سرور ثبت شد.`);
-    return response.order;
+    const order = { ...response.order, paymentToken: response.paymentToken };
+    setOrders(prev => [order, ...prev.filter(item => item.id !== order.id)]);
+    showToast(`سفارش ${order.orderNumber} در سرور ثبت شد.`);
+    return order;
   };
 
   const updateOrderStatus = (orderId: string, status: OrderStatus, trackingCode?: string) => {
@@ -2218,10 +2219,10 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       method: 'DELETE'
     }).then(() => {
       setOrders(prev => prev.filter(o => o.id !== orderId && o.orderNumber !== orderId));
-      showToast('سفارش حذف شد.', 'info');
+      showToast('سفارش بایگانی شد.', 'info');
     }).catch(error => {
       console.error(error);
-      showToast('حذف سفارش روی سرور انجام نشد.', 'error');
+      showToast('بایگانی سفارش روی سرور انجام نشد.', 'error');
     });
   };
 
@@ -2230,12 +2231,13 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const getOrderByTracking = async (orderNumber: string, phone: string) => {
     try {
-      const response = await apiRequest<{ order: Order }>('/api/orders/track', {
+      const response = await apiRequest<{ order: Order; paymentToken: string }>('/api/orders/track', {
         method: 'POST',
         body: JSON.stringify({ orderNumber, phone })
       });
-      setOrders(prev => [response.order, ...prev.filter(item => item.id !== response.order.id)]);
-      return response.order;
+      const order = { ...response.order, paymentToken: response.paymentToken };
+      setOrders(prev => [order, ...prev.filter(item => item.id !== order.id)]);
+      return order;
     } catch (error) {
       if (error instanceof ApiError && error.status === 404) return undefined;
       console.error(error);

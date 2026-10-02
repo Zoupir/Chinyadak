@@ -219,12 +219,13 @@ export const LiveSectionModal: React.FC<LiveSectionModalProps> = ({
     onClose();
   };
 
-  const save = () => {
+  const save = async () => {
     if (!form.title?.trim()) {
       showToast('عنوان سکشن الزامی است.', 'error');
       return;
     }
-    updateSection(pageSlug, form);
+    const saved = await updateSection(pageSlug, form);
+    if (!saved) return;
     originalRef.current = JSON.parse(JSON.stringify(form));
     onClose();
   };

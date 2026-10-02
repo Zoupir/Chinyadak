@@ -508,6 +508,7 @@ interface StoreContextType {
   // Store Settings (Theme, Font, Color, Contact, Shipping)
   settings: SiteSettings;
   isStoreReady: boolean;
+  storeLoadError: string | null;
   updateSettings: (newSettings: Partial<SiteSettings>) => void;
 
   // Payment Gateways
@@ -642,6 +643,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [settings, setSettings] = useState<SiteSettings>(INITIAL_SETTINGS);
   // Prevent rendering a wrong/default template before the persisted CMS settings arrive.
   const [isStoreReady, setIsStoreReady] = useState(false);
+  const [storeLoadError, setStoreLoadError] = useState<string | null>(null);
 
   // Payment Gateways
   const [paymentGateways, setPaymentGateways] = useState<PaymentGatewayConfig[]>([]);
@@ -801,6 +803,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         setPages(normalizeBuilderPages(cmsData.pages));
         if (cmsData.settings) setSettings({ ...INITIAL_SETTINGS, ...cmsData.settings });
         setPaymentGateways(cmsData.paymentGateways);
+        setStoreLoadError(null);
         setIsStoreReady(true);
       })
       .catch(error => {
@@ -816,6 +819,9 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           setPages(normalizeBuilderPages(INITIAL_PAGES));
           setSettings(INITIAL_SETTINGS);
           setPaymentGateways(INITIAL_PAYMENT_GATEWAYS);
+          setStoreLoadError(null);
+        } else {
+          setStoreLoadError('STORE_BOOTSTRAP_FAILED');
         }
         if (!cancelled) setIsStoreReady(true);
       });
@@ -2421,6 +2427,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       setIsLiveEditActive,
       settings,
       isStoreReady,
+      storeLoadError,
       updateSettings,
       paymentGateways,
       updatePaymentGateway,

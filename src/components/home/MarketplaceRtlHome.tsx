@@ -78,7 +78,7 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
       paddingInline: section.paddingInlinePx !== undefined ? `${section.paddingInlinePx}px` : undefined,
       minHeight: section.minHeightPx ? `${section.minHeightPx}px` : undefined,
       textAlign: section.contentAlign || undefined,
-      width: section.fullWidth ? '100%' : `${Math.max(20, Math.min(100, Number(section.widthPercent ?? 100)))}%`,
+      width: `${Math.max(20, Math.min(100, Number(section.widthPercent ?? (section.fullWidth ? 95 : 100))))}%`,
       maxWidth: section.fullWidth || section.maxWidthPx === 0 ? 'none' : `${Number(section.maxWidthPx || 1280)}px`,
       marginInline: 'auto',
       ['--builder-gap' as any]: `${section.gapPx ?? 12}px`,
@@ -87,9 +87,9 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
       ['--builder-mobile-cols' as any]: String(section.mobileColumns || 1),
       ['--builder-item-radius' as any]: `${section.itemRadiusPx ?? 10}px`,
       ['--builder-image-size' as any]: `${section.imageSizePx ?? 72}px`,
-      ['--builder-width' as any]: section.fullWidth ? '100%' : `${Math.max(20, Math.min(100, Number(section.widthPercent ?? 100)))}%`,
-      ['--builder-tablet-width' as any]: section.fullWidth ? '100%' : `${Math.max(20, Math.min(100, Number(section.tabletWidthPercent ?? section.widthPercent ?? 100)))}%`,
-      ['--builder-mobile-width' as any]: section.fullWidth ? '100%' : `${Math.max(20, Math.min(100, Number(section.mobileWidthPercent ?? section.widthPercent ?? 100)))}%`,
+      ['--builder-width' as any]: `${Math.max(20, Math.min(100, Number(section.widthPercent ?? (section.fullWidth ? 95 : 100))))}%`,
+      ['--builder-tablet-width' as any]: `${Math.max(20, Math.min(100, Number(section.tabletWidthPercent ?? section.widthPercent ?? (section.fullWidth ? 96 : 100))))}%`,
+      ['--builder-mobile-width' as any]: `${Math.max(20, Math.min(100, Number(section.mobileWidthPercent ?? section.widthPercent ?? 100)))}%`,
       ['--builder-max-width' as any]: section.fullWidth || section.maxWidthPx === 0 ? 'none' : `${Number(section.maxWidthPx || 1280)}px`,
       ['--builder-padding-top' as any]: section.paddingTopPx !== undefined ? `${section.paddingTopPx}px` : undefined,
       ['--builder-padding-bottom' as any]: section.paddingBottomPx !== undefined ? `${section.paddingBottomPx}px` : undefined,
@@ -115,38 +115,65 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
       ['--builder-image-fit' as any]: section.itemImageFit || 'contain',
       ['--builder-item-min-height' as any]: section.itemMinHeightPx !== undefined ? `${section.itemMinHeightPx}px` : undefined,
       ['--builder-item-align' as any]: section.itemTextAlign || section.contentAlign || 'right',
-      ['--builder-mobile-item-min' as any]: `${section.mobileItemMinWidthPx ?? 240}px`
+      ['--builder-mobile-item-min' as any]: `${section.mobileItemMinWidthPx ?? 240}px`,
+      ['--deal-timer-size' as any]: `${section.dealTimerFontSizePx ?? 18}px`,
+      ['--deal-title-color' as any]: section.dealTitleColor || '#ffffff',
+      ['--deal-subtitle-color' as any]: section.dealSubtitleColor || '#fff7ed',
+      ['--deal-timer-color' as any]: section.dealTimerTextColor || '#b45309',
+      ['--deal-timer-bg' as any]: section.dealTimerBoxBgColor || '#ffffff',
+      ['--finder-width' as any]: `${section.finderWidthPx ?? 300}px`,
+      ['--finder-padding' as any]: `${section.finderPaddingPx ?? 18}px`,
+      ['--finder-radius' as any]: `${section.finderRadiusPx ?? 8}px`,
+      ['--finder-title-size' as any]: `${section.finderTitleFontSizePx ?? 15}px`,
+      ['--finder-text-size' as any]: `${section.finderTextFontSizePx ?? 11}px`,
+      ['--finder-label-size' as any]: `${section.finderLabelFontSizePx ?? 10}px`,
+      ['--finder-value-size' as any]: `${section.finderValueFontSizePx ?? 11}px`,
+      ['--finder-button-size' as any]: `${section.finderButtonFontSizePx ?? 11}px`,
+      ['--finder-bg' as any]: section.finderBackgroundColor || '#ffffff',
+      ['--finder-text' as any]: section.finderTextColor || '#111827',
+      ['--finder-field-bg' as any]: section.finderFieldBackgroundColor || '#fafafa',
+      ['--finder-field-text' as any]: section.finderFieldTextColor || '#222b35',
+      ['--finder-button-bg' as any]: section.finderButtonBackgroundColor || '#f5a000',
+      ['--finder-button-text' as any]: section.finderButtonTextColor || '#111827'
     };
   };
 
   const itemVisualStyle = (key: string, item: PageSectionItem): React.CSSProperties => {
     const section = sectionConfig(key);
+    const perItem = /promo|banner/i.test(key);
+    const pick = <T,>(itemValue:T|undefined, sectionValue:T|undefined) => perItem ? (itemValue ?? sectionValue) : sectionValue;
     return {
-      backgroundColor: item.backgroundColor || section?.itemBackgroundColor || undefined,
-      color: item.textColor || section?.itemTextColor || undefined,
-      borderColor: item.borderColor || section?.itemBorderColor || undefined,
-      borderRadius: `${item.borderRadiusPx ?? section?.itemRadiusPx ?? 10}px`,
-      padding: item.paddingPx !== undefined
-        ? `${item.paddingPx}px`
-        : section?.itemPaddingPx !== undefined ? `${section.itemPaddingPx}px` : undefined,
-      fontSize: item.fontSizePx !== undefined
-        ? `${item.fontSizePx}px`
-        : section?.itemFontSizePx !== undefined ? `${section.itemFontSizePx}px` : undefined,
-      minHeight: item.minHeightPx !== undefined
-        ? `${item.minHeightPx}px`
-        : section?.itemMinHeightPx !== undefined ? `${section.itemMinHeightPx}px` : undefined,
-      textAlign: item.textAlignment || item.textAlign || section?.itemTextAlign || undefined,
-      ['--item-image-width' as any]: `${(item as PageSectionItem).imageWidthPx ?? section?.itemImageWidthPx ?? section?.imageSizePx ?? 72}px`,
-      ['--item-image-height' as any]: `${(item as PageSectionItem).imageHeightPx ?? section?.itemImageHeightPx ?? section?.imageSizePx ?? 72}px`,
+      backgroundColor: pick(item.backgroundColor, section?.itemBackgroundColor) || undefined,
+      color: pick(item.textColor, section?.itemTextColor) || undefined,
+      borderColor: pick(item.borderColor, section?.itemBorderColor) || undefined,
+      borderRadius: `${pick(item.borderRadiusPx, section?.itemRadiusPx) ?? 10}px`,
+      padding: pick(item.paddingPx, section?.itemPaddingPx) !== undefined
+        ? `${pick(item.paddingPx, section?.itemPaddingPx)}px` : undefined,
+      fontSize: pick(item.fontSizePx, section?.itemFontSizePx) !== undefined
+        ? `${pick(item.fontSizePx, section?.itemFontSizePx)}px` : undefined,
+      minHeight: pick(item.minHeightPx, section?.itemMinHeightPx) !== undefined
+        ? `${pick(item.minHeightPx, section?.itemMinHeightPx)}px` : undefined,
+      textAlign: pick(item.textAlignment || item.textAlign, section?.itemTextAlign) || undefined,
+      ['--item-image-width' as any]: `${pick(item.imageWidthPx, section?.itemImageWidthPx ?? section?.imageSizePx) ?? 72}px`,
+      ['--item-image-height' as any]: `${pick(item.imageHeightPx, section?.itemImageHeightPx ?? section?.imageSizePx) ?? 72}px`,
       ['--item-image-fit' as any]:
-        (item as PageSectionItem).imageMode === 'stretch' ? 'fill' :
-        ['cover','contain'].includes((item as PageSectionItem).imageMode || '') ? (item as PageSectionItem).imageMode :
-        (item as PageSectionItem).imageFit || section?.itemImageFit || 'contain',
-      ['--item-image-radius' as any]: `${item.imageRadiusPx ?? section?.itemImageRadiusPx ?? 0}px`,
-      ['--item-title-size' as any]: item.titleFontSizePx !== undefined ? `${item.titleFontSizePx}px` : undefined,
-      ['--item-content-size' as any]: item.contentFontSizePx !== undefined ? `${item.contentFontSizePx}px` : undefined
+        perItem && item.imageMode === 'stretch' ? 'fill' :
+        perItem && ['cover','contain'].includes(item.imageMode || '') ? item.imageMode :
+        pick(item.imageFit, section?.itemImageFit) || 'contain',
+      ['--item-image-radius' as any]: `${pick(item.imageRadiusPx, section?.itemImageRadiusPx) ?? 0}px`,
+      ['--item-title-size' as any]: pick(item.titleFontSizePx, section?.itemTitleFontSizePx) !== undefined ? `${pick(item.titleFontSizePx, section?.itemTitleFontSizePx)}px` : undefined,
+      ['--item-content-size' as any]: pick(item.contentFontSizePx, section?.itemContentFontSizePx) !== undefined ? `${pick(item.contentFontSizePx, section?.itemContentFontSizePx)}px` : undefined
     };
   };
+
+  const bannerGridItemStyle = (item: PageSectionItem): React.CSSProperties => ({
+    ['--banner-cols-desktop' as any]: String(Math.max(10,Math.min(100,Math.round(item.widthPercent ?? 100)))),
+    ['--banner-cols-tablet' as any]: String(Math.max(10,Math.min(100,Math.round(item.tabletWidthPercent ?? item.widthPercent ?? 100)))),
+    ['--banner-cols-mobile' as any]: String(Math.max(10,Math.min(100,Math.round(item.mobileWidthPercent ?? 100)))),
+    ['--banner-height-desktop' as any]: `${item.heightPx ?? item.minHeightPx ?? 178}px`,
+    ['--banner-height-tablet' as any]: `${item.tabletHeightPx ?? item.heightPx ?? item.minHeightPx ?? 178}px`,
+    ['--banner-height-mobile' as any]: `${item.mobileHeightPx ?? item.tabletHeightPx ?? item.heightPx ?? item.minHeightPx ?? 168}px`
+  });
   const sourceItemsFor = (
     source: 'manual' | 'categories' | 'brands' | 'products' | 'articles',
     limit: number
@@ -467,7 +494,7 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
         </div>
       )}
       {sectionVisible('hero') && (
-      <section className="marketplace-hero-shell" data-section-key="hero" style={sectionStyle('hero')}>
+      <section className="marketplace-hero-shell" data-section-key="hero" data-finder-side={sectionConfig('hero')?.finderSide || 'left'} style={sectionStyle('hero')}>
         <div
           key={hero?.id || heroIndex}
           className="marketplace-hero-banner"
@@ -678,6 +705,7 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
             className="marketplace-promo-card"
             style={{
               ...itemVisualStyle('promo-small', item as PageSectionItem),
+              ...bannerGridItemStyle(item as PageSectionItem),
               ...bannerBackgroundStyle(item as PageSectionItem, item.imageUrl || '')
             }}
             onClick={() => goLink(item.link)}
@@ -818,6 +846,7 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
             className="marketplace-promo-card marketplace-promo-medium"
             style={{
               ...itemVisualStyle('promo-medium', item as PageSectionItem),
+              ...bannerGridItemStyle(item as PageSectionItem),
               ...bannerBackgroundStyle(item as PageSectionItem, item.imageUrl || '')
             }}
             onClick={() => goLink(item.link)}
@@ -876,6 +905,7 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
               className={index % 3 === 0 ? 'large' : 'small'}
               style={{
                 ...itemVisualStyle('promo-large', item),
+                ...bannerGridItemStyle(item),
                 ...bannerBackgroundStyle(item as PageSectionItem, image, true)
               }}
               onClick={() => goLink(item.link)}

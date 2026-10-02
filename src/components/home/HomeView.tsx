@@ -4,29 +4,7 @@ import { HeroSection } from './HeroSection';
 import { MarketplaceRtlHome } from './MarketplaceRtlHome';
 import { ProductCard } from '../product/ProductCard';
 import { LiveSectionModal } from '../common/LiveSectionModal';
-import { 
-  Car, 
-  Layers, 
-  Flame, 
-  Sparkles, 
-  HelpCircle, 
-  ArrowLeft, 
-  ShieldCheck, 
-  BookOpen, 
-  Clock, 
-  CheckCircle2,
-  ChevronDown,
-  Filter,
-  Wrench,
-  Thermometer,
-  Cpu,
-  Disc,
-  Cog,
-  Zap,
-  Sun,
-  Edit3,
-  MonitorCheck
-} from 'lucide-react';
+import { Car, Layers, Flame, HelpCircle, ArrowLeft, BookOpen, Clock, CheckCircle2, Wrench, Thermometer, Cpu, Disc, Cog, Zap, Sun, Edit3 } from 'lucide-react';
 
 interface HomeViewProps {
   onNavigate: (view: string, param?: string) => void;

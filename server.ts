@@ -24,6 +24,7 @@ import { uploadDirectory } from './src/server/media';
 import { checkDatabase } from './src/server/db';
 import { config } from './src/server/config';
 import { auditMutationMiddleware } from './src/server/audit';
+import { releaseExpiredReservations } from './src/server/inventory';
 import { logError, logInfo } from './src/server/logger';
 import {
   buildHtmlSitemap,
@@ -173,8 +174,8 @@ const aiLimiter = rateLimit({
 
 app.post('/api/ai/search-advisor', aiLimiter, async (req, res) => {
   const query = String(req.body?.query ?? '').trim();
-  const vehicle = String(req.body?.vehicle ?? '').trim();
-  const partCategory = String(req.body?.partCategory ?? '').trim();
+  const vehicle = String(req.body?.vehicle ?? '').trim().slice(0, 160);
+  const partCategory = String(req.body?.partCategory ?? '').trim().slice(0, 120);
 
   if (query.length < 2 || query.length > 500) {
     res.status(400).json({ error: 'INVALID_QUERY' });
@@ -287,6 +288,19 @@ async function startServer() {
 
   app.listen(config.port, '0.0.0.0', () => {
     logInfo('server_started', { port: config.port, environment: config.nodeEnv });
+
+    // Reservations must expire even when no new payment is started. Relying
+    // only on request traffic can leave sellable inventory hidden indefinitely.
+    if (config.nodeEnv === 'production') {
+      const cleanupTimer = setInterval(() => {
+        releaseExpiredReservations()
+          .then(released => {
+            if (released > 0) logInfo('expired_reservations_released', { released });
+          })
+          .catch(error => logError('expired_reservation_cleanup_failed', error));
+      }, 5 * 60 * 1000);
+      cleanupTimer.unref();
+    }
   });
 }
 

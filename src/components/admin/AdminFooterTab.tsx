@@ -48,10 +48,10 @@ export const AdminFooterTab: React.FC = () => {
   // Features
   const [footerShowFeatures, setFooterShowFeatures] = useState(settings.footerShowFeatures !== false);
   const [features, setFeatures] = useState<FooterFeatureItem[]>(settings.footerFeatures || [
-    { id: 'f1', title: 'ضمانت ۱۰۰٪ اصالت قطعه', description: 'تضمین قطعات اصلی شرکتی با هولوگرام لیزری', icon: 'ShieldCheck' },
-    { id: 'f2', title: 'ارسال اکسپرس و بیمه‌شده', description: 'تهران ۲ ساعته، شهرستان‌ها با تیپاکس و پست پیشتاز', icon: 'Truck' },
-    { id: 'f3', title: '۷ روز مهلت تست و مرجوعی', description: 'بازگشت بدون قید و شرط در صورت عدم تطبیق فیتمنت', icon: 'Clock' },
-    { id: 'f4', title: 'مشاوره تخصصی قبل از خرید', description: 'بررسی دقیق شماره شاسی VIN توسط مهندسین فنی', icon: 'Headphones' }
+    { id: 'f1', title: 'اطلاعات دقیق قطعه', description: 'مشخصات فنی، شماره فنی و سازگاری خودرو را برای هر کالا تکمیل کنید.', icon: 'ShieldCheck' },
+    { id: 'f2', title: 'روش‌های ارسال', description: 'روش‌ها و شرایط ارسال فروشگاه را از تنظیمات مطابق کسب‌وکار خود تعریف کنید.', icon: 'Truck' },
+    { id: 'f3', title: 'قوانین بازگشت کالا', description: 'شرایط مرجوعی و ضمانت را مطابق سیاست واقعی فروشگاه در برگه مربوط ثبت کنید.', icon: 'Clock' },
+    { id: 'f4', title: 'پشتیبانی پیش از خرید', description: 'راه‌های ارتباطی و ساعات پاسخ‌گویی را از تنظیمات سایت مشخص کنید.', icon: 'Headphones' }
   ]);
 
   // Columns & Links

@@ -132,6 +132,11 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenAuthModal }) =
       ];
 
   const badges: FooterBadgeItem[] = settings.footerBadges || [];
+  const bottomLinks = settings.footerBottomLinks || [
+    { id: 'footer-bottom-terms', title: 'قوانین', url: 'page:terms' },
+    { id: 'footer-bottom-privacy', title: 'حریم خصوصی', url: 'page:privacy' },
+    { id: 'footer-bottom-payment', title: 'پرداخت امن', url: 'page:payment' }
+  ];
 
   if (settings.layoutPreset === 'marketplace-rtl') {
     const footerRows = (value?: number) => value && value > 0 ? `repeat(${value}, minmax(0, auto))` : 'none';
@@ -151,10 +156,10 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenAuthModal }) =
       ['--footer-text' as any]: settings.footerTextColor || '#b9c0c7',
       ['--footer-heading' as any]: settings.footerHeadingColor || '#ffffff'
     } as React.CSSProperties;
-    const footerLogo = settings.footerLogoUrl || settings.logoUrl;
+    const footerLogo = settings.footerLogoUrl || '';
 
     return (
-      <footer className="marketplace-ref-footer" dir="rtl" style={footerStyle}>
+      <footer className="marketplace-ref-footer" dir="rtl" style={footerStyle} data-bottom-align={settings.footerBottomAlign || 'center'}>
         <div className="marketplace-ref-footer-main marketplace-ref-container">
           <div className="marketplace-ref-footer-about">
             <button type="button" className="marketplace-ref-footer-logo" onClick={() => onNavigate('home')}>
@@ -191,11 +196,11 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenAuthModal }) =
 
         <div className="marketplace-ref-footer-bottom">
           <div className="marketplace-ref-container">
-            <span>{settings.footerCopyrightText || `© ${new Date().getFullYear()} تمامی حقوق محفوظ است.`}</span>
-            <div>
-              <button type="button" onClick={() => onNavigate('page', 'terms')}>قوانین</button>
-              <button type="button" onClick={() => onNavigate('page', 'privacy')}>حریم خصوصی</button>
-              <span>پرداخت امن</span>
+            <span className="marketplace-ref-footer-copyright">{settings.footerCopyrightText || `© ${new Date().getFullYear()} تمامی حقوق محفوظ است.`}</span>
+            <div className="marketplace-ref-footer-bottom-links">
+              {bottomLinks.map(link => (
+                <button key={link.id} type="button" onClick={() => handleLinkClick(link.url)}>{link.title}</button>
+              ))}
             </div>
           </div>
         </div>

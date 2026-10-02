@@ -1,6 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { useStore } from '../../context/StoreContext';
 import { ProductCard } from '../product/ProductCard';
+import { RichTextContent } from '../common/RichTextContent';
+import { sanitizeEmbedHtml } from '../../utils/sanitizeHtml';
 import { QualityGrade } from '../../types';
 import { Filter, Car, Layers, SlidersHorizontal, ArrowUpDown } from 'lucide-react';
 
@@ -28,6 +30,13 @@ export const ShopView: React.FC<ShopViewProps> = ({
   const [onlyFitActiveVehicle, setOnlyFitActiveVehicle] = useState<boolean>(Boolean(selectedVehicle));
   const [sortBy, setSortBy] = useState<'bestseller' | 'price_asc' | 'price_desc' | 'rating'>('bestseller');
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
+  const [specialMode, setSpecialMode] = useState<'all' | 'maintenance' | 'bestseller'>(
+    initialFilterMode === 'maintenance'
+      ? 'maintenance'
+      : initialFilterMode === 'bestseller'
+      ? 'bestseller'
+      : 'all'
+  );
 
   const categoryIndex = useMemo(() => {
     const rows: Array<{ node: any; parent?: any; depth: number }> = [];
@@ -60,6 +69,10 @@ export const ShopView: React.FC<ShopViewProps> = ({
   // Filtered & Sorted products
   const filteredProducts = useMemo(() => {
     return products.filter(p => {
+      // 0. Optional catalog shortcut filters from navigation.
+      if (specialMode === 'maintenance' && !p.isMaintenancePart) return false;
+      if (specialMode === 'bestseller' && !p.isBestSeller) return false;
+
       // 1. Category Filter
       if (
         selectedCategory !== 'all' &&
@@ -123,6 +136,7 @@ export const ShopView: React.FC<ShopViewProps> = ({
     setSelectedGrade('all');
     setOnlyInStock(false);
     setOnlyFitActiveVehicle(Boolean(selectedVehicle));
+    setSpecialMode('all');
   };
 
   return (
@@ -360,6 +374,26 @@ export const ShopView: React.FC<ShopViewProps> = ({
 
         {/* Product Grid & Sorting Area */}
         <main className="lg:col-span-9 space-y-6">
+          {specialMode !== 'all' && (
+            <div className="flex items-center justify-between gap-3 rounded-2xl border border-blue-200 bg-blue-50 px-4 py-3 text-xs">
+              <div>
+                <strong className="text-blue-900">
+                  {specialMode === 'maintenance' ? 'فیلتر فعال: قطعات مصرفی و سرویس دوره‌ای' : 'فیلتر فعال: محصولات پرفروش'}
+                </strong>
+                <span className="block mt-1 text-blue-700">
+                  این فیلتر از لینک منو اعمال شده و هر زمان بخواهید قابل حذف است.
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSpecialMode('all')}
+                className="shrink-0 rounded-xl bg-white px-3 py-2 font-bold text-blue-700 border border-blue-200"
+              >
+                حذف فیلتر
+              </button>
+            </div>
+          )}
+
           {/* Sorting Bar */}
           <div className="shop-mobile-toolbar bg-white p-3.5 rounded-2xl border border-neutral-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
             <div className="flex items-center gap-2 min-w-0 w-full sm:w-auto">
@@ -521,10 +555,19 @@ export const ShopView: React.FC<ShopViewProps> = ({
             <Layers className="w-5 h-5" />
             <h2>راهنمای خرید و اطلاعات {activeCategoryObj.nameFa}</h2>
           </div>
-          <div
-            className="shop-category-seo-body"
-            dangerouslySetInnerHTML={{ __html: activeCategoryObj.bottomDescription || activeCategoryObj.description }}
-          />
+          {/<[a-z][\s\S]*>/i.test(activeCategoryObj.bottomDescription || activeCategoryObj.description || '') ? (
+            <div
+              className="shop-category-seo-body"
+              dangerouslySetInnerHTML={{
+                __html: sanitizeEmbedHtml(activeCategoryObj.bottomDescription || activeCategoryObj.description || '')
+              }}
+            />
+          ) : (
+            <RichTextContent
+              value={activeCategoryObj.bottomDescription || activeCategoryObj.description || ''}
+              className="shop-category-seo-body"
+            />
+          )}
         </section>
       )}
     </div>

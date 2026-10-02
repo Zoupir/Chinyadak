@@ -80,6 +80,7 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderCompleted, on
   const [isProcessing, setIsProcessing] = useState(false);
   const [paymentFailed, setPaymentFailed] = useState(false);
   const [pendingOrderId, setPendingOrderId] = useState<string | null>(null);
+  const [pendingPaymentToken, setPendingPaymentToken] = useState<string | null>(null);
 
   // Gateway availability is read from server-side configuration; credentials never reach the browser.
   useEffect(() => {
@@ -119,7 +120,15 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderCompleted, on
   const effectiveRedeemedPoints = 0;
   const loyaltyDiscount = 0;
 
-  const shippingCost = selectedShipping === 'express' ? 120000 : selectedShipping === 'tipax' ? 110000 : 85000;
+  const shippingFees = {
+    express: Math.max(0, Number(settings.expressShippingFee ?? 120000)),
+    tipax: Math.max(0, Number(settings.tipaxShippingFee ?? 110000)),
+    post: Math.max(0, Number(settings.postShippingFee ?? 85000))
+  };
+  const freeShippingThreshold = Math.max(0, Number(settings.freeShippingThreshold ?? 0));
+  const hasFreeShipping = freeShippingThreshold > 0 && cartTotal >= freeShippingThreshold;
+  const selectedShippingBaseCost = shippingFees[selectedShipping];
+  const shippingCost = hasFreeShipping ? 0 : selectedShippingBaseCost;
   const finalTotal = Math.max(0, cartTotal - appliedDiscount - loyaltyDiscount + shippingCost);
 
   const pointsEarnedFromThisOrder = 0;
@@ -164,8 +173,17 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderCompleted, on
   };
 
   const handleProcessPayment = async (simulateFailure = false) => {
-    if (!firstName || !lastName || !phone || !address) {
+    if (!firstName.trim() || !lastName.trim() || !address.trim()) {
       showToast('لطفاً اطلاعات هویتی و آدرس پستی را تکمیل فرمایید.', 'error');
+      return;
+    }
+    const normalizedPhone = phone.replace(/\D/g, '');
+    if (!/^09\d{9}$/.test(normalizedPhone)) {
+      showToast('شماره موبایل باید با ۰۹ شروع شود و ۱۱ رقم باشد.', 'error');
+      return;
+    }
+    if (postalCode && !/^\d{10}$/.test(postalCode.replace(/\D/g, ''))) {
+      showToast('کد پستی باید ۱۰ رقم باشد.', 'error');
       return;
     }
 
@@ -196,6 +214,7 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderCompleted, on
       }));
 
       let orderId = pendingOrderId;
+      let paymentToken = pendingPaymentToken;
       if (!orderId) {
         const newOrder = await createOrder({
         status: 'pending',
@@ -235,6 +254,12 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderCompleted, on
         });
         orderId = newOrder.id;
         setPendingOrderId(newOrder.id);
+        paymentToken = newOrder.paymentToken || null;
+        setPendingPaymentToken(paymentToken);
+      }
+
+      if (!paymentToken) {
+        throw new ApiError(403, 'PAYMENT_TOKEN_MISSING');
       }
 
       const payment = await apiRequest<{
@@ -246,10 +271,11 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderCompleted, on
         fields: Record<string, string>;
       }>('/api/payments/start', {
         method: 'POST',
-        body: JSON.stringify({ orderId, provider: selectedGateway })
+        body: JSON.stringify({ orderId, provider: selectedGateway, paymentToken })
       });
 
       setPendingOrderId(null);
+      setPendingPaymentToken(null);
       clearCart();
       redirectToGateway(payment.redirectUrl, payment.redirectMethod, payment.fields || {});
     } catch (error) {
@@ -458,19 +484,19 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderCompleted, on
                   id: 'post',
                   title: 'پست پیشتاز بیمه‌شده (سراسر ایران)',
                   desc: 'تحویل ۲ الی ۳ روز کاری با بیمه کامل شکستگی قطعات',
-                  cost: 85000
+                  cost: hasFreeShipping ? 0 : shippingFees.post
                 },
                 {
                   id: 'tipax',
                   title: 'تیپاکس اکسپرس هوایی',
                   desc: 'تحویل ۲۴ ساعته درب منزل در کلیه شهرستان‌ها',
-                  cost: 110000
+                  cost: hasFreeShipping ? 0 : shippingFees.tipax
                 },
                 {
                   id: 'express',
                   title: 'پیک فوری ویژه شهر تهران (۲ ساعته)',
                   desc: 'ارسال فوری از انبار چراغ برق با پیک اختصاصی',
-                  cost: 120000
+                  cost: hasFreeShipping ? 0 : shippingFees.express
                 }
               ].map(opt => (
                 <label
@@ -495,7 +521,7 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderCompleted, on
                     </div>
                   </div>
                   <span className="text-xs font-bold text-neutral-900 font-mono">
-                    {formatToman(opt.cost)}
+                    {opt.cost === 0 && hasFreeShipping ? 'رایگان' : formatToman(opt.cost)}
                   </span>
                 </label>
               ))}

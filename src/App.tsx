@@ -9,7 +9,7 @@ import { HomeView } from './components/home/HomeView';
 import { AppErrorBoundary } from './components/common/AppErrorBoundary';
 import { CustomerAuthModal } from './components/auth/CustomerAuthModal';
 import { AiSearchAdvisorModal } from './components/search/AiSearchAdvisorModal';
-import { CheckCircle2, AlertCircle, Info, X } from 'lucide-react';
+import { CheckCircle2, AlertCircle, Info } from 'lucide-react';
 import { buildRoutePath, parseRoutePath, parseLegacyHash } from './utils/navigation';
 
 const ShopView = lazy(() => import('./components/shop/ShopView').then(m => ({ default: m.ShopView })));

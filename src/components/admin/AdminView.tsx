@@ -514,7 +514,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `chinpart_products_${new Date().toLocaleDateString('fa-IR')}.csv`);
+    link.setAttribute("download", `yadakstore_products_${new Date().toLocaleDateString('fa-IR')}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);

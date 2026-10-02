@@ -1,19 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import {
-  ArrowLeft,
-  Car,
-  ChevronLeft,
-  ChevronRight,
-  Clock3,
-  Headphones,
-  PackageCheck,
-  Search,
-  ShieldCheck,
-  ShoppingCart,
-  Sparkles,
-  Truck,
-  Wrench
-} from 'lucide-react';
+import { ArrowLeft, Car, ChevronLeft, ChevronRight, Headphones, PackageCheck, Search, ShieldCheck, ShoppingCart, Sparkles, Truck, Wrench } from 'lucide-react';
 import { useStore } from '../../context/StoreContext';
 import { formatToman } from '../../utils/formatters';
 import { LiveSectionModal } from '../common/LiveSectionModal';

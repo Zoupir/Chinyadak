@@ -1,31 +1,9 @@
 import React, { useState } from 'react';
-import { Product } from '../../types';
+
 import { useStore } from '../../context/StoreContext';
 import { checkProductFitment, formatToman, getGradeInfo } from '../../utils/formatters';
 import { ProductCard } from './ProductCard';
-import { 
-  ShoppingBag, 
-  Heart, 
-  ArrowRightLeft, 
-  Star, 
-  CheckCircle2, 
-  AlertTriangle, 
-  ShieldCheck, 
-  Truck, 
-  Clock, 
-  Car, 
-  Plus, 
-  Minus, 
-  Share2, 
-  HelpCircle, 
-  ArrowRight,
-  Info,
-  Bell,
-  Check,
-  ChevronLeft,
-  Wrench,
-  AlertCircle
-} from 'lucide-react';
+import { ShoppingBag, Heart, ArrowRightLeft, Star, CheckCircle2, AlertTriangle, ShieldCheck, Clock, Car, Plus, Minus, Bell, Wrench, AlertCircle } from 'lucide-react';
 import { ShareButton } from '../common/ShareButton';
 
 interface ProductDetailViewProps {

@@ -249,7 +249,7 @@ async function startServer() {
   });
 
   app.listen(config.port, '0.0.0.0', () => {
-    console.log(`ChinPart server running on port ${config.port} (${config.nodeEnv})`);
+    console.log(`Yadak Store server running on port ${config.port} (${config.nodeEnv})`);
   });
 }
 

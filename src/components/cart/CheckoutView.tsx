@@ -1,21 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useStore } from '../../context/StoreContext';
-import { formatToman, getGradeInfo } from '../../utils/formatters';
+import { formatToman } from '../../utils/formatters';
 import { apiRequest, ApiError } from '../../api/client';
-import { 
-  ShoppingBag, 
-  CreditCard, 
-  Truck, 
-  ShieldCheck, 
-  ArrowLeft, 
-  CheckCircle2, 
-  AlertCircle, 
-  X,
-  Phone,
-  MapPin,
-  Clock,
-  Sparkles,
-} from 'lucide-react';
+import { ShoppingBag, CreditCard, Truck, ShieldCheck, AlertCircle, Phone, MapPin } from 'lucide-react';
 
 interface CheckoutViewProps {
   onOrderCompleted: (orderId: string) => void;

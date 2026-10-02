@@ -258,6 +258,8 @@ export interface Order {
   paymentStatus?: string;
   paymentReference?: string;
   paidAt?: string;
+  /** Short-lived server-signed token authorizing payment initialization. */
+  paymentToken?: string;
 }
 
 export interface ArticleCategory {

@@ -1,4 +1,5 @@
 import { CarBrand, VehicleModel, Category, Product, Article, ArticleCategory, SliderItem, AdminUser, SitePage, PageSection } from '../types';
+import { REAL_MODEL_IMAGE_OVERRIDES, REAL_VEHICLE_BRANDS, REAL_VEHICLE_MODELS } from './realCatalogDefaults';
 
 export const BRANDS: CarBrand[] = [
   {
@@ -2133,3 +2134,12 @@ export const INITIAL_PAGES: SitePage[] = [
     ]
   }
 ];
+
+
+// Add verified default vehicles while leaving existing catalog entries intact.
+for (const model of VEHICLE_MODELS) {
+  const imageUrl = REAL_MODEL_IMAGE_OVERRIDES[model.id];
+  if (imageUrl) model.imageUrl = imageUrl;
+}
+BRANDS.push(...REAL_VEHICLE_BRANDS);
+VEHICLE_MODELS.push(...REAL_VEHICLE_MODELS);

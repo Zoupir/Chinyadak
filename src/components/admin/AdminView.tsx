@@ -54,6 +54,7 @@ import {
   PanelsTopLeft
 } from 'lucide-react';
 import { AdminCarsTab } from './AdminCarsTab';
+import { PART_MANUFACTURERS } from '../../data/realCatalogDefaults';
 import { AdminArticlesTab } from './AdminArticlesTab';
 import { AdminSandboxGateway } from './AdminSandboxGateway';
 import { AdminMenusAndAttributes } from './AdminMenusAndAttributes';
@@ -1745,6 +1746,21 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
                   className="w-full p-2.5 border border-neutral-300 rounded-xl"
                   required
                 />
+              </div>
+
+              <div>
+                <label className="block text-neutral-600 mb-1 font-semibold">سازندهٔ قطعه:</label>
+                <input
+                  type="text"
+                  list="known-part-manufacturers"
+                  value={newProductForm.partManufacturerCompany || newProductForm.brandManufacturer || ''}
+                  onChange={e => setNewProductForm({ ...newProductForm, brandManufacturer: e.target.value, partManufacturerCompany: e.target.value })}
+                  placeholder="نام واقعی شرکت سازنده را انتخاب یا وارد کنید"
+                  className="w-full p-2.5 border border-neutral-300 rounded-xl"
+                />
+                <datalist id="known-part-manufacturers">
+                  {PART_MANUFACTURERS.map(manufacturer => <option key={manufacturer.id} value={manufacturer.nameEn}>{manufacturer.nameFa}</option>)}
+                </datalist>
               </div>
 
               <div className="grid grid-cols-2 gap-3">

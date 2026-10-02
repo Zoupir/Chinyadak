@@ -66,13 +66,15 @@ else
   echo "[2/6] Dependencies unchanged - skipped"
 fi
 
-echo "[3/6] Apply safe database migrations"
+echo "[3/7] Apply safe database migrations"
 npm run db:init
+echo "[4/7] Add real default vehicle and manufacturer data"
+npm run db:seed-real-defaults
 
-echo "[4/6] Production build (low resource mode)"
+echo "[5/7] Production build (low resource mode)"
 RAYON_NUM_THREADS=1 UV_THREADPOOL_SIZE=1 npm run build
 
-echo "[5/6] Restart application"
+echo "[6/7] Restart application"
 if [[ -n "$SELECTOR" ]]; then
   if [[ "$APP_STOPPED" == "1" ]]; then
     if "$SELECTOR" start --json --interpreter nodejs --app-root "$APP_ROOT" >/dev/null 2>&1; then
@@ -101,6 +103,6 @@ mkdir -p tmp
 
 trap - ERR
 
-echo "[6/6] Done"
+echo "[7/7] Done"
 echo "UPDATE_OK"
 echo "Commit: $(git rev-parse --short HEAD)"

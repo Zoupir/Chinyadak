@@ -17,7 +17,8 @@
     "db:wait": "tsx scripts/wait-for-db.ts",
     "seo:worker": "tsx scripts/seo-worker.ts",
     "seo:audit": "tsx -e \"import('./src/server/seo/platform.ts').then(async m=>{await m.runFullSeoAudit();process.exit(0)})\"",
-    "seo:graph": "tsx -e \"import('./src/server/seo/platform.ts').then(async m=>{await m.rebuildSeoKnowledgeGraph();process.exit(0)})\""
+    "seo:graph": "tsx -e \"import('./src/server/seo/platform.ts').then(async m=>{await m.rebuildSeoKnowledgeGraph();process.exit(0)})\"",
+    "db:seed-real-defaults": "tsx scripts/seed-real-defaults.ts"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",

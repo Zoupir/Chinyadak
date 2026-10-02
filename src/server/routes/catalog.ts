@@ -185,27 +185,72 @@ const validateCategoryParent = async (
 export const catalogRouter = Router();
 
 catalogRouter.get('/products', async (req, res) => {
-  const q = String(req.query.q || '').trim();
-  const category = String(req.query.category || '').trim();
-  const params: any[] = [];
+  const q = String(req.query.q || '').trim().slice(0, 120);
+  const category = String(req.query.category || '').trim().slice(0, 190);
+  const page = Math.max(1, Math.floor(Number(req.query.page || 1)));
+  const limit = Math.max(1, Math.min(200, Math.floor(Number(req.query.limit || 120))));
+  const offset = (page - 1) * limit;
+
+  const params: unknown[] = [];
   const clauses = ["status = 'active'"];
 
   if (category) {
     clauses.push('category_slug = ?');
     params.push(category);
   }
+
   if (q) {
-    clauses.push('(name_fa LIKE ? OR name_en LIKE ? OR oem_number LIKE ? OR part_number LIKE ? OR sku LIKE ?)');
-    const like = `%${q}%`;
-    params.push(like, like, like, like, like);
+    const prefix = `${q}%`;
+    const fulltextQuery = q
+      .split(/\s+/)
+      .map(token => token.replace(/[^\p{L}\p{N}_-]+/gu, ''))
+      .filter(token => token.length >= 2)
+      .map(token => `+${token}*`)
+      .join(' ');
+
+    if (fulltextQuery) {
+      clauses.push(`(
+        sku = ?
+        OR oem_number = ?
+        OR part_number = ?
+        OR sku LIKE ?
+        OR oem_number LIKE ?
+        OR part_number LIKE ?
+        OR MATCH(name_fa, name_en, oem_number, part_number)
+           AGAINST (? IN BOOLEAN MODE)
+      )`);
+      params.push(q, q, q, prefix, prefix, prefix, fulltextQuery);
+    } else {
+      clauses.push('(sku LIKE ? OR oem_number LIKE ? OR part_number LIKE ? OR name_fa LIKE ? OR name_en LIKE ?)');
+      params.push(prefix, prefix, prefix, prefix, prefix);
+    }
   }
 
-  const [rows] = await pool.query<ProductRow[]>(
-    `SELECT ${PRODUCT_PUBLIC_COLUMNS} FROM products WHERE ${clauses.join(' AND ')} ORDER BY updated_at DESC`,
+  const where = clauses.join(' AND ');
+  const [countRows] = await pool.query<Array<RowDataPacket & { total: number }>>(
+    `SELECT COUNT(*) AS total FROM products WHERE ${where}`,
     params
   );
+  const total = Number(countRows[0]?.total || 0);
+
+  const [rows] = await pool.query<ProductRow[]>(
+    `SELECT ${PRODUCT_PUBLIC_COLUMNS}
+     FROM products
+     WHERE ${where}
+     ORDER BY updated_at DESC
+     LIMIT ? OFFSET ?`,
+    [...params, limit, offset]
+  );
+
   res.json({
-    products: rows.map(productDto)
+    products: rows.map(productDto),
+    pagination: {
+      page,
+      limit,
+      total,
+      totalPages: Math.max(1, Math.ceil(total / limit)),
+      hasMore: offset + rows.length < total
+    }
   });
 });
 

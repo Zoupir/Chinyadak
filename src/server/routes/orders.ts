@@ -57,6 +57,37 @@ interface OrderItemRow extends RowDataPacket {
   metadata_json: any;
 }
 
+const ORDER_COLUMNS = [
+  'id',
+  'order_number',
+  'customer_id',
+  'status',
+  'customer_snapshot',
+  'shipping_snapshot',
+  'payment_method',
+  'subtotal',
+  'discount_amount',
+  'shipping_fee',
+  'total',
+  'payment_status',
+  'payment_reference',
+  'paid_at',
+  'tracking_code',
+  'created_at'
+].join(', ');
+
+const ORDER_ITEM_COLUMNS = [
+  'order_id',
+  'product_id',
+  'sku',
+  'product_name',
+  'oem_number',
+  'unit_price',
+  'quantity',
+  'line_total',
+  'metadata_json'
+].join(', ');
+
 const parseJson = <T>(value: unknown, fallback: T): T => {
   if (value == null) return fallback;
   if (typeof value === 'object') return value as T;
@@ -149,16 +180,30 @@ const orderDto = (row: OrderRow, items: OrderItemRow[]) => {
   };
 };
 
-const fetchOrdersByWhere = async (whereSql: string, params: any[]) => {
+const fetchOrdersByWhere = async (
+  whereSql: string,
+  params: unknown[],
+  limit = 100,
+  offset = 0
+) => {
+  const safeLimit = Math.max(1, Math.min(200, Math.floor(limit)));
+  const safeOffset = Math.max(0, Math.floor(offset));
   const [rows] = await pool.query<OrderRow[]>(
-    `SELECT * FROM orders ${whereSql} ORDER BY created_at DESC LIMIT 500`,
-    params
+    `SELECT ${ORDER_COLUMNS}
+     FROM orders
+     ${whereSql}
+     ORDER BY created_at DESC
+     LIMIT ? OFFSET ?`,
+    [...params, safeLimit, safeOffset]
   );
   if (!rows.length) return [];
   const ids = rows.map(row => row.id);
   const placeholders = ids.map(() => '?').join(',');
   const [itemRows] = await pool.query<OrderItemRow[]>(
-    `SELECT * FROM order_items WHERE order_id IN (${placeholders}) ORDER BY id ASC`,
+    `SELECT ${ORDER_ITEM_COLUMNS}
+     FROM order_items
+     WHERE order_id IN (${placeholders})
+     ORDER BY id ASC`,
     ids
   );
   const grouped = new Map<string, OrderItemRow[]>();
@@ -371,13 +416,49 @@ ordersRouter.get('/mine', authenticate, async (req: AuthenticatedRequest, res) =
     res.status(403).json({ error: 'CUSTOMER_REQUIRED' });
     return;
   }
-  const orders = await fetchOrdersByWhere('WHERE customer_id = ?', [req.auth.sub]);
-  res.json({ orders });
+  const page = Math.max(1, Math.floor(Number(req.query.page || 1)));
+  const limit = Math.max(1, Math.min(100, Math.floor(Number(req.query.limit || 50))));
+  const offset = (page - 1) * limit;
+
+  const [countRows] = await pool.query<Array<RowDataPacket & { total: number }>>(
+    'SELECT COUNT(*) AS total FROM orders WHERE customer_id = ?',
+    [req.auth.sub]
+  );
+  const total = Number(countRows[0]?.total || 0);
+  const orders = await fetchOrdersByWhere('WHERE customer_id = ?', [req.auth.sub], limit, offset);
+  res.json({
+    orders,
+    pagination: {
+      page,
+      limit,
+      total,
+      totalPages: Math.max(1, Math.ceil(total / limit)),
+      hasMore: offset + orders.length < total
+    }
+  });
 });
 
-ordersRouter.get('/', requireAdminPermission('canManageOrders'), async (_req, res) => {
-  const orders = await fetchOrdersByWhere('WHERE archived_at IS NULL', []);
-  res.json({ orders });
+ordersRouter.get('/', requireAdminPermission('canManageOrders'), async (req, res) => {
+  const page = Math.max(1, Math.floor(Number(req.query.page || 1)));
+  const limit = Math.max(1, Math.min(200, Math.floor(Number(req.query.limit || 100))));
+  const offset = (page - 1) * limit;
+
+  const [countRows] = await pool.query<Array<RowDataPacket & { total: number }>>(
+    'SELECT COUNT(*) AS total FROM orders WHERE archived_at IS NULL'
+  );
+  const total = Number(countRows[0]?.total || 0);
+  const orders = await fetchOrdersByWhere('WHERE archived_at IS NULL', [], limit, offset);
+
+  res.json({
+    orders,
+    pagination: {
+      page,
+      limit,
+      total,
+      totalPages: Math.max(1, Math.ceil(total / limit)),
+      hasMore: offset + orders.length < total
+    }
+  });
 });
 
 ordersRouter.patch('/:id/status', requireAdminPermission('canManageOrders'), async (req, res) => {

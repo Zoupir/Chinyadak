@@ -6,6 +6,7 @@ import { MobileBottomNav } from './components/layout/MobileBottomNav';
 import { VehicleSelectorModal } from './components/vehicle/VehicleSelectorModal';
 import { CartDrawer } from './components/cart/CartDrawer';
 import { HomeView } from './components/home/HomeView';
+import { AppErrorBoundary } from './components/common/AppErrorBoundary';
 import { CustomerAuthModal } from './components/auth/CustomerAuthModal';
 import { AiSearchAdvisorModal } from './components/search/AiSearchAdvisorModal';
 import { CheckCircle2, AlertCircle, Info, X } from 'lucide-react';
@@ -519,8 +520,10 @@ const AppContent: React.FC = () => {
 
 export default function App() {
   return (
-    <StoreProvider>
-      <AppContent />
-    </StoreProvider>
+    <AppErrorBoundary>
+      <StoreProvider>
+        <AppContent />
+      </StoreProvider>
+    </AppErrorBoundary>
   );
 }

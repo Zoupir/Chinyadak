@@ -29,7 +29,7 @@ interface InvoicePageViewProps {
 
 // Convert numbers to Persian text words
 function numberToPersianWords(amount: number): string {
-  if (amount <= 0) return 'صفر ریال';
+  if (amount <= 0) return 'صفر تومان';
   const units = ['', 'یک', 'دو', 'سه', 'چهار', 'پنج', 'شش', 'هفت', 'هشت', 'نه'];
   const teens = ['ده', 'یازده', 'دوازده', 'سیزده', 'چهارده', 'پانزده', 'شانزده', 'هفده', 'هجده', 'نوزده'];
   const tens = ['', 'ده', 'بیست', 'سی', 'چهل', 'پنجاه', 'شصت', 'هفتاد', 'هشتاد', 'نود'];
@@ -48,7 +48,7 @@ function numberToPersianWords(amount: number): string {
   if (thousands > 0) parts.push(`${thousands} هزار`);
   if (remaining > 0) parts.push(`${remaining}`);
 
-  return (parts.length > 0 ? parts.join(' و ') : `${amount}`) + ' ریال';
+  return (parts.length > 0 ? parts.join(' و ') : `${amount}`) + ' تومان';
 }
 
 export const InvoicePageView: React.FC<InvoicePageViewProps> = ({ orderId, onNavigate }) => {
@@ -173,7 +173,7 @@ export const InvoicePageView: React.FC<InvoicePageViewProps> = ({ orderId, onNav
           {/* Invoice Meta Box & Barcode */}
           <div className="w-full sm:w-auto p-3.5 bg-white border border-neutral-300 rounded-xl space-y-1.5 text-[11px] font-mono shrink-0 shadow-xs">
             <div className="flex items-center justify-between gap-4">
-              <span className="text-neutral-500 font-sans">شماره سریال فاکتور:</span>
+              <span className="text-neutral-500 font-sans">شماره ستومان فاکتور:</span>
               <span className="font-bold text-neutral-900">{order.orderNumber}</span>
             </div>
             <div className="flex items-center justify-between gap-4">
@@ -253,8 +253,8 @@ export const InvoicePageView: React.FC<InvoicePageViewProps> = ({ orderId, onNav
                 <th className="p-3 text-center">کد فنی OEM</th>
                 <th className="p-3 text-center">گرید کیفی</th>
                 <th className="p-3 text-center w-14">تعداد</th>
-                <th className="p-3 text-left">مبلغ واحد (ریال)</th>
-                <th className="p-3 text-left">مبلغ کل (ریال)</th>
+                <th className="p-3 text-left">مبلغ واحد (تومان)</th>
+                <th className="p-3 text-left">مبلغ کل (تومان)</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-neutral-200 text-[11px]">
@@ -315,12 +315,12 @@ export const InvoicePageView: React.FC<InvoicePageViewProps> = ({ orderId, onNav
           <div className="md:col-span-5 border border-neutral-300 rounded-2xl overflow-hidden divide-y divide-neutral-200 text-xs shadow-xs">
             <div className="p-3 flex justify-between items-center bg-white">
               <span className="text-neutral-600">مجموع اقلام فاکتور:</span>
-              <span className="font-mono font-bold">{order.subtotal.toLocaleString('fa-IR')} ریال</span>
+              <span className="font-mono font-bold">{order.subtotal.toLocaleString('fa-IR')} تومان</span>
             </div>
             {order.discountAmount > 0 && (
               <div className="p-3 flex justify-between items-center bg-red-50/70 text-red-700">
                 <span>تخفیف ویژه کوپن:</span>
-                <span className="font-mono font-bold">-{order.discountAmount.toLocaleString('fa-IR')} ریال</span>
+                <span className="font-mono font-bold">-{order.discountAmount.toLocaleString('fa-IR')} تومان</span>
               </div>
             )}
             {order.loyaltyPointsRedeemed && order.loyaltyPointsRedeemed > 0 ? (
@@ -330,24 +330,24 @@ export const InvoicePageView: React.FC<InvoicePageViewProps> = ({ orderId, onNav
                   <span>تخفیف امتیاز باشگاه مشتریان ({order.loyaltyPointsRedeemed} امتیاز):</span>
                 </span>
                 <span className="font-mono font-bold text-amber-800">
-                  -{(order.loyaltyDiscountAmount || 0).toLocaleString('fa-IR')} ریال
+                  -{(order.loyaltyDiscountAmount || 0).toLocaleString('fa-IR')} تومان
                 </span>
               </div>
             ) : null}
             <div className="p-3 flex justify-between items-center bg-white">
               <span className="text-neutral-600">هزینه بسته‌بندی ایمن و بیمه ارسال:</span>
               <span className="font-mono font-bold">
-                {order.shippingFee === 0 ? 'رایگان (طرح ویژه)' : `${order.shippingFee.toLocaleString('fa-IR')} ریال`}
+                {order.shippingFee === 0 ? 'رایگان (طرح ویژه)' : `${order.shippingFee.toLocaleString('fa-IR')} تومان`}
               </span>
             </div>
             <div className="p-3 flex justify-between items-center bg-white">
               <span className="text-neutral-600">مالیات بر ارزش افزوده و عوارض قانونی:</span>
-              <span className="font-mono font-bold text-neutral-500">۰ ریال (معاف)</span>
+              <span className="font-mono font-bold text-neutral-500">۰ تومان (معاف)</span>
             </div>
             <div className="p-3.5 flex justify-between items-center bg-neutral-900 text-white font-black text-sm">
               <span>مبلغ نهایی قابل پرداخت:</span>
               <div className="text-left">
-                <span className="font-mono text-base text-red-400 block">{order.total.toLocaleString('fa-IR')} ریال</span>
+                <span className="font-mono text-base text-red-400 block">{order.total.toLocaleString('fa-IR')} تومان</span>
                 <span className="text-[10px] text-neutral-400 font-normal font-sans">({formatToman(order.total)})</span>
               </div>
             </div>

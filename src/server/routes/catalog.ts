@@ -5,10 +5,43 @@ import { pool, type ResultSetHeader, type RowDataPacket } from '../db';
 
 interface ProductRow extends RowDataPacket {
   id: string;
+  sku?: string;
+  slug?: string;
+  name_fa?: string;
+  name_en?: string | null;
+  oem_number?: string | null;
+  part_number?: string | null;
+  category_slug?: string;
+  manufacturer?: string | null;
+  grade?: string | null;
+  price?: number | string;
+  discount_price?: number | string | null;
   stock: number;
   reserved_stock: number;
+  short_description?: string | null;
+  description?: string | null;
   data_json: any;
 }
+
+const PRODUCT_PUBLIC_COLUMNS = [
+  'id',
+  'sku',
+  'slug',
+  'name_fa',
+  'name_en',
+  'oem_number',
+  'part_number',
+  'category_slug',
+  'manufacturer',
+  'grade',
+  'price',
+  'discount_price',
+  'stock',
+  'reserved_stock',
+  'short_description',
+  'description',
+  'data_json'
+].join(', ');
 
 interface CategoryRow extends RowDataPacket {
   id: string;
@@ -30,7 +63,21 @@ const productDto = (row: ProductRow) => {
   const availableStock = Math.max(0, Number(row.stock) - Number(row.reserved_stock || 0));
   return {
     ...data,
+    // Indexed scalar columns are authoritative. data_json only carries extended fields.
     id: row.id,
+    sku: row.sku ?? data.sku ?? '',
+    slug: row.slug ?? data.slug ?? '',
+    nameFa: row.name_fa ?? data.nameFa ?? '',
+    nameEn: row.name_en ?? data.nameEn ?? '',
+    oemNumber: row.oem_number ?? data.oemNumber ?? '',
+    partNumber: row.part_number ?? data.partNumber ?? '',
+    categorySlug: row.category_slug ?? data.categorySlug ?? '',
+    brandManufacturer: row.manufacturer ?? data.brandManufacturer ?? '',
+    grade: row.grade ?? data.grade ?? 'aftermarket',
+    price: row.price == null ? Number(data.price || 0) : Number(row.price),
+    discountPrice: row.discount_price == null ? undefined : Number(row.discount_price),
+    shortDescription: row.short_description ?? data.shortDescription ?? '',
+    description: row.description ?? data.description ?? '',
     stock: availableStock,
     stockStatus: availableStock <= 0 ? 'out_of_stock' : availableStock <= 3 ? 'low_stock' : 'in_stock'
   };
@@ -154,7 +201,7 @@ catalogRouter.get('/products', async (req, res) => {
   }
 
   const [rows] = await pool.query<ProductRow[]>(
-    `SELECT id, stock, reserved_stock, data_json FROM products WHERE ${clauses.join(' AND ')} ORDER BY updated_at DESC`,
+    `SELECT ${PRODUCT_PUBLIC_COLUMNS} FROM products WHERE ${clauses.join(' AND ')} ORDER BY updated_at DESC`,
     params
   );
   res.json({
@@ -165,7 +212,7 @@ catalogRouter.get('/products', async (req, res) => {
 catalogRouter.get('/products/:idOrSlug', async (req, res) => {
   const key = String(req.params.idOrSlug || '');
   const [rows] = await pool.query<ProductRow[]>(
-    "SELECT id, stock, reserved_stock, data_json FROM products WHERE status = 'active' AND (id = ? OR slug = ?) LIMIT 1",
+    `SELECT ${PRODUCT_PUBLIC_COLUMNS} FROM products WHERE status = 'active' AND (id = ? OR slug = ?) LIMIT 1`,
     [key, key]
   );
   if (!rows[0]) {

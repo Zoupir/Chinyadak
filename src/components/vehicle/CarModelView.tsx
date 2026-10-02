@@ -1,22 +1,7 @@
 import React, { useState } from 'react';
 import { useStore } from '../../context/StoreContext';
 import { ProductCard } from '../product/ProductCard';
-import { 
-  Car, 
-  Wrench, 
-  ShieldCheck, 
-  CheckCircle2, 
-  ArrowLeft, 
-  Layers, 
-  Search, 
-  AlertTriangle, 
-  Clock, 
-  HelpCircle,
-  Cpu,
-  Zap,
-  Gauge,
-  Sparkles
-} from 'lucide-react';
+import { Car, Wrench, ShieldCheck, Search, AlertTriangle, HelpCircle } from 'lucide-react';
 
 interface CarModelViewProps {
   modelId: string;

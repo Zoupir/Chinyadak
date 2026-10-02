@@ -1,58 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useStore } from '../../context/StoreContext';
-import { Product, Category, CustomerUser, PaymentGatewayConfig, OrderStatus, AdminRole, VehicleFitment } from '../../types';
-import { formatToman, getGradeInfo } from '../../utils/formatters';
-import { 
-  Settings, 
-  Layers, 
-  Search, 
-  Upload, 
-  Download, 
-  Edit3, 
-  Check, 
-  AlertTriangle, 
-  Package, 
-  DollarSign, 
-  FileText,
-  BarChart3,
-  Bell,
-  Lock, 
-  LogOut, 
-  Palette, 
-  CreditCard, 
-  Radio, 
-  Users, 
-  Plus, 
-  Trash2, 
-  Eye, 
-  KeyRound, 
-  ShieldAlert, 
-  Send, 
-  Printer, 
-  ChevronDown, 
-  ChevronLeft, 
-  ChevronRight,
-  RefreshCw, 
-  Sliders, 
-  CheckCircle2, 
-  ExternalLink, 
-  PhoneCall, 
-  Car, 
-  BookOpen, 
-  Receipt, 
-  Menu,
-  X,
-  ShieldCheck,
-  ArrowRight,
-  Wrench,
-  Image as ImageIcon,
-  Compass,
-  FileCheck2,
-  Sparkles,
-  LayoutTemplate,
-  Type,
-  PanelsTopLeft
-} from 'lucide-react';
+import { Product, Category, CustomerUser, OrderStatus } from '../../types';
+import { formatToman } from '../../utils/formatters';
+import { Settings, Layers, Search, Download, Edit3, Check, AlertTriangle, Package, BarChart3, LogOut, Palette, CreditCard, Radio, Users, Plus, Trash2, KeyRound, ShieldAlert, Printer, ChevronLeft, ChevronRight, Sliders, ExternalLink, Car, BookOpen, Receipt, Menu, X, ShieldCheck, ArrowRight, Image as ImageIcon, Compass, FileCheck2, Sparkles, LayoutTemplate, PanelsTopLeft } from 'lucide-react';
 import { AdminCarsTab } from './AdminCarsTab';
 import { AdminArticlesTab } from './AdminArticlesTab';
 import { AdminSandboxGateway } from './AdminSandboxGateway';

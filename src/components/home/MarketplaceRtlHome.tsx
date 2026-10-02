@@ -63,14 +63,14 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
   };
   const backgroundRepeat = (mode?: string) =>
     mode === 'repeat' ? 'repeat' : mode === 'repeat-x' ? 'repeat-x' : mode === 'repeat-y' ? 'repeat-y' : 'no-repeat';
-  const sectionStyle = (key: string): React.CSSProperties => {
+  const sectionStyle = (key: string, includeBackgroundImage = true): React.CSSProperties => {
     const section = sectionConfig(key);
     if (!section) return {};
     const imageOpacity = Math.max(0, Math.min(100, Number(section.backgroundImageOpacity ?? 100))) / 100;
     const overlayAlpha = Math.max(0, Math.min(1, 1 - imageOpacity));
     return {
       backgroundColor: section.backgroundColor || undefined,
-      backgroundImage: section.imageUrl
+      backgroundImage: includeBackgroundImage && section.imageUrl
         ? `linear-gradient(rgba(0,0,0,${overlayAlpha}), rgba(0,0,0,${overlayAlpha})), url(${section.imageUrl})`
         : undefined,
       backgroundSize: section.imageUrl ? backgroundFit(section.imageMode) : undefined,
@@ -83,7 +83,7 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
       paddingInline: section.paddingInlinePx !== undefined ? `${section.paddingInlinePx}px` : undefined,
       minHeight: section.minHeightPx ? `${section.minHeightPx}px` : undefined,
       textAlign: section.contentAlign || undefined,
-      width: `${Math.max(20, Math.min(100, Number(section.widthPercent ?? (section.fullWidth ? 95 : 100))))}%`,
+      width: `${Math.max(20, Math.min(100, Number(section.widthPercent ?? 100)))}%`,
       maxWidth: section.fullWidth || section.maxWidthPx === 0 ? 'none' : `${Number(section.maxWidthPx || 1280)}px`,
       marginInline: 'auto',
       ['--builder-gap' as any]: `${section.gapPx ?? 12}px`,
@@ -95,8 +95,8 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
       ['--builder-mobile-item-basis' as any]: `${100 / Math.max(1, section.mobileColumns || 1)}%`,
       ['--builder-item-radius' as any]: `${section.itemRadiusPx ?? 10}px`,
       ['--builder-image-size' as any]: `${section.imageSizePx ?? 72}px`,
-      ['--builder-width' as any]: `${Math.max(20, Math.min(100, Number(section.widthPercent ?? (section.fullWidth ? 95 : 100))))}%`,
-      ['--builder-tablet-width' as any]: `${Math.max(20, Math.min(100, Number(section.tabletWidthPercent ?? section.widthPercent ?? (section.fullWidth ? 96 : 100))))}%`,
+      ['--builder-width' as any]: `${Math.max(20, Math.min(100, Number(section.widthPercent ?? 100)))}%`,
+      ['--builder-tablet-width' as any]: `${Math.max(20, Math.min(100, Number(section.tabletWidthPercent ?? section.widthPercent ?? 100)))}%`,
       ['--builder-mobile-width' as any]: `${Math.max(20, Math.min(100, Number(section.mobileWidthPercent ?? section.widthPercent ?? 100)))}%`,
       ['--builder-max-width' as any]: section.fullWidth || section.maxWidthPx === 0 ? 'none' : `${Number(section.maxWidthPx || 1280)}px`,
       ['--builder-padding-top' as any]: section.paddingTopPx !== undefined ? `${section.paddingTopPx}px` : undefined,
@@ -178,9 +178,9 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
   };
 
   const bannerGridItemStyle = (item: PageSectionItem): React.CSSProperties => ({
-    ['--banner-cols-desktop' as any]: String(Math.max(10,Math.min(100,Math.round(item.widthPercent ?? 100)))),
-    ['--banner-cols-tablet' as any]: String(Math.max(10,Math.min(100,Math.round(item.tabletWidthPercent ?? item.widthPercent ?? 100)))),
-    ['--banner-cols-mobile' as any]: String(Math.max(10,Math.min(100,Math.round(item.mobileWidthPercent ?? 100)))),
+    ['--banner-cols-desktop' as any]: String(Math.max(1,Math.min(12,Math.round((item.widthPercent ?? 100) * 12 / 100)))),
+    ['--banner-cols-tablet' as any]: String(Math.max(1,Math.min(12,Math.round((item.tabletWidthPercent ?? item.widthPercent ?? 100) * 12 / 100)))),
+    ['--banner-cols-mobile' as any]: String(Math.max(1,Math.min(12,Math.round((item.mobileWidthPercent ?? 100) * 12 / 100)))),
     ['--banner-height-desktop' as any]: `${item.heightPx ?? item.minHeightPx ?? 178}px`,
     ['--banner-height-tablet' as any]: `${item.tabletHeightPx ?? item.heightPx ?? item.minHeightPx ?? 178}px`,
     ['--banner-height-mobile' as any]: `${item.mobileHeightPx ?? item.tabletHeightPx ?? item.heightPx ?? item.minHeightPx ?? 168}px`
@@ -523,7 +523,7 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
         </div>
       )}
       {sectionVisible('hero') && (
-      <section className="marketplace-hero-shell" data-section-key="hero" data-finder-side={sectionConfig('hero')?.finderSide || 'left'} style={sectionStyle('hero')}>
+      <section className="marketplace-hero-shell" data-section-key="hero" data-finder-side={sectionConfig('hero')?.finderSide || 'left'} style={sectionStyle('hero', false)}>
         <div
           key={hero?.id || heroIndex}
           className="marketplace-hero-banner"
@@ -533,7 +533,7 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
           style={{
             ...(hero?.imageUrl || sectionConfig('hero')?.imageUrl ? (() => {
               const image = hero?.imageUrl || sectionConfig('hero')?.imageUrl || '';
-              const mode = sectionConfig('hero')?.imageMode || hero?.imageMode || 'cover';
+              const mode = hero?.imageMode || 'cover';
               return {
                 backgroundImage: `url(${image})`,
                 backgroundSize: backgroundFit(mode),
@@ -953,7 +953,7 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
             <button
               key={item.id}
               type="button"
-              className={index % 3 === 0 ? 'large' : 'small'}
+              className="marketplace-banner-item"
               style={{
                 ...itemVisualStyle('promo-large', item),
                 ...bannerGridItemStyle(item),

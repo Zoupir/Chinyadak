@@ -197,6 +197,8 @@ export const AdminVisualPageBuilder: React.FC<{onNavigate?:(view:string,param?:s
   const previewWidth=device==='desktop'?'100%':device==='tablet'?'820px':'390px';
   const previewColumns=(section:PageSection)=>device==='desktop'?(section.desktopColumns||3):device==='tablet'?(section.tabletColumns||Math.min(section.desktopColumns||3,2)):(section.mobileColumns||1);
   const previewWidthPercent=(section:PageSection)=>device==='desktop'?(section.widthPercent??100):device==='tablet'?(section.tabletWidthPercent??section.widthPercent??100):(section.mobileWidthPercent??section.widthPercent??100);
+  const isBannerSection=(section:PageSection)=>/promo|banner/i.test(section.sectionKey||'');
+  const isDynamicSection=(section:PageSection)=>Boolean(section.contentSource&&section.contentSource!=='manual');
 
   const updateItem=(id:string,partial:Partial<PageSectionItem>)=>{
     if(!draft)return;
@@ -222,7 +224,7 @@ export const AdminVisualPageBuilder: React.FC<{onNavigate?:(view:string,param?:s
     const source=section.id===draft?.id?draft:section;
     const items=(source.items||[]).filter(item=>item.isVisible!==false);
     const isSelected=source.id===selected?.id;
-    const width=source.fullWidth?100:previewWidthPercent(source);
+    const width=previewWidthPercent(source);
     const max=source.fullWidth||source.maxWidthPx===0?'none':`${source.maxWidthPx||1280}px`;
     return (
       <div
@@ -257,7 +259,7 @@ export const AdminVisualPageBuilder: React.FC<{onNavigate?:(view:string,param?:s
             style={{
               display: device==='mobile' && source.mobileDisplayMode==='scroll' ? 'flex' : 'grid',
               overflowX: device==='mobile' && source.mobileDisplayMode==='scroll' ? 'auto' : undefined,
-              gridTemplateColumns:device==='mobile' && source.mobileDisplayMode==='scroll' ? undefined : `repeat(${previewColumns(source)},minmax(0,1fr))`,
+              gridTemplateColumns:device==='mobile' && source.mobileDisplayMode==='scroll' ? undefined : isBannerSection(source) ? 'repeat(100,minmax(0,1fr))' : `repeat(${previewColumns(source)},minmax(0,1fr))`,
               gap:`${source.gapPx??16}px`
             }}
           >
@@ -267,13 +269,16 @@ export const AdminVisualPageBuilder: React.FC<{onNavigate?:(view:string,param?:s
                 className="border min-w-0"
                 style={{
                   flex:device==='mobile' && source.mobileDisplayMode==='scroll' ? `0 0 ${source.mobileItemMinWidthPx??240}px` : undefined,
-                  backgroundColor:item.backgroundColor||source.itemBackgroundColor||'rgba(255,255,255,.82)',
-                  color:item.textColor||source.itemTextColor||'#111827',
-                  borderColor:item.borderColor||source.itemBorderColor||'rgba(0,0,0,.1)',
-                  borderRadius:`${item.borderRadiusPx??source.itemRadiusPx??10}px`,
-                  padding:`${item.paddingPx??source.itemPaddingPx??12}px`,
-                  minHeight:`${item.minHeightPx??source.itemMinHeightPx??0}px`,
-                  textAlign:item.textAlign||source.itemTextAlign||'right'
+                  gridColumn:isBannerSection(source) ? `span ${Math.max(1,Math.min(100,Math.round((device==='desktop'?item.widthPercent:device==='tablet'?(item.tabletWidthPercent??item.widthPercent):item.mobileWidthPercent)??100)))}` : undefined,
+                  backgroundColor:(isBannerSection(source)?item.backgroundColor:undefined)||source.itemBackgroundColor||'rgba(255,255,255,.82)',
+                  color:(isBannerSection(source)?item.textColor:undefined)||source.itemTextColor||'#111827',
+                  borderColor:(isBannerSection(source)?item.borderColor:undefined)||source.itemBorderColor||'rgba(0,0,0,.1)',
+                  borderRadius:`${(isBannerSection(source)?item.borderRadiusPx:undefined)??source.itemRadiusPx??10}px`,
+                  padding:`${(isBannerSection(source)?item.paddingPx:undefined)??source.itemPaddingPx??12}px`,
+                  minHeight:isBannerSection(source)
+                    ? `${device==='desktop'?(item.heightPx??source.itemMinHeightPx??0):device==='tablet'?(item.tabletHeightPx??item.heightPx??source.itemMinHeightPx??0):(item.mobileHeightPx??item.tabletHeightPx??item.heightPx??source.itemMinHeightPx??0)}px`
+                    : `${source.itemMinHeightPx??0}px`,
+                  textAlign:(isBannerSection(source)?item.textAlignment||item.textAlign:undefined)||source.itemTextAlign||'right'
                 }}
               >
                 {item.imageUrl&&<img
@@ -281,14 +286,14 @@ export const AdminVisualPageBuilder: React.FC<{onNavigate?:(view:string,param?:s
                   alt=""
                   className="mb-2 max-w-full"
                   style={{
-                    width:`${item.imageWidthPx??source.itemImageWidthPx??source.imageSizePx??72}px`,
-                    height:`${item.imageHeightPx??source.itemImageHeightPx??source.imageSizePx??72}px`,
-                    objectFit:item.imageFit||source.itemImageFit||'contain',
-                    borderRadius:`${item.imageRadiusPx??source.itemImageRadiusPx??0}px`
+                    width:`${(isBannerSection(source)?item.imageWidthPx:undefined)??source.itemImageWidthPx??source.imageSizePx??72}px`,
+                    height:`${(isBannerSection(source)?item.imageHeightPx:undefined)??source.itemImageHeightPx??source.imageSizePx??72}px`,
+                    objectFit:(isBannerSection(source)?item.imageFit:undefined)||source.itemImageFit||'contain',
+                    borderRadius:`${(isBannerSection(source)?item.imageRadiusPx:undefined)??source.itemImageRadiusPx??0}px`
                   }}
                 />}
-                <strong className="block truncate" style={{fontSize:`${item.titleFontSizePx??source.itemTitleFontSizePx??12}px`}}>{item.title}</strong>
-                {item.subtitle&&<span className="block text-neutral-500 mt-1 truncate" style={{fontSize:`${item.contentFontSizePx??source.itemContentFontSizePx??9}px`}}>{item.subtitle}</span>}
+                <strong className="block truncate" style={{fontSize:`${(isBannerSection(source)?item.titleFontSizePx:undefined)??source.itemTitleFontSizePx??12}px`}}>{item.title}</strong>
+                {item.subtitle&&<span className="block text-neutral-500 mt-1 truncate" style={{fontSize:`${(isBannerSection(source)?item.contentFontSizePx:undefined)??source.itemContentFontSizePx??9}px`}}>{item.subtitle}</span>}
               </div>
             ))}
           </div>
@@ -329,7 +334,7 @@ export const AdminVisualPageBuilder: React.FC<{onNavigate?:(view:string,param?:s
       <div className="grid grid-cols-1 xl:grid-cols-[250px_minmax(0,1fr)_330px] min-h-[calc(100vh-184px)]">
         <aside className="bg-white border-l border-neutral-200 p-3 overflow-y-auto">
           <div className="flex items-center justify-between mb-3">
-            <strong className="text-xs">Navigator</strong>
+            <strong className="text-xs">ساختار صفحه</strong>
             <div className="flex gap-1">
               <button onClick={addNewSection} className="w-7 h-7 grid place-items-center rounded bg-blue-600 text-white"><Plus className="w-3.5 h-3.5"/></button>
               <button onClick={duplicateSection} disabled={!selected} className="w-7 h-7 grid place-items-center rounded bg-neutral-100 disabled:opacity-30"><CopyPlus className="w-3.5 h-3.5"/></button>
@@ -406,16 +411,17 @@ export const AdminVisualPageBuilder: React.FC<{onNavigate?:(view:string,param?:s
 
               {inspectorTab==='layout'&&<>
                 <div><span className="font-bold block mb-1">کادر و عرض سکشن</span><div className="grid grid-cols-3 gap-1">
-                  <button onClick={()=>patch({fullWidth:true,widthPercent:100,maxWidthPx:0})} className={`p-2 rounded border ${draft.fullWidth?'bg-blue-600 text-white':''}`}>تمام عرض</button>
+                  <button onClick={()=>patch({fullWidth:true,widthPercent:95,tabletWidthPercent:96,mobileWidthPercent:100,maxWidthPx:0})} className={`p-2 rounded border ${draft.fullWidth?'bg-blue-600 text-white':''}`}>تمام عرض</button>
                   <button onClick={()=>patch({fullWidth:false,widthPercent:100,maxWidthPx:1280})} className={`p-2 rounded border ${!draft.fullWidth&&draft.widthPercent===100&&draft.maxWidthPx===1280?'bg-blue-600 text-white':''}`}>داخل کادر</button>
                   <button onClick={()=>patch({fullWidth:false,maxWidthPx:draft.maxWidthPx||1100})} className="p-2 rounded border">سفارشی</button>
                 </div></div>
-                {!draft.fullWidth&&<>
-                  <label className="block"><span>عرض دسکتاپ: {draft.widthPercent??100}%</span><input type="range" min="20" max="100" value={draft.widthPercent??100} onChange={e=>patch({widthPercent:Number(e.target.value)})} className="w-full"/></label>
-                  <label className="block"><span>عرض تبلت: {draft.tabletWidthPercent??draft.widthPercent??100}%</span><input type="range" min="20" max="100" value={draft.tabletWidthPercent??draft.widthPercent??100} onChange={e=>patch({tabletWidthPercent:Number(e.target.value)})} className="w-full"/></label>
+                <>
+                  <label className="block"><span>عرض دسکتاپ: {draft.widthPercent??(draft.fullWidth?95:100)}%</span><input type="range" min="20" max="100" value={draft.widthPercent??(draft.fullWidth?95:100)} onChange={e=>patch({widthPercent:Number(e.target.value)})} className="w-full"/></label>
+                  <label className="block"><span>عرض تبلت: {draft.tabletWidthPercent??draft.widthPercent??(draft.fullWidth?96:100)}%</span><input type="range" min="20" max="100" value={draft.tabletWidthPercent??draft.widthPercent??(draft.fullWidth?96:100)} onChange={e=>patch({tabletWidthPercent:Number(e.target.value)})} className="w-full"/></label>
                   <label className="block"><span>عرض موبایل: {draft.mobileWidthPercent??draft.widthPercent??100}%</span><input type="range" min="20" max="100" value={draft.mobileWidthPercent??draft.widthPercent??100} onChange={e=>patch({mobileWidthPercent:Number(e.target.value)})} className="w-full"/></label>
-                  <label className="block"><span>حداکثر عرض px</span><input type="number" value={draft.maxWidthPx??1280} onChange={e=>patch({maxWidthPx:Number(e.target.value)})} className="w-full p-2 border rounded"/></label>
-                </>}
+                  {!draft.fullWidth&&<label className="block"><span>حداکثر عرض px</span><input type="number" value={draft.maxWidthPx??1280} onChange={e=>patch({maxWidthPx:Number(e.target.value)})} className="w-full p-2 border rounded"/></label>}
+                  <p className="col-span-2 text-[8px] text-neutral-500">در حالت تمام عرض هم درصد واقعی قابل کنترل است؛ مقدار پیشنهادی دسکتاپ ۹۵٪ است.</p>
+                </>
                 <div className="grid grid-cols-3 gap-2">
                   <label><span>ستون دسکتاپ</span><input type="number" min="1" max="12" value={draft.desktopColumns??3} onChange={e=>setDesktopColumns(Number(e.target.value))} className="w-full p-2 border rounded"/></label>
                   <label><span>ستون تبلت</span><input type="number" min="1" max="8" value={draft.tabletColumns??2} onChange={e=>patch({tabletColumns:Number(e.target.value)})} className="w-full p-2 border rounded"/></label>
@@ -458,7 +464,8 @@ export const AdminVisualPageBuilder: React.FC<{onNavigate?:(view:string,param?:s
               </>}
 
               {inspectorTab==='items'&&<>
-                <div className="flex items-center justify-between"><strong>آیتم‌های تکرارشونده</strong><button onClick={addItem} className="px-2 py-1.5 bg-blue-600 text-white rounded inline-flex gap-1 items-center"><Plus className="w-3 h-3"/>آیتم</button></div>
+                <div className="flex items-center justify-between"><strong>{isDynamicSection(draft)?'آیتم‌های منبع زنده':'آیتم‌های سکشن'}</strong>{!isDynamicSection(draft)&&<button onClick={addItem} className="px-2 py-1.5 bg-blue-600 text-white rounded inline-flex gap-1 items-center"><Plus className="w-3 h-3"/>آیتم</button>}</div>
+                {isDynamicSection(draft)&&<div className="p-3 rounded-xl border border-amber-200 bg-amber-50 text-[9px] leading-5">ظاهر همه آیتم‌های این سکشن یک‌جا از تب «ظاهر» کنترل می‌شود و نیاز به تنظیم تک‌تک آیتم‌ها نیست.</div>}
                 <div className="space-y-3">
                   {(draft.items||[]).map((item,index)=><div key={item.id} className="p-3 rounded-xl border bg-neutral-50 space-y-2">
                     <div className="flex justify-between items-center gap-2">
@@ -475,18 +482,26 @@ export const AdminVisualPageBuilder: React.FC<{onNavigate?:(view:string,param?:s
                     <input value={item.badge||''} onChange={e=>updateItem(item.id,{badge:e.target.value})} className="w-full p-2 border rounded" placeholder="برچسب"/>
                     <textarea rows={3} value={item.content||''} onChange={e=>updateItem(item.id,{content:e.target.value})} className="w-full p-2 border rounded" placeholder="متن / توضیحات آیتم"/>
                     <ImageUploadInput value={item.imageUrl||''} onChange={url=>updateItem(item.id,{imageUrl:url})} aspectRatio="square" presetCategory="parts"/>
-                    <div className="grid grid-cols-2 gap-2">
-                      <label><span className="block text-[8px] mb-1">عرض تصویر</span><input type="number" value={item.imageWidthPx??draft.itemImageWidthPx??draft.imageSizePx??72} onChange={e=>updateItem(item.id,{imageWidthPx:Number(e.target.value)})} className="w-full p-2 border rounded"/></label>
-                      <label><span className="block text-[8px] mb-1">ارتفاع تصویر</span><input type="number" value={item.imageHeightPx??draft.itemImageHeightPx??draft.imageSizePx??72} onChange={e=>updateItem(item.id,{imageHeightPx:Number(e.target.value)})} className="w-full p-2 border rounded"/></label>
-                      <label><span className="block text-[8px] mb-1">گردی کارت</span><input type="number" value={item.borderRadiusPx??draft.itemRadiusPx??10} onChange={e=>updateItem(item.id,{borderRadiusPx:Number(e.target.value)})} className="w-full p-2 border rounded"/></label>
-                      <label><span className="block text-[8px] mb-1">فونت عنوان</span><input type="number" value={item.titleFontSizePx??draft.itemTitleFontSizePx??14} onChange={e=>updateItem(item.id,{titleFontSizePx:Number(e.target.value)})} className="w-full p-2 border rounded"/></label>
-                    </div>
+                    {isBannerSection(draft)?<>
+                      <div className="grid grid-cols-2 gap-2">
+                        <label><span className="block text-[8px] mb-1">عرض بنر دسکتاپ ٪</span><input type="number" min="10" max="100" value={item.widthPercent??100} onChange={e=>updateItem(item.id,{widthPercent:Number(e.target.value)})} className="w-full p-2 border rounded"/></label>
+                        <label><span className="block text-[8px] mb-1">ارتفاع بنر دسکتاپ</span><input type="number" min="80" max="900" value={item.heightPx??draft.itemMinHeightPx??178} onChange={e=>updateItem(item.id,{heightPx:Number(e.target.value)})} className="w-full p-2 border rounded"/></label>
+                        <label><span className="block text-[8px] mb-1">عرض تبلت ٪</span><input type="number" min="10" max="100" value={item.tabletWidthPercent??item.widthPercent??100} onChange={e=>updateItem(item.id,{tabletWidthPercent:Number(e.target.value)})} className="w-full p-2 border rounded"/></label>
+                        <label><span className="block text-[8px] mb-1">ارتفاع تبلت</span><input type="number" min="80" max="900" value={item.tabletHeightPx??item.heightPx??178} onChange={e=>updateItem(item.id,{tabletHeightPx:Number(e.target.value)})} className="w-full p-2 border rounded"/></label>
+                        <label><span className="block text-[8px] mb-1">عرض موبایل ٪</span><input type="number" min="10" max="100" value={item.mobileWidthPercent??100} onChange={e=>updateItem(item.id,{mobileWidthPercent:Number(e.target.value)})} className="w-full p-2 border rounded"/></label>
+                        <label><span className="block text-[8px] mb-1">ارتفاع موبایل</span><input type="number" min="80" max="900" value={item.mobileHeightPx??item.tabletHeightPx??item.heightPx??168} onChange={e=>updateItem(item.id,{mobileHeightPx:Number(e.target.value)})} className="w-full p-2 border rounded"/></label>
+                        <label><span className="block text-[8px] mb-1">عرض تصویر</span><input type="number" value={item.imageWidthPx??draft.itemImageWidthPx??draft.imageSizePx??72} onChange={e=>updateItem(item.id,{imageWidthPx:Number(e.target.value)})} className="w-full p-2 border rounded"/></label>
+                        <label><span className="block text-[8px] mb-1">ارتفاع تصویر</span><input type="number" value={item.imageHeightPx??draft.itemImageHeightPx??draft.imageSizePx??72} onChange={e=>updateItem(item.id,{imageHeightPx:Number(e.target.value)})} className="w-full p-2 border rounded"/></label>
+                        <label><span className="block text-[8px] mb-1">گردی کارت</span><input type="number" value={item.borderRadiusPx??draft.itemRadiusPx??10} onChange={e=>updateItem(item.id,{borderRadiusPx:Number(e.target.value)})} className="w-full p-2 border rounded"/></label>
+                        <label><span className="block text-[8px] mb-1">فونت عنوان</span><input type="number" value={item.titleFontSizePx??draft.itemTitleFontSizePx??14} onChange={e=>updateItem(item.id,{titleFontSizePx:Number(e.target.value)})} className="w-full p-2 border rounded"/></label>
+                      </div>
+                    </>:<div className="p-2 rounded-lg bg-neutral-100 text-[8px] text-neutral-500">ظاهر این آیتم از تنظیمات مشترک سکشن در تب «ظاهر» پیروی می‌کند.</div>}
                     <input value={item.buttonText||''} onChange={e=>updateItem(item.id,{buttonText:e.target.value})} className="w-full p-2 border rounded" placeholder="متن دکمه"/>
                     <LinkDestinationPicker label="مقصد آیتم / دکمه" value={item.link||''} onChange={value=>updateItem(item.id,{link:value})} />
-                    <div className="grid grid-cols-2 gap-2">
+                    {isBannerSection(draft)&&<div className="grid grid-cols-2 gap-2">
                       <label><span className="block text-[8px] mb-1">نمایش تصویر</span><select value={item.imageMode||(item.imageFit==='contain'?'contain':'cover')} onChange={e=>updateItem(item.id,{imageMode:e.target.value as PageSectionItem['imageMode']})} className="w-full p-2 border rounded bg-white"><option value="cover">پوشش کامل کادر</option><option value="contain">کامل بدون برش</option><option value="stretch">کشیده تا کل کادر</option><option value="original">اندازه اصلی</option><option value="repeat">تکرار کامل</option><option value="repeat-x">تکرار افقی</option><option value="repeat-y">تکرار عمودی</option></select></label>
                       <label><span className="block text-[8px] mb-1">تراز متن</span><select value={item.textAlignment||item.textAlign||'right'} onChange={e=>updateItem(item.id,{textAlignment:e.target.value as PageSectionItem['textAlignment']})} className="w-full p-2 border rounded bg-white"><option value="right">راست</option><option value="center">وسط</option><option value="left">چپ</option></select></label>
-                    </div>
+                    </div>}
                   </div>)}
                 </div>
               </>}

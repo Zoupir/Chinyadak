@@ -25,18 +25,7 @@ import {
   LoyaltySettings,
   SeoEntityDraft
 } from '../types';
-import { 
-  PRODUCTS as INITIAL_PRODUCTS, 
-  BRANDS as INITIAL_BRANDS, 
-  VEHICLE_MODELS as INITIAL_MODELS, 
-  CATEGORIES as INITIAL_CATEGORIES,
-  ARTICLES as INITIAL_ARTICLES,
-  INITIAL_ARTICLE_CATEGORIES,
-  INITIAL_SETTINGS,
-  INITIAL_PAYMENT_GATEWAYS,
-  INITIAL_SLIDERS,
-  INITIAL_PAGES
-} from '../data/mockData';
+import { DEFAULT_SITE_SETTINGS } from '../data/siteDefaults';
 import { apiRequest, ApiError } from '../api/client';
 import { readJsonStorage, writeJsonStorage } from '../utils/storage';
 
@@ -640,7 +629,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [loyaltyTransactions, setLoyaltyTransactions] = useState<LoyaltyTransaction[]>([]);
 
   // Settings
-  const [settings, setSettings] = useState<SiteSettings>(INITIAL_SETTINGS);
+  const [settings, setSettings] = useState<SiteSettings>(DEFAULT_SITE_SETTINGS);
   // Prevent rendering a wrong/default template before the persisted CMS settings arrive.
   const [isStoreReady, setIsStoreReady] = useState(false);
   const [storeLoadError, setStoreLoadError] = useState<string | null>(null);
@@ -801,24 +790,26 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         setArticleCategories(cmsData.articleCategories);
         setSliders(cmsData.sliders);
         setPages(normalizeBuilderPages(cmsData.pages));
-        if (cmsData.settings) setSettings({ ...INITIAL_SETTINGS, ...cmsData.settings });
+        if (cmsData.settings) setSettings({ ...DEFAULT_SITE_SETTINGS, ...cmsData.settings });
         setPaymentGateways(cmsData.paymentGateways);
         setStoreLoadError(null);
         setIsStoreReady(true);
       })
-      .catch(error => {
+      .catch(async error => {
         console.error('Public store data load failed:', error);
         if (import.meta.env.DEV) {
-          setProducts(INITIAL_PRODUCTS);
-          setCategories(INITIAL_CATEGORIES);
-          setBrands(INITIAL_BRANDS);
-          setModels(INITIAL_MODELS);
-          setArticles(INITIAL_ARTICLES);
-          setArticleCategories(INITIAL_ARTICLE_CATEGORIES);
-          setSliders(INITIAL_SLIDERS);
-          setPages(normalizeBuilderPages(INITIAL_PAGES));
-          setSettings(INITIAL_SETTINGS);
-          setPaymentGateways(INITIAL_PAYMENT_GATEWAYS);
+          const mock = await import('../data/mockData');
+          if (cancelled) return;
+          setProducts(mock.PRODUCTS);
+          setCategories(mock.CATEGORIES);
+          setBrands(mock.BRANDS);
+          setModels(mock.VEHICLE_MODELS);
+          setArticles(mock.ARTICLES);
+          setArticleCategories(mock.INITIAL_ARTICLE_CATEGORIES);
+          setSliders(mock.INITIAL_SLIDERS);
+          setPages(normalizeBuilderPages(mock.INITIAL_PAGES));
+          setSettings({ ...DEFAULT_SITE_SETTINGS, ...mock.INITIAL_SETTINGS });
+          setPaymentGateways(mock.INITIAL_PAYMENT_GATEWAYS);
           setStoreLoadError(null);
         } else {
           setStoreLoadError('STORE_BOOTSTRAP_FAILED');

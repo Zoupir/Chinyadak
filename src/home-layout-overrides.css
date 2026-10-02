@@ -34,3 +34,27 @@ html[data-layout="marketplace-rtl"] .marketplace-ref-footer-copyright {
   align-self: center !important;
   text-align: center !important;
 }
+
+html[data-layout="marketplace-rtl"] .marketplace-rtl-home.is-layout-reordering > [data-section-key] {
+  position: relative;
+  outline: 2px dashed rgba(37, 99, 235, .75);
+  outline-offset: 3px;
+  cursor: grab !important;
+  transition: outline-color .15s ease, opacity .15s ease;
+}
+html[data-layout="marketplace-rtl"] .marketplace-rtl-home.is-layout-reordering > [data-section-key]::before {
+  content: "⠿  برای جابه‌جایی بکشید";
+  position: absolute;
+  z-index: 30;
+  top: 8px;
+  left: 8px;
+  padding: 6px 9px;
+  border-radius: 8px;
+  background: #1d4ed8;
+  color: white;
+  font: 700 11px/1.4 sans-serif;
+  pointer-events: none;
+}
+html[data-layout="marketplace-rtl"] .marketplace-rtl-home.is-layout-reordering > [data-section-key]:active {
+  cursor: grabbing !important;
+}

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowLeft,
   Car,
@@ -50,7 +50,8 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
     isLiveEditActive,
     setIsLiveEditActive,
     adminAuth,
-    showToast
+    showToast,
+    updateSettings
   } = useStore();
 
   const homeSections = useMemo(
@@ -62,6 +63,29 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
   const bannerPlacementFor = (key: string) => bannerPlacements.find(placement => placement.key === key);
   const layoutOrder = useMemo(() => resolveHomeLayoutOrder(settings.homeLayoutOrder, homeSections), [settings.homeLayoutOrder, homeSections]);
   const layoutRank = (key: string) => Math.max(0, layoutOrder.indexOf(key)) + 1;
+  const homeRootRef = useRef<HTMLDivElement>(null);
+  const [sectionReorderMode, setSectionReorderMode] = useState(false);
+  const [draggedSectionKey, setDraggedSectionKey] = useState<string | null>(null);
+
+  useEffect(() => {
+    const root = homeRootRef.current;
+    if (!root) return;
+    const sections = Array.from(root.children).filter((child): child is HTMLElement =>
+      child instanceof HTMLElement && child.hasAttribute('data-section-key')
+    );
+    sections.forEach(section => {
+      if (sectionReorderMode && isLiveEditActive && adminAuth.isAuthenticated) section.setAttribute('draggable', 'true');
+      else section.removeAttribute('draggable');
+    });
+    return () => sections.forEach(section => section.removeAttribute('draggable'));
+  }, [sectionReorderMode, isLiveEditActive, adminAuth.isAuthenticated, layoutOrder]);
+
+  useEffect(() => {
+    if (!isLiveEditActive || !adminAuth.isAuthenticated) {
+      setSectionReorderMode(false);
+      setDraggedSectionKey(null);
+    }
+  }, [isLiveEditActive, adminAuth.isAuthenticated]);
   const customSections = homeSections
     .filter(section => Boolean(section.sectionKey) && !MARKETPLACE_BUILT_IN_SECTION_KEYS.has(section.sectionKey!))
     .sort((a, b) => a.order - b.order);
@@ -459,7 +483,46 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
       : fillProducts(products.filter(product => ['engine', 'turbo', 'cooling'].includes(product.categorySlug || '') || product.isFeatured), 8);
 
 
-const handleLiveEditCapture = (event: React.MouseEvent<HTMLDivElement>) => {
+const handleSectionDragStart = (event: React.DragEvent<HTMLDivElement>) => {
+    if (!sectionReorderMode || !isLiveEditActive || !adminAuth.isAuthenticated) return;
+    const section = (event.target as HTMLElement).closest<HTMLElement>('[data-section-key]');
+    const key = section?.dataset.sectionKey;
+    if (!key) return;
+    setDraggedSectionKey(key);
+    event.dataTransfer.effectAllowed = 'move';
+    event.dataTransfer.setData('text/plain', key);
+  };
+
+  const handleSectionDragOver = (event: React.DragEvent<HTMLDivElement>) => {
+    if (!sectionReorderMode || !draggedSectionKey) return;
+    if ((event.target as HTMLElement).closest('[data-section-key]')) {
+      event.preventDefault();
+      event.dataTransfer.dropEffect = 'move';
+    }
+  };
+
+  const handleSectionDrop = (event: React.DragEvent<HTMLDivElement>) => {
+    if (!sectionReorderMode || !draggedSectionKey) return;
+    const target = (event.target as HTMLElement).closest<HTMLElement>('[data-section-key]')?.dataset.sectionKey;
+    if (!target || target === draggedSectionKey) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const next = [...layoutOrder];
+    const from = next.indexOf(draggedSectionKey);
+    const to = next.indexOf(target);
+    if (from < 0 || to < 0) return;
+    next.splice(from, 1);
+    next.splice(to, 0, draggedSectionKey);
+    setDraggedSectionKey(null);
+    void updateSettings({ homeLayoutOrder: next }).then(ok => {
+      if (ok) {
+        setSectionReorderMode(false);
+        showToast('چیدمان سکشن‌ها ذخیره شد.');
+      }
+    });
+  };
+
+  const handleLiveEditCapture = (event: React.MouseEvent<HTMLDivElement>) => {
     if (!isLiveEditActive || !adminAuth.isAuthenticated) return;
     const target = event.target as HTMLElement;
     const sectionElement = target.closest<HTMLElement>('[data-section-key]');
@@ -542,14 +605,20 @@ const handleLiveEditCapture = (event: React.MouseEvent<HTMLDivElement>) => {
 
   return (
     <div
-      className={`marketplace-rtl-home ${isLiveEditActive && adminAuth.isAuthenticated ? 'is-live-editing' : ''}`}
+      className={`marketplace-rtl-home ${isLiveEditActive && adminAuth.isAuthenticated ? 'is-live-editing' : ''} ${sectionReorderMode ? 'is-layout-reordering' : ''}`}
       dir="rtl"
       onClickCapture={handleLiveEditCapture}
+      onDragStartCapture={handleSectionDragStart}
+      onDragOverCapture={handleSectionDragOver}
+      onDropCapture={handleSectionDrop}
+      onDragEndCapture={() => { setDraggedSectionKey(null); }}
+      ref={homeRootRef}
       style={{ display: 'flex', flexDirection: 'column', alignItems: 'stretch' }}
     >
       {isLiveEditActive && adminAuth.isAuthenticated && (
         <div className="marketplace-live-edit-toolbar">
-          <span>ویرایش زنده فعال است — روی هر سکشن کلیک کن</span>
+          <span>{sectionReorderMode ? 'برای جابه‌جایی، سکشن را با موس بکش و روی جای تازه رها کن' : 'ویرایش زنده فعال است — روی هر سکشن کلیک کن'}</span>
+          <button type="button" onClick={(event) => { event.stopPropagation(); setSectionReorderMode(value => !value); }} className={sectionReorderMode ? 'is-active' : ''}>{sectionReorderMode ? 'پایان چیدمان' : 'چیدمان سکشن‌ها'}</button>
           <button type="button" onClick={(event) => { event.stopPropagation(); setIsLiveEditActive(false); }}>خروج از ویرایش</button>
         </div>
       )}

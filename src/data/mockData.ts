@@ -1815,6 +1815,17 @@ export const INITIAL_SETTINGS = {
   footerBadges: [],
   footerCustomHtml: '',
   footerCopyrightText: 'تمامی حقوق مادی و معنوی برای فروشگاه اینترنتی فروشگاه محفوظ است. طراحی تخصصی مخصوص صنعت خودروهای چینی.',
+  footerBottomAlign: 'center',
+  footerBottomLinks: [
+    { id: 'footer-bottom-terms', title: 'قوانین', url: 'page:terms' },
+    { id: 'footer-bottom-privacy', title: 'حریم خصوصی', url: 'page:privacy' },
+    { id: 'footer-bottom-payment', title: 'پرداخت امن', url: 'page:payment' }
+  ],
+  footerLogoUrl: '',
+  footerLogoWidthPx: 160,
+  footerGridColumnsDesktop: 5,
+  footerGridColumnsTablet: 2,
+  footerGridColumnsMobile: 2,
   loyaltySettings: {
     enabled: true,
     pointsPerToman: 0.0001, // 1 point per 10,000 Tomans

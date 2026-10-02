@@ -1177,10 +1177,10 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       method: 'DELETE'
     }).then(() => {
       setAdminUsers(prev => prev.filter(user => user.id !== id));
-      showToast('مدیر حذف شد.', 'info');
+      showToast('حساب مدیر بایگانی شد.', 'info');
     }).catch(error => {
       console.error(error);
-      showToast('حذف مدیر انجام نشد.', 'error');
+      showToast('بایگانی حساب مدیر انجام نشد.', 'error');
     });
   };
 
@@ -1203,7 +1203,6 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   // Pages & Section Builder Methods
-  // Pages & Section Builder Methods
 
   const persistPage = (page: SitePage, successMessage: string) => {
     const normalized = { ...page, updatedAt: new Date().toLocaleDateString('fa-IR') };
@@ -1221,8 +1220,18 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         console.error('Page SEO sync failed:', seoError);
       }
       showToast(successMessage);
-    }).catch(error => {
+    }).catch(async error => {
       console.error(error);
+      if (error instanceof ApiError && error.code === 'PAGE_EDIT_CONFLICT') {
+        showToast('این برگه هم‌زمان در جای دیگری تغییر کرده است. آخرین نسخه سرور بارگذاری شد؛ تغییرات را روی نسخه جدید دوباره اعمال کنید.', 'error');
+        try {
+          const cmsData = await apiRequest<{ pages: SitePage[] }>('/api/cms/bundle');
+          setPages(normalizeBuilderPages(cmsData.pages));
+        } catch (reloadError) {
+          console.error('Page conflict reload failed:', reloadError);
+        }
+        return;
+      }
       showToast('ذخیره برگه در سرور انجام نشد.', 'error');
     });
   };

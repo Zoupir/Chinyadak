@@ -3,10 +3,7 @@ import { useStore } from '../../context/StoreContext';
 import { HeaderMenuKind, MenuItem, PopularPartsBrandItem, ProductAttributeDefinition } from '../../types';
 import { ImageUploadInput } from '../common/ImageUploadInput';
 import { AdminMenuBuilder } from './AdminMenuBuilder';
-import {
-  ArrowDown, ArrowUp, Car, Check, Edit3, Eye, EyeOff, Globe2, Layers,
-  Link2, Menu, Plus, Save, Sliders, Tag, Trash2, X
-} from 'lucide-react';
+import { Car, Check, Edit3, Globe2, Layers, Link2, Menu, Plus, Save, Sliders, Tag, Trash2, X } from 'lucide-react';
 
 const defaultHeaderMenus = (legacy: MenuItem[] = []): MenuItem[] => [
   {

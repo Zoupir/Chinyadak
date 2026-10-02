@@ -4,6 +4,7 @@ import { PageSection, PageSectionItem } from '../../types';
 import { RichTextEditor } from './RichTextEditor';
 import { ImageUploadInput } from './ImageUploadInput';
 import { LinkDestinationPicker } from './LinkDestinationPicker';
+import { ConfirmDialog } from './ConfirmDialog';
 import {
   AlignCenter,
   AlignLeft,
@@ -68,6 +69,7 @@ export const LiveSectionModal: React.FC<LiveSectionModalProps> = ({
   const liveSection = page?.sections.find(section => section.id === sectionId);
   const [form, setForm] = useState<PageSection | null>(null);
   const [tab, setTab] = useState<InspectorTab>('content');
+  const [deletePending, setDeletePending] = useState(false);
   const [dragItemId, setDragItemId] = useState<string | null>(null);
   const originalRef = useRef<PageSection | null>(null);
   const activeKeyRef = useRef('');
@@ -187,9 +189,13 @@ export const LiveSectionModal: React.FC<LiveSectionModalProps> = ({
   };
 
   const deleteCurrent = () => {
-    if (!window.confirm(`سکشن «${form.title || 'انتخاب‌شده'}» حذف شود؟`)) return;
+    setDeletePending(true);
+  };
+
+  const confirmDeleteCurrent = () => {
     deleteSection(pageSlug, form.id);
     originalRef.current = null;
+    setDeletePending(false);
     onClose();
   };
 
@@ -615,6 +621,16 @@ export const LiveSectionModal: React.FC<LiveSectionModalProps> = ({
         <button type="button" onClick={cancel} className="py-2.5 rounded-xl bg-neutral-100 text-neutral-700 text-xs font-bold">لغو و بازگردانی</button>
         <button type="button" onClick={save} className="py-2.5 rounded-xl bg-emerald-600 text-white text-xs font-black inline-flex items-center justify-center gap-1"><Save className="w-4 h-4" /> ذخیره</button>
       </footer>
+
+      <ConfirmDialog
+        open={deletePending}
+        title="حذف سکشن"
+        message={`سکشن «${form.title || 'انتخاب‌شده'}» حذف شود؟`}
+        confirmLabel="حذف سکشن"
+        danger
+        onCancel={() => setDeletePending(false)}
+        onConfirm={confirmDeleteCurrent}
+      />
     </aside>
   );
 };

@@ -119,11 +119,13 @@ export const AdminVisualPageBuilder: React.FC<{onNavigate?:(view:string,param?:s
   const patch=(partial:Partial<PageSection>)=>setDraft(current=>current?{...current,...partial}:current);
   const contentPolicyFor = (section: PageSection) => {
     const key = section.sectionKey || '';
-    if (key === 'featured-categories') return { kind:'fixed' as const, source:'categories' as const, title:'دسته‌بندی‌های قطعات' };
-    if (key === 'manufacturers') return { kind:'fixed' as const, source:'brands' as const, title:'برندهای خودرو' };
+    if (key === 'featured-categories') return { kind:'flexible' as const, source:(section.contentSource || 'categories') as NonNullable<PageSection['contentSource']>, title:'محتوای سکشن دسته‌بندی‌ها' };
+    if (key === 'manufacturers') return { kind:'flexible' as const, source:(section.contentSource || 'brands') as NonNullable<PageSection['contentSource']>, title:'محتوای سکشن برندها' };
+    if (key === 'hero') return { kind:'fixed' as const, source:'sliders' as const, title:'اسلایدهای فعال مدیریت اسلایدر' };
     if (['featured-products','weekly-deals','maintenance-products'].includes(key)) return { kind:'fixed' as const, source:'products' as const, title:'محصولات فروشگاه' };
     if (key === 'articles') return { kind:'fixed' as const, source:'articles' as const, title:'مقالات و آموزش‌ها' };
-    if (/promo|banner|testimonial|service-strip|parts-brands|shipping|hero/i.test(key)) return { kind:'manual' as const, source:'manual' as const, title:'آیتم‌های دستی و قابل ویرایش' };
+    if (/promo|banner/i.test(key)) return { kind:'flexible' as const, source:(section.contentSource || 'manual') as NonNullable<PageSection['contentSource']>, title:'محتوای بنرها' };
+    if (/testimonial|service-strip|parts-brands|shipping/i.test(key)) return { kind:'manual' as const, source:'manual' as const, title:'آیتم‌های دستی و قابل ویرایش' };
     return { kind:'flexible' as const, source:(section.contentSource || 'manual') as NonNullable<PageSection['contentSource']>, title:'منبع محتوا' };
   };
 
@@ -387,7 +389,7 @@ export const AdminVisualPageBuilder: React.FC<{onNavigate?:(view:string,param?:s
                       </div>
                     ) : (
                       <div className="grid grid-cols-[1fr_100px] gap-2">
-                        <select value={draft.contentSource||'manual'} onChange={e=>patch({contentSource:e.target.value as PageSection['contentSource']})} className="w-full p-2 border rounded-lg bg-white">
+                        <select value={draft.contentSource||policy.source} onChange={e=>patch({contentSource:e.target.value as PageSection['contentSource']})} className="w-full p-2 border rounded-lg bg-white">
                           <option value="manual">آیتم‌های دستی</option>
                           <option value="categories">دسته‌بندی‌های قطعات</option>
                           <option value="brands">برندهای خودرو</option>

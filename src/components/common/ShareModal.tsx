@@ -1,17 +1,5 @@
 import React, { useState } from 'react';
-import { 
-  X, 
-  Copy, 
-  Check, 
-  Share2, 
-  QrCode, 
-  Send, 
-  MessageSquare, 
-  ExternalLink,
-  Smartphone,
-  Sparkles,
-  Link as LinkIcon
-} from 'lucide-react';
+import { X, Copy, Check, Share2, QrCode, Smartphone, Link as LinkIcon } from 'lucide-react';
 import { useStore } from '../../context/StoreContext';
 import { copyToClipboard, getFullShareUrl, getPageShareMeta } from '../../utils/navigation';
 

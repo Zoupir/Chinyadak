@@ -1,19 +1,5 @@
 import React, { useState } from 'react';
-import { 
-  Sparkles, 
-  Search, 
-  X, 
-  Car, 
-  ExternalLink, 
-  CheckCircle2, 
-  HelpCircle, 
-  Coins, 
-  Globe, 
-  Copy, 
-  Check, 
-  ArrowLeft,
-  RotateCcw
-} from 'lucide-react';
+import { Sparkles, Search, X, Car, ExternalLink, Coins, Globe, Copy, Check, RotateCcw } from 'lucide-react';
 import { useStore } from '../../context/StoreContext';
 
 interface AiSearchAdvisorModalProps {

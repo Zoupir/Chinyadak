@@ -19,6 +19,7 @@ interface CustomerRow extends RowDataPacket {
   address: string | null;
   loyalty_points: number;
   loyalty_tier: string;
+  password_initialized: number;
   created_at: Date;
   total_orders: number | string;
   total_spent: number | string;
@@ -89,7 +90,8 @@ const customerDto = (row: CustomerRow) => ({
   vehicle: row.vehicle || '',
   address: row.address || '',
   loyaltyPoints: Number(row.loyalty_points || 0),
-  loyaltyTier: row.loyalty_tier
+  loyaltyTier: row.loyalty_tier,
+  loginReady: Boolean(row.password_initialized)
 });
 
 const adminDto = (row: AdminRow) => ({
@@ -164,7 +166,7 @@ adminDataRouter.get('/customers', requireAdminPermission('canManageOrders'), asy
   const [rows] = await pool.query<CustomerRow[]>(
     `SELECT
        c.id, c.first_name, c.last_name, c.phone, c.email, c.customer_type, c.status,
-       c.vehicle, c.address, c.loyalty_points, c.loyalty_tier, c.created_at,
+       c.vehicle, c.address, c.loyalty_points, c.loyalty_tier, c.password_initialized, c.created_at,
        COUNT(o.id) AS total_orders,
        COALESCE(SUM(CASE WHEN o.payment_status IN ('paid','paid_stock_review') THEN o.total ELSE 0 END), 0) AS total_spent
      FROM customers c
@@ -196,6 +198,7 @@ adminDataRouter.post('/customers', requireAdminPermission('canManageOrders'), as
   const status = req.body?.status === 'blocked' ? 'blocked' : 'active';
   const vehicle = String(req.body?.vehicle || '').trim() || null;
   const address = String(req.body?.address || '').trim() || null;
+  const initialPassword = String(req.body?.initialPassword || '');
 
   if (!firstName || !lastName || !/^09\d{9}$/.test(phone)) {
     res.status(400).json({ error: 'CUSTOMER_DATA_INVALID' });
@@ -205,17 +208,22 @@ adminDataRouter.post('/customers', requireAdminPermission('canManageOrders'), as
     res.status(400).json({ error: 'CUSTOMER_TYPE_INVALID' });
     return;
   }
+  if (initialPassword && initialPassword.length < 8) {
+    res.status(400).json({ error: 'CUSTOMER_INITIAL_PASSWORD_TOO_SHORT' });
+    return;
+  }
 
-  const temporarySecret = randomBytes(32).toString('hex');
+  const temporarySecret = initialPassword || randomBytes(32).toString('hex');
   const passwordHash = await hashPassword(temporarySecret);
+  const passwordInitialized = initialPassword ? 1 : 0;
   const id = randomUUID();
 
   try {
     await pool.execute(
       `INSERT INTO customers
        (id, first_name, last_name, phone, password_hash, password_initialized, email, customer_type, status, vehicle, address)
-       VALUES (?, ?, ?, ?, ?, 0, ?, ?, ?, ?, ?)`,
-      [id, firstName, lastName, phone, passwordHash, email, type, status, vehicle, address]
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [id, firstName, lastName, phone, passwordHash, passwordInitialized, email, type, status, vehicle, address]
     );
   } catch (error: any) {
     if (error?.code === 'ER_DUP_ENTRY') {

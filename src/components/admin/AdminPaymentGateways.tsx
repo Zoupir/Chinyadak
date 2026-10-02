@@ -1,16 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import {
-  CheckCircle2,
-  CreditCard,
-  Edit3,
-  Eye,
-  EyeOff,
-  KeyRound,
-  Save,
-  ShieldCheck,
-  TestTube2,
-  X
-} from 'lucide-react';
+import { CreditCard, Edit3, Eye, EyeOff, KeyRound, Save, ShieldCheck, TestTube2, X } from 'lucide-react';
 import { useStore } from '../../context/StoreContext';
 import type { PaymentGatewayConfig } from '../../types';
 

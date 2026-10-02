@@ -767,8 +767,8 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
               <span className="font-black text-sm text-white tracking-tight">
                 کنترل پنل سازمانی {settings.siteTitle || 'فروشگاه'}
               </span>
-              <span className="hidden sm:inline-block text-[10px] bg-red-600/90 text-white font-bold px-2 py-0.2 rounded-full mr-2">
-                ADMIN ENTERPRISE
+              <span className="inline-block text-[9px] bg-red-600/90 text-white font-bold px-2 py-0.2 rounded-full mr-2">
+                نسخه سایت 30.1.1
               </span>
             </div>
           </div>

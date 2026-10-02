@@ -2,30 +2,7 @@ import React, { useRef, useState } from 'react';
 import { useStore } from '../../context/StoreContext';
 import { SiteSettings } from '../../types';
 import { ImageUploadInput } from '../common/ImageUploadInput';
-import { 
-  Palette, 
-  Sparkles, 
-  Check, 
-  Sun, 
-  Moon, 
-  Layers, 
-  Type, 
-  Sliders, 
-  Globe, 
-  Search, 
-  Package, 
-  PhoneCall, 
-  ShieldCheck,
-  RefreshCw,
-  Eye,
-  SlidersHorizontal,
-  CheckCircle2,
-  FileText,
-  LayoutTemplate,
-  Download,
-  Upload,
-  RotateCcw
-} from 'lucide-react';
+import { Palette, Sparkles, Check, Sun, Type, Globe, Search, Package, PhoneCall, LayoutTemplate, Download, Upload, RotateCcw } from 'lucide-react';
 
 export const AdminThemeTab: React.FC = () => {
   const { settings, updateSettings, showToast, pages, sliders, updatePage, updateSlider } = useStore();

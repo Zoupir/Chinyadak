@@ -87,6 +87,7 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
       backgroundRepeat: section.imageUrl ? backgroundRepeat(section.imageMode) : undefined,
       backgroundPosition: section.imageUrl ? 'center' : undefined,
       color: section.textColor || undefined,
+      order: section.order,
       borderRadius: section.borderRadiusPx !== undefined ? `${section.borderRadiusPx}px` : undefined,
       paddingTop: section.paddingTopPx !== undefined ? `${section.paddingTopPx}px` : undefined,
       paddingBottom: section.paddingBottomPx !== undefined ? `${section.paddingBottomPx}px` : undefined,

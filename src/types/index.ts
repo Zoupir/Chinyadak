@@ -851,6 +851,8 @@ export interface SitePage {
   description?: string;
   sections: PageSection[];
   isSystem?: boolean;
+  /** Server revision used to prevent silent concurrent overwrites. */
+  revision?: number;
   updatedAt: string;
   seo?: SeoEntityDraft;
 }

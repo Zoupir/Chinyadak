@@ -2,27 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useStore } from '../../context/StoreContext';
 import { ProductCard } from '../product/ProductCard';
 import { formatToman } from '../../utils/formatters';
-import { 
-  Car, 
-  ShoppingBag, 
-  Heart, 
-  User, 
-  Plus, 
-  Trash2, 
-  Check, 
-  ArrowLeft, 
-  Clock, 
-  MapPin, 
-  Package, 
-  FileText,
-  ShieldCheck,
-  LogOut,
-  Printer,
-  Sparkles,
-  Coins,
-  Award,
-  Share2
-} from 'lucide-react';
+import { Car, ShoppingBag, Heart, User, Plus, Trash2, Check, FileText, LogOut, Printer, Sparkles } from 'lucide-react';
 import { InvoiceModal } from '../orders/InvoiceModal';
 import { LoyaltyDashboardTab } from './LoyaltyDashboardTab';
 import { ShareButton } from '../common/ShareButton';

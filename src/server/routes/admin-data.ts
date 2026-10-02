@@ -323,7 +323,7 @@ adminDataRouter.post('/loyalty', requireAdminPermission('canManageOrders'), asyn
 
 adminDataRouter.get('/admins', requireAdminPermission('canManageAdmins'), async (_req, res) => {
   const [rows] = await pool.query<AdminRow[]>(
-    'SELECT * FROM admin_users ORDER BY created_at ASC'
+    'SELECT * FROM admin_users WHERE deleted_at IS NULL ORDER BY created_at ASC'
   );
   res.json({ admins: rows.map(adminDto) });
 });
@@ -489,6 +489,14 @@ adminDataRouter.delete('/admins/:id', requireAdminPermission('canManageAdmins'),
     return;
   }
 
-  await pool.execute('DELETE FROM admin_users WHERE id = ?', [id]);
-  res.json({ ok: true });
+  await pool.execute(
+    `UPDATE admin_users
+     SET is_active = 0,
+         session_version = session_version + 1,
+         deleted_at = NOW(),
+         updated_at = NOW()
+     WHERE id = ?`,
+    [id]
+  );
+  res.json({ ok: true, archived: true });
 });

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useStore } from '../../context/StoreContext';
 import { PageSection } from '../../types';
 import { LiveSectionModal } from '../common/LiveSectionModal';
+import { RichTextContent } from '../common/RichTextContent';
 import { 
   ChevronLeft, 
   Home, 
@@ -346,9 +347,10 @@ export const PageView: React.FC<PageViewProps> = ({ pageSlug, onNavigate }) => {
                         </p>
                       )}
                       {section.content && (
-                        <div className="text-xs sm:text-sm text-neutral-300 leading-loose space-y-3 pt-1 whitespace-pre-line">
-                          {section.content}
-                        </div>
+                        <RichTextContent
+                          value={section.content}
+                          className="text-xs sm:text-sm text-neutral-300 leading-loose space-y-3 pt-1"
+                        />
                       )}
                       {section.buttonText && (
                         <div className="pt-3">
@@ -431,9 +433,10 @@ export const PageView: React.FC<PageViewProps> = ({ pageSlug, onNavigate }) => {
                         </p>
                       )}
                       {section.content && (
-                        <div className="text-xs sm:text-sm text-neutral-600 leading-loose space-y-3 pt-1 whitespace-pre-line">
-                          {section.content}
-                        </div>
+                        <RichTextContent
+                          value={section.content}
+                          className="text-xs sm:text-sm text-neutral-600 leading-loose space-y-3 pt-1"
+                        />
                       )}
                       {section.buttonText && (
                         <div className="pt-2">

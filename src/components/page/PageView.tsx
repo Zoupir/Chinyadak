@@ -3,24 +3,7 @@ import { useStore } from '../../context/StoreContext';
 import { PageSection } from '../../types';
 import { LiveSectionModal } from '../common/LiveSectionModal';
 import { RichTextContent } from '../common/RichTextContent';
-import { 
-  ChevronLeft, 
-  Home, 
-  FileText, 
-  Sparkles, 
-  Edit3, 
-  ArrowLeft, 
-  ExternalLink,
-  ShieldCheck,
-  EyeOff,
-  CheckCircle2,
-  HelpCircle,
-  PackageOpen,
-  Plus,
-  Trash2,
-  ArrowUp,
-  ArrowDown
-} from 'lucide-react';
+import { ChevronLeft, Home, FileText, Edit3, ArrowLeft, EyeOff, PackageOpen, Plus, Trash2, ArrowUp, ArrowDown } from 'lucide-react';
 
 interface PageViewProps {
   pageSlug: string;
@@ -234,7 +217,6 @@ export const PageView: React.FC<PageViewProps> = ({ pageSlug, onNavigate }) => {
           </div>
         </div>
       )}
-
 
       {/* Hero Header */}
       <section className="bg-neutral-900 text-white py-12 px-4 border-b border-neutral-800">

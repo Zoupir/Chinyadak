@@ -19,6 +19,7 @@ interface CustomerRow extends RowDataPacket {
   phone: string;
   password_hash: string;
   password_initialized: number;
+  session_version: number;
   customer_type: 'retail' | 'mechanic' | 'wholesale';
   status: 'active' | 'blocked';
   vehicle: string | null;
@@ -36,6 +37,7 @@ interface AdminRow extends RowDataPacket {
   role: string;
   permissions_json: string | object | null;
   is_active: number;
+  session_version: number;
   created_at: Date;
 }
 
@@ -153,7 +155,7 @@ authRouter.post('/customer/register', loginLimiter, async (req, res) => {
     [id]
   );
   const customer = rows[0];
-  issueSession(res, { sub: customer.id, role: 'customer', phone: customer.phone });
+  issueSession(res, { sub: customer.id, role: 'customer', phone: customer.phone, ver: Number(customer.session_version) });
   res.status(201).json({ customer: customerDto(customer) });
 });
 
@@ -249,7 +251,7 @@ authRouter.post('/admin/login', loginLimiter, async (req, res) => {
   }
 
   await pool.execute('UPDATE admin_users SET last_login_at = NOW() WHERE id = ?', [admin.id]);
-  issueSession(res, { sub: admin.id, role: 'admin', username: admin.username });
+  issueSession(res, { sub: admin.id, role: 'admin', username: admin.username, ver: Number(admin.session_version) });
   res.json({ admin: adminDto(admin) });
 });
 
@@ -300,10 +302,17 @@ authRouter.post('/admin/change-password', requireAdmin, async (req: Authenticate
   }
 
   const hash = await hashPassword(newPassword);
+  const nextSessionVersion = Number(admin.session_version || 1) + 1;
   await pool.execute(
-    'UPDATE admin_users SET password_hash = ?, updated_at = NOW() WHERE id = ?',
-    [hash, admin.id]
+    'UPDATE admin_users SET password_hash = ?, session_version = ?, updated_at = NOW() WHERE id = ?',
+    [hash, nextSessionVersion, admin.id]
   );
+  issueSession(res, {
+    sub: admin.id,
+    role: 'admin',
+    username: admin.username,
+    ver: nextSessionVersion
+  });
   res.json({ ok: true });
 });
 

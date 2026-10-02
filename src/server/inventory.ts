@@ -29,7 +29,8 @@ const aggregateReservedItems = (items: ReservedItemRow[]): ReservedItemRow[] => 
   const aggregated = Array.from(totals, ([product_id, quantity]) => ({
     product_id,
     quantity
-  })) as ReservedItemRow[];
+  }))
+    .sort((a, b) => a.product_id.localeCompare(b.product_id)) as ReservedItemRow[];
 
   if (missingQuantity > 0) {
     aggregated.push({ product_id: null, quantity: missingQuantity } as ReservedItemRow);
@@ -284,7 +285,9 @@ export const releaseExpiredReservations = async (): Promise<number> => {
      FROM orders
      WHERE reservation_expires_at IS NOT NULL
        AND reservation_expires_at < NOW()
-       AND payment_status NOT IN ('paid', 'paid_stock_review')`
+       AND payment_status NOT IN ('paid', 'paid_stock_review')
+     ORDER BY reservation_expires_at ASC
+     LIMIT 500`
   );
 
   let released = 0;

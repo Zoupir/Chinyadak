@@ -1,25 +1,8 @@
 import React, { useState } from 'react';
 import { useStore } from '../../context/StoreContext';
 import { formatToman } from '../../utils/formatters';
-import { 
-  Sparkles, 
-  Award, 
-  Gift, 
-  ShoppingBag, 
-  ArrowUpRight, 
-  ArrowDownLeft, 
-  ShieldCheck, 
-  Calculator, 
-  Zap, 
-  Car, 
-  CheckCircle2, 
-  TrendingUp, 
-  ChevronRight,
-  Clock,
-  HelpCircle,
-  Coins
-} from 'lucide-react';
-import { LoyaltyTier, LoyaltyTransaction } from '../../types';
+import { Sparkles, Award, Gift, ShoppingBag, ArrowUpRight, ArrowDownLeft, ShieldCheck, Calculator, Zap, Car, CheckCircle2, TrendingUp, ChevronRight, Clock, Coins } from 'lucide-react';
+import { LoyaltyTier } from '../../types';
 
 interface LoyaltyDashboardTabProps {
   onNavigate: (view: string, param?: string) => void;

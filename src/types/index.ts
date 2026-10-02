@@ -812,6 +812,30 @@ export interface PageSection {
   mobileItemMinWidthPx?: number;
   layoutVariant?: 'default' | 'uniform' | 'mosaic' | 'compact';
 
+  dealTimerAlign?: 'right' | 'center' | 'left';
+  dealTimerFontSizePx?: number;
+  dealTitleColor?: string;
+  dealSubtitleColor?: string;
+  dealTimerTextColor?: string;
+  dealTimerBoxBgColor?: string;
+  dealContentVerticalAlign?: 'start' | 'center' | 'end';
+
+  finderWidthPx?: number;
+  finderPaddingPx?: number;
+  finderRadiusPx?: number;
+  finderTitleFontSizePx?: number;
+  finderTextFontSizePx?: number;
+  finderLabelFontSizePx?: number;
+  finderValueFontSizePx?: number;
+  finderButtonFontSizePx?: number;
+  finderBackgroundColor?: string;
+  finderTextColor?: string;
+  finderFieldBackgroundColor?: string;
+  finderFieldTextColor?: string;
+  finderButtonBackgroundColor?: string;
+  finderButtonTextColor?: string;
+  finderSide?: 'left' | 'right';
+
   /** Repeater content for testimonials, banners, feature cards and similar sections. */
   items?: PageSectionItem[];
 }

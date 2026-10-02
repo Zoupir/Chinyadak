@@ -426,12 +426,12 @@ export const LiveSectionModal: React.FC<LiveSectionModalProps> = ({
               </div>
 
               <div className="grid grid-cols-2 gap-3">
-                {numberField('عرض سکشن در دسکتاپ ٪','widthPercent',20,100,form.fullWidth ? 95 : 100)}
-                {numberField('عرض سکشن در تبلت ٪','tabletWidthPercent',20,100,form.fullWidth ? 96 : 100)}
+                {numberField('عرض سکشن در دسکتاپ ٪','widthPercent',20,100,100)}
+                {numberField('عرض سکشن در تبلت ٪','tabletWidthPercent',20,100,100)}
                 {numberField('عرض سکشن در موبایل ٪','mobileWidthPercent',20,100,100)}
                 {!form.fullWidth && numberField('حداکثر عرض px','maxWidthPx',0,2400,1280)}
               </div>
-              <p className="text-[8px] text-neutral-500">«تمام عرض» یعنی بدون محدودیت حداکثر عرض؛ درصد واقعی همچنان دست شماست. مقدار پیشنهادی دسکتاپ ۹۵٪ است تا سکشن از دو طرف فاصله متعادل داشته باشد.</p>
+              <p className="text-[8px] text-neutral-500">عرض پیش‌فرض ۱۰۰٪ است و می‌توانید آن را برای هر دستگاه جداگانه تغییر دهید.</p>
             </section>
 
             <section className="bg-white rounded-2xl border border-neutral-200 p-4 space-y-4">

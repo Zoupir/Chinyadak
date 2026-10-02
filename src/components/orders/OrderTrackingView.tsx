@@ -1,18 +1,8 @@
 import React, { useState } from 'react';
 import { useStore } from '../../context/StoreContext';
 import { Order, OrderStatus } from '../../types';
-import { formatToman, getGradeInfo } from '../../utils/formatters';
-import { 
-  Search, 
-  Package, 
-  Truck, 
-  CheckCircle2, 
-  Clock, 
-  MapPin, 
-  AlertCircle, 
-  ArrowLeft,
-  FileText
-} from 'lucide-react';
+import { formatToman } from '../../utils/formatters';
+import { Search, MapPin, AlertCircle } from 'lucide-react';
 
 interface OrderTrackingViewProps {
   initialOrderNumber?: string;

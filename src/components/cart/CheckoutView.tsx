@@ -5,11 +5,10 @@ import { apiRequest, ApiError } from '../../api/client';
 import { ShoppingBag, CreditCard, Truck, ShieldCheck, AlertCircle, Phone, MapPin } from 'lucide-react';
 
 interface CheckoutViewProps {
-  onOrderCompleted: (orderId: string) => void;
   onNavigate: (view: string) => void;
 }
 
-export const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderCompleted, onNavigate }) => {
+export const CheckoutView: React.FC<CheckoutViewProps> = ({ onNavigate }) => {
   const { 
     cart, 
     cartTotal, 
@@ -88,6 +87,12 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderCompleted, on
   const shippingCost = hasFreeShipping ? 0 : selectedShippingBaseCost;
   const finalTotal = Math.max(0, cartTotal + shippingCost);
 
+  useEffect(() => {
+    if (province !== 'تهران' && selectedShipping === 'express') {
+      setSelectedShipping('post');
+    }
+  }, [province, selectedShipping]);
+
   const redirectToGateway = (
     redirectUrl: string,
     method: 'GET' | 'POST',
@@ -116,6 +121,10 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderCompleted, on
   };
 
   const handleProcessPayment = async (simulateFailure = false) => {
+    if (!settings.enableGuestCheckout && !currentCustomer) {
+      showToast('برای تکمیل خرید ابتدا وارد حساب کاربری شوید.', 'error');
+      return;
+    }
     if (!firstName.trim() || !lastName.trim() || !address.trim()) {
       showToast('لطفاً اطلاعات هویتی و آدرس پستی را تکمیل فرمایید.', 'error');
       return;
@@ -176,12 +185,16 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderCompleted, on
         shippingMethod: {
           id: selectedShipping,
           title: selectedShipping === 'express'
-            ? 'پیک موتوری ۲ ساعته'
+            ? 'پیک شهری'
             : selectedShipping === 'tipax'
-              ? 'تیپاکس اکسپرس'
-              : 'پست پیشتاز بیمه‌شده',
+              ? 'تیپاکس'
+              : 'پست پیشتاز',
           cost: shippingCost,
-          estimatedDelivery: selectedShipping === 'express' ? '۲ ساعت کاری' : '۲۴ الی ۴۸ ساعت'
+          estimatedDelivery: selectedShipping === 'express'
+            ? 'طبق هماهنگی فروشگاه'
+            : selectedShipping === 'tipax'
+              ? 'طبق زمان‌بندی شرکت حمل'
+              : 'طبق زمان‌بندی شرکت پست'
         },
         paymentMethod: {
           id: selectedGateway,
@@ -265,7 +278,7 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderCompleted, on
       <div>
         <h1 className="text-2xl font-black text-neutral-900">تکمیل اطلاعات و ثبت نهایی سفارش</h1>
         <p className="text-xs text-neutral-500 mt-1">
-          خرید آسان مهمان بدون نیاز به ثبت‌نام اجباری با ضمانت بازگشت وجه ۷ روزه
+          مبلغ کالا و ارسال پیش از ایجاد سفارش دوباره روی سرور محاسبه و کنترل می‌شود.
         </p>
       </div>
 
@@ -356,14 +369,12 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderCompleted, on
                   onChange={e => setProvince(e.target.value)}
                   className="w-full text-xs p-3 border border-neutral-300 rounded-xl focus:border-red-600 focus:outline-hidden cursor-pointer"
                 >
-                  <option value="تهران">تهران</option>
-                  <option value="اصفهان">اصفهان</option>
-                  <option value="فارس">فارس (شیراز)</option>
-                  <option value="خراسان رضوی">خراسان رضوی (مشهد)</option>
-                  <option value="آذربایجان شرقی">آذربایجان شرقی (تبریز)</option>
-                  <option value="مازندران">مازندران</option>
-                  <option value="خوزستان">خوزستان</option>
-                  <option value="گیلان">گیلان</option>
+                  {[
+                    'آذربایجان شرقی','آذربایجان غربی','اردبیل','اصفهان','البرز','ایلام','بوشهر','تهران',
+                    'چهارمحال و بختیاری','خراسان جنوبی','خراسان رضوی','خراسان شمالی','خوزستان','زنجان',
+                    'سمنان','سیستان و بلوچستان','فارس','قزوین','قم','کردستان','کرمان','کرمانشاه',
+                    'کهگیلویه و بویراحمد','گلستان','گیلان','لرستان','مازندران','مرکزی','هرمزگان','همدان','یزد'
+                  ].map(item => <option key={item} value={item}>{item}</option>)}
                 </select>
               </div>
 
@@ -425,26 +436,30 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderCompleted, on
               {[
                 {
                   id: 'post',
-                  title: 'پست پیشتاز بیمه‌شده (سراسر ایران)',
-                  desc: 'تحویل ۲ الی ۳ روز کاری با بیمه کامل شکستگی قطعات',
+                  title: 'پست پیشتاز',
+                  desc: 'زمان تحویل بر اساس مقصد و زمان‌بندی شرکت پست تعیین می‌شود.',
                   cost: hasFreeShipping ? 0 : shippingFees.post
                 },
                 {
                   id: 'tipax',
-                  title: 'تیپاکس اکسپرس هوایی',
-                  desc: 'تحویل ۲۴ ساعته درب منزل در کلیه شهرستان‌ها',
+                  title: 'تیپاکس',
+                  desc: 'زمان و محدوده تحویل مطابق سرویس شرکت حمل محاسبه می‌شود.',
                   cost: hasFreeShipping ? 0 : shippingFees.tipax
                 },
                 {
                   id: 'express',
-                  title: 'پیک فوری ویژه شهر تهران (۲ ساعته)',
-                  desc: 'ارسال فوری از انبار چراغ برق با پیک اختصاصی',
+                  title: 'پیک شهری',
+                  desc: province === 'تهران'
+                    ? 'زمان ارسال پس از ثبت سفارش با فروشگاه هماهنگ می‌شود.'
+                    : 'این روش فقط برای نشانی‌های شهر تهران قابل انتخاب است.',
                   cost: hasFreeShipping ? 0 : shippingFees.express
                 }
-              ].map(opt => (
+              ].map(opt => {
+                const disabled = opt.id === 'express' && province !== 'تهران';
+                return (
                 <label
                   key={opt.id}
-                  className={`p-4 rounded-2xl border flex items-center justify-between cursor-pointer transition-all ${
+                  className={`p-4 rounded-2xl border flex items-center justify-between transition-all ${disabled ? 'opacity-50 cursor-not-allowed bg-neutral-50' : 'cursor-pointer'} ${
                     selectedShipping === opt.id
                       ? 'border-red-600 bg-red-50/40 ring-2 ring-red-600/20'
                       : 'border-neutral-200 hover:border-neutral-300'
@@ -455,7 +470,8 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderCompleted, on
                       type="radio"
                       name="shipping"
                       checked={selectedShipping === opt.id}
-                      onChange={() => setSelectedShipping(opt.id as any)}
+                      disabled={disabled}
+                      onChange={() => !disabled && setSelectedShipping(opt.id as 'express' | 'tipax' | 'post')}
                       className="text-red-600 focus:ring-red-500 w-4 h-4"
                     />
                     <div>
@@ -467,7 +483,8 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderCompleted, on
                     {opt.cost === 0 && hasFreeShipping ? 'رایگان' : formatToman(opt.cost)}
                   </span>
                 </label>
-              ))}
+                );
+              })}
             </div>
           </div>
 
@@ -495,8 +512,8 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderCompleted, on
                   className="text-red-600 focus:ring-red-500 w-4 h-4"
                 />
                 <div>
-                  <h4 className="font-bold text-xs text-neutral-900">درگاه پرداخت الکترونیک سامان (SEP)</h4>
-                  <p className="text-[10px] text-neutral-500">{gatewayAvailability.saman ? 'پشتیبانی از کلیه کارت‌های عضو شتاب' : 'هنوز روی سرور پیکربندی نشده'}</p>
+                  <h4 className="font-bold text-xs text-neutral-900">درگاه پرداخت الکترونیک سامان</h4>
+                  <p className="text-[10px] text-neutral-500">{gatewayAvailability.saman ? 'درگاه آماده پرداخت است' : 'هنوز روی سرور پیکربندی نشده'}</p>
                 </div>
               </label>
 
@@ -516,8 +533,8 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderCompleted, on
                   className="text-red-600 focus:ring-red-500 w-4 h-4"
                 />
                 <div>
-                  <h4 className="font-bold text-xs text-neutral-900">به‌پرداخت ملت (BPM)</h4>
-                  <p className="text-[10px] text-neutral-500">{gatewayAvailability.mellat ? 'تسویه و تایید آنی با شاپرک' : 'هنوز روی سرور پیکربندی نشده'}</p>
+                  <h4 className="font-bold text-xs text-neutral-900">به‌پرداخت بانک ملت</h4>
+                  <p className="text-[10px] text-neutral-500">{gatewayAvailability.mellat ? 'درگاه آماده پرداخت است' : 'هنوز روی سرور پیکربندی نشده'}</p>
                 </div>
               </label>
             </div>
@@ -606,9 +623,9 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderCompleted, on
             <div className="p-3 bg-neutral-50 rounded-xl border border-neutral-100 text-[11px] text-neutral-500 space-y-1">
               <div className="flex items-center gap-1.5 text-neutral-700 font-bold">
                 <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-                <span>گارانتی خرید بدون ریسک:</span>
+                <span>کنترل نهایی سفارش:</span>
               </div>
-              <p>در صورت مغایرت قطعه یا عدم رضایت مکانیک، وجه شما ظرف ۲۴ ساعت بدون کسر هزینه مسترد می‌گردد.</p>
+              <p>قیمت کالا، موجودی و هزینه ارسال در سرور کنترل می‌شود و مبلغ معتبر برای پرداخت از سفارش ثبت‌شده دریافت می‌شود.</p>
             </div>
           </div>
         </div>

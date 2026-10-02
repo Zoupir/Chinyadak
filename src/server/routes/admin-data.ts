@@ -295,11 +295,38 @@ adminDataRouter.patch('/customers/:id/status', requireAdminPermission('canManage
   res.json({ id: req.params.id, status });
 });
 
-adminDataRouter.get('/loyalty', requireAdminPermission('canManageOrders'), async (_req, res) => {
-  const [rows] = await pool.query<LoyaltyRow[]>(
-    'SELECT * FROM loyalty_transactions ORDER BY created_at DESC LIMIT 10000'
+adminDataRouter.get('/loyalty', requireAdminPermission('canManageOrders'), async (req, res) => {
+  const page = Math.max(1, Math.floor(Number(req.query.page || 1)));
+  const limit = Math.max(1, Math.min(250, Math.floor(Number(req.query.limit || 150))));
+  const offset = (page - 1) * limit;
+  const customerId = String(req.query.customerId || '').trim();
+  const where = customerId ? 'WHERE customer_id = ?' : '';
+  const params: unknown[] = customerId ? [customerId] : [];
+
+  const [countRows] = await pool.query<Array<RowDataPacket & { total: number }>>(
+    `SELECT COUNT(*) AS total FROM loyalty_transactions ${where}`,
+    params
   );
-  res.json({ transactions: rows.map(loyaltyDto) });
+  const total = Number(countRows[0]?.total || 0);
+
+  const [rows] = await pool.query<LoyaltyRow[]>(
+    `SELECT id, customer_id, transaction_type, points, description, order_number, balance_after, created_at
+     FROM loyalty_transactions
+     ${where}
+     ORDER BY created_at DESC
+     LIMIT ? OFFSET ?`,
+    [...params, limit, offset]
+  );
+  res.json({
+    transactions: rows.map(loyaltyDto),
+    pagination: {
+      page,
+      limit,
+      total,
+      totalPages: Math.max(1, Math.ceil(total / limit)),
+      hasMore: offset + rows.length < total
+    }
+  });
 });
 
 adminDataRouter.post('/loyalty', requireAdminPermission('canManageOrders'), async (req, res) => {

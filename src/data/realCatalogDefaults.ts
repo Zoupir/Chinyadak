@@ -106,6 +106,5 @@ export const REAL_VEHICLE_MODELS: VehicleModel[] = [
 
 export const REAL_MODEL_IMAGE_OVERRIDES: Record<string, string> = {
   'chery-tiggo7-pro': 'https://www.cheryinternational.com/data/tms/website/html/images/index/hu7_oil.png',
-  'chery-tiggo8-pro': 'https://www.cheryinternational.com/data/tms/website/html/images/index/hu8_oil.png',
-  'fownix-fx': 'https://www.cheryinternational.com/data/tms/website/html/images/index/hu7.png'
+  'chery-tiggo8-pro': 'https://www.cheryinternational.com/data/tms/website/html/images/index/hu8_oil.png'
 };

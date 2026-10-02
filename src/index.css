@@ -7416,3 +7416,346 @@ html[data-layout="marketplace-rtl"] [data-section-key="articles"] .marketplace-a
   width: min(100%, var(--builder-image-width, 100%)) !important;
   margin-inline: auto !important;
 }
+
+
+/* MARKETPLACE LAYOUT CONTROL V8 — centered defaults, proportional banners, deals/finder/footer */
+html[data-layout="marketplace-rtl"] .marketplace-rtl-home > [data-section-key] {
+  width: var(--builder-width, 95%) !important;
+  max-width: var(--builder-max-width, 1280px) !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  box-sizing: border-box !important;
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-rtl-home > .marketplace-hero-shell[data-section-key],
+html[data-layout="marketplace-rtl"] .marketplace-rtl-home > .marketplace-deals[data-section-key],
+html[data-layout="marketplace-rtl"] .marketplace-rtl-home > .marketplace-testimonials[data-section-key],
+html[data-layout="marketplace-rtl"] .marketplace-rtl-home > .marketplace-service-strip[data-section-key],
+html[data-layout="marketplace-rtl"] .marketplace-rtl-home > .marketplace-wide-banner[data-section-key] {
+  margin-inline: auto !important;
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-hero-shell {
+  width: var(--builder-width, 95%) !important;
+  max-width: var(--builder-max-width, none) !important;
+  margin-inline: auto !important;
+  padding: 0 !important;
+  overflow: hidden;
+  border-radius: var(--builder-section-radius, 8px) !important;
+}
+html[data-layout="marketplace-rtl"] .marketplace-hero-banner {
+  border-radius: var(--builder-section-radius, 8px) !important;
+}
+
+/* Keep boxed sections genuinely centered and prevent legacy full-viewport backgrounds. */
+html[data-layout="marketplace-rtl"] .marketplace-category-row,
+html[data-layout="marketplace-rtl"] .marketplace-section[data-section-key="featured-products"] {
+  box-shadow: none !important;
+  clip-path: none !important;
+}
+html[data-layout="marketplace-rtl"] .marketplace-deals,
+html[data-layout="marketplace-rtl"] .marketplace-testimonials {
+  width: var(--builder-width, 95%) !important;
+  max-width: var(--builder-max-width, none) !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+}
+
+/* Banner sections use a 100-column composition grid: 70/30, 67/33, etc. */
+html[data-layout="marketplace-rtl"] [data-section-key="promo-small"].builder-section-grid,
+html[data-layout="marketplace-rtl"] [data-section-key="promo-medium"].builder-section-grid,
+html[data-layout="marketplace-rtl"] [data-section-key="promo-large"].builder-section-grid,
+html[data-layout="marketplace-rtl"] .marketplace-banner-grid {
+  display: grid !important;
+  grid-template-columns: repeat(100, minmax(0, 1fr)) !important;
+  gap: var(--builder-gap, 12px) !important;
+  align-items: stretch !important;
+}
+html[data-layout="marketplace-rtl"] [data-section-key="promo-small"].builder-section-grid > *,
+html[data-layout="marketplace-rtl"] [data-section-key="promo-medium"].builder-section-grid > *,
+html[data-layout="marketplace-rtl"] [data-section-key="promo-large"].builder-section-grid > *,
+html[data-layout="marketplace-rtl"] .marketplace-banner-grid > * {
+  grid-column: span var(--banner-cols-desktop, 100) !important;
+  height: var(--banner-height-desktop, auto) !important;
+  min-height: var(--banner-height-desktop, 178px) !important;
+  max-width: none !important;
+  width: 100% !important;
+}
+html[data-layout="marketplace-rtl"] [data-section-key="promo-large"][data-layout-variant] > button {
+  grid-column: span var(--banner-cols-desktop, 100) !important;
+}
+html[data-layout="marketplace-rtl"] .marketplace-wide-banner {
+  display: grid !important;
+  padding: 0 !important;
+  min-height: 0 !important;
+  background: transparent !important;
+  overflow: visible !important;
+}
+html[data-layout="marketplace-rtl"] .marketplace-wide-banner-item {
+  position: relative;
+  overflow: hidden;
+  border: 0;
+  cursor: pointer;
+  background-color: #17202b;
+  background-position: center;
+  text-align: right;
+}
+html[data-layout="marketplace-rtl"] .marketplace-wide-banner-copy {
+  position: relative;
+  z-index: 2;
+  padding: 46px max(24px, 6vw);
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+}
+html[data-layout="marketplace-rtl"] .marketplace-wide-banner-copy span {
+  font-weight: 900;
+  margin-bottom: 8px;
+}
+html[data-layout="marketplace-rtl"] .marketplace-wide-banner-copy h2 {
+  max-width: 600px;
+  font-size: var(--item-title-size, 38px);
+  line-height: 1.2;
+  font-weight: 950;
+}
+html[data-layout="marketplace-rtl"] .marketplace-wide-banner-copy small {
+  display: inline-flex;
+  margin-top: 18px;
+  padding: 9px 12px;
+  border-radius: 4px;
+  font-weight: 900;
+}
+
+/* Weekly deals: visible bottom background, centered content and configurable timer. */
+html[data-layout="marketplace-rtl"] [data-section-key="weekly-deals"] {
+  padding-top: var(--builder-padding-top, 28px) !important;
+  padding-bottom: var(--builder-padding-bottom, 34px) !important;
+  padding-inline: var(--builder-padding-inline, 16px) !important;
+  border-radius: var(--builder-section-radius, 10px) !important;
+  overflow: hidden;
+}
+html[data-layout="marketplace-rtl"] [data-section-key="weekly-deals"] > .marketplace-deals-inner {
+  width: 100% !important;
+  max-width: none !important;
+  padding: 0 !important;
+  min-height: 100%;
+  display: flex !important;
+  flex-direction: column;
+}
+html[data-layout="marketplace-rtl"] [data-section-key="weekly-deals"][data-content-valign="start"] > .marketplace-deals-inner { justify-content: flex-start; }
+html[data-layout="marketplace-rtl"] [data-section-key="weekly-deals"][data-content-valign="center"] > .marketplace-deals-inner { justify-content: center; }
+html[data-layout="marketplace-rtl"] [data-section-key="weekly-deals"][data-content-valign="end"] > .marketplace-deals-inner { justify-content: flex-end; }
+
+html[data-layout="marketplace-rtl"] [data-section-key="weekly-deals"] .marketplace-section-heading {
+  width: 100%;
+  margin-bottom: 20px !important;
+}
+html[data-layout="marketplace-rtl"] [data-section-key="weekly-deals"] .marketplace-deal-heading {
+  position: relative;
+  width: 100%;
+  min-height: 62px;
+  display: flex;
+  align-items: center;
+}
+html[data-layout="marketplace-rtl"] [data-section-key="weekly-deals"] .marketplace-deal-copy h2 {
+  color: var(--deal-title-color, #fff) !important;
+  font-size: var(--builder-heading-size, 20px) !important;
+}
+html[data-layout="marketplace-rtl"] [data-section-key="weekly-deals"] .marketplace-deal-copy p {
+  color: var(--deal-subtitle-color, #fff7ed) !important;
+  font-size: var(--builder-subtitle-size, 11px) !important;
+  opacity: 1 !important;
+}
+html[data-layout="marketplace-rtl"] [data-section-key="weekly-deals"] .marketplace-deal-timer {
+  position: absolute;
+  top: 50%;
+  direction: ltr;
+  display: flex !important;
+  align-items: center;
+  gap: 5px;
+  font-size: var(--deal-timer-size, 18px) !important;
+  z-index: 2;
+}
+html[data-layout="marketplace-rtl"] [data-section-key="weekly-deals"][data-timer-align="left"] .marketplace-deal-timer {
+  left: 0;
+  right: auto;
+  transform: translateY(-50%);
+}
+html[data-layout="marketplace-rtl"] [data-section-key="weekly-deals"][data-timer-align="center"] .marketplace-deal-timer {
+  left: 50%;
+  right: auto;
+  transform: translate(-50%, -50%);
+}
+html[data-layout="marketplace-rtl"] [data-section-key="weekly-deals"][data-timer-align="right"] .marketplace-deal-timer {
+  right: 0;
+  left: auto;
+  transform: translateY(-50%);
+}
+html[data-layout="marketplace-rtl"] [data-section-key="weekly-deals"] .marketplace-deal-timer span {
+  min-width: 38px;
+  height: 38px;
+  padding: 0 7px;
+  display: grid;
+  place-items: center;
+  border-radius: 6px;
+  background: var(--deal-timer-bg, #fff) !important;
+  color: var(--deal-timer-color, #b45309) !important;
+  font-size: inherit !important;
+  font-weight: 950;
+}
+html[data-layout="marketplace-rtl"] [data-section-key="weekly-deals"] .marketplace-deal-timer b {
+  color: var(--deal-subtitle-color, #fff7ed) !important;
+  font-size: inherit !important;
+}
+html[data-layout="marketplace-rtl"] [data-section-key="weekly-deals"] .marketplace-product-grid {
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+  align-items: center !important;
+}
+
+/* Hero vehicle finder uses admin variables rather than tiny hard-coded values. */
+html[data-layout="marketplace-rtl"] [data-section-key="hero"] .marketplace-vehicle-finder {
+  width: min(var(--finder-width, 300px), calc(100% - 48px)) !important;
+  padding: var(--finder-padding, 18px) !important;
+  border-radius: var(--finder-radius, 8px) !important;
+  background: var(--finder-bg, #fff) !important;
+  color: var(--finder-text, #111827) !important;
+}
+html[data-layout="marketplace-rtl"] [data-section-key="hero"][data-finder-side="left"] .marketplace-vehicle-finder {
+  left: max(24px, calc((100vw - 1280px) / 2)) !important;
+  right: auto !important;
+}
+html[data-layout="marketplace-rtl"] [data-section-key="hero"][data-finder-side="right"] .marketplace-vehicle-finder {
+  right: max(24px, calc((100vw - 1280px) / 2)) !important;
+  left: auto !important;
+}
+html[data-layout="marketplace-rtl"] [data-section-key="hero"] .marketplace-vehicle-finder h3 {
+  font-size: var(--finder-title-size, 15px) !important;
+  color: var(--finder-text, #111827) !important;
+}
+html[data-layout="marketplace-rtl"] [data-section-key="hero"] .marketplace-vehicle-finder > p {
+  font-size: var(--finder-text-size, 11px) !important;
+  color: var(--finder-text, #111827) !important;
+}
+html[data-layout="marketplace-rtl"] [data-section-key="hero"] .marketplace-finder-grid button {
+  background: var(--finder-field-bg, #fafafa) !important;
+  min-height: 48px !important;
+}
+html[data-layout="marketplace-rtl"] [data-section-key="hero"] .marketplace-finder-grid button span {
+  font-size: var(--finder-label-size, 10px) !important;
+}
+html[data-layout="marketplace-rtl"] [data-section-key="hero"] .marketplace-finder-grid button strong {
+  color: var(--finder-field-text, #222b35) !important;
+  font-size: var(--finder-value-size, 11px) !important;
+}
+html[data-layout="marketplace-rtl"] [data-section-key="hero"] .marketplace-search-car {
+  background: var(--finder-button-bg, #f5a000) !important;
+  color: var(--finder-button-text, #111827) !important;
+  font-size: var(--finder-button-size, 11px) !important;
+}
+
+/* Footer bottom is centered by default and completely editable. */
+html[data-layout="marketplace-rtl"] .marketplace-ref-footer-bottom .marketplace-ref-container {
+  min-height: 54px !important;
+  display: flex !important;
+  flex-direction: column;
+  align-items: center !important;
+  justify-content: center !important;
+  text-align: center;
+  gap: 7px !important;
+  padding-block: 9px;
+}
+html[data-layout="marketplace-rtl"] .marketplace-ref-footer-bottom-links {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 14px !important;
+}
+html[data-layout="marketplace-rtl"] .marketplace-ref-footer[data-bottom-align="right"] .marketplace-ref-footer-bottom .marketplace-ref-container {
+  align-items: flex-start !important;
+  text-align: right;
+}
+html[data-layout="marketplace-rtl"] .marketplace-ref-footer[data-bottom-align="right"] .marketplace-ref-footer-bottom-links {
+  justify-content: flex-start;
+}
+html[data-layout="marketplace-rtl"] .marketplace-ref-footer[data-bottom-align="left"] .marketplace-ref-footer-bottom .marketplace-ref-container {
+  align-items: flex-end !important;
+  text-align: left;
+}
+html[data-layout="marketplace-rtl"] .marketplace-ref-footer[data-bottom-align="left"] .marketplace-ref-footer-bottom-links {
+  justify-content: flex-end;
+}
+
+/* Footer About is independent; on phones it is always the last full-width footer block. */
+@media (max-width: 700px) {
+  html[data-layout="marketplace-rtl"] .marketplace-rtl-home > [data-section-key] {
+    width: var(--builder-mobile-width, 100%) !important;
+    max-width: 100% !important;
+  }
+  html[data-layout="marketplace-rtl"] [data-section-key="promo-small"].builder-section-grid > *,
+  html[data-layout="marketplace-rtl"] [data-section-key="promo-medium"].builder-section-grid > *,
+  html[data-layout="marketplace-rtl"] [data-section-key="promo-large"].builder-section-grid > *,
+  html[data-layout="marketplace-rtl"] .marketplace-banner-grid > * {
+    grid-column: span var(--banner-cols-mobile, 100) !important;
+    height: var(--banner-height-mobile, auto) !important;
+    min-height: var(--banner-height-mobile, 168px) !important;
+  }
+  html[data-layout="marketplace-rtl"] [data-section-key="hero"] .marketplace-vehicle-finder {
+    left: 12px !important;
+    right: 12px !important;
+    width: auto !important;
+    max-width: none !important;
+  }
+  html[data-layout="marketplace-rtl"] [data-section-key="weekly-deals"] .marketplace-deal-heading {
+    min-height: 110px;
+    align-items: flex-start;
+  }
+  html[data-layout="marketplace-rtl"] [data-section-key="weekly-deals"] .marketplace-deal-timer {
+    top: auto !important;
+    bottom: 0;
+    left: 50% !important;
+    right: auto !important;
+    transform: translateX(-50%) !important;
+  }
+  html[data-layout="marketplace-rtl"] .marketplace-ref-footer-main {
+    display: grid !important;
+    grid-template-columns: repeat(var(--footer-cols-mobile, 2), minmax(0,1fr)) !important;
+  }
+  html[data-layout="marketplace-rtl"] .marketplace-ref-footer-about {
+    grid-column: 1 / -1 !important;
+    order: 999 !important;
+    width: 100% !important;
+    text-align: center;
+    padding-top: 12px;
+    border-top: 1px solid rgba(255,255,255,.08);
+  }
+  html[data-layout="marketplace-rtl"] .marketplace-ref-footer-about .marketplace-ref-footer-logo {
+    margin-inline: auto !important;
+  }
+  html[data-layout="marketplace-rtl"] .marketplace-ref-footer-about > p {
+    max-width: 620px !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    text-align: center !important;
+  }
+  html[data-layout="marketplace-rtl"] .marketplace-ref-newsletter {
+    margin-inline: auto !important;
+  }
+}
+
+@media (min-width: 701px) and (max-width: 1024px) {
+  html[data-layout="marketplace-rtl"] .marketplace-rtl-home > [data-section-key] {
+    width: var(--builder-tablet-width, var(--builder-width, 96%)) !important;
+  }
+  html[data-layout="marketplace-rtl"] [data-section-key="promo-small"].builder-section-grid > *,
+  html[data-layout="marketplace-rtl"] [data-section-key="promo-medium"].builder-section-grid > *,
+  html[data-layout="marketplace-rtl"] [data-section-key="promo-large"].builder-section-grid > *,
+  html[data-layout="marketplace-rtl"] .marketplace-banner-grid > * {
+    grid-column: span var(--banner-cols-tablet, var(--banner-cols-desktop, 100)) !important;
+    height: var(--banner-height-tablet, var(--banner-height-desktop, auto)) !important;
+    min-height: var(--banner-height-tablet, var(--banner-height-desktop, 178px)) !important;
+  }
+}

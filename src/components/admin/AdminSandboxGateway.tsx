@@ -7,7 +7,6 @@ export const AdminSandboxGateway: React.FC = () => {
   const { 
     paymentGateways, 
     orders, 
-    updateOrderStatus, 
     simulateAdminPayment, 
     showToast 
   } = useStore();
@@ -63,12 +62,7 @@ export const AdminSandboxGateway: React.FC = () => {
       setIsProcessing(false);
 
       if (res.success) {
-        showToast('تست تراکنش با موفقیت انجام شد و رسید صادر گردید.');
-        // If an actual order was linked, update its status to 'paid'
-        if (selectedOrderId) {
-          updateOrderStatus(selectedOrderId, 'paid', res.trackingNumber);
-          showToast(`وضعیت سفارش ${selectedOrderId} به پرداخت‌شده تغییر یافت.`);
-        }
+        showToast('تست تراکنش با موفقیت انجام شد. این شبیه‌سازی هیچ سفارش واقعی را تغییر نمی‌دهد.');
       } else {
         showToast(res.message, 'error');
       }
@@ -101,7 +95,7 @@ export const AdminSandboxGateway: React.FC = () => {
             <span>درگاه شبیه‌ساز پرداخت آزمایشی (Sandbox Gateway Simulator)</span>
           </h3>
           <p className="text-xs text-neutral-500 mt-1">
-            بررسی فرآیند پرداخت، تست سناریوهای خطا یا موفقیت و صدور رسید الکترونیکی شاپرک
+            بررسی رابط و سناریوهای پرداخت در محیط شبیه‌سازی. هیچ تراکنش بانکی واقعی انجام نمی‌شود و وضعیت سفارش واقعی تغییر نمی‌کند.
           </p>
         </div>
 

@@ -143,7 +143,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenAuthModal }) =
     const footerStyle = {
       ['--footer-cols-desktop' as any]: settings.footerGridColumnsDesktop || 5,
       ['--footer-cols-tablet' as any]: settings.footerGridColumnsTablet || 2,
-      ['--footer-cols-mobile' as any]: settings.footerGridColumnsMobile || 1,
+      ['--footer-cols-mobile' as any]: settings.footerGridColumnsMobile || 2,
       ['--footer-rows-desktop' as any]: footerRows(settings.footerGridRowsDesktop || 1),
       ['--footer-rows-tablet' as any]: footerRows(settings.footerGridRowsTablet),
       ['--footer-rows-mobile' as any]: footerRows(settings.footerGridRowsMobile),

@@ -14,7 +14,7 @@ const providerHelp: Record<string, string> = {
 };
 
 export const AdminPaymentGateways: React.FC = () => {
-  const { paymentGateways, updatePaymentGateway, toggleGatewayActive, showToast } = useStore();
+  const { paymentGateways, updatePaymentGateway, toggleGatewayActive } = useStore();
   const [editingId, setEditingId] = useState<string | null>(null);
   const active = paymentGateways.find(item => item.id === editingId);
   const [form, setForm] = useState<PaymentGatewayConfig | null>(active ? { ...active } : null);

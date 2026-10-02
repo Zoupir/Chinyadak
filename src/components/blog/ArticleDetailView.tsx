@@ -1,6 +1,7 @@
 import React from 'react';
 import { useStore } from '../../context/StoreContext';
 import { ProductCard } from '../product/ProductCard';
+import { RichTextContent } from '../common/RichTextContent';
 import { Clock, User, ArrowRight, Share2, HelpCircle, BookOpen, Layers } from 'lucide-react';
 
 interface ArticleDetailViewProps {
@@ -71,9 +72,10 @@ export const ArticleDetailView: React.FC<ArticleDetailViewProps> = ({ articleId,
           {article.summary}
         </div>
 
-        <div className="space-y-4 whitespace-pre-line text-neutral-800 text-xs sm:text-sm">
-          {article.content}
-        </div>
+        <RichTextContent
+          value={article.content}
+          className="space-y-4 text-neutral-800 text-xs sm:text-sm"
+        />
       </div>
 
       {/* Linked Products Mentioned in Article */}

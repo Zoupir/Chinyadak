@@ -12,6 +12,8 @@ import {
   type ResultSetHeader,
   type RowDataPacket
 } from '../db';
+import { getCommerceSettings, resolveShipping } from '../commerce-settings';
+import { issuePaymentToken } from '../payment-token';
 
 interface ProductPriceRow extends RowDataPacket {
   id: string;
@@ -86,16 +88,12 @@ const normalizePhone = (input: unknown): string => {
   return value;
 };
 
-const shippingById = (id: string) => {
-  switch (id) {
-    case 'express':
-      return { id: 'express', title: 'پیک موتوری ۲ ساعته', cost: 120000, estimatedDelivery: '۲ ساعت کاری' };
-    case 'tipax':
-      return { id: 'tipax', title: 'تیپاکس اکسپرس', cost: 110000, estimatedDelivery: '۲۴ الی ۴۸ ساعت' };
-    default:
-      return { id: 'post', title: 'پست پیشتاز بیمه‌شده', cost: 85000, estimatedDelivery: '۲۴ الی ۴۸ ساعت' };
-  }
-};
+const fallbackShippingSnapshot = () => ({
+  id: 'post',
+  title: 'پست پیشتاز بیمه‌شده',
+  cost: 0,
+  estimatedDelivery: '۲۴ الی ۴۸ ساعت'
+});
 
 const paymentTitle = (id: string) => {
   if (id === 'mellat') return 'به‌پرداخت بانک ملت';
@@ -108,7 +106,7 @@ const createOrderNumber = (): string =>
 
 const orderDto = (row: OrderRow, items: OrderItemRow[]) => {
   const customer = parseJson<any>(row.customer_snapshot, {});
-  const shippingMethod = parseJson<any>(row.shipping_snapshot, shippingById('post'));
+  const shippingMethod = parseJson<any>(row.shipping_snapshot, fallbackShippingSnapshot());
   return {
     id: row.id,
     orderNumber: row.order_number,
@@ -185,7 +183,7 @@ ordersRouter.post('/', async (req: AuthenticatedRequest, res) => {
   const address = String(customerInput.address || '').trim();
   const notes = String(customerInput.notes || '').trim();
   const requestedItems = Array.isArray(req.body?.items) ? req.body.items : [];
-  const shipping = shippingById(String(req.body?.shippingMethodId || 'post'));
+  const shippingMethodId = String(req.body?.shippingMethodId || 'post');
   const paymentMethod = String(req.body?.paymentMethodId || 'saman');
 
   if (!firstName || !lastName || !/^09\d{9}$/.test(phone) || !address) {
@@ -265,16 +263,23 @@ ordersRouter.post('/', async (req: AuthenticatedRequest, res) => {
     });
   }
 
-  // Coupons and loyalty redemption will be validated server-side in their own modules.
-  // Until then, client-provided discounts are intentionally ignored.
+  const optionalSession = getOptionalSession(req);
+  const customerId =
+    optionalSession?.role === 'customer' ? optionalSession.sub : null;
+
+  const commerceSettings = await getCommerceSettings();
+  if (!customerId && !commerceSettings.enableGuestCheckout) {
+    res.status(403).json({ error: 'GUEST_CHECKOUT_DISABLED' });
+    return;
+  }
+  const shipping = resolveShipping(shippingMethodId, subtotal, commerceSettings);
+
+  // Coupons and loyalty redemption are intentionally ignored until their
+  // server-side validation modules are enabled. Never trust client totals.
   const discountAmount = 0;
   const total = Math.max(0, subtotal - discountAmount + shipping.cost);
   const orderId = randomUUID();
   const orderNumber = createOrderNumber();
-
-  const optionalSession = getOptionalSession(req);
-  const customerId =
-    optionalSession?.role === 'customer' ? optionalSession.sub : null;
 
   const customerSnapshot = {
     firstName,
@@ -332,7 +337,10 @@ ordersRouter.post('/', async (req: AuthenticatedRequest, res) => {
   });
 
   const created = await fetchOrdersByWhere('WHERE id = ?', [orderId]);
-  res.status(201).json({ order: created[0] });
+  res.status(201).json({
+    order: created[0],
+    paymentToken: issuePaymentToken(orderId, orderNumber)
+  });
 });
 
 ordersRouter.post('/track', async (req, res) => {
@@ -352,7 +360,10 @@ ordersRouter.post('/track', async (req, res) => {
     res.status(404).json({ error: 'ORDER_NOT_FOUND' });
     return;
   }
-  res.json({ order: orders[0] });
+  res.json({
+    order: orders[0],
+    paymentToken: issuePaymentToken(orders[0].id, orders[0].orderNumber)
+  });
 });
 
 ordersRouter.get('/mine', authenticate, async (req: AuthenticatedRequest, res) => {
@@ -365,7 +376,7 @@ ordersRouter.get('/mine', authenticate, async (req: AuthenticatedRequest, res) =
 });
 
 ordersRouter.get('/', requireAdminPermission('canManageOrders'), async (_req, res) => {
-  const orders = await fetchOrdersByWhere('', []);
+  const orders = await fetchOrdersByWhere('WHERE archived_at IS NULL', []);
   res.json({ orders });
 });
 
@@ -403,12 +414,14 @@ ordersRouter.patch('/:id/status', requireAdminPermission('canManageOrders'), asy
 
 ordersRouter.delete('/:id', requireAdminPermission('canManageOrders'), async (req, res) => {
   const [result] = await pool.execute<ResultSetHeader>(
-    'DELETE FROM orders WHERE id = ? OR order_number = ?',
+    `UPDATE orders
+     SET archived_at = COALESCE(archived_at, NOW()), updated_at = NOW()
+     WHERE id = ? OR order_number = ?`,
     [req.params.id, req.params.id]
   );
   if (!result.affectedRows) {
     res.status(404).json({ error: 'ORDER_NOT_FOUND' });
     return;
   }
-  res.json({ ok: true });
+  res.json({ ok: true, archived: true });
 });

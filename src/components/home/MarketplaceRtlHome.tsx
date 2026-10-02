@@ -54,6 +54,15 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
   );
   const sectionConfig = (key: string) => homeSections.find(section => section.sectionKey === key);
   const sectionVisible = (key: string) => sectionConfig(key)?.isVisible !== false;
+  const backgroundFit = (mode?: string) => {
+    const value = mode || 'cover';
+    if (value === 'stretch' || value === 'full') return '100% 100%';
+    if (value === 'original' || value.startsWith('repeat')) return 'auto';
+    if (value === 'side' || value === 'banner') return 'cover';
+    return value;
+  };
+  const backgroundRepeat = (mode?: string) =>
+    mode === 'repeat' ? 'repeat' : mode === 'repeat-x' ? 'repeat-x' : mode === 'repeat-y' ? 'repeat-y' : 'no-repeat';
   const sectionStyle = (key: string): React.CSSProperties => {
     const section = sectionConfig(key);
     if (!section) return {};
@@ -64,12 +73,8 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
       backgroundImage: section.imageUrl
         ? `linear-gradient(rgba(0,0,0,${overlayAlpha}), rgba(0,0,0,${overlayAlpha})), url(${section.imageUrl})`
         : undefined,
-      backgroundSize: section.imageUrl
-        ? section.imageMode === 'contain' ? 'contain'
-          : section.imageMode === 'full' ? '100% 100%'
-          : 'cover'
-        : undefined,
-      backgroundRepeat: section.imageUrl ? 'no-repeat' : undefined,
+      backgroundSize: section.imageUrl ? backgroundFit(section.imageMode) : undefined,
+      backgroundRepeat: section.imageUrl ? backgroundRepeat(section.imageMode) : undefined,
       backgroundPosition: section.imageUrl ? 'center' : undefined,
       color: section.textColor || undefined,
       borderRadius: section.borderRadiusPx !== undefined ? `${section.borderRadiusPx}px` : undefined,
@@ -163,6 +168,9 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
         perItem && item.imageMode === 'stretch' ? 'fill' :
         perItem && ['cover','contain'].includes(item.imageMode || '') ? item.imageMode :
         pick(item.imageFit, section?.itemImageFit) || 'contain',
+      ['--builder-image-fit' as any]: perItem
+        ? backgroundFit(item.imageMode || item.imageFit || section?.itemImageFit || 'cover')
+        : backgroundFit(section?.itemImageFit || 'cover'),
       ['--item-image-radius' as any]: `${pick(item.imageRadiusPx, section?.itemImageRadiusPx) ?? 0}px`,
       ['--item-title-size' as any]: pick(item.titleFontSizePx, section?.itemTitleFontSizePx) !== undefined ? `${pick(item.titleFontSizePx, section?.itemTitleFontSizePx)}px` : undefined,
       ['--item-content-size' as any]: pick(item.contentFontSizePx, section?.itemContentFontSizePx) !== undefined ? `${pick(item.contentFontSizePx, section?.itemContentFontSizePx)}px` : undefined
@@ -263,13 +271,15 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
           backgroundImage: `linear-gradient(90deg, rgba(0,0,0,.24), rgba(0,0,0,.62)), url(${image})`,
           backgroundSize: `100% 100%, ${size}`,
           backgroundRepeat: `no-repeat, ${repeat}`,
-          backgroundPosition: 'center, center'
+          backgroundPosition: 'center, center',
+          ['--builder-image-fit' as any]: size
         }
       : {
           backgroundImage: `url(${image})`,
           backgroundSize: size,
           backgroundRepeat: repeat,
-          backgroundPosition: 'center'
+          backgroundPosition: 'center',
+          ['--builder-image-fit' as any]: size
         };
   };
 
@@ -409,7 +419,21 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
       ? fillProducts(products.filter(product => ['suspension', 'brakes', 'steering'].includes(product.categorySlug || '')), 8)
       : fillProducts(products.filter(product => ['engine', 'turbo', 'cooling'].includes(product.categorySlug || '') || product.isFeatured), 8);
 
-  const wideBannerItem = sortedItems('wide-banner-1')[0];
+  const wideBannerSection = sectionConfig('wide-banner-1');
+  const wideBannerItem = sortedItems('wide-banner-1')[0] || (
+    isLiveEditActive && adminAuth.isAuthenticated
+      ? {
+          id: `${wideBannerSection?.id || 'wide-banner-1'}-live-placeholder`,
+          title: wideBannerSection?.title || 'بنر عریض میانی',
+          subtitle: wideBannerSection?.subtitle || 'این بنر خالی است؛ برای افزودن تصویر و محتوا ویرایشش کنید.',
+          imageUrl: wideBannerSection?.imageUrl || '',
+          link: wideBannerSection?.buttonLink || '',
+          buttonText: wideBannerSection?.buttonText || 'ویرایش بنر',
+          isVisible: true,
+          order: 1
+        }
+      : undefined
+  );
 
   const handleLiveEditCapture = (event: React.MouseEvent<HTMLDivElement>) => {
     if (!isLiveEditActive || !adminAuth.isAuthenticated) return;
@@ -509,11 +533,11 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
           style={{
             ...(hero?.imageUrl || sectionConfig('hero')?.imageUrl ? (() => {
               const image = hero?.imageUrl || sectionConfig('hero')?.imageUrl || '';
-              const mode = hero?.imageMode || 'cover';
+              const mode = hero?.imageMode || sectionConfig('hero')?.imageMode || 'cover';
               return {
                 backgroundImage: `url(${image})`,
-                backgroundSize: mode === 'stretch' ? '100% 100%' : (mode === 'original' || mode.startsWith('repeat')) ? 'auto' : mode,
-                backgroundRepeat: mode === 'repeat' ? 'repeat' : mode === 'repeat-x' ? 'repeat-x' : mode === 'repeat-y' ? 'repeat-y' : 'no-repeat',
+                backgroundSize: backgroundFit(mode),
+                backgroundRepeat: backgroundRepeat(mode),
                 backgroundPosition: 'center'
               };
             })() : {}),

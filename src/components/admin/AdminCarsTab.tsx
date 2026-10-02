@@ -3,21 +3,7 @@ import { useStore } from '../../context/StoreContext';
 import { CarBrand, VehicleModel } from '../../types';
 import { ImageUploadInput } from '../common/ImageUploadInput';
 import { AdminEntitySeoPanel } from './AdminEntitySeoPanel';
-import { 
-  Car, 
-  Plus, 
-  Trash2, 
-  Edit3, 
-  Check, 
-  X, 
-  Search, 
-  Building2, 
-  Layers, 
-  ChevronDown,
-  ExternalLink,
-  ShieldCheck,
-  AlertTriangle
-} from 'lucide-react';
+import { Car, Plus, Trash2, Edit3, X, Search, Building2, ExternalLink } from 'lucide-react';
 
 export const AdminCarsTab: React.FC = () => {
   const { 

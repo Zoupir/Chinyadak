@@ -1,10 +1,16 @@
 import { Product, GarageCar, QualityGrade } from '../types';
 
-export const formatRial = (amount: number): string => {
-  return new Intl.NumberFormat('fa-IR').format(amount) + ' ریال';
+export const formatToman = (amount: number): string => {
+  return new Intl.NumberFormat('fa-IR').format(Math.round(Number(amount) || 0)) + ' تومان';
 };
 
-export const formatToman = formatRial;
+/**
+ * Formats an amount that is already expressed in Rial.
+ * Store/catalog values are canonical Toman; gateway conversion happens server-side.
+ */
+export const formatRial = (amountRial: number): string => {
+  return new Intl.NumberFormat('fa-IR').format(Math.round(Number(amountRial) || 0)) + ' ریال';
+};
 
 export const formatPersianDigits = (num: number | string): string => {
   const farsiDigits = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'];

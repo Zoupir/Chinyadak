@@ -43,8 +43,26 @@ app.set('trust proxy', config.trustProxy);
 
 app.use(
   helmet({
-    contentSecurityPolicy: false,
-    crossOriginResourcePolicy: { policy: 'cross-origin' }
+    contentSecurityPolicy: config.nodeEnv === 'production'
+      ? {
+          directives: {
+            defaultSrc: ["'self'"],
+            scriptSrc: ["'self'"],
+            styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
+            fontSrc: ["'self'", 'data:', 'https://fonts.gstatic.com'],
+            imgSrc: ["'self'", 'data:', 'blob:', 'https:'],
+            connectSrc: ["'self'", 'https:', 'wss:'],
+            frameSrc: ["'self'", 'https:'],
+            formAction: ["'self'", 'https:'],
+            objectSrc: ["'none'"],
+            baseUri: ["'self'"],
+            frameAncestors: ["'self'"],
+            upgradeInsecureRequests: []
+          }
+        }
+      : false,
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+    referrerPolicy: { policy: 'strict-origin-when-cross-origin' }
   })
 );
 app.use(express.json({ limit: '1mb' }));

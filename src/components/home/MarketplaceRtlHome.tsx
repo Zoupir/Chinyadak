@@ -406,6 +406,8 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
       ? fillProducts(products.filter(product => ['suspension', 'brakes', 'steering'].includes(product.categorySlug || '')), 8)
       : fillProducts(products.filter(product => ['engine', 'turbo', 'cooling'].includes(product.categorySlug || '') || product.isFeatured), 8);
 
+  const wideBannerItem = sortedItems('wide-banner-1')[0];
+
   const handleLiveEditCapture = (event: React.MouseEvent<HTMLDivElement>) => {
     if (!isLiveEditActive || !adminAuth.isAuthenticated) return;
     const target = event.target as HTMLElement;
@@ -756,23 +758,38 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
       </section>
       )}
 
-      {sectionVisible('wide-banner-1') && (
+      {sectionVisible('wide-banner-1') && wideBannerItem && (
       <section
-        className="marketplace-wide-banner"
+        className="marketplace-wide-banner marketplace-banner-grid"
         data-section-key="wide-banner-1"
         data-mobile-display={sectionConfig('wide-banner-1')?.mobileDisplayMode || 'grid'}
-        style={{
-          ...sectionStyle('wide-banner-1'),
-          ...(sectionConfig('wide-banner-1')?.imageUrl
-            ? { backgroundImage: `url(${sectionConfig('wide-banner-1')?.imageUrl})` }
-            : {})
-        }}
+        style={sectionStyle('wide-banner-1')}
       >
-        <div>
-          {sectionConfig('wide-banner-1')?.subtitle && <span>{sectionConfig('wide-banner-1')?.subtitle}</span>}
-          {sectionConfig('wide-banner-1')?.title && <h2>{sectionConfig('wide-banner-1')?.title}</h2>}
-          {sectionConfig('wide-banner-1')?.buttonText && <button type="button" onClick={() => goLink(sectionConfig('wide-banner-1')?.buttonLink)}>{sectionConfig('wide-banner-1')?.buttonText}</button>}
-        </div>
+        <button
+          type="button"
+          className="marketplace-wide-banner-item"
+          style={{
+            ...itemVisualStyle('wide-banner-1', wideBannerItem),
+            ...bannerGridItemStyle(wideBannerItem),
+            ...bannerBackgroundStyle(wideBannerItem, wideBannerItem.imageUrl || '', true)
+          }}
+          onClick={() => goLink(wideBannerItem.link)}
+        >
+          {wideBannerItem.responsiveLayout ? (
+            <span className="marketplace-free-layout-layer" aria-hidden="true">
+              {wideBannerItem.badge && <span className="marketplace-free-layout-el marketplace-free-tag" style={freeElementStyle(wideBannerItem, 'tag', { x: 72, y: 16, width: 20 })}>{wideBannerItem.badge}</span>}
+              {wideBannerItem.title && <h2 className="marketplace-free-layout-el marketplace-free-title" style={freeElementStyle(wideBannerItem, 'title', { x: 62, y: 28, width: 32 })}>{wideBannerItem.title}</h2>}
+              {wideBannerItem.subtitle && <span className="marketplace-free-layout-el marketplace-free-subtitle" style={freeElementStyle(wideBannerItem, 'subtitle', { x: 68, y: 18, width: 24 })}>{wideBannerItem.subtitle}</span>}
+              {wideBannerItem.buttonText && <small className="marketplace-free-layout-el marketplace-free-button" style={freeElementStyle(wideBannerItem, 'button', { x: 78, y: 72, width: 14 })}>{wideBannerItem.buttonText}</small>}
+            </span>
+          ) : (
+            <div className="marketplace-wide-banner-copy" style={{textAlign:wideBannerItem.textAlignment || 'right'}}>
+              {wideBannerItem.subtitle && <span style={{color:wideBannerItem.subtitleColor || '#f5a000'}}>{wideBannerItem.subtitle}</span>}
+              {wideBannerItem.title && <h2 style={{color:wideBannerItem.titleColor || '#ffffff'}}>{wideBannerItem.title}</h2>}
+              {wideBannerItem.buttonText && <small style={{backgroundColor:wideBannerItem.buttonBgColor || '#ffffff',color:wideBannerItem.buttonTextColor || '#111827'}}>{wideBannerItem.buttonText}</small>}
+            </div>
+          )}
+        </button>
       </section>
       )}
 
@@ -871,11 +888,18 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
       )}
 
       {sectionVisible('weekly-deals') && (
-      <section className="marketplace-deals" data-section-key="weekly-deals" data-mobile-display={sectionConfig('weekly-deals')?.mobileDisplayMode || 'grid'} style={sectionStyle('weekly-deals')}>
+      <section
+        className="marketplace-deals"
+        data-section-key="weekly-deals"
+        data-mobile-display={sectionConfig('weekly-deals')?.mobileDisplayMode || 'grid'}
+        data-timer-align={sectionConfig('weekly-deals')?.dealTimerAlign || 'left'}
+        data-content-valign={sectionConfig('weekly-deals')?.dealContentVerticalAlign || 'center'}
+        style={sectionStyle('weekly-deals')}
+      >
         <div className="marketplace-section marketplace-deals-inner">
           <div className="marketplace-section-heading inverse">
             <div className="marketplace-deal-heading">
-              <div>
+              <div className="marketplace-deal-copy">
                 <h2>{sectionConfig('weekly-deals')?.title || 'بهترین پیشنهادهای این هفته'}</h2>
                 <p>{sectionConfig('weekly-deals')?.subtitle || 'فرصت محدود برای خرید قطعات منتخب'}</p>
               </div>

@@ -53,6 +53,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
     customers,
     addCustomer,
     updateCustomer,
+    setCustomerLoginPassword,
     toggleCustomerStatus,
     adminUsers,
     settings,
@@ -141,6 +142,8 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
 
   // Customer Modal
   const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
+  const [customerPasswordTarget, setCustomerPasswordTarget] = useState<CustomerUser | null>(null);
+  const [customerPasswordInput, setCustomerPasswordInput] = useState('');
   const [custForm, setCustForm] = useState({
     firstName: '',
     lastName: '',
@@ -447,7 +450,21 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
     setIsCustomerModalOpen(false);
   };
 
-  const handleSaveTheme = (e: React.FormEvent) => {
+  const handleCustomerPasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!customerPasswordTarget) return;
+    if (customerPasswordInput.length < 8) {
+      showToast('رمز ورود مشتری باید حداقل ۸ کاراکتر باشد.', 'error');
+      return;
+    }
+    const saved = await setCustomerLoginPassword(customerPasswordTarget.id, customerPasswordInput);
+    if (saved) {
+      setCustomerPasswordTarget(null);
+      setCustomerPasswordInput('');
+    }
+  };
+
+    const handleSaveTheme = (e: React.FormEvent) => {
     e.preventDefault();
     updateSettings(themeForm);
   };
@@ -1223,16 +1240,27 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
                           </span>
                         </td>
                         <td className="p-3 text-left">
-                          <button
-                            onClick={() => toggleCustomerStatus(cust.id)}
-                            className={`px-3 py-1 rounded-lg text-[11px] font-bold ${
-                              cust.status === 'active' 
-                                ? 'bg-neutral-100 hover:bg-red-50 hover:text-red-600 text-neutral-600' 
-                                : 'bg-emerald-100 text-emerald-800'
-                            }`}
-                          >
-                            {cust.status === 'active' ? 'مسدودسازی' : 'فعال‌سازی'}
-                          </button>
+                          <div className="flex flex-wrap justify-end gap-1.5">
+                            <button
+                              onClick={() => {
+                                setCustomerPasswordTarget(cust);
+                                setCustomerPasswordInput('');
+                              }}
+                              className="px-3 py-1 rounded-lg text-[10px] font-bold bg-blue-50 text-blue-700 hover:bg-blue-100"
+                            >
+                              {cust.loginReady ? 'تغییر رمز ورود' : 'فعال‌سازی ورود'}
+                            </button>
+                            <button
+                              onClick={() => toggleCustomerStatus(cust.id)}
+                              className={`px-3 py-1 rounded-lg text-[11px] font-bold ${
+                                cust.status === 'active' 
+                                  ? 'bg-neutral-100 hover:bg-red-50 hover:text-red-600 text-neutral-600' 
+                                  : 'bg-emerald-100 text-emerald-800'
+                              }`}
+                            >
+                              {cust.status === 'active' ? 'مسدودسازی' : 'فعال‌سازی'}
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -2105,6 +2133,44 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
                 >
                   ذخیره تغییرات
                 </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {customerPasswordTarget && (
+        <div className="fixed inset-0 z-[215] flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+          <div className="bg-white rounded-3xl p-6 max-w-md w-full text-right shadow-2xl">
+            <div className="flex items-center justify-between pb-3 border-b border-neutral-100">
+              <div>
+                <h3 className="font-black text-sm text-neutral-900">تنظیم رمز ورود مشتری</h3>
+                <p className="text-[10px] text-neutral-500 mt-1">
+                  {customerPasswordTarget.firstName} {customerPasswordTarget.lastName} — {customerPasswordTarget.phone}
+                </p>
+              </div>
+              <button type="button" onClick={() => setCustomerPasswordTarget(null)} className="text-neutral-400 hover:text-neutral-700">✕</button>
+            </div>
+            <form onSubmit={handleCustomerPasswordSubmit} className="mt-4 space-y-4">
+              <label className="block">
+                <span className="block text-xs font-bold text-neutral-700 mb-1">رمز ورود جدید</span>
+                <input
+                  type="password"
+                  value={customerPasswordInput}
+                  onChange={e => setCustomerPasswordInput(e.target.value)}
+                  autoComplete="new-password"
+                  minLength={8}
+                  className="w-full p-3 border border-neutral-300 rounded-xl font-mono text-left"
+                  placeholder="حداقل ۸ کاراکتر"
+                  autoFocus
+                />
+              </label>
+              <p className="text-[9px] leading-5 text-amber-700 bg-amber-50 rounded-xl p-3">
+                با ذخیره رمز جدید، نشست‌های ورود قبلی این مشتری باطل می‌شوند.
+              </p>
+              <div className="flex gap-2">
+                <button type="button" onClick={() => setCustomerPasswordTarget(null)} className="flex-1 py-2.5 rounded-xl bg-neutral-100 text-xs font-bold">انصراف</button>
+                <button type="submit" className="flex-1 py-2.5 rounded-xl bg-blue-600 text-white text-xs font-black">ذخیره رمز</button>
               </div>
             </form>
           </div>

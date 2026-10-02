@@ -23,6 +23,43 @@ const main = async () => {
       );
     }
 
+    // Fill only empty L8 technical fields in an earlier untouched starter row.
+    const l8Default = REAL_VEHICLE_MODELS.find(model => model.id === 'lucano-l8');
+    if (l8Default) {
+      const [storedRows] = await connection.execute<any[]>(
+        'SELECT data_json FROM vehicle_models WHERE id = ? LIMIT 1',
+        ['lucano-l8']
+      );
+      const rawData = storedRows[0]?.data_json;
+      const storedModel = typeof rawData === 'string' ? JSON.parse(rawData) : rawData;
+      if (storedModel) {
+        const previousSpecs = storedModel.specifications || {};
+        const nextSpecs = { ...previousSpecs };
+        let changed = false;
+        for (const key of ['engineCode', 'displacement', 'horsepower', 'torque', 'transmission'] as const) {
+          if (!nextSpecs[key] && l8Default.specifications[key]) {
+            nextSpecs[key] = l8Default.specifications[key];
+            changed = true;
+          }
+        }
+        const patch: Record<string, unknown> = { ...storedModel, specifications: nextSpecs };
+        if (!storedModel.engineSummary && l8Default.engineSummary) {
+          patch.engineSummary = l8Default.engineSummary;
+          changed = true;
+        }
+        if (!storedModel.transmissionSummary && l8Default.transmissionSummary) {
+          patch.transmissionSummary = l8Default.transmissionSummary;
+          changed = true;
+        }
+        if (changed) {
+          await connection.execute(
+            'UPDATE vehicle_models SET data_json = ?, updated_at = NOW() WHERE id = ?',
+            [JSON.stringify(patch), 'lucano-l8']
+          );
+        }
+      }
+    }
+
     // Upgrade only the known stock placeholders in the matching model records.
     for (const [modelId, imageUrl] of Object.entries(REAL_MODEL_IMAGE_OVERRIDES)) {
       await connection.execute(

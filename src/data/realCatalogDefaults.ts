@@ -104,6 +104,22 @@ export const REAL_VEHICLE_MODELS: VehicleModel[] = [
   )
 ];
 
+// Imported from the user's Lucano L8 knowledge base (v2.1). Keep gearbox conflict visible.
+const lucanoL8 = REAL_VEHICLE_MODELS.find(model => model.id === 'lucano-l8');
+if (lucanoL8) {
+  lucanoL8.engineSummary = '2.0T GDI، کد موتور SQRF4J20C';
+  lucanoL8.transmissionSummary = '۷ سرعته Wet DCT؛ شناسهٔ گیربکس در منابع اختلاف دارد و باید با VIN/EPC بررسی شود.';
+  lucanoL8.description = 'پیکربندی بازار ایران با کد T26. با Tiggo 9 جهانی T28 یا Tiggo 8L اشتباه نشود. شماره و فیتمنت دقیق قطعه باید با VIN/EPC تأیید شود.';
+  lucanoL8.specifications = {
+    engineCode: 'SQRF4J20C',
+    displacement: '2.0 L',
+    horsepower: '245 hp',
+    torque: '385 Nm',
+    transmission: '7-speed wet DCT; gearbox identifier requires VIN/EPC confirmation',
+    fuelConsumption: ''
+  };
+}
+
 export const REAL_MODEL_IMAGE_OVERRIDES: Record<string, string> = {
   'chery-tiggo7-pro': 'https://www.cheryinternational.com/data/tms/website/html/images/index/hu7_oil.png',
   'chery-tiggo8-pro': 'https://www.cheryinternational.com/data/tms/website/html/images/index/hu8_oil.png'

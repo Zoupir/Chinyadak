@@ -77,11 +77,19 @@ export const resolveBannerPlacements = (
 ): BannerPlacementConfig[] => {
   if (!Array.isArray(saved) || saved.length === 0) return migrateLegacyBannerPlacements(sections, slides);
   const byKey = new Map(saved.map(item => [item.key, item]));
-  return BANNER_PLACEMENT_META.map(meta => ({
-    ...meta,
-    ...byKey.get(meta.key),
-    items: [...(byKey.get(meta.key)?.items || [])].sort((a, b) => a.order - b.order)
-  }));
+  return BANNER_PLACEMENT_META.map(meta => {
+    const existing = byKey.get(meta.key);
+    return {
+      ...meta,
+      ...existing,
+      key: meta.key,
+      title: existing?.title || meta.title,
+      isVisible: existing?.isVisible ?? true,
+      widthMode: existing?.widthMode ?? 'container',
+      gapPx: existing?.gapPx ?? 12,
+      items: [...(existing?.items || [])].sort((a, b) => a.order - b.order)
+    };
+  });
 };
 
 export const findBannerPlacement = (placements: BannerPlacementConfig[], key: BannerPlacementKey) =>

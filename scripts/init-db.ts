@@ -2,6 +2,7 @@ import fs from 'fs/promises';
 import path from 'path';
 import dotenv from 'dotenv';
 import mysql from 'mysql2/promise';
+import { INITIAL_SETTINGS } from '../src/data/mockData';
 
 dotenv.config();
 
@@ -96,6 +97,63 @@ const main = async () => {
     await connection.query(
       `ALTER TABLE products MODIFY data_json JSON NOT NULL`
     );
+
+    // Upgrade only the untouched legacy starter settings. Any edited store settings
+    // are left intact; unrelated fields are preserved while the new visual defaults apply.
+    const [siteSettingRows] = await connection.query<any[]>(
+      "SELECT setting_value FROM app_settings WHERE setting_key = 'site_settings' LIMIT 1"
+    );
+    const storedSiteSettings = siteSettingRows[0]?.setting_value;
+    const currentSiteSettings = typeof storedSiteSettings === 'string'
+      ? JSON.parse(storedSiteSettings)
+      : storedSiteSettings;
+    const legacyStarterSignature: Record<string, unknown> = {
+      siteTitle: 'فروشگاه قطعات خودرو',
+      siteSlogan: 'مرجع رسمی و تخصصی لوازم یدکی و قطعات فابریک با سیستم فیتمنت هوشمند',
+      contactPhone: '۰۲۱-۸۸۹۹۲۲۱۱',
+      supportPhone: '۰۹۱۲۳۴۵۶۷۸۹',
+      supportEmail: 'support@chinpart.ir',
+      address: 'تهران، خیابان امیرکبیر (چراغ برق)، کوچه سراج، پاساژ کاشانی، طبقه همکف، پلاک ۲۸',
+      themeMode: 'dark',
+      layoutPreset: 'classic',
+      primaryColor: '#DC2626',
+      siteBgColor: '#0a0a0a'
+    };
+    const isUntouchedLegacyStarter = currentSiteSettings &&
+      Object.entries(legacyStarterSignature).every(([key, value]) => currentSiteSettings[key] === value);
+
+    if (isUntouchedLegacyStarter) {
+      const upgradedSiteSettings = {
+        ...currentSiteSettings,
+        siteTitle: INITIAL_SETTINGS.siteTitle,
+        siteSlogan: INITIAL_SETTINGS.siteSlogan,
+        contactPhone: INITIAL_SETTINGS.contactPhone,
+        supportPhone: INITIAL_SETTINGS.supportPhone,
+        supportEmail: INITIAL_SETTINGS.supportEmail,
+        address: INITIAL_SETTINGS.address,
+        announcementText: INITIAL_SETTINGS.announcementText,
+        primaryColor: INITIAL_SETTINGS.primaryColor,
+        primaryHover: INITIAL_SETTINGS.primaryHover,
+        accentGlowColor: INITIAL_SETTINGS.accentGlowColor,
+        themeMode: INITIAL_SETTINGS.themeMode,
+        layoutPreset: INITIAL_SETTINGS.layoutPreset,
+        siteBgColor: INITIAL_SETTINGS.siteBgColor,
+        cardBgColor: INITIAL_SETTINGS.cardBgColor,
+        headerBgColor: INITIAL_SETTINGS.headerBgColor,
+        footerBgColor: INITIAL_SETTINGS.footerBgColor,
+        textColor: INITIAL_SETTINGS.textColor,
+        metaTitle: INITIAL_SETTINGS.metaTitle,
+        metaDescription: INITIAL_SETTINGS.metaDescription,
+        ogTitle: INITIAL_SETTINGS.ogTitle,
+        ogDescription: INITIAL_SETTINGS.ogDescription,
+        ogImageUrl: INITIAL_SETTINGS.ogImageUrl
+      };
+      await connection.execute(
+        "UPDATE app_settings SET setting_value = ? WHERE setting_key = 'site_settings'",
+        [JSON.stringify(upgradedSiteSettings)]
+      );
+      console.log('Upgraded untouched legacy starter settings to the marketplace storefront.');
+    }
   } finally {
     await connection.end();
   }

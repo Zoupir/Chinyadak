@@ -7468,7 +7468,8 @@ html[data-layout="marketplace-rtl"] [data-section-key="promo-large"].builder-sec
 html[data-layout="marketplace-rtl"] .marketplace-banner-grid {
   display: grid !important;
   grid-template-columns: repeat(100, minmax(0, 1fr)) !important;
-  gap: var(--builder-gap, 12px) !important;
+  column-gap: 0 !important;
+  row-gap: var(--builder-gap, 12px) !important;
   align-items: stretch !important;
 }
 html[data-layout="marketplace-rtl"] [data-section-key="promo-small"].builder-section-grid > *,
@@ -7479,7 +7480,8 @@ html[data-layout="marketplace-rtl"] .marketplace-banner-grid > * {
   height: var(--banner-height-desktop, auto) !important;
   min-height: var(--banner-height-desktop, 178px) !important;
   max-width: none !important;
-  width: 100% !important;
+  width: calc(100% - var(--builder-gap, 12px)) !important;
+  justify-self: center !important;
 }
 html[data-layout="marketplace-rtl"] [data-section-key="promo-large"][data-layout-variant] > button {
   grid-column: span var(--banner-cols-desktop, 100) !important;

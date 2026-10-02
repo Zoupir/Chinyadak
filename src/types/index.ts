@@ -670,6 +670,8 @@ export interface SiteSettings {
   footerColumns?: FooterColumn[];
   footerCopyright?: string;
   footerCopyrightText?: string;
+  footerBottomLinks?: FooterLink[];
+  footerBottomAlign?: 'right' | 'center' | 'left';
   footerShowBadges?: boolean;
   footerBadges?: FooterBadgeItem[];
   footerCustomHtml?: string;

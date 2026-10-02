@@ -183,7 +183,12 @@ authRouter.post('/customer/login', loginLimiter, async (req, res) => {
   }
 
   await pool.execute('UPDATE customers SET last_login_at = NOW() WHERE id = ?', [customer.id]);
-  issueSession(res, { sub: customer.id, role: 'customer', phone: customer.phone });
+  issueSession(res, {
+    sub: customer.id,
+    role: 'customer',
+    phone: customer.phone,
+    ver: Number(customer.session_version)
+  });
   res.json({ customer: customerDto(customer) });
 });
 

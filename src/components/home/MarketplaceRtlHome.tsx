@@ -17,12 +17,18 @@ import {
 import { useStore } from '../../context/StoreContext';
 import { formatToman } from '../../utils/formatters';
 import { LiveSectionModal } from '../common/LiveSectionModal';
-import type { PageSectionItem } from '../../types';
+import type { PageSection, PageSectionItem } from '../../types';
 
 interface MarketplaceRtlHomeProps {
   onNavigate: (view: string, param?: string) => void;
   onOpenVehicleModal: () => void;
 }
+
+const MARKETPLACE_BUILT_IN_SECTION_KEYS = new Set([
+  'hero', 'featured-categories', 'promo-small', 'featured-products', 'manufacturers',
+  'parts-brands', 'promo-medium', 'weekly-deals', 'wide-banner-1', 'promo-large',
+  'maintenance-products', 'testimonials', 'shipping-banner', 'articles', 'service-strip'
+]);
 
 export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
   onNavigate,
@@ -43,16 +49,20 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
     adminAuth
   } = useStore();
 
-  const activeSlides = useMemo(
-    () => sliders.filter(slide => slide.isActive).sort((a, b) => a.order - b.order),
-    [sliders]
-  );
-
   const homeSections = useMemo(
     () => pages.find(page => page.slug === 'home')?.sections || [],
     [pages]
   );
   const sectionConfig = (key: string) => homeSections.find(section => section.sectionKey === key);
+  const customSections = homeSections
+    .filter(section => Boolean(section.sectionKey) && !MARKETPLACE_BUILT_IN_SECTION_KEYS.has(section.sectionKey!))
+    .sort((a, b) => a.order - b.order);
+  const activeSlides = useMemo(() => {
+    const section = homeSections.find(item => item.sectionKey === 'hero');
+    const slides = sliders.filter(slide => slide.isActive).sort((a, b) => a.order - b.order);
+    const limit = Number(section?.contentSourceLimit || section?.maxItems || 0);
+    return limit > 0 ? slides.slice(0, limit) : slides;
+  }, [sliders, homeSections]);
   const sectionVisible = (key: string) => sectionConfig(key)?.isVisible !== false;
   const backgroundFit = (mode?: string) => {
     const value = mode || 'cover';
@@ -186,7 +196,7 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
     ['--banner-height-mobile' as any]: `${item.mobileHeightPx ?? item.tabletHeightPx ?? item.heightPx ?? item.minHeightPx ?? 168}px`
   });
   const sourceItemsFor = (
-    source: 'manual' | 'categories' | 'brands' | 'products' | 'articles',
+    source: NonNullable<PageSection['contentSource']>,
     limit: number
   ): PageSectionItem[] => {
     const max = Math.max(1, Math.min(100, limit || 12));
@@ -234,6 +244,31 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
         isVisible: true,
         order: index + 1
       }));
+    }
+    if (source === 'sliders') {
+      return sliders
+        .filter(item => item.isActive)
+        .sort((a, b) => a.order - b.order)
+        .slice(0, max)
+        .map((item, index) => ({
+          id: `source-slider-${item.id}`,
+          title: item.title,
+          subtitle: item.subtitle,
+          badge: item.tag,
+          imageUrl: item.imageUrl || '',
+          link: item.link,
+          buttonText: item.buttonText,
+          isVisible: true,
+          order: index + 1,
+          imageMode: item.imageMode as PageSectionItem['imageMode'],
+          backgroundColor: item.bgColor,
+          textColor: item.titleColor,
+          buttonBgColor: item.buttonBgColor,
+          buttonTextColor: item.buttonTextColor,
+          responsiveLayout: item.responsiveLayout,
+          inheritTabletFromDesktop: item.inheritTabletFromDesktop,
+          inheritMobileFromDesktop: item.inheritMobileFromDesktop
+        }));
     }
     return [];
   };
@@ -694,9 +729,11 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
           <h2>{sectionConfig('featured-categories')?.title || 'دسته‌بندی‌های ویژه'}</h2>
         </div>
         <div className="marketplace-round-list builder-section-grid">
-          {(sortedItems('featured-categories').length
+          {(sectionConfig('featured-categories')?.contentSource
             ? sortedItems('featured-categories')
-            : categories.slice(0, sectionConfig('featured-categories')?.maxItems || 9).map((cat,index): PageSectionItem => ({
+            : sortedItems('featured-categories').length
+              ? sortedItems('featured-categories')
+              : categories.slice(0, sectionConfig('featured-categories')?.maxItems || 9).map((cat,index): PageSectionItem => ({
                 id:cat.id,
                 title:cat.nameFa,
                 imageUrl:cat.iconUrl || cat.imageUrl,
@@ -827,7 +864,7 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
           <button type="button" onClick={() => onNavigate('shop')}>مشاهده همه</button>
         </div>
         <div className="marketplace-brand-row builder-section-grid">
-          {(sectionConfig('manufacturers')?.items?.length
+          {(sectionConfig('manufacturers')?.contentSource || sectionConfig('manufacturers')?.items?.length
             ? sortedItems('manufacturers').slice(0, sectionConfig('manufacturers')?.maxItems || sortedItems('manufacturers').length)
             : brands.slice(0, sectionConfig('manufacturers')?.maxItems || brands.length).map((brand, index) => ({
                 id: brand.id,
@@ -1095,6 +1132,66 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
         })}
       </section>
       )}
+
+      {customSections.map(section => {
+        const key = section.sectionKey!;
+        const items = sortedItems(key);
+        if (!items.length && !(isLiveEditActive && adminAuth.isAuthenticated)) return null;
+        const isBanner = /promo|banner/i.test(key);
+        return (
+          <section
+            key={section.id}
+            className="marketplace-section marketplace-custom-builder-section"
+            data-section-key={key}
+            data-mobile-display={section.mobileDisplayMode || 'grid'}
+            style={sectionStyle(key)}
+          >
+            <div className="marketplace-section-heading">
+              <div>
+                {section.title && <h2>{section.title}</h2>}
+                {section.subtitle && <p>{section.subtitle}</p>}
+              </div>
+              {section.buttonText && section.buttonLink && (
+                <button type="button" onClick={() => goLink(section.buttonLink)}>
+                  {section.buttonText}<ChevronLeft className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+            <div className="builder-section-grid marketplace-custom-builder-grid">
+              {items.map(item => (
+                <button
+                  key={item.id}
+                  type="button"
+                  className={isBanner ? 'marketplace-custom-builder-card is-banner' : 'marketplace-custom-builder-card'}
+                  style={{
+                    ...itemVisualStyle(key, item),
+                    ...(isBanner ? bannerBackgroundStyle(item, item.imageUrl || '', true) : {})
+                  }}
+                  onClick={() => goLink(item.link)}
+                >
+                  {!isBanner && item.imageUrl && (
+                    <img src={item.imageUrl} alt={item.title || ''} style={{
+                      width: 'var(--item-image-width, 72px)',
+                      height: 'var(--item-image-height, 72px)',
+                      objectFit: item.imageFit || 'contain'
+                    }} />
+                  )}
+                  {item.badge && <small className="marketplace-custom-builder-badge">{item.badge}</small>}
+                  {item.title && <strong style={{color:item.titleColor || undefined}}>{item.title}</strong>}
+                  {item.subtitle && <span style={{color:item.subtitleColor || undefined}}>{item.subtitle}</span>}
+                  {item.content && <p>{item.content}</p>}
+                  {item.buttonText && <span className="marketplace-custom-builder-button">{item.buttonText}</span>}
+                </button>
+              ))}
+              {!items.length && isLiveEditActive && adminAuth.isAuthenticated && (
+                <button type="button" className="marketplace-custom-builder-empty" onClick={() => setLiveSectionId(section.id)}>
+                  این سکشن خالی است؛ برای افزودن آیتم کلیک کنید.
+                </button>
+              )}
+            </div>
+          </section>
+        );
+      })}
 
       {liveSectionId && (
         <LiveSectionModal

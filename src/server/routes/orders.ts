@@ -23,6 +23,7 @@ interface ProductPriceRow extends RowDataPacket {
   price: number | string;
   discount_price: number | string | null;
   stock: number;
+  reserved_stock: number;
   data_json: any;
 }
 
@@ -242,9 +243,9 @@ ordersRouter.post('/', async (req: AuthenticatedRequest, res) => {
 
   const compactItems = requestedItems
     .map((item: any) => ({
-      productId: String(item.productId || ''),
+      productId: String(item.productId || '').trim(),
       quantity: Math.max(1, Math.min(100, Math.floor(Number(item.quantity || 1)))),
-      vehicleInfo: item.vehicleInfo ? String(item.vehicleInfo) : ''
+      vehicleInfo: item.vehicleInfo ? String(item.vehicleInfo).slice(0, 255) : ''
     }))
     .filter((item: any) => item.productId);
 
@@ -253,10 +254,28 @@ ordersRouter.post('/', async (req: AuthenticatedRequest, res) => {
     return;
   }
 
-  const productIds = [...new Set(compactItems.map((item: any) => item.productId))];
+  // Collapse duplicate product lines before stock validation and reservation.
+  // This prevents two lines for the same SKU from bypassing per-line stock checks.
+  const aggregatedByProduct = new Map<string, { productId: string; quantity: number; vehicleInfo: string }>();
+  for (const item of compactItems) {
+    const existing = aggregatedByProduct.get(item.productId);
+    if (existing) {
+      existing.quantity += item.quantity;
+      if (!existing.vehicleInfo && item.vehicleInfo) existing.vehicleInfo = item.vehicleInfo;
+    } else {
+      aggregatedByProduct.set(item.productId, { ...item });
+    }
+  }
+  const normalizedRequestItems = Array.from(aggregatedByProduct.values());
+  if (normalizedRequestItems.some(item => item.quantity > 100)) {
+    res.status(400).json({ error: 'ORDER_ITEM_QUANTITY_INVALID' });
+    return;
+  }
+
+  const productIds = normalizedRequestItems.map(item => item.productId);
   const placeholders = productIds.map(() => '?').join(',');
   const [productRows] = await pool.query<ProductPriceRow[]>(
-    `SELECT id, sku, name_fa, oem_number, price, discount_price, stock, data_json
+    `SELECT id, sku, name_fa, oem_number, price, discount_price, stock, reserved_stock, data_json
      FROM products
      WHERE status = 'active' AND id IN (${placeholders})`,
     productIds
@@ -281,13 +300,14 @@ ordersRouter.post('/', async (req: AuthenticatedRequest, res) => {
     vehicleInfo?: string;
   }> = [];
 
-  for (const item of compactItems) {
+  for (const item of normalizedRequestItems) {
     const row = productMap.get(item.productId)!;
-    if (row.stock < item.quantity) {
+    const availableStock = Math.max(0, Number(row.stock) - Number(row.reserved_stock || 0));
+    if (availableStock < item.quantity) {
       res.status(409).json({
         error: 'INSUFFICIENT_STOCK',
         productId: row.id,
-        available: row.stock
+        available: availableStock
       });
       return;
     }

@@ -851,4 +851,5 @@ export interface SitePage {
   isSystem?: boolean;
   updatedAt: string;
   seo?: SeoEntityDraft;
+  builderConfigVersion?: number;
 }

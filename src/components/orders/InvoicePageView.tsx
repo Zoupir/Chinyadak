@@ -1,26 +1,7 @@
 import React, { useRef } from 'react';
 import { useStore } from '../../context/StoreContext';
 import { formatToman } from '../../utils/formatters';
-import { 
-  Printer, 
-  Download, 
-  ArrowRight, 
-  ShieldCheck, 
-  CheckCircle2, 
-  Wrench, 
-  Building2, 
-  User, 
-  Phone, 
-  MapPin, 
-  Hash, 
-  Calendar, 
-  CreditCard,
-  QrCode,
-  FileCheck2,
-  AlertCircle,
-  Sparkles,
-  Coins
-} from 'lucide-react';
+import { Printer, Download, ArrowRight, ShieldCheck, CheckCircle2, Wrench, Building2, User, QrCode, FileCheck2, AlertCircle, Sparkles, Coins } from 'lucide-react';
 
 interface InvoicePageViewProps {
   orderId?: string;

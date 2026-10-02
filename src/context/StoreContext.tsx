@@ -696,15 +696,27 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }, 3800);
   };
 
+  type PaginationMeta = {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+    hasMore: boolean;
+  };
+
   type OrderPageResponse = {
     orders: Order[];
-    pagination?: {
-      page: number;
-      limit: number;
-      total: number;
-      totalPages: number;
-      hasMore: boolean;
-    };
+    pagination?: PaginationMeta;
+  };
+
+  type CustomerPageResponse = {
+    customers: CustomerUser[];
+    pagination?: PaginationMeta;
+  };
+
+  type LoyaltyPageResponse = {
+    transactions: LoyaltyTransaction[];
+    pagination?: PaginationMeta;
   };
 
   const hydrateRemainingOrderPages = async (
@@ -732,7 +744,54 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   };
 
-  const loadAdminData = async (admin: AdminUser, cancelled = false) => {
+  const hydrateRemainingCustomers = async (
+    firstPage: CustomerUser[],
+    totalPages: number,
+    isCancelled: () => boolean
+  ) => {
+    if (totalPages <= 1) return;
+    const byId = new Map(firstPage.map(customer => [customer.id, customer]));
+    for (let page = 2; page <= totalPages; page += 1) {
+      if (isCancelled()) return;
+      try {
+        const pageData = await apiRequest<CustomerPageResponse>(
+          `/api/admin-data/customers?page=${page}&limit=100`
+        );
+        pageData.customers.forEach(customer => byId.set(customer.id, customer));
+        if (!isCancelled()) setCustomers(Array.from(byId.values()));
+      } catch (error) {
+        console.error(`Customer page ${page} load failed:`, error);
+        return;
+      }
+    }
+  };
+
+  const hydrateRemainingLoyalty = async (
+    firstPage: LoyaltyTransaction[],
+    totalPages: number,
+    isCancelled: () => boolean
+  ) => {
+    if (totalPages <= 1) return;
+    const byId = new Map(firstPage.map(transaction => [transaction.id, transaction]));
+    for (let page = 2; page <= totalPages; page += 1) {
+      if (isCancelled()) return;
+      try {
+        const pageData = await apiRequest<LoyaltyPageResponse>(
+          `/api/admin-data/loyalty?page=${page}&limit=150`
+        );
+        pageData.transactions.forEach(transaction => byId.set(transaction.id, transaction));
+        if (!isCancelled()) setLoyaltyTransactions(Array.from(byId.values()));
+      } catch (error) {
+        console.error(`Loyalty page ${page} load failed:`, error);
+        return;
+      }
+    }
+  };
+
+  const loadAdminData = async (
+    admin: AdminUser,
+    isCancelled: () => boolean = () => false
+  ) => {
     const canOrders = admin.role === 'super_admin' || admin.permissions?.canManageOrders;
     const canAdmins = admin.role === 'super_admin' || admin.permissions?.canManageAdmins;
     const canSettings = admin.role === 'super_admin' || admin.permissions?.canManageSettings;
@@ -743,24 +802,40 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       requests.push(
         apiRequest<OrderPageResponse>('/api/orders?page=1&limit=100')
           .then(result => {
-            if (cancelled) return;
+            if (isCancelled()) return;
             setOrders(result.orders);
             void hydrateRemainingOrderPages(
               '/api/orders',
               result.orders,
               Math.max(1, Number(result.pagination?.totalPages || 1)),
               100,
-              () => cancelled
+              isCancelled
             );
           })
           .catch(error => console.error('Admin orders load failed:', error))
       );
       requests.push(
-        apiRequest<{ customers: CustomerUser[] }>('/api/admin-data/customers')
-          .then(result => { if (!cancelled) setCustomers(result.customers); })
+        apiRequest<CustomerPageResponse>('/api/admin-data/customers?page=1&limit=100')
+          .then(result => {
+            if (isCancelled()) return;
+            setCustomers(result.customers);
+            void hydrateRemainingCustomers(
+              result.customers,
+              Math.max(1, Number(result.pagination?.totalPages || 1)),
+              isCancelled
+            );
+          })
           .catch(error => console.error('CRM customers load failed:', error)),
-        apiRequest<{ transactions: LoyaltyTransaction[] }>('/api/admin-data/loyalty')
-          .then(result => { if (!cancelled) setLoyaltyTransactions(result.transactions); })
+        apiRequest<LoyaltyPageResponse>('/api/admin-data/loyalty?page=1&limit=150')
+          .then(result => {
+            if (isCancelled()) return;
+            setLoyaltyTransactions(result.transactions);
+            void hydrateRemainingLoyalty(
+              result.transactions,
+              Math.max(1, Number(result.pagination?.totalPages || 1)),
+              isCancelled
+            );
+          })
           .catch(error => console.error('Loyalty data load failed:', error)),
         apiRequest<{
           partRequests: PartRequest[];
@@ -768,7 +843,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           searchLogs: SearchQueryLog[];
         }>('/api/engagement/admin')
           .then(result => {
-            if (cancelled) return;
+            if (isCancelled()) return;
             setPartRequests(result.partRequests);
             setStockAlerts(result.stockAlerts);
             setSearchLogs(result.searchLogs);
@@ -780,7 +855,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (canAdmins) {
       requests.push(
         apiRequest<{ admins: AdminUser[] }>('/api/admin-data/admins')
-          .then(result => { if (!cancelled) setAdminUsers(result.admins); })
+          .then(result => { if (!isCancelled()) setAdminUsers(result.admins); })
           .catch(error => console.error('Admin users load failed:', error))
       );
     }
@@ -788,10 +863,10 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (canSettings) {
       requests.push(
         apiRequest<{ integrations: ApiIntegrationsConfig }>('/api/integrations')
-          .then(result => { if (!cancelled) setApiIntegrations(result.integrations); })
+          .then(result => { if (!isCancelled()) setApiIntegrations(result.integrations); })
           .catch(error => console.error('Integration settings load failed:', error)),
         apiRequest<{ gateways: PaymentGatewayConfig[] }>('/api/integrations/payment-gateways')
-          .then(result => { if (!cancelled) setPaymentGateways(result.gateways); })
+          .then(result => { if (!isCancelled()) setPaymentGateways(result.gateways); })
           .catch(error => console.error('Secure payment gateway settings load failed:', error))
       );
     }
@@ -799,24 +874,26 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     await Promise.allSettled(requests);
   };
 
-  const loadCustomerPrivateData = async (cancelled = false) => {
+  const loadCustomerPrivateData = async (
+    isCancelled: () => boolean = () => false
+  ) => {
     await Promise.allSettled([
       apiRequest<OrderPageResponse>('/api/orders/mine?page=1&limit=50')
         .then(result => {
-          if (cancelled) return;
+          if (isCancelled()) return;
           setOrders(result.orders);
           void hydrateRemainingOrderPages(
             '/api/orders/mine',
             result.orders,
             Math.max(1, Number(result.pagination?.totalPages || 1)),
             50,
-            () => cancelled
+            isCancelled
           );
         }),
       apiRequest<{ transactions: LoyaltyTransaction[] }>('/api/auth/customer/loyalty')
-        .then(result => { if (!cancelled) setLoyaltyTransactions(result.transactions); }),
+        .then(result => { if (!isCancelled()) setLoyaltyTransactions(result.transactions); }),
       apiRequest<{ requests: PartRequest[] }>('/api/engagement/part-requests/mine')
-        .then(result => { if (!cancelled) setPartRequests(result.requests); })
+        .then(result => { if (!isCancelled()) setPartRequests(result.requests); })
     ]);
   };
 
@@ -842,7 +919,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
       const byId = new Map(firstPage.map(product => [product.id, product]));
       for (let page = 2; page <= totalPages; page += 1) {
-        if (cancelled) return;
+        if (isCancelled()) return;
         try {
           const pageData = await apiRequest<ProductPageResponse>(
             `/api/catalog/products?page=${page}&limit=120`
@@ -870,7 +947,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       }>('/api/cms/bundle')
     ])
       .then(([productData, categoryData, vehicleData, cmsData]) => {
-        if (cancelled) return;
+        if (isCancelled()) return;
         setProducts(productData.products);
         setCategories(categoryData.categories);
         setBrands(vehicleData.brands);
@@ -891,7 +968,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         console.error('Public store data load failed:', error);
         if (import.meta.env.DEV) {
           const mock = await import('../data/mockData');
-          if (cancelled) return;
+          if (isCancelled()) return;
           setProducts(mock.PRODUCTS);
           setCategories(mock.CATEGORIES);
           setBrands(mock.BRANDS);
@@ -920,14 +997,14 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     apiRequest<{ role: 'customer' | 'admin'; customer?: CustomerUser; admin?: AdminUser }>('/api/auth/me')
       .then(data => {
-        if (cancelled) return;
+        if (isCancelled()) return;
         if (data.role === 'customer' && data.customer) {
           setCurrentCustomer(data.customer);
           setCustomers(prev => {
             const exists = prev.some(item => item.id === data.customer!.id);
             return exists ? prev.map(item => item.id === data.customer!.id ? data.customer! : item) : [data.customer!, ...prev];
           });
-          void loadCustomerPrivateData(cancelled);
+          void loadCustomerPrivateData(() => cancelled);
         } else if (data.role === 'admin' && data.admin) {
           setAdminAuth({
             isAuthenticated: true,
@@ -935,7 +1012,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             currentUser: data.admin,
             isMustChangePassword: false
           });
-          void loadAdminData(data.admin, cancelled);
+          void loadAdminData(data.admin, () => cancelled);
         }
       })
       .catch(error => {

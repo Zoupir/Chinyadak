@@ -32,13 +32,13 @@ import {
   CATEGORIES as INITIAL_CATEGORIES,
   ARTICLES as INITIAL_ARTICLES,
   INITIAL_ARTICLE_CATEGORIES,
-  INITIAL_GARAGE, 
   INITIAL_SETTINGS,
   INITIAL_PAYMENT_GATEWAYS,
   INITIAL_SLIDERS,
   INITIAL_PAGES
 } from '../data/mockData';
 import { apiRequest, ApiError } from '../api/client';
+import { readJsonStorage, writeJsonStorage } from '../utils/storage';
 
 interface SearchQueryLog {
   query: string;
@@ -667,29 +667,22 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     isMustChangePassword: false
   });
 
-  // Selected Vehicle for active fitment filtering
-  const [selectedVehicle, setSelectedVehicleState] = useState<GarageCar | null>(() => {
-    const saved = localStorage.getItem('chinpart_selected_car');
-    return saved ? JSON.parse(saved) : INITIAL_GARAGE[0];
-  });
+  // Browser-only shopping state. Corrupt/stale storage must never crash app startup.
+  const [selectedVehicle, setSelectedVehicleState] = useState<GarageCar | null>(() =>
+    readJsonStorage<GarageCar | null>('chinpart_selected_car', null)
+  );
 
-  // Garage
-  const [garage, setGarage] = useState<GarageCar[]>(() => {
-    const saved = localStorage.getItem('chinpart_garage');
-    return saved ? JSON.parse(saved) : INITIAL_GARAGE;
-  });
+  const [garage, setGarage] = useState<GarageCar[]>(() =>
+    readJsonStorage<GarageCar[]>('chinpart_garage', [])
+  );
 
-  // Cart
-  const [cart, setCart] = useState<CartItem[]>(() => {
-    const saved = localStorage.getItem('chinpart_cart');
-    return saved ? JSON.parse(saved) : [];
-  });
+  const [cart, setCart] = useState<CartItem[]>(() =>
+    readJsonStorage<CartItem[]>('chinpart_cart', [])
+  );
 
-  // Wishlist
-  const [wishlist, setWishlist] = useState<string[]>(() => {
-    const saved = localStorage.getItem('chinpart_wishlist');
-    return saved ? JSON.parse(saved) : ['prod-water-pump-kmc-j7'];
-  });
+  const [wishlist, setWishlist] = useState<string[]>(() =>
+    readJsonStorage<string[]>('chinpart_wishlist', [])
+  );
 
   // Compare List
   const [compareList, setCompareList] = useState<Product[]>([]);
@@ -879,19 +872,19 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
 
   useEffect(() => {
-    localStorage.setItem('chinpart_selected_car', JSON.stringify(selectedVehicle));
+    writeJsonStorage('chinpart_selected_car', selectedVehicle);
   }, [selectedVehicle]);
 
   useEffect(() => {
-    localStorage.setItem('chinpart_garage', JSON.stringify(garage));
+    writeJsonStorage('chinpart_garage', garage);
   }, [garage]);
 
   useEffect(() => {
-    localStorage.setItem('chinpart_cart', JSON.stringify(cart));
+    writeJsonStorage('chinpart_cart', cart);
   }, [cart]);
 
   useEffect(() => {
-    localStorage.setItem('chinpart_wishlist', JSON.stringify(wishlist));
+    writeJsonStorage('chinpart_wishlist', wishlist);
   }, [wishlist]);
 
 

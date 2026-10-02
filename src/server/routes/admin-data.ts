@@ -286,6 +286,32 @@ adminDataRouter.put('/customers/:id', requireAdminPermission('canManageOrders'),
   res.json({ customer: customerDto(rows[0]) });
 });
 
+adminDataRouter.patch('/customers/:id/login-password', requireAdminPermission('canManageOrders'), async (req, res) => {
+  const id = String(req.params.id || '').trim();
+  const newPassword = String(req.body?.newPassword || '');
+  if (newPassword.length < 8) {
+    res.status(400).json({ error: 'CUSTOMER_PASSWORD_TOO_SHORT' });
+    return;
+  }
+
+  const passwordHash = await hashPassword(newPassword);
+  const [result] = await pool.execute<ResultSetHeader>(
+    `UPDATE customers
+     SET password_hash = ?,
+         password_initialized = 1,
+         session_version = session_version + 1,
+         updated_at = NOW()
+     WHERE id = ?`,
+    [passwordHash, id]
+  );
+  if (!result.affectedRows) {
+    res.status(404).json({ error: 'CUSTOMER_NOT_FOUND' });
+    return;
+  }
+
+  res.json({ id, loginReady: true });
+});
+
 adminDataRouter.patch('/customers/:id/status', requireAdminPermission('canManageOrders'), async (req, res) => {
   const [rows] = await pool.query<Array<RowDataPacket & { status: string }>>(
     'SELECT status FROM customers WHERE id = ? LIMIT 1',

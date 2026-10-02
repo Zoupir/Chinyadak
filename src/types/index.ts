@@ -759,7 +759,7 @@ export interface PageSection {
   content?: string;
   badge?: string;
   imageUrl?: string;
-  imageMode?: 'full' | 'cover' | 'contain' | 'side' | 'banner';
+  imageMode?: 'full' | 'cover' | 'contain' | 'side' | 'banner' | 'stretch' | 'original' | 'repeat' | 'repeat-x' | 'repeat-y';
   buttonText?: string;
   buttonLink?: string;
   isVisible: boolean;

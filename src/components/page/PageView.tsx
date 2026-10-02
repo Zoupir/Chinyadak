@@ -116,10 +116,11 @@ export const PageView: React.FC<PageViewProps> = ({ pageSlug, onNavigate }) => {
       ['--builder-gap' as any]: `${section.gapPx ?? 16}px`,
       ['--builder-item-radius' as any]: `${section.itemRadiusPx ?? 10}px`,
       ['--builder-image-size' as any]: `${section.imageSizePx ?? 72}px`,
-      ...(section.imageUrl && section.imageMode !== 'full' && section.imageMode !== 'side' && section.imageMode !== 'contain'
+      ...(section.imageUrl && !['full', 'side', 'contain'].includes(section.imageMode || '')
         ? {
             backgroundImage: `linear-gradient(rgba(0,0,0,${overlayAlpha}), rgba(0,0,0,${overlayAlpha})), url(${section.imageUrl})`,
-            backgroundSize: 'cover',
+            backgroundSize: section.imageMode === 'stretch' ? '100% 100%' : section.imageMode === 'original' || (section.imageMode || '').startsWith('repeat') ? 'auto' : 'cover',
+            backgroundRepeat: section.imageMode === 'repeat' ? 'repeat' : section.imageMode === 'repeat-x' ? 'repeat-x' : section.imageMode === 'repeat-y' ? 'repeat-y' : 'no-repeat',
             backgroundPosition: 'center'
           }
         : {})
@@ -411,6 +412,7 @@ export const PageView: React.FC<PageViewProps> = ({ pageSlug, onNavigate }) => {
                         alt={currentPage.seo?.images?.[section.imageUrl || '']?.alt || section.title}
                         title={currentPage.seo?.images?.[section.imageUrl || '']?.title || section.title}
                         className="w-full h-full object-cover"
+                        style={{ objectFit: section.imageMode === 'contain' ? 'contain' : section.imageMode === 'stretch' || section.imageMode === 'full' ? 'fill' : section.imageMode === 'original' ? 'none' : 'cover' }}
                         loading="lazy"
                       />
                     </div>
@@ -571,6 +573,7 @@ export const PageView: React.FC<PageViewProps> = ({ pageSlug, onNavigate }) => {
                               alt={currentPage.seo?.images?.[section.imageUrl || '']?.alt || section.title}
                               title={currentPage.seo?.images?.[section.imageUrl || '']?.title || section.title}
                               className={`w-full ${mode === 'contain' ? 'max-h-80 object-contain p-4' : 'h-64 sm:h-80 object-cover hover:scale-102 transition-transform duration-300'}`}
+                              style={{ objectFit: mode === 'contain' ? 'contain' : mode === 'stretch' || mode === 'full' ? 'fill' : mode === 'original' ? 'none' : 'cover' }}
                               loading="lazy"
                             />
                           </div>

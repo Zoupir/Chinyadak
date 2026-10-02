@@ -99,6 +99,42 @@ const normalizeCategory = (input: any) => ({
   subcategories: Array.isArray(input?.subcategories) ? input.subcategories : []
 });
 
+const activeCategoryExists = async (slug: string): Promise<boolean> => {
+  const [rows] = await pool.query<Array<RowDataPacket & { id: string }>>(
+    'SELECT id FROM categories WHERE slug = ? AND is_active = 1 LIMIT 1',
+    [slug]
+  );
+  return Boolean(rows[0]);
+};
+
+const validateCategoryParent = async (
+  categoryId: string,
+  parentId?: string
+): Promise<string | null> => {
+  if (!parentId) return null;
+  if (parentId === categoryId) return 'CATEGORY_PARENT_SELF';
+
+  const [rows] = await pool.query<Array<RowDataPacket & {
+    id: string;
+    parent_id: string | null;
+    is_active: number;
+  }>>('SELECT id, parent_id, is_active FROM categories');
+
+  const byId = new Map(rows.map(row => [row.id, row]));
+  const parent = byId.get(parentId);
+  if (!parent || !parent.is_active) return 'CATEGORY_PARENT_NOT_FOUND';
+
+  let current: string | null = parentId;
+  const visited = new Set<string>();
+  while (current) {
+    if (current === categoryId) return 'CATEGORY_PARENT_CYCLE';
+    if (visited.has(current)) return 'CATEGORY_PARENT_CYCLE';
+    visited.add(current);
+    current = byId.get(current)?.parent_id || null;
+  }
+  return null;
+};
+
 export const catalogRouter = Router();
 
 catalogRouter.get('/products', async (req, res) => {
@@ -146,6 +182,10 @@ catalogRouter.post('/products', requireAdminPermission('canManageProducts'), asy
     res.status(400).json({ error: invalid });
     return;
   }
+  if (!(await activeCategoryExists(product.categorySlug))) {
+    res.status(400).json({ error: 'PRODUCT_CATEGORY_NOT_FOUND' });
+    return;
+  }
 
   try {
     await pool.execute<ResultSetHeader>(
@@ -191,6 +231,10 @@ catalogRouter.put('/products/:id', requireAdminPermission('canManageProducts'), 
   const invalid = validateProduct(product);
   if (invalid) {
     res.status(400).json({ error: invalid });
+    return;
+  }
+  if (!(await activeCategoryExists(product.categorySlug))) {
+    res.status(400).json({ error: 'PRODUCT_CATEGORY_NOT_FOUND' });
     return;
   }
 
@@ -324,8 +368,13 @@ catalogRouter.get('/categories', async (_req, res) => {
 
 catalogRouter.post('/categories', requireAdminPermission('canManageProducts'), async (req, res) => {
   const category = normalizeCategory(req.body);
-  if (!category.slug || !category.nameFa) {
+  if (!category.slug || !category.nameFa || category.slug.length > 190 || category.nameFa.length > 255) {
     res.status(400).json({ error: 'CATEGORY_DATA_INVALID' });
+    return;
+  }
+  const parentError = await validateCategoryParent(category.id, category.parentId);
+  if (parentError) {
+    res.status(400).json({ error: parentError });
     return;
   }
   try {
@@ -355,8 +404,13 @@ catalogRouter.post('/categories', requireAdminPermission('canManageProducts'), a
 
 catalogRouter.put('/categories/:id', requireAdminPermission('canManageProducts'), async (req, res) => {
   const category = normalizeCategory({ ...req.body, id: req.params.id });
-  if (!category.slug || !category.nameFa) {
+  if (!category.slug || !category.nameFa || category.slug.length > 190 || category.nameFa.length > 255) {
     res.status(400).json({ error: 'CATEGORY_DATA_INVALID' });
+    return;
+  }
+  const parentError = await validateCategoryParent(category.id, category.parentId);
+  if (parentError) {
+    res.status(400).json({ error: parentError });
     return;
   }
   const [result] = await pool.execute<ResultSetHeader>(
@@ -381,13 +435,39 @@ catalogRouter.put('/categories/:id', requireAdminPermission('canManageProducts')
 });
 
 catalogRouter.delete('/categories/:id', requireAdminPermission('canManageProducts'), async (req, res) => {
-  const [result] = await pool.execute<ResultSetHeader>(
-    'UPDATE categories SET is_active = 0, updated_at = NOW() WHERE id = ?',
+  const [categoryRows] = await pool.query<Array<RowDataPacket & { slug: string }>>(
+    'SELECT slug FROM categories WHERE id = ? AND is_active = 1 LIMIT 1',
     [req.params.id]
   );
-  if (!result.affectedRows) {
+  const category = categoryRows[0];
+  if (!category) {
     res.status(404).json({ error: 'CATEGORY_NOT_FOUND' });
     return;
   }
+
+  const [[usage], [children]] = await Promise.all([
+    pool.query<Array<RowDataPacket & { count: number }>>(
+      "SELECT COUNT(*) AS count FROM products WHERE category_slug = ? AND status = 'active'",
+      [category.slug]
+    ),
+    pool.query<Array<RowDataPacket & { count: number }>>(
+      'SELECT COUNT(*) AS count FROM categories WHERE parent_id = ? AND is_active = 1',
+      [req.params.id]
+    )
+  ]);
+
+  if (Number(usage[0]?.count || 0) > 0) {
+    res.status(409).json({ error: 'CATEGORY_IN_USE_BY_PRODUCTS' });
+    return;
+  }
+  if (Number(children[0]?.count || 0) > 0) {
+    res.status(409).json({ error: 'CATEGORY_HAS_ACTIVE_CHILDREN' });
+    return;
+  }
+
+  await pool.execute(
+    'UPDATE categories SET is_active = 0, updated_at = NOW() WHERE id = ?',
+    [req.params.id]
+  );
   res.json({ ok: true });
 });

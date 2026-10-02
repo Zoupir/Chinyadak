@@ -467,7 +467,7 @@ export const AdminVisualPageBuilder: React.FC<{onNavigate?:(view:string,param?:s
                 <div className="flex items-center justify-between"><strong>{isDynamicSection(draft)?'آیتم‌های منبع زنده':'آیتم‌های سکشن'}</strong>{!isDynamicSection(draft)&&<button onClick={addItem} className="px-2 py-1.5 bg-blue-600 text-white rounded inline-flex gap-1 items-center"><Plus className="w-3 h-3"/>آیتم</button>}</div>
                 {isDynamicSection(draft)&&<div className="p-3 rounded-xl border border-amber-200 bg-amber-50 text-[9px] leading-5">ظاهر همه آیتم‌های این سکشن یک‌جا از تب «ظاهر» کنترل می‌شود و نیاز به تنظیم تک‌تک آیتم‌ها نیست.</div>}
                 <div className="space-y-3">
-                  {(draft.items||[]).map((item,index)=><div key={item.id} className="p-3 rounded-xl border bg-neutral-50 space-y-2">
+                  {!isDynamicSection(draft)&&(draft.items||[]).map((item,index)=><div key={item.id} className="p-3 rounded-xl border bg-neutral-50 space-y-2">
                     <div className="flex justify-between items-center gap-2">
                       <strong>آیتم {index+1}</strong>
                       <div className="flex items-center gap-1">

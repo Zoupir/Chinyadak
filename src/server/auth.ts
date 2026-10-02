@@ -9,6 +9,7 @@ export type AuthRole = 'customer' | 'admin';
 export interface SessionPayload extends JwtPayload {
   sub: string;
   role: AuthRole;
+  ver: number;
   username?: string;
   phone?: string;
 }
@@ -22,6 +23,21 @@ export const hashPassword = (password: string): Promise<string> =>
 
 export const verifyPassword = (password: string, hash: string): Promise<boolean> =>
   bcrypt.compare(password, hash);
+
+const sessionCookieMaxAgeMs = (): number => {
+  const raw = String(config.jwtExpiresIn || '7d').trim().toLowerCase();
+  if (/^\d+$/.test(raw)) return Math.max(60, Number(raw)) * 1000;
+  const match = raw.match(/^(\d+(?:\.\d+)?)(s|m|h|d|w)$/);
+  if (!match) return 7 * 24 * 60 * 60 * 1000;
+  const amount = Number(match[1]);
+  const multiplier =
+    match[2] === 's' ? 1000 :
+    match[2] === 'm' ? 60 * 1000 :
+    match[2] === 'h' ? 60 * 60 * 1000 :
+    match[2] === 'd' ? 24 * 60 * 60 * 1000 :
+    7 * 24 * 60 * 60 * 1000;
+  return Math.max(60_000, Math.round(amount * multiplier));
+};
 
 export const issueSession = (
   res: Response,
@@ -38,7 +54,7 @@ export const issueSession = (
     secure: config.nodeEnv === 'production',
     sameSite: 'lax',
     path: '/',
-    maxAge: 7 * 24 * 60 * 60 * 1000
+    maxAge: sessionCookieMaxAgeMs()
   });
 };
 
@@ -51,39 +67,68 @@ export const clearSession = (res: Response): void => {
   });
 };
 
-export const getOptionalSession = (req: Request): SessionPayload | null => {
+interface SessionSubjectRow extends RowDataPacket {
+  session_version: number;
+  is_active?: number;
+  status?: string;
+}
+
+const isSessionSubjectValid = async (payload: SessionPayload): Promise<boolean> => {
+  const table = payload.role === 'admin' ? 'admin_users' : 'customers';
+  const [rows] = await pool.query<SessionSubjectRow[]>(
+    payload.role === 'admin'
+      ? `SELECT session_version, is_active FROM ${table} WHERE id = ? LIMIT 1`
+      : `SELECT session_version, status FROM ${table} WHERE id = ? LIMIT 1`,
+    [payload.sub]
+  );
+  const row = rows[0];
+  if (!row || Number(row.session_version) !== Number(payload.ver)) return false;
+  return payload.role === 'admin' ? Boolean(row.is_active) : row.status === 'active';
+};
+
+const decodeSession = (req: Request): SessionPayload | null => {
   const token = req.cookies?.[config.sessionCookieName];
   if (!token) return null;
   try {
-    return jwt.verify(token, config.jwtSecret, {
+    const payload = jwt.verify(token, config.jwtSecret, {
       issuer: 'chinpart',
       audience: 'chinpart-web'
     }) as SessionPayload;
+    if (!payload.sub || !payload.role || !Number.isInteger(Number(payload.ver))) return null;
+    return payload;
   } catch {
     return null;
   }
 };
 
-export const authenticate = (
+export const getOptionalSession = async (req: Request): Promise<SessionPayload | null> => {
+  const payload = decodeSession(req);
+  if (!payload) return null;
+  return (await isSessionSubjectValid(payload)) ? payload : null;
+};
+
+export const authenticate = async (
   req: AuthenticatedRequest,
   res: Response,
   next: NextFunction
-): void => {
-  const token = req.cookies?.[config.sessionCookieName];
-  if (!token) {
+): Promise<void> => {
+  const payload = decodeSession(req);
+  if (!payload) {
+    clearSession(res);
     res.status(401).json({ error: 'AUTH_REQUIRED' });
     return;
   }
 
   try {
-    req.auth = jwt.verify(token, config.jwtSecret, {
-      issuer: 'chinpart',
-      audience: 'chinpart-web'
-    }) as SessionPayload;
+    if (!(await isSessionSubjectValid(payload))) {
+      clearSession(res);
+      res.status(401).json({ error: 'INVALID_SESSION' });
+      return;
+    }
+    req.auth = payload;
     next();
-  } catch {
-    clearSession(res);
-    res.status(401).json({ error: 'INVALID_SESSION' });
+  } catch (error) {
+    next(error);
   }
 };
 

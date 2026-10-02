@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useStore } from '../../context/StoreContext';
 import { PageSection, PageSectionItem } from '../../types';
 import { RichTextEditor } from './RichTextEditor';
@@ -69,6 +70,8 @@ export const LiveSectionModal: React.FC<LiveSectionModalProps> = ({
   const [form, setForm] = useState<PageSection | null>(null);
   const [tab, setTab] = useState<InspectorTab>('content');
   const [dragItemId, setDragItemId] = useState<string | null>(null);
+  const [modalOffset, setModalOffset] = useState({ x: 0, y: 0 });
+  const modalDragRef = useRef<{ pointerId: number; startX: number; startY: number; offsetX: number; offsetY: number } | null>(null);
   const originalRef = useRef<PageSection | null>(null);
   const activeKeyRef = useRef('');
 
@@ -91,7 +94,47 @@ export const LiveSectionModal: React.FC<LiveSectionModalProps> = ({
     }
   }, [isOpen]);
 
+  useEffect(() => {
+    if (!isOpen) return;
+    setModalOffset({ x: 0, y: 0 });
+    modalDragRef.current = null;
+  }, [isOpen, pageSlug, sectionId]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [isOpen, onClose]);
+
   if (!isOpen || !form) return null;
+
+  const onModalPointerDown = (event: React.PointerEvent<HTMLElement>) => {
+    if ((event.target as HTMLElement).closest('button')) return;
+    event.currentTarget.setPointerCapture(event.pointerId);
+    modalDragRef.current = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      offsetX: modalOffset.x,
+      offsetY: modalOffset.y
+    };
+  };
+  const onModalPointerMove = (event: React.PointerEvent<HTMLElement>) => {
+    const drag = modalDragRef.current;
+    if (!drag || drag.pointerId !== event.pointerId) return;
+    const maxX = Math.max(0, window.innerWidth / 2 - 120);
+    const maxY = Math.max(0, window.innerHeight / 2 - 80);
+    setModalOffset({
+      x: Math.max(-maxX, Math.min(maxX, drag.offsetX + event.clientX - drag.startX)),
+      y: Math.max(-maxY, Math.min(maxY, drag.offsetY + event.clientY - drag.startY))
+    });
+  };
+  const onModalPointerUp = (event: React.PointerEvent<HTMLElement>) => {
+    if (modalDragRef.current?.pointerId === event.pointerId) modalDragRef.current = null;
+  };
 
   const apply = (next: PageSection) => {
     setForm(next);
@@ -207,15 +250,37 @@ export const LiveSectionModal: React.FC<LiveSectionModalProps> = ({
         min={min}
         max={max}
         value={Number((form as any)[key] ?? fallback)}
-        onChange={event => patch({ [key]: Number(event.target.value) } as Partial<PageSection>)}
+        onChange={event => {
+          const value = Number(event.target.value);
+          patch({
+            [key]: value,
+            ...(key === 'widthPercent' && value >= 100 ? { maxWidthPx: 0 } : {})
+          } as Partial<PageSection>);
+        }}
         className="w-full p-2.5 border border-neutral-300 rounded-xl bg-white text-xs font-mono"
       />
     </label>
   );
 
-  return (
-    <aside className="fixed top-0 right-0 bottom-0 z-[230] w-[min(430px,94vw)] bg-white shadow-[-12px_0_40px_rgba(15,23,42,.22)] border-l border-neutral-200 flex flex-col text-right" dir="rtl">
-      <header className="h-16 px-4 border-b border-neutral-200 flex items-center justify-between gap-3 shrink-0 bg-neutral-950 text-white">
+  return createPortal(
+    <>
+      <div className="fixed inset-0 z-[499] bg-neutral-950/20 backdrop-blur-[1px]" aria-hidden="true" />
+      <aside
+        role="dialog"
+        aria-modal="true"
+        aria-label={`ویرایش ${form.title || 'سکشن'}`}
+        className="fixed z-[500] left-1/2 top-1/2 w-[min(580px,96vw)] max-h-[min(92dvh,900px)] bg-white rounded-2xl shadow-2xl border border-neutral-200 flex flex-col text-right overflow-hidden"
+        style={{ transform: `translate(calc(-50% + ${modalOffset.x}px), calc(-50% + ${modalOffset.y}px))` }}
+        dir="rtl"
+      >
+      <header
+        className="h-16 px-4 border-b border-neutral-200 flex items-center justify-between gap-3 shrink-0 bg-neutral-950 text-white cursor-move select-none"
+        style={{ touchAction: 'none' }}
+        onPointerDown={onModalPointerDown}
+        onPointerMove={onModalPointerMove}
+        onPointerUp={onModalPointerUp}
+        onPointerCancel={onModalPointerUp}
+      >
         <div className="min-w-0">
           <strong className="block text-xs truncate">{form.title || 'ویرایش سکشن'}</strong>
           <span className="block mt-0.5 text-[9px] text-neutral-400 truncate">{page?.title || pageSlug} • تغییرات فوراً روی سایت دیده می‌شوند</span>
@@ -243,7 +308,7 @@ export const LiveSectionModal: React.FC<LiveSectionModalProps> = ({
         ))}
       </nav>
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-neutral-50/60">
+      <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-4 bg-neutral-50/60">
         {tab === 'content' && (
           <>
             <section className="bg-white rounded-2xl border border-blue-200 p-4 space-y-3">
@@ -318,24 +383,25 @@ export const LiveSectionModal: React.FC<LiveSectionModalProps> = ({
                 aspectRatio="banner"
                 presetCategory="banners"
               />
-              {form.imageUrl && (
-                <div className="grid grid-cols-2 gap-2">
-                  {[
-                    ['side','کنار متن'],
-                    ['cover','پوشش کامل کادر'],
-                    ['full','کشیده‌شدن تا کل کادر'],
-                    ['contain','نمایش کامل بدون برش']
-                  ].map(([id,label]) => (
-                    <button
-                      key={id}
-                      type="button"
-                      onClick={() => patch({imageMode:id as PageSection['imageMode']})}
-                      className={`p-2 rounded-xl border text-[9px] font-bold ${(form.imageMode || 'side') === id ? 'border-blue-500 bg-blue-50 text-blue-700' : 'bg-white'}`}
-                    >
-                      {label}
-                    </button>
-                  ))}
-                </div>
+              {(form.imageUrl || form.sectionKey === 'hero' || isBannerSection) && (
+                <label className="block">
+                  <span className="block text-[10px] font-bold mb-1">نحوه نمایش تصویر / بنر</span>
+                  <select
+                    value={form.imageMode || 'cover'}
+                    onChange={event => patch({imageMode: event.target.value as PageSection['imageMode']})}
+                    className="w-full p-2.5 border border-neutral-300 rounded-xl bg-white text-xs"
+                  >
+                    <option value="side">کنار متن</option>
+                    <option value="cover">پوشش کل کادر (با برش متناسب)</option>
+                    <option value="contain">نمایش کامل بدون برش</option>
+                    <option value="full">کشیده‌شدن به کل کادر</option>
+                    <option value="stretch">کشیده‌شدن اجباری</option>
+                    <option value="original">اندازه اصلی</option>
+                    <option value="repeat">تکرار تصویر</option>
+                    <option value="repeat-x">تکرار افقی</option>
+                    <option value="repeat-y">تکرار عمودی</option>
+                  </select>
+                </label>
               )}
             </section>
 
@@ -354,7 +420,7 @@ export const LiveSectionModal: React.FC<LiveSectionModalProps> = ({
                 <p className="text-[9px] text-neutral-400 mt-1">تمام‌عرض، داخل کادر یا اندازه سفارشی را جداگانه برای هر دستگاه تعیین کنید.</p>
               </div>
               <div className="grid grid-cols-3 gap-2">
-                <button type="button" onClick={() => patch({fullWidth:true,widthPercent:95,tabletWidthPercent:96,mobileWidthPercent:100,maxWidthPx:0,layout:'full'})} className={`p-2.5 rounded-xl border text-[9px] font-black ${form.fullWidth ? 'bg-blue-600 text-white border-blue-600' : 'bg-white'}`}>تمام عرض</button>
+                <button type="button" onClick={() => patch({fullWidth:true,widthPercent:100,tabletWidthPercent:100,mobileWidthPercent:100,maxWidthPx:0,layout:'full'})} className={`p-2.5 rounded-xl border text-[9px] font-black ${form.fullWidth ? 'bg-blue-600 text-white border-blue-600' : 'bg-white'}`}>تمام عرض</button>
                 <button type="button" onClick={() => patch({fullWidth:false,widthPercent:100,tabletWidthPercent:100,mobileWidthPercent:100,maxWidthPx:1280,layout:'boxed'})} className={`p-2.5 rounded-xl border text-[9px] font-black ${!form.fullWidth && (form.maxWidthPx || 1280) === 1280 ? 'bg-blue-600 text-white border-blue-600' : 'bg-white'}`}>داخل کادر</button>
                 <button type="button" onClick={() => patch({fullWidth:false,maxWidthPx:form.maxWidthPx || 1100})} className="p-2.5 rounded-xl border bg-white text-[9px] font-black">سفارشی</button>
               </div>
@@ -615,6 +681,8 @@ export const LiveSectionModal: React.FC<LiveSectionModalProps> = ({
         <button type="button" onClick={cancel} className="py-2.5 rounded-xl bg-neutral-100 text-neutral-700 text-xs font-bold">لغو و بازگردانی</button>
         <button type="button" onClick={save} className="py-2.5 rounded-xl bg-emerald-600 text-white text-xs font-black inline-flex items-center justify-center gap-1"><Save className="w-4 h-4" /> ذخیره</button>
       </footer>
-    </aside>
+      </aside>
+    </>,
+    document.body
   );
 };

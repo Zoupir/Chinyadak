@@ -1,4 +1,5 @@
 import 'dotenv/config';
+import { randomUUID } from 'crypto';
 import express from 'express';
 import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
@@ -23,6 +24,7 @@ import { uploadDirectory } from './src/server/media';
 import { checkDatabase } from './src/server/db';
 import { config } from './src/server/config';
 import { auditMutationMiddleware } from './src/server/audit';
+import { logError, logInfo } from './src/server/logger';
 import {
   buildHtmlSitemap,
   buildSitemapChunkXml,
@@ -41,6 +43,14 @@ const app = express();
 
 app.disable('x-powered-by');
 app.set('trust proxy', config.trustProxy);
+
+app.use((req, res, next) => {
+  const incoming = String(req.get('x-request-id') || '').trim();
+  const requestId = (/^[a-zA-Z0-9._:-]{8,100}$/.test(incoming) ? incoming : randomUUID());
+  (req as express.Request & { requestId?: string }).requestId = requestId;
+  res.setHeader('x-request-id', requestId);
+  next();
+});
 
 app.use(
   helmet({
@@ -213,7 +223,9 @@ ${partCategory ? `دسته‌بندی قطعه: ${partCategory}` : ''}
       isFallback: false
     });
   } catch (error) {
-    console.error('AI advisor error:', error);
+    logError('ai_advisor_error', error, {
+      requestId: (req as express.Request & { requestId?: string }).requestId
+    });
     res.status(502).json({
       error: 'AI_PROVIDER_ERROR',
       message: 'در حال حاضر دریافت پاسخ معتبر از سرویس هوش مصنوعی ممکن نیست.'
@@ -263,17 +275,22 @@ async function startServer() {
     app.use(vite.middlewares);
   }
 
-  app.use((error: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
-    console.error('Unhandled server error:', error);
-    res.status(500).json({ error: 'INTERNAL_SERVER_ERROR' });
+  app.use((error: unknown, req: express.Request, res: express.Response, _next: express.NextFunction) => {
+    const requestId = (req as express.Request & { requestId?: string }).requestId;
+    logError('unhandled_server_error', error, {
+      requestId,
+      method: req.method,
+      path: req.originalUrl.split('?')[0]
+    });
+    res.status(500).json({ error: 'INTERNAL_SERVER_ERROR', requestId });
   });
 
   app.listen(config.port, '0.0.0.0', () => {
-    console.log(`ChinPart server running on port ${config.port} (${config.nodeEnv})`);
+    logInfo('server_started', { port: config.port, environment: config.nodeEnv });
   });
 }
 
 startServer().catch(error => {
-  console.error('Server startup failed:', error);
+  logError('server_startup_failed', error);
   process.exit(1);
 });

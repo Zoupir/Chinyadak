@@ -443,7 +443,7 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
         <div className="marketplace-ref-product-info">
           <div className="marketplace-ref-badges">
             {product.isBestSeller && <span>پرفروش</span>}
-            <span className="muted">{product.brandManufacturer || 'قطعه اصلی'}</span>
+            {product.brandManufacturer && <span className="muted">{product.brandManufacturer}</span>}
           </div>
           <button type="button" className="marketplace-ref-product-title" onClick={() => onNavigate('product', product.id)}>
             {product.nameFa}
@@ -558,7 +558,7 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
                 style={{ backgroundColor: hero?.badgeBgColor || undefined, color: hero?.badgeTextColor || undefined }}
               >{hero?.tag ?? sectionConfig('hero')?.badge ?? ''}</span>
               <h1 style={{ color: hero?.titleColor || undefined }}>{hero?.title || sectionConfig('hero')?.title || 'قطعات مطمئن برای خودروی شما'}</h1>
-              <p style={{ color: hero?.subtitleColor || undefined }}>{hero?.subtitle || sectionConfig('hero')?.subtitle || 'خرید تخصصی قطعات خودروهای چینی با تضمین اصالت، فیتمنت دقیق و ارسال سریع.'}</p>
+              <p style={{ color: hero?.subtitleColor || undefined }}>{hero?.subtitle || sectionConfig('hero')?.subtitle || 'قطعه مناسب را بر اساس خودرو، دسته‌بندی و مشخصات فنی پیدا کنید.'}</p>
               <button
                 type="button"
                 style={{ backgroundColor: hero?.buttonBgColor || undefined, color: hero?.buttonTextColor || undefined }}

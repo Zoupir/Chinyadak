@@ -166,12 +166,35 @@ export const AdminSliderStudio:React.FC=()=>{
   const [dragging,setDragging]=useState<{key:SliderElementKey;offsetX:number;offsetY:number}|null>(null);
   const [resizing,setResizing]=useState<{key:SliderElementKey;startX:number;startY:number;startWidth:number;startHeight:number}|null>(null);
   const [deletePending,setDeletePending]=useState(false);
+  const [sliderBehavior,setSliderBehavior]=useState({
+    autoplayMs:Math.max(1500,Number(settings.heroSliderAutoplayMs||6500)),
+    navigation:(settings.heroSliderNavigation||'dots') as 'dots'|'arrows'|'both'|'none',
+    animation:(settings.heroSliderAnimation||'fade') as 'fade'|'slide'|'zoom',
+    pauseOnHover:settings.heroSliderPauseOnHover!==false,
+    loop:settings.heroSliderLoop!==false
+  });
   const canvasRef=useRef<HTMLDivElement>(null);
 
   React.useEffect(()=>{
     const selected=ordered.find(item=>item.id===selectedId)||ordered[0];
     setDraft(selected?clone(selected):null);
   },[selectedId,sliders]);
+
+  React.useEffect(()=>{
+    setSliderBehavior({
+      autoplayMs:Math.max(1500,Number(settings.heroSliderAutoplayMs||6500)),
+      navigation:(settings.heroSliderNavigation||'dots') as 'dots'|'arrows'|'both'|'none',
+      animation:(settings.heroSliderAnimation||'fade') as 'fade'|'slide'|'zoom',
+      pauseOnHover:settings.heroSliderPauseOnHover!==false,
+      loop:settings.heroSliderLoop!==false
+    });
+  },[
+    settings.heroSliderAutoplayMs,
+    settings.heroSliderNavigation,
+    settings.heroSliderAnimation,
+    settings.heroSliderPauseOnHover,
+    settings.heroSliderLoop
+  ]);
 
   React.useEffect(()=>{
     if(mode!=='banners')return;
@@ -206,6 +229,16 @@ export const AdminSliderStudio:React.FC=()=>{
   const selectBanner=(section:PageSection,item:PageSectionItem)=>{
     setBannerSelection({sectionId:section.id,itemId:item.id});
     setBannerDraft(clone(item));
+  };
+
+  const saveSliderBehavior=()=>{
+    updateSettings({
+      heroSliderAutoplayMs:sliderBehavior.autoplayMs,
+      heroSliderNavigation:sliderBehavior.navigation,
+      heroSliderAnimation:sliderBehavior.animation,
+      heroSliderPauseOnHover:sliderBehavior.pauseOnHover,
+      heroSliderLoop:sliderBehavior.loop
+    });
   };
 
   const save=()=>{
@@ -604,8 +637,8 @@ export const AdminSliderStudio:React.FC=()=>{
                       min="1500"
                       max="20000"
                       step="500"
-                      value={Math.max(1500,Number(settings.heroSliderAutoplayMs||6500))}
-                      onChange={event=>updateSettings({heroSliderAutoplayMs:Number(event.target.value)})}
+                      value={sliderBehavior.autoplayMs}
+                      onChange={event=>setSliderBehavior(current=>({...current,autoplayMs:Number(event.target.value)}))}
                       className="w-full"
                     />
                     <input
@@ -613,8 +646,8 @@ export const AdminSliderStudio:React.FC=()=>{
                       min="1500"
                       max="60000"
                       step="500"
-                      value={Math.max(1500,Number(settings.heroSliderAutoplayMs||6500))}
-                      onChange={event=>updateSettings({heroSliderAutoplayMs:Math.max(1500,Number(event.target.value||6500))})}
+                      value={sliderBehavior.autoplayMs}
+                      onChange={event=>setSliderBehavior(current=>({...current,autoplayMs:Math.max(1500,Number(event.target.value||6500))}))}
                       className="w-full p-2 border rounded-lg font-mono"
                     />
                   </div>
@@ -624,8 +657,8 @@ export const AdminSliderStudio:React.FC=()=>{
                   <label>
                     <span className="block text-[8px] font-bold mb-1">کنترل تعویض اسلاید</span>
                     <select
-                      value={settings.heroSliderNavigation||'dots'}
-                      onChange={event=>updateSettings({heroSliderNavigation:event.target.value as 'dots'|'arrows'|'both'|'none'})}
+                      value={sliderBehavior.navigation}
+                      onChange={event=>setSliderBehavior(current=>({...current,navigation:event.target.value as 'dots'|'arrows'|'both'|'none'}))}
                       className="w-full p-2 border rounded-lg bg-white"
                     >
                       <option value="dots">نقطه‌ها</option>
@@ -637,8 +670,8 @@ export const AdminSliderStudio:React.FC=()=>{
                   <label>
                     <span className="block text-[8px] font-bold mb-1">انیمیشن تعویض</span>
                     <select
-                      value={settings.heroSliderAnimation||'fade'}
-                      onChange={event=>updateSettings({heroSliderAnimation:event.target.value as 'fade'|'slide'|'zoom'})}
+                      value={sliderBehavior.animation}
+                      onChange={event=>setSliderBehavior(current=>({...current,animation:event.target.value as 'fade'|'slide'|'zoom'}))}
                       className="w-full p-2 border rounded-lg bg-white"
                     >
                       <option value="fade">محو شدن</option>
@@ -650,13 +683,20 @@ export const AdminSliderStudio:React.FC=()=>{
                 <div className="grid grid-cols-2 gap-2">
                   <label className="p-2 rounded-lg border bg-white flex items-center justify-between gap-2">
                     <span className="font-bold">توقف هنگام رفتن موس روی اسلاید</span>
-                    <input type="checkbox" checked={settings.heroSliderPauseOnHover!==false} onChange={event=>updateSettings({heroSliderPauseOnHover:event.target.checked})}/>
+                    <input type="checkbox" checked={sliderBehavior.pauseOnHover} onChange={event=>setSliderBehavior(current=>({...current,pauseOnHover:event.target.checked}))}/>
                   </label>
                   <label className="p-2 rounded-lg border bg-white flex items-center justify-between gap-2">
                     <span className="font-bold">تکرار پیوسته اسلایدها</span>
-                    <input type="checkbox" checked={settings.heroSliderLoop!==false} onChange={event=>updateSettings({heroSliderLoop:event.target.checked})}/>
+                    <input type="checkbox" checked={sliderBehavior.loop} onChange={event=>setSliderBehavior(current=>({...current,loop:event.target.checked}))}/>
                   </label>
                 </div>
+                <button
+                  type="button"
+                  onClick={saveSliderBehavior}
+                  className="w-full py-2.5 rounded-xl bg-violet-600 text-white text-[9px] font-black"
+                >
+                  ذخیره تنظیمات عمومی اسلایدر
+                </button>
               </section>
             )}
 

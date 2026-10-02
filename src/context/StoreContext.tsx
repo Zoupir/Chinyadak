@@ -62,18 +62,18 @@ const EMPTY_API_INTEGRATIONS: ApiIntegrationsConfig = {
 };
 
 const HOME_SECTION_DEFAULTS: PageSection[] = [
-  { id: 'home-hero', sectionKey: 'hero', title: 'قطعات مطمئن برای خودروی شما', subtitle: 'خرید تخصصی قطعات خودروهای چینی با تضمین اصالت، فیتمنت دقیق و ارسال سریع.', badge: 'پیشنهاد ویژه قطعات خودرو', buttonText: 'مشاهده محصولات', buttonLink: 'shop', isVisible: true, order: 1, layout: 'full', desktopColumns: 1, mobileColumns: 1, borderRadiusPx: 8, itemRadiusPx: 0, gapPx: 0, fullWidth: true, widthPercent: 95, tabletWidthPercent: 96, mobileWidthPercent: 100, maxWidthPx: 0, marginTopPx: 12, finderWidthPx: 300, finderPaddingPx: 18, finderRadiusPx: 8, finderTitleFontSizePx: 15, finderTextFontSizePx: 11, finderLabelFontSizePx: 10, finderValueFontSizePx: 11, finderButtonFontSizePx: 11, finderBackgroundColor: '#ffffff', finderTextColor: '#111827', finderFieldBackgroundColor: '#fafafa', finderFieldTextColor: '#222b35', finderButtonBackgroundColor: '#f5a000', finderButtonTextColor: '#111827', finderSide: 'left' },
-  { id: 'home-featured-categories', sectionKey: 'featured-categories', title: 'دسته‌بندی‌های ویژه', subtitle: '', isVisible: true, order: 2, layout: 'grid', desktopColumns: 9, mobileColumns: 3, borderRadiusPx: 8, itemRadiusPx: 999, gapPx: 14, maxItems: 9, imageSizePx: 68, widthPercent: 95, tabletWidthPercent: 96, mobileWidthPercent: 100, maxWidthPx: 1280, paddingTopPx: 22, paddingBottomPx: 24 },
-  { id: 'home-promo-small', sectionKey: 'promo-small', title: 'بنرهای کوچک صفحه اصلی', isVisible: true, order: 3, layout: 'grid', desktopColumns: 3, mobileColumns: 1, borderRadiusPx: 10, itemRadiusPx: 10, gapPx: 12, widthPercent: 95, tabletWidthPercent: 96, mobileWidthPercent: 100, maxWidthPx: 1280, itemMinHeightPx: 178, items: [
+  { id: 'home-hero', sectionKey: 'hero', title: 'قطعات مطمئن برای خودروی شما', subtitle: 'خرید تخصصی قطعات خودروهای چینی با تضمین اصالت، فیتمنت دقیق و ارسال سریع.', badge: 'پیشنهاد ویژه قطعات خودرو', buttonText: 'مشاهده محصولات', buttonLink: 'shop', isVisible: true, order: 1, layout: 'full', desktopColumns: 1, mobileColumns: 1, borderRadiusPx: 8, itemRadiusPx: 0, gapPx: 0, fullWidth: true, widthPercent: 100, tabletWidthPercent: 100, mobileWidthPercent: 100, maxWidthPx: 0, marginTopPx: 12, finderWidthPx: 300, finderPaddingPx: 18, finderRadiusPx: 8, finderTitleFontSizePx: 15, finderTextFontSizePx: 11, finderLabelFontSizePx: 10, finderValueFontSizePx: 11, finderButtonFontSizePx: 11, finderBackgroundColor: '#ffffff', finderTextColor: '#111827', finderFieldBackgroundColor: '#fafafa', finderFieldTextColor: '#222b35', finderButtonBackgroundColor: '#f5a000', finderButtonTextColor: '#111827', finderSide: 'left' },
+  { id: 'home-featured-categories', sectionKey: 'featured-categories', title: 'دسته‌بندی‌های ویژه', subtitle: '', isVisible: true, order: 2, layout: 'grid', desktopColumns: 9, mobileColumns: 3, borderRadiusPx: 8, itemRadiusPx: 999, gapPx: 14, maxItems: 9, imageSizePx: 68, widthPercent: 100, tabletWidthPercent: 100, mobileWidthPercent: 100, maxWidthPx: 1280, paddingTopPx: 22, paddingBottomPx: 24 },
+  { id: 'home-promo-small', sectionKey: 'promo-small', title: 'بنرهای کوچک صفحه اصلی', isVisible: true, order: 3, layout: 'grid', desktopColumns: 3, mobileColumns: 1, borderRadiusPx: 10, itemRadiusPx: 10, gapPx: 12, widthPercent: 100, tabletWidthPercent: 100, mobileWidthPercent: 100, maxWidthPx: 1280, itemMinHeightPx: 178, items: [
     { id: 'promo-small-1', title: 'باتری و برق خودرو', subtitle: 'پیشنهاد روز', buttonText: 'مشاهده محصولات', link: 'shop', isVisible: true, order: 1, widthPercent: 34, tabletWidthPercent: 34, mobileWidthPercent: 100, heightPx: 178 },
     { id: 'promo-small-2', title: 'رینگ، جلوبندی و تعلیق', subtitle: 'محصولات منتخب', buttonText: 'مشاهده محصولات', link: 'shop', isVisible: true, order: 2, widthPercent: 33, tabletWidthPercent: 33, mobileWidthPercent: 100, heightPx: 178 },
     { id: 'promo-small-3', title: 'پیشنهادهای محدود فروشگاه', subtitle: 'فروش ویژه', buttonText: 'مشاهده محصولات', link: 'shop', isVisible: true, order: 3, widthPercent: 33, tabletWidthPercent: 33, mobileWidthPercent: 100, heightPx: 178 }
   ]},
-  { id: 'home-featured-products', sectionKey: 'featured-products', title: 'محصولات ویژه', subtitle: 'محصولات منتخب، جدید و پرفروش فروشگاه', isVisible: true, order: 4, layout: 'grid', desktopColumns: 4, mobileColumns: 2, borderRadiusPx: 8, itemRadiusPx: 10, gapPx: 10, maxItems: 8, widthPercent: 95, tabletWidthPercent: 96, mobileWidthPercent: 100, maxWidthPx: 1280, paddingTopPx: 28, paddingBottomPx: 30 },
-  { id: 'home-wide-banner-1', sectionKey: 'wide-banner-1', title: 'بنر عریض میانی', isVisible: true, order: 5, layout: 'full', desktopColumns: 1, mobileColumns: 1, borderRadiusPx: 10, minHeightPx: 330, fullWidth: true, widthPercent: 95, tabletWidthPercent: 96, mobileWidthPercent: 100, maxWidthPx: 0, items: [
+  { id: 'home-featured-products', sectionKey: 'featured-products', title: 'محصولات ویژه', subtitle: 'محصولات منتخب، جدید و پرفروش فروشگاه', isVisible: true, order: 4, layout: 'grid', desktopColumns: 4, mobileColumns: 2, borderRadiusPx: 8, itemRadiusPx: 10, gapPx: 10, maxItems: 8, widthPercent: 100, tabletWidthPercent: 100, mobileWidthPercent: 100, maxWidthPx: 1280, paddingTopPx: 28, paddingBottomPx: 30 },
+  { id: 'home-wide-banner-1', sectionKey: 'wide-banner-1', title: 'بنر عریض میانی', isVisible: true, order: 5, layout: 'full', desktopColumns: 1, mobileColumns: 1, borderRadiusPx: 10, minHeightPx: 330, fullWidth: true, widthPercent: 100, tabletWidthPercent: 100, mobileWidthPercent: 100, maxWidthPx: 0, items: [
     { id: 'wide-banner-1-item', title: 'برای توقف مطمئن، قطعه مطمئن انتخاب کنید', subtitle: 'سیستم ترمز و ایمنی', buttonText: 'مشاهده محصولات', link: 'shop', isVisible: true, order: 1, widthPercent: 100, tabletWidthPercent: 100, mobileWidthPercent: 100, heightPx: 330, titleColor: '#ffffff', subtitleColor: '#f5a000', buttonBgColor: '#ffffff', buttonTextColor: '#111827', textAlignment: 'right' }
   ] },
-  { id: 'home-manufacturers', sectionKey: 'manufacturers', title: 'برندهای خودرو', isVisible: true, order: 6, layout: 'grid', desktopColumns: 10, mobileColumns: 3, borderRadiusPx: 8, itemRadiusPx: 999, gapPx: 10, maxItems: 20, imageSizePx: 58, widthPercent: 95, tabletWidthPercent: 96, mobileWidthPercent: 100, maxWidthPx: 1280, paddingTopPx: 24, paddingBottomPx: 24, items: [
+  { id: 'home-manufacturers', sectionKey: 'manufacturers', title: 'برندهای خودرو', isVisible: true, order: 6, layout: 'grid', desktopColumns: 10, mobileColumns: 3, borderRadiusPx: 8, itemRadiusPx: 999, gapPx: 10, maxItems: 20, imageSizePx: 58, widthPercent: 100, tabletWidthPercent: 100, mobileWidthPercent: 100, maxWidthPx: 1280, paddingTopPx: 24, paddingBottomPx: 24, items: [
     { id: 'manufacturer-kmc', title: 'KMC', imageUrl: 'https://www.google.com/s2/favicons?domain=kermanmotor.com&sz=128', link: 'car-brand:kmc', isVisible: true, order: 1 },
     { id: 'manufacturer-chery', title: 'Chery', imageUrl: 'https://www.google.com/s2/favicons?domain=cheryinternational.com&sz=128', link: 'car-brand:chery', isVisible: true, order: 2 },
     { id: 'manufacturer-mvm', title: 'MVM', imageUrl: 'https://www.google.com/s2/favicons?domain=mvmco.ir&sz=128', link: 'car-brand:mvm', isVisible: true, order: 3 },
@@ -95,28 +95,28 @@ const HOME_SECTION_DEFAULTS: PageSection[] = [
     { id: 'manufacturer-omoda', title: 'Omoda', imageUrl: 'https://www.google.com/s2/favicons?domain=omodajaecoo.com&sz=128', link: 'shop', isVisible: true, order: 19 },
     { id: 'manufacturer-jaecoo', title: 'Jaecoo', imageUrl: 'https://www.google.com/s2/favicons?domain=omodajaecoo.com&sz=128', link: 'shop', isVisible: true, order: 20 }
   ]},
-  { id: 'home-parts-brands', sectionKey: 'parts-brands', title: 'برندهای محبوب قطعات', isVisible: true, order: 7, layout: 'grid', desktopColumns: 8, mobileColumns: 2, borderRadiusPx: 8, itemRadiusPx: 4, gapPx: 7, maxItems: 16, imageSizePx: 48, widthPercent: 95, tabletWidthPercent: 96, mobileWidthPercent: 100, maxWidthPx: 1280, paddingTopPx: 24, paddingBottomPx: 24 },
-  { id: 'home-promo-medium', sectionKey: 'promo-medium', title: 'بنرهای متوسط', isVisible: true, order: 8, layout: 'grid', desktopColumns: 2, mobileColumns: 1, borderRadiusPx: 10, itemRadiusPx: 10, gapPx: 12, widthPercent: 95, tabletWidthPercent: 96, mobileWidthPercent: 100, maxWidthPx: 1280, itemMinHeightPx: 205, items: [
+  { id: 'home-parts-brands', sectionKey: 'parts-brands', title: 'برندهای محبوب قطعات', isVisible: true, order: 7, layout: 'grid', desktopColumns: 8, mobileColumns: 2, borderRadiusPx: 8, itemRadiusPx: 4, gapPx: 7, maxItems: 16, imageSizePx: 48, widthPercent: 100, tabletWidthPercent: 100, mobileWidthPercent: 100, maxWidthPx: 1280, paddingTopPx: 24, paddingBottomPx: 24 },
+  { id: 'home-promo-medium', sectionKey: 'promo-medium', title: 'بنرهای متوسط', isVisible: true, order: 8, layout: 'grid', desktopColumns: 2, mobileColumns: 1, borderRadiusPx: 10, itemRadiusPx: 10, gapPx: 12, widthPercent: 100, tabletWidthPercent: 100, mobileWidthPercent: 100, maxWidthPx: 1280, itemMinHeightPx: 205, items: [
     { id: 'promo-medium-1', title: 'جلوبندی، تایر و سیستم تعلیق', subtitle: 'آماده برای جاده', buttonText: 'خرید کنید', link: 'shop', isVisible: true, order: 1, widthPercent: 50, tabletWidthPercent: 50, mobileWidthPercent: 100, heightPx: 205 },
     { id: 'promo-medium-2', title: 'قطعات موتور و سرویس تخصصی', subtitle: 'قطعات حیاتی موتور', buttonText: 'خرید کنید', link: 'shop', isVisible: true, order: 2, widthPercent: 50, tabletWidthPercent: 50, mobileWidthPercent: 100, heightPx: 205 }
   ]},
-  { id: 'home-weekly-deals', sectionKey: 'weekly-deals', title: 'بهترین پیشنهادهای این هفته', subtitle: 'فرصت محدود برای خرید قطعات منتخب', isVisible: true, order: 9, layout: 'grid', desktopColumns: 4, mobileColumns: 2, borderRadiusPx: 10, itemRadiusPx: 14, gapPx: 10, maxItems: 8, fullWidth: true, widthPercent: 95, tabletWidthPercent: 96, mobileWidthPercent: 100, maxWidthPx: 0, paddingTopPx: 28, paddingBottomPx: 34, headingFontSizePx: 20, subtitleFontSizePx: 11, dealTimerAlign: 'left', dealTimerFontSizePx: 18, dealTitleColor: '#ffffff', dealSubtitleColor: '#fff7ed', dealTimerTextColor: '#b45309', dealTimerBoxBgColor: '#ffffff', dealContentVerticalAlign: 'center' },
-  { id: 'home-promo-large', sectionKey: 'promo-large', title: 'بنرهای اصلی', isVisible: true, order: 10, layout: 'grid', desktopColumns: 3, mobileColumns: 1, borderRadiusPx: 10, itemRadiusPx: 10, gapPx: 12, widthPercent: 95, tabletWidthPercent: 96, mobileWidthPercent: 100, maxWidthPx: 1280, itemMinHeightPx: 220, items: [
+  { id: 'home-weekly-deals', sectionKey: 'weekly-deals', title: 'بهترین پیشنهادهای این هفته', subtitle: 'فرصت محدود برای خرید قطعات منتخب', isVisible: true, order: 9, layout: 'grid', desktopColumns: 4, mobileColumns: 2, borderRadiusPx: 10, itemRadiusPx: 14, gapPx: 10, maxItems: 8, fullWidth: true, widthPercent: 100, tabletWidthPercent: 100, mobileWidthPercent: 100, maxWidthPx: 0, paddingTopPx: 28, paddingBottomPx: 34, headingFontSizePx: 20, subtitleFontSizePx: 11, dealTimerAlign: 'left', dealTimerFontSizePx: 18, dealTitleColor: '#ffffff', dealSubtitleColor: '#fff7ed', dealTimerTextColor: '#b45309', dealTimerBoxBgColor: '#ffffff', dealContentVerticalAlign: 'center' },
+  { id: 'home-promo-large', sectionKey: 'promo-large', title: 'بنرهای اصلی', isVisible: true, order: 10, layout: 'grid', desktopColumns: 3, mobileColumns: 1, borderRadiusPx: 10, itemRadiusPx: 10, gapPx: 12, widthPercent: 100, tabletWidthPercent: 100, mobileWidthPercent: 100, maxWidthPx: 1280, itemMinHeightPx: 220, items: [
     { id: 'promo-large-1', title: 'چراغ‌ها و قطعات بدنه با تنوع کامل', subtitle: 'روشنایی و بدنه', buttonText: 'مشاهده محصولات', link: 'shop', isVisible: true, order: 1, widthPercent: 67, tabletWidthPercent: 50, mobileWidthPercent: 100, heightPx: 220 },
     { id: 'promo-large-2', title: 'سرویس دوره‌ای مطمئن', subtitle: 'فیلترها', link: 'shop:maintenance', isVisible: true, order: 2, widthPercent: 33, tabletWidthPercent: 50, mobileWidthPercent: 100, heightPx: 220 },
     { id: 'promo-large-3', title: 'قطعات تخصصی انتقال قدرت', subtitle: 'گیربکس و روغن', link: 'shop', isVisible: true, order: 3, widthPercent: 33, tabletWidthPercent: 50, mobileWidthPercent: 100, heightPx: 220 },
     { id: 'promo-large-4', title: 'محصولات نگهداری و لوازم جانبی', subtitle: 'مراقبت خودرو', buttonText: 'مشاهده محصولات', link: 'shop', isVisible: true, order: 4, widthPercent: 67, tabletWidthPercent: 50, mobileWidthPercent: 100, heightPx: 220 }
   ]},
-  { id: 'home-maintenance-products', sectionKey: 'maintenance-products', title: 'قطعات مصرفی و سرویس دوره‌ای', subtitle: 'انتخاب‌های سریع برای نگهداری اصولی خودرو', isVisible: false, order: 11, layout: 'grid', desktopColumns: 4, mobileColumns: 2, borderRadiusPx: 8, itemRadiusPx: 10, gapPx: 10, maxItems: 8, widthPercent: 95, tabletWidthPercent: 96, mobileWidthPercent: 100, maxWidthPx: 1280 },
-  { id: 'home-testimonials', sectionKey: 'testimonials', title: 'نظر مشتریان ما', subtitle: 'تجربه خرید از فروشگاه تخصصی قطعات', isVisible: true, order: 12, layout: 'cards', desktopColumns: 4, mobileColumns: 2, borderRadiusPx: 10, itemRadiusPx: 10, gapPx: 10, fullWidth: true, widthPercent: 95, tabletWidthPercent: 96, mobileWidthPercent: 100, maxWidthPx: 0, paddingTopPx: 26, paddingBottomPx: 30, items: [
+  { id: 'home-maintenance-products', sectionKey: 'maintenance-products', title: 'قطعات مصرفی و سرویس دوره‌ای', subtitle: 'انتخاب‌های سریع برای نگهداری اصولی خودرو', isVisible: false, order: 11, layout: 'grid', desktopColumns: 4, mobileColumns: 2, borderRadiusPx: 8, itemRadiusPx: 10, gapPx: 10, maxItems: 8, widthPercent: 100, tabletWidthPercent: 100, mobileWidthPercent: 100, maxWidthPx: 1280 },
+  { id: 'home-testimonials', sectionKey: 'testimonials', title: 'نظر مشتریان ما', subtitle: 'تجربه خرید از فروشگاه تخصصی قطعات', isVisible: true, order: 12, layout: 'cards', desktopColumns: 4, mobileColumns: 2, borderRadiusPx: 10, itemRadiusPx: 10, gapPx: 10, fullWidth: true, widthPercent: 100, tabletWidthPercent: 100, mobileWidthPercent: 100, maxWidthPx: 0, paddingTopPx: 26, paddingBottomPx: 30, items: [
     { id: 'testimonial-1', title: 'خریدار قطعات موتور', content: 'اصالت قطعه دقیق بود و خیلی سریع به دستم رسید.', isVisible: true, order: 1 },
     { id: 'testimonial-2', title: 'مشتری فروشگاه', content: 'قبل از خرید شماره فنی را بررسی کردند و قطعه کاملاً مناسب بود.', isVisible: true, order: 2 },
     { id: 'testimonial-3', title: 'خریدار عمده', content: 'بسته‌بندی و پیگیری سفارش حرفه‌ای بود.', isVisible: true, order: 3 },
     { id: 'testimonial-4', title: 'تعمیرکار', content: 'برای قطعه کمیاب خیلی سریع استعلام انجام شد.', isVisible: true, order: 4 }
   ]},
-  { id: 'home-shipping-banner', sectionKey: 'shipping-banner', title: 'ارسال سریع', subtitle: 'برای سفارش‌های واجد شرایط', isVisible: true, order: 13, layout: 'full', desktopColumns: 1, mobileColumns: 1, borderRadiusPx: 8, widthPercent: 92, tabletWidthPercent: 95, mobileWidthPercent: 96, maxWidthPx: 1040, minHeightPx: 112 },
-  { id: 'home-articles', sectionKey: 'articles', title: 'راهنما و مقالات', subtitle: 'آموزش، نگهداری و انتخاب صحیح قطعات خودرو', buttonText: 'مشاهده همه مقالات', buttonLink: 'blog', isVisible: true, order: 14, layout: 'grid', desktopColumns: 3, mobileColumns: 2, borderRadiusPx: 8, itemRadiusPx: 8, gapPx: 10, maxItems: 3, widthPercent: 95, tabletWidthPercent: 96, mobileWidthPercent: 100, maxWidthPx: 1280, paddingTopPx: 28, paddingBottomPx: 30 },
-  { id: 'home-service-strip', sectionKey: 'service-strip', title: 'مزایای فروشگاه', isVisible: true, order: 15, layout: 'grid', desktopColumns: 4, mobileColumns: 2, borderRadiusPx: 8, itemRadiusPx: 6, gapPx: 10, fullWidth: true, widthPercent: 95, tabletWidthPercent: 96, mobileWidthPercent: 100, maxWidthPx: 0, items: [
+  { id: 'home-shipping-banner', sectionKey: 'shipping-banner', title: 'ارسال سریع', subtitle: 'برای سفارش‌های واجد شرایط', isVisible: true, order: 13, layout: 'full', desktopColumns: 1, mobileColumns: 1, borderRadiusPx: 8, widthPercent: 100, tabletWidthPercent: 100, mobileWidthPercent: 96, maxWidthPx: 1040, minHeightPx: 112 },
+  { id: 'home-articles', sectionKey: 'articles', title: 'راهنما و مقالات', subtitle: 'آموزش، نگهداری و انتخاب صحیح قطعات خودرو', buttonText: 'مشاهده همه مقالات', buttonLink: 'blog', isVisible: true, order: 14, layout: 'grid', desktopColumns: 3, mobileColumns: 2, borderRadiusPx: 8, itemRadiusPx: 8, gapPx: 10, maxItems: 3, widthPercent: 100, tabletWidthPercent: 100, mobileWidthPercent: 100, maxWidthPx: 1280, paddingTopPx: 28, paddingBottomPx: 30 },
+  { id: 'home-service-strip', sectionKey: 'service-strip', title: 'مزایای فروشگاه', isVisible: true, order: 15, layout: 'grid', desktopColumns: 4, mobileColumns: 2, borderRadiusPx: 8, itemRadiusPx: 6, gapPx: 10, fullWidth: true, widthPercent: 100, tabletWidthPercent: 100, mobileWidthPercent: 100, maxWidthPx: 0, items: [
     { id: 'service-1', title: 'تضمین اصالت', content: 'کنترل اصالت و کیفیت قطعه', isVisible: true, order: 1 },
     { id: 'service-2', title: 'ارزش خرید', content: 'قیمت‌گذاری شفاف و رقابتی', isVisible: true, order: 2 },
     { id: 'service-3', title: 'ارسال سریع', content: 'بسته‌بندی ایمن و رهگیری سفارش', isVisible: true, order: 3 },
@@ -137,20 +137,6 @@ const PART_REQUEST_SECTION_DEFAULTS: PageSection[] = [
 
 const upgradeLegacyHomeSection = (section: PageSection): PageSection => {
   const key = section.sectionKey;
-
-  const centeredLegacyKeys = new Set([
-    'hero','featured-categories','promo-small','featured-products','wide-banner-1',
-    'manufacturers','parts-brands','promo-medium','weekly-deals','promo-large',
-    'maintenance-products','testimonials','articles','service-strip'
-  ]);
-  if (centeredLegacyKeys.has(key || '') && Number(section.widthPercent ?? 100) === 100) {
-    section = {
-      ...section,
-      widthPercent: 95,
-      tabletWidthPercent: section.tabletWidthPercent == null || section.tabletWidthPercent === 100 ? 96 : section.tabletWidthPercent,
-      mobileWidthPercent: section.mobileWidthPercent ?? 100
-    };
-  }
 
   if (!section.contentSource) {
     const liveSource =
@@ -564,7 +550,7 @@ interface StoreContextType {
   pages: SitePage[];
   updatePage: (page: SitePage) => void;
   deletePage: (pageId: string) => void;
-  updateSection: (pageSlug: string, section: PageSection) => void;
+  updateSection: (pageSlug: string, section: PageSection) => Promise<boolean>;
   previewSection: (pageSlug: string, section: PageSection) => void;
   addSection: (pageSlug: string, section: PageSection) => void;
   deleteSection: (pageSlug: string, sectionId: string) => void;
@@ -1215,12 +1201,13 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   // Pages & Section Builder Methods
   // Pages & Section Builder Methods
 
-  const persistPage = (page: SitePage, successMessage: string) => {
+  const persistPage = async (page: SitePage, successMessage: string): Promise<boolean> => {
     const normalized = { ...page, updatedAt: new Date().toLocaleDateString('fa-IR') };
-    void apiRequest<{ page: SitePage }>(`/api/cms/pages/${encodeURIComponent(normalized.id)}`, {
-      method: 'PUT',
-      body: JSON.stringify(normalized)
-    }).then(async ({ page: saved }) => {
+    try {
+      const { page: saved } = await apiRequest<{ page: SitePage }>(`/api/cms/pages/${encodeURIComponent(normalized.id)}`, {
+        method: 'PUT',
+        body: JSON.stringify(normalized)
+      });
       setPages(prev => {
         const exists = prev.some(item => item.id === saved.id);
         return exists ? prev.map(item => item.id === saved.id ? saved : item) : [...prev, saved];
@@ -1231,10 +1218,12 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         console.error('Page SEO sync failed:', seoError);
       }
       showToast(successMessage);
-    }).catch(error => {
+      return true;
+    } catch (error) {
       console.error(error);
-      showToast('ذخیره برگه در سرور انجام نشد.', 'error');
-    });
+      showToast('ذخیره برگه در سرور انجام نشد؛ اتصال و دسترسی مدیر را بررسی کنید.', 'error');
+      return false;
+    }
   };
 
   const updatePage = (updatedPage: SitePage) => {
@@ -1260,10 +1249,13 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     });
   };
 
-  const updateSection = (pageSlug: string, updatedSection: PageSection) => {
+  const updateSection = async (pageSlug: string, updatedSection: PageSection): Promise<boolean> => {
     const page = pages.find(item => item.slug === pageSlug);
-    if (!page) return;
-    persistPage({
+    if (!page) {
+      showToast('برگه برای ذخیره پیدا نشد.', 'error');
+      return false;
+    }
+    return persistPage({
       ...page,
       sections: page.sections.map(section => section.id === updatedSection.id ? updatedSection : section)
     }, `بخش "${updatedSection.title}" با موفقیت به‌روزرسانی شد.`);

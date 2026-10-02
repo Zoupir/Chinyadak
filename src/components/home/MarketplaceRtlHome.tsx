@@ -18,6 +18,8 @@ import { useStore } from '../../context/StoreContext';
 import { formatToman } from '../../utils/formatters';
 import { LiveSectionModal } from '../common/LiveSectionModal';
 import type { PageSection, PageSectionItem } from '../../types';
+import { BannerPlacement } from './BannerPlacement';
+import { resolveBannerPlacements } from '../../utils/bannerPlacements';
 
 interface MarketplaceRtlHomeProps {
   onNavigate: (view: string, param?: string) => void;
@@ -46,7 +48,8 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
     pages,
     isLiveEditActive,
     setIsLiveEditActive,
-    adminAuth
+    adminAuth,
+    showToast
   } = useStore();
 
   const homeSections = useMemo(
@@ -54,6 +57,8 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
     [pages]
   );
   const sectionConfig = (key: string) => homeSections.find(section => section.sectionKey === key);
+  const bannerPlacements = useMemo(() => resolveBannerPlacements(settings.bannerPlacements, homeSections, sliders), [settings.bannerPlacements, homeSections, sliders]);
+  const bannerPlacementFor = (key: string) => bannerPlacements.find(placement => placement.key === key);
   const customSections = homeSections
     .filter(section => Boolean(section.sectionKey) && !MARKETPLACE_BUILT_IN_SECTION_KEYS.has(section.sectionKey!))
     .sort((a, b) => a.order - b.order);
@@ -188,15 +193,8 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
     };
   };
 
-  const bannerGridItemStyle = (item: PageSectionItem): React.CSSProperties => ({
-    ['--banner-cols-desktop' as any]: String(Math.max(1,Math.min(12,Math.round((item.widthPercent ?? 100) * 12 / 100)))),
-    ['--banner-cols-tablet' as any]: String(Math.max(1,Math.min(12,Math.round((item.tabletWidthPercent ?? item.widthPercent ?? 100) * 12 / 100)))),
-    ['--banner-cols-mobile' as any]: String(Math.max(1,Math.min(12,Math.round((item.mobileWidthPercent ?? 100) * 12 / 100)))),
-    ['--banner-height-desktop' as any]: `${item.heightPx ?? item.minHeightPx ?? 178}px`,
-    ['--banner-height-tablet' as any]: `${item.tabletHeightPx ?? item.heightPx ?? item.minHeightPx ?? 178}px`,
-    ['--banner-height-mobile' as any]: `${item.mobileHeightPx ?? item.tabletHeightPx ?? item.heightPx ?? item.minHeightPx ?? 168}px`
-  });
-  const sourceItemsFor = (
+
+
     source: NonNullable<PageSection['contentSource']>,
     limit: number
   ): PageSectionItem[] => {
@@ -283,6 +281,43 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
     return base
       .filter(item => item.isVisible !== false)
       .sort((a, b) => a.order - b.order);
+  };
+
+
+
+    owner: any,
+    key: 'tag' | 'title' | 'subtitle' | 'button',
+    fallback: { x: number; y: number; width: number }
+  ): React.CSSProperties => {
+    const layouts = owner?.responsiveLayout || {};
+    const desktop = { ...fallback, ...(layouts.desktop?.[key] || {}) };
+    const tablet = owner?.inheritTabletFromDesktop === false
+      ? { ...desktop, ...(layouts.tablet?.[key] || {}) }
+      : desktop;
+    const mobile = owner?.inheritMobileFromDesktop === false
+      ? { ...desktop, ...(layouts.mobile?.[key] || {}) }
+      : desktop;
+
+    return {
+      ['--free-d-x' as any]: String(desktop.x),
+      ['--free-d-y' as any]: String(desktop.y),
+      ['--free-d-w' as any]: String(desktop.width),
+      ['--free-d-h' as any]: desktop.height ? `${desktop.height}%` : 'auto',
+      ['--free-d-font' as any]: desktop.fontSizePx ? `${desktop.fontSizePx}px` : undefined,
+      ['--free-d-wrap' as any]: desktop.wrap === 'nowrap' ? 'nowrap' : 'normal',
+      ['--free-t-x' as any]: String(tablet.x),
+      ['--free-t-y' as any]: String(tablet.y),
+      ['--free-t-w' as any]: String(tablet.width),
+      ['--free-t-h' as any]: tablet.height ? `${tablet.height}%` : 'auto',
+      ['--free-t-font' as any]: tablet.fontSizePx ? `${tablet.fontSizePx}px` : undefined,
+      ['--free-t-wrap' as any]: tablet.wrap === 'nowrap' ? 'nowrap' : 'normal',
+      ['--free-m-x' as any]: String(mobile.x),
+      ['--free-m-y' as any]: String(mobile.y),
+      ['--free-m-w' as any]: String(mobile.width),
+      ['--free-m-h' as any]: mobile.height ? `${mobile.height}%` : 'auto',
+      ['--free-m-font' as any]: mobile.fontSizePx ? `${mobile.fontSizePx}px` : undefined,
+      ['--free-m-wrap' as any]: mobile.wrap === 'nowrap' ? 'nowrap' : 'normal'
+    };
   };
 
   const bannerBackgroundStyle = (
@@ -455,29 +490,20 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
       ? fillProducts(products.filter(product => ['suspension', 'brakes', 'steering'].includes(product.categorySlug || '')), 8)
       : fillProducts(products.filter(product => ['engine', 'turbo', 'cooling'].includes(product.categorySlug || '') || product.isFeatured), 8);
 
-  const wideBannerSection = sectionConfig('wide-banner-1');
-  const wideBannerItem = sortedItems('wide-banner-1')[0] || (
-    isLiveEditActive && adminAuth.isAuthenticated
-      ? {
-          id: `${wideBannerSection?.id || 'wide-banner-1'}-live-placeholder`,
-          title: wideBannerSection?.title || 'بنر عریض میانی',
-          subtitle: wideBannerSection?.subtitle || 'این بنر خالی است؛ برای افزودن تصویر و محتوا ویرایشش کنید.',
-          imageUrl: wideBannerSection?.imageUrl || '',
-          link: wideBannerSection?.buttonLink || '',
-          buttonText: wideBannerSection?.buttonText || 'ویرایش بنر',
-          isVisible: true,
-          order: 1
-        }
-      : undefined
-  );
 
-  const handleLiveEditCapture = (event: React.MouseEvent<HTMLDivElement>) => {
+event: React.MouseEvent<HTMLDivElement>) => {
     if (!isLiveEditActive || !adminAuth.isAuthenticated) return;
     const target = event.target as HTMLElement;
     const sectionElement = target.closest<HTMLElement>('[data-section-key]');
     if (!sectionElement) return;
 
     const sectionKey = sectionElement.dataset.sectionKey;
+    if (['wide-banner-1','promo-large','promo-medium','promo-small'].includes(sectionKey || '')) {
+      event.preventDefault();
+      event.stopPropagation();
+      showToast('برای ویرایش بنر، از مدیریت ← جایگاه‌های بنر استفاده کن.', 'info');
+      return;
+    }
     const section = homeSections.find(item => item.sectionKey === sectionKey);
     if (!section) return;
 
@@ -763,39 +789,8 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
       </section>
       )}
 
-      {sectionVisible('promo-small') && (
-      <section className="marketplace-section marketplace-promo-grid three builder-section-grid" data-section-key="promo-small" data-mobile-display={sectionConfig('promo-small')?.mobileDisplayMode || 'grid'} style={sectionStyle('promo-small')}>
-        {sortedItems('promo-small').map((item, index) => (
-          <button
-            key={item.id}
-            type="button"
-            className="marketplace-promo-card"
-            style={{
-              ...itemVisualStyle('promo-small', item as PageSectionItem),
-              ...bannerGridItemStyle(item as PageSectionItem),
-              ...bannerBackgroundStyle(item as PageSectionItem, item.imageUrl || '')
-            }}
-            onClick={() => goLink(item.link)}
-          >
-            {item.responsiveLayout ? (
-              <span className="marketplace-free-layout-layer" aria-hidden="true">
-                {item.badge && (
-                  <span className="marketplace-free-layout-el marketplace-free-tag" style={freeElementStyle(item, 'tag', { x: 70, y: 16, width: 22 })}>{item.badge}</span>
-                )}
-                <h3 className="marketplace-free-layout-el marketplace-free-title marketplace-free-promo-title" style={freeElementStyle(item, 'title', { x: 55, y: 24, width: 38 })}>{item.title || ''}</h3>
-                {item.subtitle && <span className="marketplace-free-layout-el marketplace-free-subtitle marketplace-free-promo-subtitle" style={freeElementStyle(item, 'subtitle', { x: 58, y: 48, width: 34 })}>{item.subtitle}</span>}
-                <small className="marketplace-free-layout-el marketplace-free-button marketplace-free-promo-button" style={freeElementStyle(item, 'button', { x: 73, y: 70, width: 20 })}>{item.buttonText || ''}</small>
-              </span>
-            ) : (
-              <>
-                {item.subtitle && <span style={{color:item.subtitleColor||'#e5e7eb'}}>{item.subtitle}</span>}
-                {item.title && <h3 style={{color:item.titleColor||item.textColor||'#ffffff'}}>{item.title}</h3>}
-                {item.buttonText && <small style={{backgroundColor:item.buttonBgColor||'#f59e0b',color:item.buttonTextColor||'#111827'}}>{item.buttonText}</small>}
-              </>
-            )}
-          </button>
-        ))}
-      </section>
+      {bannerPlacementFor('promo-small') && (
+        <BannerPlacement placement={bannerPlacementFor('promo-small')!} showEmptyState={isLiveEditActive && adminAuth.isAuthenticated} onNavigate={onNavigate} />
       )}
 
       {sectionVisible('featured-products') && (
@@ -823,39 +818,8 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
       </section>
       )}
 
-      {sectionVisible('wide-banner-1') && wideBannerItem && (
-      <section
-        className="marketplace-wide-banner marketplace-banner-grid"
-        data-section-key="wide-banner-1"
-        data-mobile-display={sectionConfig('wide-banner-1')?.mobileDisplayMode || 'grid'}
-        style={sectionStyle('wide-banner-1')}
-      >
-        <button
-          type="button"
-          className="marketplace-wide-banner-item"
-          style={{
-            ...itemVisualStyle('wide-banner-1', wideBannerItem),
-            ...bannerGridItemStyle(wideBannerItem),
-            ...bannerBackgroundStyle(wideBannerItem, wideBannerItem.imageUrl || '', true)
-          }}
-          onClick={() => goLink(wideBannerItem.link)}
-        >
-          {wideBannerItem.responsiveLayout ? (
-            <span className="marketplace-free-layout-layer" aria-hidden="true">
-              {wideBannerItem.badge && <span className="marketplace-free-layout-el marketplace-free-tag" style={freeElementStyle(wideBannerItem, 'tag', { x: 72, y: 16, width: 20 })}>{wideBannerItem.badge}</span>}
-              {wideBannerItem.title && <h2 className="marketplace-free-layout-el marketplace-free-title" style={freeElementStyle(wideBannerItem, 'title', { x: 62, y: 28, width: 32 })}>{wideBannerItem.title}</h2>}
-              {wideBannerItem.subtitle && <span className="marketplace-free-layout-el marketplace-free-subtitle" style={freeElementStyle(wideBannerItem, 'subtitle', { x: 68, y: 18, width: 24 })}>{wideBannerItem.subtitle}</span>}
-              {wideBannerItem.buttonText && <small className="marketplace-free-layout-el marketplace-free-button" style={freeElementStyle(wideBannerItem, 'button', { x: 78, y: 72, width: 14 })}>{wideBannerItem.buttonText}</small>}
-            </span>
-          ) : (
-            <div className="marketplace-wide-banner-copy" style={{textAlign:wideBannerItem.textAlignment || 'right'}}>
-              {wideBannerItem.subtitle && <span style={{color:wideBannerItem.subtitleColor || '#f5a000'}}>{wideBannerItem.subtitle}</span>}
-              {wideBannerItem.title && <h2 style={{color:wideBannerItem.titleColor || '#ffffff'}}>{wideBannerItem.title}</h2>}
-              {wideBannerItem.buttonText && <small style={{backgroundColor:wideBannerItem.buttonBgColor || '#ffffff',color:wideBannerItem.buttonTextColor || '#111827'}}>{wideBannerItem.buttonText}</small>}
-            </div>
-          )}
-        </button>
-      </section>
+      {bannerPlacementFor('wide-banner-1') && (
+        <BannerPlacement placement={bannerPlacementFor('wide-banner-1')!} showEmptyState={isLiveEditActive && adminAuth.isAuthenticated} onNavigate={onNavigate} />
       )}
 
       {sectionVisible('manufacturers') && (
@@ -919,37 +883,8 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
       </section>
       )}
 
-      {sectionVisible('promo-medium') && (
-      <section className="marketplace-section marketplace-promo-grid two builder-section-grid" data-section-key="promo-medium" data-mobile-display={sectionConfig('promo-medium')?.mobileDisplayMode || 'grid'} style={sectionStyle('promo-medium')}>
-        {sortedItems('promo-medium').map((item, index) => (
-          <button
-            key={item.id}
-            type="button"
-            className="marketplace-promo-card marketplace-promo-medium"
-            style={{
-              ...itemVisualStyle('promo-medium', item as PageSectionItem),
-              ...bannerGridItemStyle(item as PageSectionItem),
-              ...bannerBackgroundStyle(item as PageSectionItem, item.imageUrl || '')
-            }}
-            onClick={() => goLink(item.link)}
-          >
-            {item.responsiveLayout ? (
-              <span className="marketplace-free-layout-layer" aria-hidden="true">
-                {item.badge && <span className="marketplace-free-layout-el marketplace-free-tag" style={freeElementStyle(item, 'tag', { x: 70, y: 16, width: 22 })}>{item.badge}</span>}
-                <h3 className="marketplace-free-layout-el marketplace-free-title marketplace-free-promo-title" style={freeElementStyle(item, 'title', { x: 55, y: 24, width: 38 })}>{item.title || ''}</h3>
-                {item.subtitle && <span className="marketplace-free-layout-el marketplace-free-subtitle marketplace-free-promo-subtitle" style={freeElementStyle(item, 'subtitle', { x: 58, y: 48, width: 34 })}>{item.subtitle}</span>}
-                <small className="marketplace-free-layout-el marketplace-free-button marketplace-free-promo-button" style={freeElementStyle(item, 'button', { x: 73, y: 70, width: 20 })}>{item.buttonText || ''}</small>
-              </span>
-            ) : (
-              <>
-                {item.subtitle && <span style={{color:item.subtitleColor||'#e5e7eb'}}>{item.subtitle}</span>}
-                {item.title && <h3 style={{color:item.titleColor||item.textColor||'#ffffff'}}>{item.title}</h3>}
-                {item.buttonText && <small style={{backgroundColor:item.buttonBgColor||'#f59e0b',color:item.buttonTextColor||'#111827'}}>{item.buttonText}</small>}
-              </>
-            )}
-          </button>
-        ))}
-      </section>
+      {bannerPlacementFor('promo-medium') && (
+        <BannerPlacement placement={bannerPlacementFor('promo-medium')!} showEmptyState={isLiveEditActive && adminAuth.isAuthenticated} onNavigate={onNavigate} />
       )}
 
       {sectionVisible('weekly-deals') && (
@@ -983,40 +918,8 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
       </section>
       )}
 
-      {sectionVisible('promo-large') && (
-      <section className="marketplace-section marketplace-feature-banners builder-section-grid" data-section-key="promo-large" data-layout-variant={sectionConfig('promo-large')?.layoutVariant || 'mosaic'} data-mobile-display={sectionConfig('promo-large')?.mobileDisplayMode || 'grid'} style={sectionStyle('promo-large')}>
-        {sortedItems('promo-large').map((item, index) => {
-          const image = item.imageUrl || '';
-          return (
-            <button
-              key={item.id}
-              type="button"
-              className="marketplace-banner-item"
-              style={{
-                ...itemVisualStyle('promo-large', item),
-                ...bannerGridItemStyle(item),
-                ...bannerBackgroundStyle(item as PageSectionItem, image, true)
-              }}
-              onClick={() => goLink(item.link)}
-            >
-              {item.responsiveLayout ? (
-                <span className="marketplace-free-layout-layer" aria-hidden="true">
-                  {item.badge && <span className="marketplace-free-layout-el marketplace-free-tag" style={freeElementStyle(item, 'tag', { x: 68, y: 15, width: 22 })}>{item.badge}</span>}
-                  <h3 className="marketplace-free-layout-el marketplace-free-title marketplace-free-promo-title" style={freeElementStyle(item, 'title', { x: 54, y: 26, width: 40 })}>{item.title || ''}</h3>
-                  {item.subtitle && <span className="marketplace-free-layout-el marketplace-free-subtitle marketplace-free-promo-subtitle" style={freeElementStyle(item, 'subtitle', { x: 58, y: 50, width: 34 })}>{item.subtitle}</span>}
-                  {item.buttonText && <small className="marketplace-free-layout-el marketplace-free-button marketplace-free-promo-button" style={freeElementStyle(item, 'button', { x: 73, y: 72, width: 20 })}>{item.buttonText}</small>}
-                </span>
-              ) : (
-                <div>
-                  {item.subtitle && <span style={{color:item.subtitleColor||'#e5e7eb'}}>{item.subtitle}</span>}
-                  {item.title && <h3 style={{color:item.titleColor||item.textColor||'#ffffff'}}>{item.title}</h3>}
-                  {item.buttonText && <small style={{backgroundColor:item.buttonBgColor||'#f59e0b',color:item.buttonTextColor||'#111827'}}>{item.buttonText}</small>}
-                </div>
-              )}
-            </button>
-          );
-        })}
-      </section>
+      {bannerPlacementFor('promo-large') && (
+        <BannerPlacement placement={bannerPlacementFor('promo-large')!} showEmptyState={isLiveEditActive && adminAuth.isAuthenticated} onNavigate={onNavigate} />
       )}
 
       {sectionVisible('maintenance-products') && (

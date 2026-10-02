@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Check,
   FileImage,
@@ -46,6 +47,7 @@ export const MediaPickerModal: React.FC<MediaPickerModalProps> = ({
   const [query, setQuery] = useState('');
   const [selected, setSelected] = useState<MediaLibraryItem | null>(null);
   const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState('');
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState('');
   const [directUrl, setDirectUrl] = useState('');
@@ -53,6 +55,7 @@ export const MediaPickerModal: React.FC<MediaPickerModalProps> = ({
 
   const load = async () => {
     setLoading(true);
+    setLoadError('');
     try {
       const result = await listMediaLibrary({
         category: filterCategory,
@@ -64,6 +67,9 @@ export const MediaPickerModal: React.FC<MediaPickerModalProps> = ({
       setCategories(result.categories || []);
       setYears(result.years || []);
       setMonths(result.months || []);
+    } catch (error) {
+      setItems([]);
+      setLoadError(error instanceof Error ? error.message : 'دریافت فهرست رسانه‌ها انجام نشد.');
     } finally {
       setLoading(false);
     }
@@ -133,9 +139,9 @@ export const MediaPickerModal: React.FC<MediaPickerModalProps> = ({
 
   if (!isOpen) return null;
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-[240] bg-black/65 backdrop-blur-sm p-3 sm:p-6 flex items-center justify-center" onClick={onClose}>
-      <div className="w-full max-w-7xl h-[min(90vh,900px)] bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col" onClick={event => event.stopPropagation()}>
+      <div className="w-[96vw] max-w-[1440px] h-[88vh] max-h-[820px] bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col" onClick={event => event.stopPropagation()}>
         <header className="h-16 px-4 sm:px-6 border-b border-neutral-200 flex items-center justify-between gap-4 shrink-0">
           <div>
             <h2 className="font-black text-base">{title}</h2>
@@ -164,7 +170,7 @@ export const MediaPickerModal: React.FC<MediaPickerModalProps> = ({
         </div>
 
         {tab === 'library' && (
-          <div className="min-h-0 flex-1 grid grid-cols-1 lg:grid-cols-[220px_minmax(0,1fr)_300px]">
+          <div className="min-h-0 flex-1 grid grid-cols-1 lg:grid-cols-[210px_minmax(0,1fr)] 2xl:grid-cols-[210px_minmax(0,1fr)_270px]">
             <aside className="border-l border-neutral-200 bg-neutral-50 p-3 overflow-y-auto hidden lg:block">
               <strong className="text-[11px]">پوشه‌ها</strong>
               <button type="button" onClick={() => { setFilterCategory('all'); setFilterYear('all'); setFilterMonth('all'); }} className={`mt-2 w-full p-2 rounded-lg text-right text-[10px] font-bold flex items-center gap-2 ${filterCategory === 'all' ? 'bg-blue-600 text-white' : 'hover:bg-white'}`}>
@@ -247,13 +253,24 @@ export const MediaPickerModal: React.FC<MediaPickerModalProps> = ({
                       </button>
                     ))}
                   </div>
+                ) : loadError ? (
+                  <div className="h-full grid place-items-center text-center text-xs text-red-700">
+                    <div><FileImage className="w-8 h-8 mx-auto mb-2" /><p>{loadError}</p><button type="button" onClick={() => void load()} className="mt-3 px-4 py-2 rounded-lg bg-red-50 font-bold">تلاش دوباره</button></div>
+                  </div>
                 ) : (
-                  <div className="h-full grid place-items-center text-neutral-400 text-xs"><FileImage className="w-8 h-8 mb-2" />رسانه‌ای پیدا نشد.</div>
+                  <div className="h-full grid place-items-center text-neutral-400 text-xs"><div className="text-center"><FileImage className="w-8 h-8 mx-auto mb-2" />رسانه‌ای در این فهرست پیدا نشد.</div></div>
                 )}
               </div>
+              {selected && (
+                <div className="lg:hidden p-3 border-t border-neutral-200 flex items-center gap-3 bg-white shrink-0">
+                  <img src={selected.url} alt="" className="w-12 h-12 rounded-lg object-cover border" />
+                  <span className="flex-1 min-w-0 text-[10px] font-bold truncate">{selected.filename}</span>
+                  <button type="button" onClick={() => { onSelect(selected.url, selected); onClose(); }} className="px-3 py-2 rounded-lg bg-blue-600 text-white text-[10px] font-black shrink-0">انتخاب</button>
+                </div>
+              )}
             </main>
 
-            <aside className="border-r border-neutral-200 p-4 overflow-y-auto bg-white">
+            <aside className="border-r border-neutral-200 p-4 overflow-y-auto bg-white hidden 2xl:block">
               {selected ? (
                 <div className="space-y-4">
                   <div className="aspect-video rounded-xl border bg-neutral-50 overflow-hidden grid place-items-center">
@@ -306,6 +323,7 @@ export const MediaPickerModal: React.FC<MediaPickerModalProps> = ({
           </div>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

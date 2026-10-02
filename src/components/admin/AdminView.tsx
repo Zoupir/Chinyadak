@@ -60,6 +60,7 @@ import { AdminMenusAndAttributes } from './AdminMenusAndAttributes';
 import { AdminFooterTab } from './AdminFooterTab';
 import { AdminSlidersTab } from './AdminSlidersTab';
 import { AdminSliderStudio } from './AdminSliderStudio';
+import { AdminBannerPlacements } from './AdminBannerPlacements';
 import { AdminUsersTab } from './AdminUsersTab';
 import { AdminPagesTab } from './AdminPagesTab';
 import { AdminThemeTab } from './AdminThemeTab';
@@ -126,7 +127,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
 
   // Navigation tab inside Admin
   const [activeTab, setActiveTab] = useState<
-    'overview' | 'cars' | 'products' | 'categories' | 'menus_attrs' | 'mega_menu' | 'media' | 'icons' | 'footer' | 'pages' | 'articles' | 'sliders' | 'orders' | 'customers' | 'admins' | 'gateways' | 'sandbox' | 'apis' | 'theme' | 'seo' | 'bulk' | 'analytics'
+    'overview' | 'cars' | 'products' | 'categories' | 'menus_attrs' | 'mega_menu' | 'media' | 'icons' | 'footer' | 'pages' | 'articles' | 'sliders' | 'banners' | 'orders' | 'customers' | 'admins' | 'gateways' | 'sandbox' | 'apis' | 'theme' | 'seo' | 'bulk' | 'analytics'
   >('overview');
 
   // Sidebar Layout State
@@ -252,6 +253,8 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
         return permissions.canManageArticles || permissions.canManageSettings;
       case 'sliders':
         return permissions.canManageSliders;
+      case 'banners':
+        return permissions.canManageSliders || permissions.canManageSettings;
       case 'menus_attrs':
       case 'mega_menu':
       case 'media':
@@ -709,7 +712,8 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
       items: [
         { id: 'pages', label: 'صفحه‌ساز دیداری', icon: LayoutTemplate, count: pages.length },
         { id: 'articles', label: 'مقالات و آموزش‌ها', icon: BookOpen, count: articles.length },
-        { id: 'sliders', label: 'اسلایدرها و بنرها', icon: Compass, count: sliders.length },
+        { id: 'sliders', label: 'اسلایدر اصلی', icon: Compass, count: sliders.length },
+        { id: 'banners', label: 'جایگاه‌های بنر', icon: ImageIcon },
         { id: 'menus_attrs', label: 'فهرست اصلی', icon: Menu },
         { id: 'mega_menu', label: 'استودیو مگامنو', icon: PanelsTopLeft },
         { id: 'media', label: 'کتابخانه رسانه', icon: ImageIcon },
@@ -1104,6 +1108,9 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
           {/* TAB 7: SLIDERS & BANNERS */}
           {activeTab === 'sliders' && (
             <AdminSliderStudio />
+          )}
+          {activeTab === 'banners' && (
+            <AdminBannerPlacements />
           )}
 
           {/* TAB 8: ORDERS & INVOICES */}

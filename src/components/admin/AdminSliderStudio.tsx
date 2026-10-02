@@ -477,13 +477,10 @@ export const AdminSliderStudio:React.FC=()=>{
       <div className="min-h-14 px-4 py-2 bg-neutral-950 text-white sticky top-16 z-20 flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <div>
-            <strong className="text-sm">استودیو اسلایدر و بنر</strong>
-            <span className="text-[9px] text-neutral-400 mr-2">ویرایش دیداری با کشیدن، رها کردن و تغییر اندازه</span>
+            <strong className="text-sm">مدیریت اسلایدر اصلی</strong>
+            <span className="text-[9px] text-neutral-400 mr-2">مدیریت تصاویر چرخشی و تنظیمات نمایش اسلایدر بالای سایت</span>
           </div>
-          <div className="flex items-center gap-1 bg-neutral-800 p-1 rounded-lg">
-            <button onClick={()=>setMode('slides')} className={`px-3 py-2 rounded text-[9px] font-black ${mode==='slides'?'bg-blue-600':'text-neutral-400'}`}>اسلایدهای اصلی</button>
-            <button onClick={()=>setMode('banners')} className={`px-3 py-2 rounded text-[9px] font-black ${mode==='banners'?'bg-blue-600':'text-neutral-400'}`}>بنرهای صفحه اصلی</button>
-          </div>
+
         </div>
 
         <div className="flex items-center gap-1 bg-neutral-800 p-1 rounded-lg">

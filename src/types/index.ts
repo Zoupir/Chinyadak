@@ -580,6 +580,42 @@ export interface TrustBadgeItem {
   link?: string;
 }
 
+export type BannerPlacementKey = 'wide-banner-1' | 'promo-large' | 'promo-medium' | 'promo-small';
+export type BannerImageFit = 'cover' | 'contain';
+
+/** Banner data is stored independently from generic page-builder sections. */
+export interface BannerCreative {
+  id: string;
+  title: string;
+  subtitle?: string;
+  badge?: string;
+  desktopImageUrl: string;
+  mobileImageUrl?: string;
+  alt: string;
+  link: string;
+  buttonText?: string;
+  isVisible: boolean;
+  order: number;
+  imageFit: BannerImageFit;
+  overlayOpacity: number;
+  textAlignment: 'right' | 'center' | 'left';
+  titleColor: string;
+  subtitleColor: string;
+}
+
+export interface BannerPlacementConfig {
+  key: BannerPlacementKey;
+  title: string;
+  isVisible: boolean;
+  widthMode: 'full' | 'container';
+  desktopAspectRatio: string;
+  mobileAspectRatio: string;
+  desktopColumns: number;
+  mobileColumns: number;
+  gapPx: number;
+  items: BannerCreative[];
+}
+
 export interface SiteSettings {
   siteTitle: string;
   siteSlogan: string;
@@ -628,6 +664,8 @@ export interface SiteSettings {
   logoUrl?: string;
   faviconUrl?: string;
   sliders?: SliderItem[];
+  /** Independent home-page banner placements; migrated from legacy sections on first save. */
+  bannerPlacements?: BannerPlacementConfig[];
   // Homepage hero-slider behavior.
   heroSliderAutoplayMs?: number;
   heroSliderNavigation?: 'dots' | 'arrows' | 'both' | 'none';

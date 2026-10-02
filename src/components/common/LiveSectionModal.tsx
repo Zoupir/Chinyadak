@@ -313,6 +313,12 @@ export const LiveSectionModal: React.FC<LiveSectionModalProps> = ({
 
       <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-4 bg-neutral-50/60">
         {tab === 'content' && (
+          isBannerSection ? (
+            <div className="rounded-2xl border border-amber-300 bg-amber-50 p-4 text-[10px] leading-6 text-amber-950">
+              <strong className="block text-xs mb-1">تنظیمات بنر به‌صورت مستقل مدیریت می‌شوند</strong>
+              تصویر، لینک، نسبت تصویر و چینش این جایگاه را از «مدیریت ← جایگاه‌های بنر» تغییر بده. این سکشن قدیمی فقط برای سازگاری با داده‌های قبلی نگه داشته شده و ذخیرهٔ تنظیمات آن روی بنر جدید اثر نمی‌گذارد.
+            </div>
+          ) : (
           <>
             <section className="bg-white rounded-2xl border border-blue-200 p-4 space-y-3">
               <div>
@@ -681,7 +687,9 @@ export const LiveSectionModal: React.FC<LiveSectionModalProps> = ({
       </div>
 
       <footer className="p-3 border-t border-neutral-200 bg-white shrink-0 grid grid-cols-[40px_1fr_1fr] gap-2">
+        {!isBannerSection && <>
         <button type="button" onClick={deleteCurrent} className="grid place-items-center rounded-xl bg-red-50 text-red-600" title="حذف سکشن"><Trash2 className="w-4 h-4" /></button>
+        </>}
         <button type="button" onClick={cancel} className="py-2.5 rounded-xl bg-neutral-100 text-neutral-700 text-xs font-bold">لغو و بازگردانی</button>
         <button type="button" onClick={save} className="py-2.5 rounded-xl bg-emerald-600 text-white text-xs font-black inline-flex items-center justify-center gap-1"><Save className="w-4 h-4" /> ذخیره</button>
       </footer>

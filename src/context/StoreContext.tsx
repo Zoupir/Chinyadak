@@ -509,7 +509,7 @@ interface StoreContextType {
   // Store Settings (Theme, Font, Color, Contact, Shipping)
   settings: SiteSettings;
   isStoreReady: boolean;
-  updateSettings: (newSettings: Partial<SiteSettings>) => void;
+  updateSettings: (newSettings: Partial<SiteSettings>) => Promise<boolean>;
 
   // Payment Gateways
   paymentGateways: PaymentGatewayConfig[];
@@ -1374,17 +1374,20 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   // Settings
-  const updateSettings = (newSettings: Partial<SiteSettings>) => {
-    void apiRequest<{ settings: SiteSettings }>('/api/cms/settings', {
-      method: 'PATCH',
-      body: JSON.stringify(newSettings)
-    }).then(({ settings: saved }) => {
+  const updateSettings = async (newSettings: Partial<SiteSettings>): Promise<boolean> => {
+    try {
+      const { settings: saved } = await apiRequest<{ settings: SiteSettings }>('/api/cms/settings', {
+        method: 'PATCH',
+        body: JSON.stringify(newSettings)
+      });
       setSettings(saved);
-      showToast('تنظیمات فروشگاه (قالب، رنگ و سیاست‌ها) با موفقیت ذخیره شد.');
-    }).catch(error => {
+      showToast('تنظیمات فروشگاه با موفقیت ذخیره شد.');
+      return true;
+    } catch (error) {
       console.error(error);
       showToast('ذخیره تنظیمات فروشگاه انجام نشد.', 'error');
-    });
+      return false;
+    }
   };
 
   const persistPaymentGateways = (gateways: PaymentGatewayConfig[], message: string) => {

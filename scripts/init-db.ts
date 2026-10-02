@@ -60,6 +60,7 @@ const main = async () => {
     await ensureColumn('customers', 'session_version', 'INT UNSIGNED NOT NULL DEFAULT 1');
     await ensureColumn('admin_users', 'session_version', 'INT UNSIGNED NOT NULL DEFAULT 1');
     await ensureColumn('orders', 'archived_at', 'DATETIME NULL');
+    await ensureColumn('site_pages', 'revision', 'INT UNSIGNED NOT NULL DEFAULT 1');
 
     await connection.query(
       `ALTER TABLE payment_transactions

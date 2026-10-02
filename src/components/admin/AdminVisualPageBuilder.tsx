@@ -228,7 +228,12 @@ export const AdminVisualPageBuilder: React.FC<{onNavigate?:(view:string,param?:s
             {source.badge&&<span className="inline-block px-2 py-1 rounded-full bg-amber-100 text-amber-800 text-[8px] font-bold">{source.badge}</span>}
             <h2 className="font-black mt-2" style={{fontSize:`${source.headingFontSizePx??18}px`}}>{source.title}</h2>
             {source.subtitle&&<p className="opacity-70 mt-1" style={{fontSize:`${source.subtitleFontSizePx??10}px`}}>{source.subtitle}</p>}
-            {source.content&&<div className="text-[9px] leading-6 opacity-80 mt-3 line-clamp-4" dangerouslySetInnerHTML={{__html:source.content}}/>}
+            {source.content&&(
+              <RichTextContent
+                value={source.content}
+                className="text-[9px] leading-6 opacity-80 mt-3 line-clamp-4"
+              />
+            )}
             {source.buttonText&&<button className="mt-3 px-3 py-2 rounded-lg bg-neutral-900 text-white text-[8px] font-bold">{source.buttonText}</button>}
           </div>
           {source.imageUrl&&source.imageMode!=='cover'&&<img src={source.imageUrl} alt="" className="max-w-[42%] max-h-40 object-contain rounded-xl"/>}

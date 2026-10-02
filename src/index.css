@@ -7866,3 +7866,82 @@ html[data-layout="marketplace-rtl"] .marketplace-ref-footer-bottom .marketplace-
   gap: 8px !important;
   padding-block: 10px !important;
 }
+
+
+/* Generic page-builder sections in the Marketplace RTL storefront. */
+html[data-layout="marketplace-rtl"] .marketplace-custom-builder-grid .marketplace-custom-builder-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+  min-height: 150px;
+  padding: 16px;
+  overflow: hidden;
+  background-color: #fff;
+  border: 1px solid #e5e7eb;
+  color: #111827;
+  text-align: center;
+  transition: border-color .18s ease, box-shadow .18s ease, transform .18s ease;
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-custom-builder-grid .marketplace-custom-builder-card:hover {
+  border-color: #93c5fd;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, .08);
+  transform: translateY(-2px);
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-custom-builder-grid .marketplace-custom-builder-card > img {
+  max-width: 100%;
+  object-fit: contain;
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-custom-builder-grid .marketplace-custom-builder-card.is-banner {
+  min-height: var(--banner-height-desktop, 178px);
+  align-items: flex-start;
+  justify-content: flex-end;
+  background-color: #111827;
+  background-size: cover;
+  background-position: center;
+  color: #fff;
+  text-align: right;
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-custom-builder-grid .marketplace-custom-builder-card strong {
+  max-width: 100%;
+  font-size: var(--item-title-size, 15px);
+  font-weight: 900;
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-custom-builder-grid .marketplace-custom-builder-card > span,
+html[data-layout="marketplace-rtl"] .marketplace-custom-builder-grid .marketplace-custom-builder-card p {
+  max-width: 100%;
+  font-size: var(--item-content-size, 12px);
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-custom-builder-grid .marketplace-custom-builder-badge,
+html[data-layout="marketplace-rtl"] .marketplace-custom-builder-grid .marketplace-custom-builder-button {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 8px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, .08);
+  font-size: 10px;
+  font-weight: 800;
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-custom-builder-grid .is-banner .marketplace-custom-builder-button {
+  background: #f59e0b;
+  color: #111827;
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-custom-builder-empty {
+  min-height: 100px;
+  padding: 18px;
+  border: 1px dashed #94a3b8;
+  border-radius: var(--builder-item-radius, 10px);
+  color: #475569;
+  text-align: center;
+}

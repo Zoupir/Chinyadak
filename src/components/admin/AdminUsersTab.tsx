@@ -169,7 +169,7 @@ export const AdminUsersTab: React.FC = () => {
       });
     } else {
       if (password.trim().length < 10) {
-        alert('رمز عبور اولیه مدیر باید حداقل ۱۰ کاراکتر باشد.');
+        showToast('رمز عبور اولیه مدیر باید حداقل ۱۰ کاراکتر باشد.', 'error');
         return;
       }
       const newUser: AdminUser = {
@@ -179,7 +179,7 @@ export const AdminUsersTab: React.FC = () => {
         fullName,
         role,
         roleTitle: getRoleTitle(role),
-        avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+        avatar: '',
         email,
         phone,
         isActive,
@@ -364,11 +364,20 @@ export const AdminUsersTab: React.FC = () => {
                 <tr key={user.id} className="hover:bg-neutral-50/50">
                   <td className="p-3">
                     <div className="flex items-center gap-2.5">
-                      <img
-                        src={user.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80'}
-                        alt={user.fullName}
-                        className="w-9 h-9 rounded-full object-cover border border-neutral-200"
-                      />
+                      {user.avatar ? (
+                        <img
+                          src={user.avatar}
+                          alt={user.fullName}
+                          className="w-9 h-9 rounded-full object-cover border border-neutral-200"
+                        />
+                      ) : (
+                        <div
+                          className="w-9 h-9 rounded-full border border-neutral-200 bg-neutral-100 text-neutral-600 grid place-items-center font-black text-xs"
+                          aria-label={user.fullName}
+                        >
+                          {(user.fullName || user.username || '?').trim().slice(0, 1)}
+                        </div>
+                      )}
                       <div>
                         <div className="font-bold text-neutral-900">{user.fullName}</div>
                         <div className="text-[10px] text-neutral-400">ثبت: {user.createdAt}</div>

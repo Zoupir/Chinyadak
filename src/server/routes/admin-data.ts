@@ -135,7 +135,32 @@ const requesterIsSuperAdmin = async (req: AuthenticatedRequest): Promise<boolean
 
 export const adminDataRouter = Router();
 
-adminDataRouter.get('/customers', requireAdminPermission('canManageOrders'), async (_req, res) => {
+adminDataRouter.get('/customers', requireAdminPermission('canManageOrders'), async (req, res) => {
+  const page = Math.max(1, Math.floor(Number(req.query.page || 1)));
+  const limit = Math.max(1, Math.min(200, Math.floor(Number(req.query.limit || 100))));
+  const offset = (page - 1) * limit;
+  const q = String(req.query.q || '').trim().slice(0, 120);
+  const status = String(req.query.status || '').trim();
+  const clauses: string[] = [];
+  const params: unknown[] = [];
+
+  if (q) {
+    const like = `%${q}%`;
+    clauses.push('(c.first_name LIKE ? OR c.last_name LIKE ? OR c.phone LIKE ? OR c.email LIKE ?)');
+    params.push(like, like, like, like);
+  }
+  if (status === 'active' || status === 'blocked') {
+    clauses.push('c.status = ?');
+    params.push(status);
+  }
+
+  const where = clauses.length ? `WHERE ${clauses.join(' AND ')}` : '';
+  const [countRows] = await pool.query<Array<RowDataPacket & { total: number }>>(
+    `SELECT COUNT(*) AS total FROM customers c ${where}`,
+    params
+  );
+  const total = Number(countRows[0]?.total || 0);
+
   const [rows] = await pool.query<CustomerRow[]>(
     `SELECT
        c.id, c.first_name, c.last_name, c.phone, c.email, c.customer_type, c.status,
@@ -144,11 +169,22 @@ adminDataRouter.get('/customers', requireAdminPermission('canManageOrders'), asy
        COALESCE(SUM(CASE WHEN o.payment_status IN ('paid','paid_stock_review') THEN o.total ELSE 0 END), 0) AS total_spent
      FROM customers c
      LEFT JOIN orders o ON o.customer_id = c.id
+     ${where}
      GROUP BY c.id
      ORDER BY c.created_at DESC
-     LIMIT 5000`
+     LIMIT ? OFFSET ?`,
+    [...params, limit, offset]
   );
-  res.json({ customers: rows.map(customerDto) });
+  res.json({
+    customers: rows.map(customerDto),
+    pagination: {
+      page,
+      limit,
+      total,
+      totalPages: Math.max(1, Math.ceil(total / limit)),
+      hasMore: offset + rows.length < total
+    }
+  });
 });
 
 adminDataRouter.post('/customers', requireAdminPermission('canManageOrders'), async (req, res) => {

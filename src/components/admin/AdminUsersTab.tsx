@@ -1,22 +1,7 @@
 import React, { useState } from 'react';
 import { useStore } from '../../context/StoreContext';
 import { AdminUser, AdminRole, AdminPermissions } from '../../types';
-import { 
-  Users, 
-  ShieldCheck, 
-  ShieldAlert, 
-  Plus, 
-  Edit3, 
-  Trash2, 
-  Lock, 
-  Check, 
-  KeyRound, 
-  UserCheck, 
-  Mail, 
-  Phone, 
-  Calendar,
-  AlertCircle
-} from 'lucide-react';
+import { Users, ShieldCheck, Plus, Edit3, Trash2, Lock, Check, KeyRound } from 'lucide-react';
 
 export const AdminUsersTab: React.FC = () => {
   const { 

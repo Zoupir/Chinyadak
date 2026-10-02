@@ -533,7 +533,7 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
           style={{
             ...(hero?.imageUrl || sectionConfig('hero')?.imageUrl ? (() => {
               const image = hero?.imageUrl || sectionConfig('hero')?.imageUrl || '';
-              const mode = hero?.imageMode || sectionConfig('hero')?.imageMode || 'cover';
+              const mode = sectionConfig('hero')?.imageMode || hero?.imageMode || 'cover';
               return {
                 backgroundImage: `url(${image})`,
                 backgroundSize: backgroundFit(mode),

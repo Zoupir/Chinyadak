@@ -357,6 +357,7 @@ export interface CustomerUser {
   address?: string;
   loyaltyPoints?: number;
   loyaltyTier?: LoyaltyTier;
+  loginReady?: boolean;
 }
 
 export interface PaymentGatewayConfig {

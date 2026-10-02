@@ -31,7 +31,7 @@ interface RouteState {
 }
 
 const AppContent: React.FC = () => {
-  const { toast, products, categories, models, brands, articles, settings, isStoreReady } = useStore();
+  const { toast, products, categories, models, brands, articles, settings, isStoreReady, storeLoadError } = useStore();
   const [route, setRoute] = useState<RouteState>(() => {
     if (typeof window === 'undefined') return { view: 'home' };
     const legacy = parseLegacyHash(window.location.hash);
@@ -239,6 +239,27 @@ const AppContent: React.FC = () => {
           <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-3">
             {Array.from({ length: 4 }).map((_, index) => <div key={index} className="h-32 rounded-xl bg-neutral-200" />)}
           </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (storeLoadError) {
+    return (
+      <div className="min-h-screen bg-neutral-50 flex items-center justify-center px-4" role="alert">
+        <div className="w-full max-w-md rounded-3xl border border-red-200 bg-white p-7 text-center shadow-sm space-y-4">
+          <AlertCircle className="w-10 h-10 text-red-600 mx-auto" />
+          <h1 className="text-lg font-black text-neutral-900">ارتباط با اطلاعات فروشگاه برقرار نشد</h1>
+          <p className="text-xs leading-6 text-neutral-600">
+            برای جلوگیری از نمایش اطلاعات ناقص یا آزمایشی، فروشگاه موقتاً متوقف شده است.
+          </p>
+          <button
+            type="button"
+            onClick={() => window.location.reload()}
+            className="px-5 py-2.5 rounded-xl bg-neutral-900 text-white text-xs font-bold"
+          >
+            تلاش دوباره
+          </button>
         </div>
       </div>
     );

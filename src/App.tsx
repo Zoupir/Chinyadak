@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { Suspense, lazy, useState, useEffect } from 'react';
 import { StoreProvider, useStore } from './context/StoreContext';
 import { Header } from './components/layout/Header';
 import { Footer } from './components/layout/Footer';
@@ -6,24 +6,31 @@ import { MobileBottomNav } from './components/layout/MobileBottomNav';
 import { VehicleSelectorModal } from './components/vehicle/VehicleSelectorModal';
 import { CartDrawer } from './components/cart/CartDrawer';
 import { HomeView } from './components/home/HomeView';
-import { ShopView } from './components/shop/ShopView';
-import { ProductDetailView } from './components/product/ProductDetailView';
-import { BrandDetailView } from './components/brand/BrandDetailView';
-import { CarModelView } from './components/vehicle/CarModelView';
-import { CheckoutView } from './components/cart/CheckoutView';
-import { OrderTrackingView } from './components/orders/OrderTrackingView';
-import { AccountView } from './components/account/AccountView';
-import { CompareView } from './components/compare/CompareView';
-import { PartRequestView } from './components/parts/PartRequestView';
-import { BlogView } from './components/blog/BlogView';
-import { ArticleDetailView } from './components/blog/ArticleDetailView';
-import { PageView } from './components/page/PageView';
-import { AdminView } from './components/admin/AdminView';
-import { InvoicePageView } from './components/orders/InvoicePageView';
 import { CustomerAuthModal } from './components/auth/CustomerAuthModal';
 import { AiSearchAdvisorModal } from './components/search/AiSearchAdvisorModal';
 import { CheckCircle2, AlertCircle, Info, X } from 'lucide-react';
 import { buildRoutePath, parseRoutePath, parseLegacyHash } from './utils/navigation';
+
+const ShopView = lazy(() => import('./components/shop/ShopView').then(m => ({ default: m.ShopView })));
+const ProductDetailView = lazy(() => import('./components/product/ProductDetailView').then(m => ({ default: m.ProductDetailView })));
+const BrandDetailView = lazy(() => import('./components/brand/BrandDetailView').then(m => ({ default: m.BrandDetailView })));
+const CarModelView = lazy(() => import('./components/vehicle/CarModelView').then(m => ({ default: m.CarModelView })));
+const CheckoutView = lazy(() => import('./components/cart/CheckoutView').then(m => ({ default: m.CheckoutView })));
+const OrderTrackingView = lazy(() => import('./components/orders/OrderTrackingView').then(m => ({ default: m.OrderTrackingView })));
+const AccountView = lazy(() => import('./components/account/AccountView').then(m => ({ default: m.AccountView })));
+const CompareView = lazy(() => import('./components/compare/CompareView').then(m => ({ default: m.CompareView })));
+const PartRequestView = lazy(() => import('./components/parts/PartRequestView').then(m => ({ default: m.PartRequestView })));
+const BlogView = lazy(() => import('./components/blog/BlogView').then(m => ({ default: m.BlogView })));
+const ArticleDetailView = lazy(() => import('./components/blog/ArticleDetailView').then(m => ({ default: m.ArticleDetailView })));
+const PageView = lazy(() => import('./components/page/PageView').then(m => ({ default: m.PageView })));
+const AdminView = lazy(() => import('./components/admin/AdminView').then(m => ({ default: m.AdminView })));
+const InvoicePageView = lazy(() => import('./components/orders/InvoicePageView').then(m => ({ default: m.InvoicePageView })));
+
+const RouteFallback = () => (
+  <div className="min-h-[45vh] flex items-center justify-center" aria-label="در حال بارگذاری صفحه">
+    <div className="w-8 h-8 rounded-full border-2 border-neutral-300 border-t-neutral-900 animate-spin" />
+  </div>
+);
 
 interface RouteState {
   view: string;
@@ -289,12 +296,14 @@ const AppContent: React.FC = () => {
             </div>
           </div>
         )}
-        <AdminView 
-          onExitToStore={() => {
-            handleNavigate('home');
-          }} 
-          onNavigate={handleNavigate}
-        />
+        <Suspense fallback={<RouteFallback />}>
+          <AdminView 
+            onExitToStore={() => {
+              handleNavigate('home');
+            }} 
+            onNavigate={handleNavigate}
+          />
+        </Suspense>
       </div>
     );
   }
@@ -336,6 +345,7 @@ const AppContent: React.FC = () => {
 
       {/* Main View Container */}
       <main key={`${route.view}:${route.param || ''}:${routeRevision}`} className="flex-1">
+        <Suspense fallback={<RouteFallback />}>
         {route.view === 'home' && (
           <HomeView
             onNavigate={handleNavigate}
@@ -453,6 +463,7 @@ const AppContent: React.FC = () => {
             onNavigate={handleNavigate}
           />
         )}
+        </Suspense>
       </main>
 
       {/* Footer */}

@@ -116,6 +116,9 @@ export const LiveSectionModal: React.FC<LiveSectionModalProps> = ({
     patch({ contentSource:source });
   };
 
+  const isBannerSection = /promo|banner/i.test(form.sectionKey || '');
+  const isDynamicSource = contentPolicy.kind === 'fixed' || Boolean(form.contentSource && form.contentSource !== 'manual');
+
   const ensureSlots = (count: number, base = form): PageSectionItem[] => {
     const current = [...(base.items || [])];
     if (!autoRepeaterSection(base)) return current;
@@ -351,19 +354,18 @@ export const LiveSectionModal: React.FC<LiveSectionModalProps> = ({
                 <p className="text-[9px] text-neutral-400 mt-1">تمام‌عرض، داخل کادر یا اندازه سفارشی را جداگانه برای هر دستگاه تعیین کنید.</p>
               </div>
               <div className="grid grid-cols-3 gap-2">
-                <button type="button" onClick={() => patch({fullWidth:true,widthPercent:100,tabletWidthPercent:100,mobileWidthPercent:100,maxWidthPx:0,layout:'full'})} className={`p-2.5 rounded-xl border text-[9px] font-black ${form.fullWidth ? 'bg-blue-600 text-white border-blue-600' : 'bg-white'}`}>تمام عرض</button>
+                <button type="button" onClick={() => patch({fullWidth:true,widthPercent:95,tabletWidthPercent:96,mobileWidthPercent:100,maxWidthPx:0,layout:'full'})} className={`p-2.5 rounded-xl border text-[9px] font-black ${form.fullWidth ? 'bg-blue-600 text-white border-blue-600' : 'bg-white'}`}>تمام عرض</button>
                 <button type="button" onClick={() => patch({fullWidth:false,widthPercent:100,tabletWidthPercent:100,mobileWidthPercent:100,maxWidthPx:1280,layout:'boxed'})} className={`p-2.5 rounded-xl border text-[9px] font-black ${!form.fullWidth && (form.maxWidthPx || 1280) === 1280 ? 'bg-blue-600 text-white border-blue-600' : 'bg-white'}`}>داخل کادر</button>
                 <button type="button" onClick={() => patch({fullWidth:false,maxWidthPx:form.maxWidthPx || 1100})} className="p-2.5 rounded-xl border bg-white text-[9px] font-black">سفارشی</button>
               </div>
 
-              {!form.fullWidth && (
-                <div className="grid grid-cols-2 gap-3">
-                  {numberField('عرض دسکتاپ %','widthPercent',20,100,100)}
-                  {numberField('عرض تبلت %','tabletWidthPercent',20,100,100)}
-                  {numberField('عرض موبایل %','mobileWidthPercent',20,100,100)}
-                  {numberField('حداکثر عرض px','maxWidthPx',0,2400,1280)}
-                </div>
-              )}
+              <div className="grid grid-cols-2 gap-3">
+                {numberField('عرض سکشن در دسکتاپ ٪','widthPercent',20,100,form.fullWidth ? 95 : 100)}
+                {numberField('عرض سکشن در تبلت ٪','tabletWidthPercent',20,100,form.fullWidth ? 96 : 100)}
+                {numberField('عرض سکشن در موبایل ٪','mobileWidthPercent',20,100,100)}
+                {!form.fullWidth && numberField('حداکثر عرض px','maxWidthPx',0,2400,1280)}
+              </div>
+              <p className="text-[8px] text-neutral-500">«تمام عرض» یعنی بدون محدودیت حداکثر عرض؛ درصد واقعی همچنان دست شماست. مقدار پیشنهادی دسکتاپ ۹۵٪ است تا سکشن از دو طرف فاصله متعادل داشته باشد.</p>
             </section>
 
             <section className="bg-white rounded-2xl border border-neutral-200 p-4 space-y-4">
@@ -431,7 +433,7 @@ export const LiveSectionModal: React.FC<LiveSectionModalProps> = ({
             <section className="bg-white rounded-2xl border border-violet-200 p-4 space-y-3">
               <div>
                 <strong className="text-xs">ظاهر بخش داخلی / کارت‌های سکشن</strong>
-                <p className="text-[9px] text-neutral-400 mt-1">این تنظیمات روی تمام آیتم‌های داخل سکشن اعمال می‌شود؛ هر آیتم پایین‌تر تنظیم مستقل خودش را هم دارد.</p>
+                <p className="text-[9px] text-neutral-400 mt-1">{isBannerSection ? 'این‌ها تنظیمات پایه بنرها هستند؛ هر بنر می‌تواند رنگ، اندازه، تصویر و ابعاد مستقل خودش را داشته باشد.' : 'این تنظیمات یک‌بار روی همه آیتم‌های این سکشن اعمال می‌شوند؛ لازم نیست برای ده‌ها آیتم جداگانه تکرارشان کنید.'}</p>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <label><span className="block text-[9px] font-bold mb-1">پس‌زمینه آیتم</span><input type="color" value={form.itemBackgroundColor || '#ffffff'} onChange={e=>patch({itemBackgroundColor:e.target.value})} className="w-full h-10 p-1 border rounded-xl" /></label>
@@ -450,6 +452,52 @@ export const LiveSectionModal: React.FC<LiveSectionModalProps> = ({
                 <label><span className="block text-[9px] font-bold mb-1">تراز متن آیتم</span><select value={form.itemTextAlign || 'right'} onChange={e=>patch({itemTextAlign:e.target.value as 'right'|'center'|'left'})} className="w-full p-2 border rounded-lg bg-white text-xs"><option value="right">راست</option><option value="center">وسط</option><option value="left">چپ</option></select></label>
               </div>
             </section>
+
+            {form.sectionKey === 'weekly-deals' && (
+              <section className="bg-white rounded-2xl border border-orange-200 p-4 space-y-3">
+                <div>
+                  <strong className="text-xs">تنظیمات اختصاصی پیشنهادهای هفته</strong>
+                  <p className="text-[9px] text-neutral-500 mt-1">تیتر، زیرمتن، شمارنده و محل قرارگیری آن مستقل از کارت‌های محصول کنترل می‌شوند.</p>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <label><span className="block text-[9px] font-bold mb-1">رنگ عنوان</span><input type="color" value={form.dealTitleColor || '#ffffff'} onChange={e=>patch({dealTitleColor:e.target.value})} className="w-full h-10 p-1 border rounded-xl" /></label>
+                  <label><span className="block text-[9px] font-bold mb-1">رنگ زیرمتن</span><input type="color" value={form.dealSubtitleColor || '#fff7ed'} onChange={e=>patch({dealSubtitleColor:e.target.value})} className="w-full h-10 p-1 border rounded-xl" /></label>
+                  <label><span className="block text-[9px] font-bold mb-1">رنگ شمارنده</span><input type="color" value={form.dealTimerTextColor || '#b45309'} onChange={e=>patch({dealTimerTextColor:e.target.value})} className="w-full h-10 p-1 border rounded-xl" /></label>
+                  <label><span className="block text-[9px] font-bold mb-1">پس‌زمینه شمارنده</span><input type="color" value={form.dealTimerBoxBgColor || '#ffffff'} onChange={e=>patch({dealTimerBoxBgColor:e.target.value})} className="w-full h-10 p-1 border rounded-xl" /></label>
+                  {numberField('اندازه عنوان','headingFontSizePx',12,60,20)}
+                  {numberField('اندازه زیرمتن','subtitleFontSizePx',8,36,11)}
+                  {numberField('اندازه شمارنده','dealTimerFontSizePx',10,48,18)}
+                  <label><span className="block text-[9px] font-bold mb-1">محل شمارنده</span><select value={form.dealTimerAlign || 'left'} onChange={e=>patch({dealTimerAlign:e.target.value as PageSection['dealTimerAlign']})} className="w-full p-2 border rounded-lg bg-white text-xs"><option value="right">راست</option><option value="center">وسط</option><option value="left">چپ</option></select></label>
+                  <label><span className="block text-[9px] font-bold mb-1">تراز عمودی محتوای سکشن</span><select value={form.dealContentVerticalAlign || 'center'} onChange={e=>patch({dealContentVerticalAlign:e.target.value as PageSection['dealContentVerticalAlign']})} className="w-full p-2 border rounded-lg bg-white text-xs"><option value="start">بالا</option><option value="center">وسط</option><option value="end">پایین</option></select></label>
+                </div>
+              </section>
+            )}
+
+            {form.sectionKey === 'hero' && (
+              <section className="bg-white rounded-2xl border border-sky-200 p-4 space-y-3">
+                <div>
+                  <strong className="text-xs">کادر انتخاب خودرو روی اسلایدر</strong>
+                  <p className="text-[9px] text-neutral-500 mt-1">اندازه کادر، فونت‌ها، رنگ‌ها و سمت قرارگیری را مستقل تنظیم کنید.</p>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  {numberField('عرض کادر','finderWidthPx',220,520,300)}
+                  {numberField('فاصله داخلی','finderPaddingPx',8,48,18)}
+                  {numberField('گردی کادر','finderRadiusPx',0,40,8)}
+                  {numberField('اندازه عنوان','finderTitleFontSizePx',10,32,15)}
+                  {numberField('اندازه توضیح','finderTextFontSizePx',8,24,11)}
+                  {numberField('فونت برچسب فیلد','finderLabelFontSizePx',8,22,10)}
+                  {numberField('فونت مقدار فیلد','finderValueFontSizePx',8,26,11)}
+                  {numberField('فونت دکمه','finderButtonFontSizePx',8,24,11)}
+                  <label><span className="block text-[9px] font-bold mb-1">پس‌زمینه کادر</span><input type="color" value={form.finderBackgroundColor || '#ffffff'} onChange={e=>patch({finderBackgroundColor:e.target.value})} className="w-full h-10 p-1 border rounded-xl" /></label>
+                  <label><span className="block text-[9px] font-bold mb-1">رنگ متن</span><input type="color" value={form.finderTextColor || '#111827'} onChange={e=>patch({finderTextColor:e.target.value})} className="w-full h-10 p-1 border rounded-xl" /></label>
+                  <label><span className="block text-[9px] font-bold mb-1">پس‌زمینه فیلدها</span><input type="color" value={form.finderFieldBackgroundColor || '#fafafa'} onChange={e=>patch({finderFieldBackgroundColor:e.target.value})} className="w-full h-10 p-1 border rounded-xl" /></label>
+                  <label><span className="block text-[9px] font-bold mb-1">رنگ مقدار فیلدها</span><input type="color" value={form.finderFieldTextColor || '#222b35'} onChange={e=>patch({finderFieldTextColor:e.target.value})} className="w-full h-10 p-1 border rounded-xl" /></label>
+                  <label><span className="block text-[9px] font-bold mb-1">پس‌زمینه دکمه</span><input type="color" value={form.finderButtonBackgroundColor || '#f5a000'} onChange={e=>patch({finderButtonBackgroundColor:e.target.value})} className="w-full h-10 p-1 border rounded-xl" /></label>
+                  <label><span className="block text-[9px] font-bold mb-1">رنگ متن دکمه</span><input type="color" value={form.finderButtonTextColor || '#111827'} onChange={e=>patch({finderButtonTextColor:e.target.value})} className="w-full h-10 p-1 border rounded-xl" /></label>
+                  <label><span className="block text-[9px] font-bold mb-1">سمت کادر</span><select value={form.finderSide || 'left'} onChange={e=>patch({finderSide:e.target.value as PageSection['finderSide']})} className="w-full p-2 border rounded-lg bg-white text-xs"><option value="left">چپ</option><option value="right">راست</option></select></label>
+                </div>
+              </section>
+            )}
 
             <section className="bg-white rounded-2xl border border-neutral-200 p-4">
               <label className="flex items-center justify-between gap-3">
@@ -473,12 +521,12 @@ export const LiveSectionModal: React.FC<LiveSectionModalProps> = ({
                 <strong className="text-xs">آیتم‌های سکشن</strong>
                 <span className="block text-[8px] text-neutral-400 mt-0.5">{(form.items || []).length.toLocaleString('fa-IR')} آیتم</span>
               </div>
-              <button type="button" onClick={addItem} className="px-3 py-2 rounded-xl bg-blue-600 text-white text-[9px] font-black inline-flex items-center gap-1"><Plus className="w-3.5 h-3.5" /> آیتم جدید</button>
+              {!isDynamicSource && <button type="button" onClick={addItem} className="px-3 py-2 rounded-xl bg-blue-600 text-white text-[9px] font-black inline-flex items-center gap-1"><Plus className="w-3.5 h-3.5" /> آیتم جدید</button>}
             </div>
 
             {(form.contentSource && form.contentSource !== 'manual' && contentPolicy.kind !== 'manual') && (
               <div className="p-4 rounded-2xl border border-amber-200 bg-amber-50 text-[9px] leading-5 text-amber-900">
-                این بخش در حالت محتوای زنده است؛ آیتم‌ها از اطلاعات واقعی فروشگاه خوانده می‌شوند. برای ویرایش تک‌تک آیتم‌ها، منبع را روی «آیتم‌های دستی» قرار دهید.
+                این سکشن محتوای زنده دارد. اطلاعات هر آیتم از منبع اصلی فروشگاه می‌آید و ظاهر همه آیتم‌ها یک‌جا از تب «ظاهر» تنظیم می‌شود؛ بنابراین برای ۵۰ محصول لازم نیست ۵۰ بار تنظیمات ظاهری تکرار شود.
               </div>
             )}
 
@@ -508,28 +556,46 @@ export const LiveSectionModal: React.FC<LiveSectionModalProps> = ({
                   <input value={item.buttonText || ''} onChange={e => updateItem(item.id,{buttonText:e.target.value})} placeholder="متن دکمه" className="p-2 border rounded-lg text-[10px]" />
                 </div>
                 <LinkDestinationPicker label="مقصد این آیتم / دکمه" value={item.link || ''} onChange={value=>updateItem(item.id,{link:value})} />
-                <div className="grid grid-cols-3 gap-2">
-                  <label><span className="block text-[8px] font-bold mb-1">پس‌زمینه کارت</span><input type="color" value={item.backgroundColor || form.itemBackgroundColor || '#ffffff'} onChange={e=>updateItem(item.id,{backgroundColor:e.target.value})} className="w-full h-8 p-1 border rounded" /></label>
-                  <label><span className="block text-[8px] font-bold mb-1">رنگ عمومی متن</span><input type="color" value={item.textColor || form.itemTextColor || '#111827'} onChange={e=>updateItem(item.id,{textColor:e.target.value})} className="w-full h-8 p-1 border rounded" /></label>
-                  <label><span className="block text-[8px] font-bold mb-1">فونت عمومی</span><input type="number" min={8} max={60} value={item.fontSizePx || form.itemFontSizePx || 12} onChange={e=>updateItem(item.id,{fontSizePx:Number(e.target.value)})} className="w-full p-1.5 border rounded text-[9px]" /></label>
-                  <label><span className="block text-[8px] font-bold mb-1">رنگ عنوان</span><input type="color" value={item.titleColor || item.textColor || '#ffffff'} onChange={e=>updateItem(item.id,{titleColor:e.target.value})} className="w-full h-8 p-1 border rounded" /></label>
-                  <label><span className="block text-[8px] font-bold mb-1">رنگ زیرعنوان</span><input type="color" value={item.subtitleColor || '#e5e7eb'} onChange={e=>updateItem(item.id,{subtitleColor:e.target.value})} className="w-full h-8 p-1 border rounded" /></label>
-                  <label><span className="block text-[8px] font-bold mb-1">رنگ دکمه</span><input type="color" value={item.buttonBgColor || '#f59e0b'} onChange={e=>updateItem(item.id,{buttonBgColor:e.target.value})} className="w-full h-8 p-1 border rounded" /></label>
-                  <label><span className="block text-[8px] font-bold mb-1">متن دکمه</span><input type="color" value={item.buttonTextColor || '#111827'} onChange={e=>updateItem(item.id,{buttonTextColor:e.target.value})} className="w-full h-8 p-1 border rounded" /></label>
-                  <label><span className="block text-[8px] font-bold mb-1">رنگ برچسب</span><input type="color" value={item.badgeBgColor || '#16a34a'} onChange={e=>updateItem(item.id,{badgeBgColor:e.target.value})} className="w-full h-8 p-1 border rounded" /></label>
-                  <label><span className="block text-[8px] font-bold mb-1">متن برچسب</span><input type="color" value={item.badgeTextColor || '#ffffff'} onChange={e=>updateItem(item.id,{badgeTextColor:e.target.value})} className="w-full h-8 p-1 border rounded" /></label>
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <label><span className="block text-[8px] font-bold mb-1">گردی کارت</span><input type="number" min={0} max={200} value={item.borderRadiusPx ?? form.itemRadiusPx ?? 10} onChange={e=>updateItem(item.id,{borderRadiusPx:Number(e.target.value)})} className="w-full p-1.5 border rounded text-[9px]" /></label>
-                  <label><span className="block text-[8px] font-bold mb-1">Padding</span><input type="number" min={0} max={120} value={item.paddingPx ?? form.itemPaddingPx ?? 12} onChange={e=>updateItem(item.id,{paddingPx:Number(e.target.value)})} className="w-full p-1.5 border rounded text-[9px]" /></label>
-                  <label><span className="block text-[8px] font-bold mb-1">عرض تصویر</span><input type="number" min={16} max={1200} value={item.imageWidthPx ?? form.itemImageWidthPx ?? form.imageSizePx ?? 72} onChange={e=>updateItem(item.id,{imageWidthPx:Number(e.target.value)})} className="w-full p-1.5 border rounded text-[9px]" /></label>
-                  <label><span className="block text-[8px] font-bold mb-1">ارتفاع تصویر</span><input type="number" min={16} max={1200} value={item.imageHeightPx ?? form.itemImageHeightPx ?? form.imageSizePx ?? 72} onChange={e=>updateItem(item.id,{imageHeightPx:Number(e.target.value)})} className="w-full p-1.5 border rounded text-[9px]" /></label>
-                  <label><span className="block text-[8px] font-bold mb-1">عنوان px</span><input type="number" min={8} max={72} value={item.titleFontSizePx ?? form.itemTitleFontSizePx ?? 14} onChange={e=>updateItem(item.id,{titleFontSizePx:Number(e.target.value)})} className="w-full p-1.5 border rounded text-[9px]" /></label>
-                  <label><span className="block text-[8px] font-bold mb-1">متن px</span><input type="number" min={8} max={60} value={item.contentFontSizePx ?? form.itemContentFontSizePx ?? 11} onChange={e=>updateItem(item.id,{contentFontSizePx:Number(e.target.value)})} className="w-full p-1.5 border rounded text-[9px]" /></label>
-                  <label><span className="block text-[8px] font-bold mb-1">حداقل ارتفاع</span><input type="number" min={0} max={1200} value={item.minHeightPx ?? form.itemMinHeightPx ?? 0} onChange={e=>updateItem(item.id,{minHeightPx:Number(e.target.value)})} className="w-full p-1.5 border rounded text-[9px]" /></label>
-                  <label><span className="block text-[8px] font-bold mb-1">نمایش تصویر</span><select value={item.imageMode || (item.imageFit==='contain'?'contain':'cover')} onChange={e=>updateItem(item.id,{imageMode:e.target.value as PageSectionItem['imageMode']})} className="w-full p-1.5 border rounded text-[9px] bg-white"><option value="cover">پوشش کامل کادر</option><option value="contain">کامل بدون برش</option><option value="stretch">کشیده تا کل کادر</option><option value="original">اندازه اصلی</option><option value="repeat">تکرار کامل</option><option value="repeat-x">تکرار افقی</option><option value="repeat-y">تکرار عمودی</option></select></label>
-                  <label><span className="block text-[8px] font-bold mb-1">تراز متن</span><select value={item.textAlignment || item.textAlign || 'right'} onChange={e=>updateItem(item.id,{textAlignment:e.target.value as PageSectionItem['textAlignment']})} className="w-full p-1.5 border rounded text-[9px] bg-white"><option value="right">راست</option><option value="center">وسط</option><option value="left">چپ</option></select></label>
-                </div>
+                {isBannerSection ? (
+                  <>
+                    <div className="p-3 rounded-xl border border-blue-100 bg-blue-50/30 space-y-2">
+                      <strong className="block text-[9px] text-blue-800">ابعاد مستقل این بنر</strong>
+                      <div className="grid grid-cols-3 gap-2">
+                        <label><span className="block text-[8px] font-bold mb-1">عرض دسکتاپ ٪</span><input type="number" min={10} max={100} value={item.widthPercent ?? 100} onChange={e=>updateItem(item.id,{widthPercent:Number(e.target.value)})} className="w-full p-1.5 border rounded text-[9px]" /></label>
+                        <label><span className="block text-[8px] font-bold mb-1">عرض تبلت ٪</span><input type="number" min={10} max={100} value={item.tabletWidthPercent ?? item.widthPercent ?? 100} onChange={e=>updateItem(item.id,{tabletWidthPercent:Number(e.target.value)})} className="w-full p-1.5 border rounded text-[9px]" /></label>
+                        <label><span className="block text-[8px] font-bold mb-1">عرض موبایل ٪</span><input type="number" min={10} max={100} value={item.mobileWidthPercent ?? 100} onChange={e=>updateItem(item.id,{mobileWidthPercent:Number(e.target.value)})} className="w-full p-1.5 border rounded text-[9px]" /></label>
+                        <label><span className="block text-[8px] font-bold mb-1">ارتفاع دسکتاپ</span><input type="number" min={80} max={900} value={item.heightPx ?? item.minHeightPx ?? form.itemMinHeightPx ?? 178} onChange={e=>updateItem(item.id,{heightPx:Number(e.target.value)})} className="w-full p-1.5 border rounded text-[9px]" /></label>
+                        <label><span className="block text-[8px] font-bold mb-1">ارتفاع تبلت</span><input type="number" min={80} max={900} value={item.tabletHeightPx ?? item.heightPx ?? 178} onChange={e=>updateItem(item.id,{tabletHeightPx:Number(e.target.value)})} className="w-full p-1.5 border rounded text-[9px]" /></label>
+                        <label><span className="block text-[8px] font-bold mb-1">ارتفاع موبایل</span><input type="number" min={80} max={900} value={item.mobileHeightPx ?? item.tabletHeightPx ?? item.heightPx ?? 168} onChange={e=>updateItem(item.id,{mobileHeightPx:Number(e.target.value)})} className="w-full p-1.5 border rounded text-[9px]" /></label>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2">
+                      <label><span className="block text-[8px] font-bold mb-1">پس‌زمینه کارت</span><input type="color" value={item.backgroundColor || form.itemBackgroundColor || '#ffffff'} onChange={e=>updateItem(item.id,{backgroundColor:e.target.value})} className="w-full h-8 p-1 border rounded" /></label>
+                      <label><span className="block text-[8px] font-bold mb-1">رنگ عمومی متن</span><input type="color" value={item.textColor || form.itemTextColor || '#111827'} onChange={e=>updateItem(item.id,{textColor:e.target.value})} className="w-full h-8 p-1 border rounded" /></label>
+                      <label><span className="block text-[8px] font-bold mb-1">فونت عمومی</span><input type="number" min={8} max={60} value={item.fontSizePx || form.itemFontSizePx || 12} onChange={e=>updateItem(item.id,{fontSizePx:Number(e.target.value)})} className="w-full p-1.5 border rounded text-[9px]" /></label>
+                      <label><span className="block text-[8px] font-bold mb-1">رنگ عنوان</span><input type="color" value={item.titleColor || item.textColor || '#ffffff'} onChange={e=>updateItem(item.id,{titleColor:e.target.value})} className="w-full h-8 p-1 border rounded" /></label>
+                      <label><span className="block text-[8px] font-bold mb-1">رنگ زیرعنوان</span><input type="color" value={item.subtitleColor || '#e5e7eb'} onChange={e=>updateItem(item.id,{subtitleColor:e.target.value})} className="w-full h-8 p-1 border rounded" /></label>
+                      <label><span className="block text-[8px] font-bold mb-1">رنگ دکمه</span><input type="color" value={item.buttonBgColor || '#f59e0b'} onChange={e=>updateItem(item.id,{buttonBgColor:e.target.value})} className="w-full h-8 p-1 border rounded" /></label>
+                      <label><span className="block text-[8px] font-bold mb-1">متن دکمه</span><input type="color" value={item.buttonTextColor || '#111827'} onChange={e=>updateItem(item.id,{buttonTextColor:e.target.value})} className="w-full h-8 p-1 border rounded" /></label>
+                      <label><span className="block text-[8px] font-bold mb-1">رنگ برچسب</span><input type="color" value={item.badgeBgColor || '#16a34a'} onChange={e=>updateItem(item.id,{badgeBgColor:e.target.value})} className="w-full h-8 p-1 border rounded" /></label>
+                      <label><span className="block text-[8px] font-bold mb-1">متن برچسب</span><input type="color" value={item.badgeTextColor || '#ffffff'} onChange={e=>updateItem(item.id,{badgeTextColor:e.target.value})} className="w-full h-8 p-1 border rounded" /></label>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <label><span className="block text-[8px] font-bold mb-1">گردی کارت</span><input type="number" min={0} max={200} value={item.borderRadiusPx ?? form.itemRadiusPx ?? 10} onChange={e=>updateItem(item.id,{borderRadiusPx:Number(e.target.value)})} className="w-full p-1.5 border rounded text-[9px]" /></label>
+                      <label><span className="block text-[8px] font-bold mb-1">فاصله داخلی</span><input type="number" min={0} max={120} value={item.paddingPx ?? form.itemPaddingPx ?? 12} onChange={e=>updateItem(item.id,{paddingPx:Number(e.target.value)})} className="w-full p-1.5 border rounded text-[9px]" /></label>
+                      <label><span className="block text-[8px] font-bold mb-1">عرض تصویر</span><input type="number" min={16} max={1200} value={item.imageWidthPx ?? form.itemImageWidthPx ?? form.imageSizePx ?? 72} onChange={e=>updateItem(item.id,{imageWidthPx:Number(e.target.value)})} className="w-full p-1.5 border rounded text-[9px]" /></label>
+                      <label><span className="block text-[8px] font-bold mb-1">ارتفاع تصویر</span><input type="number" min={16} max={1200} value={item.imageHeightPx ?? form.itemImageHeightPx ?? form.imageSizePx ?? 72} onChange={e=>updateItem(item.id,{imageHeightPx:Number(e.target.value)})} className="w-full p-1.5 border rounded text-[9px]" /></label>
+                      <label><span className="block text-[8px] font-bold mb-1">عنوان px</span><input type="number" min={8} max={72} value={item.titleFontSizePx ?? form.itemTitleFontSizePx ?? 14} onChange={e=>updateItem(item.id,{titleFontSizePx:Number(e.target.value)})} className="w-full p-1.5 border rounded text-[9px]" /></label>
+                      <label><span className="block text-[8px] font-bold mb-1">متن px</span><input type="number" min={8} max={60} value={item.contentFontSizePx ?? form.itemContentFontSizePx ?? 11} onChange={e=>updateItem(item.id,{contentFontSizePx:Number(e.target.value)})} className="w-full p-1.5 border rounded text-[9px]" /></label>
+                      <label><span className="block text-[8px] font-bold mb-1">نمایش تصویر</span><select value={item.imageMode || (item.imageFit==='contain'?'contain':'cover')} onChange={e=>updateItem(item.id,{imageMode:e.target.value as PageSectionItem['imageMode']})} className="w-full p-1.5 border rounded text-[9px] bg-white"><option value="cover">پوشش کامل کادر</option><option value="contain">کامل بدون برش</option><option value="stretch">کشیده تا کل کادر</option><option value="original">اندازه اصلی</option><option value="repeat">تکرار کامل</option><option value="repeat-x">تکرار افقی</option><option value="repeat-y">تکرار عمودی</option></select></label>
+                      <label><span className="block text-[8px] font-bold mb-1">تراز متن</span><select value={item.textAlignment || item.textAlign || 'right'} onChange={e=>updateItem(item.id,{textAlignment:e.target.value as PageSectionItem['textAlignment']})} className="w-full p-1.5 border rounded text-[9px] bg-white"><option value="right">راست</option><option value="center">وسط</option><option value="left">چپ</option></select></label>
+                    </div>
+                  </>
+                ) : (
+                  <div className="p-3 rounded-xl border border-neutral-200 bg-neutral-50 text-[9px] leading-5 text-neutral-600">
+                    ظاهر این آیتم از تنظیمات مشترک تب «ظاهر» پیروی می‌کند. فقط محتوا، تصویر و لینک اینجا تغییر می‌کند.
+                  </div>
+                )}
                 <ImageUploadInput label="تصویر / بنر" value={item.imageUrl || ''} onChange={url => updateItem(item.id,{imageUrl:url})} aspectRatio="banner" presetCategory="banners" />
                 <textarea rows={2} value={item.content || ''} onChange={e => updateItem(item.id,{content:e.target.value})} placeholder="متن آیتم" className="w-full p-2 border rounded-lg text-[10px]" />
               </article>

@@ -58,7 +58,7 @@ export const AdminArticlesTab: React.FC = () => {
     content: '',
     author: 'مهندس فنی چین‌پارت',
     readTimeMinutes: 5,
-    imageUrl: 'https://images.unsplash.com/photo-1486006920555-c77dce18193b?w=800&auto=format&fit=crop&q=80',
+    imageUrl: '',
     relatedModelIds: [],
     relatedProductIds: [],
     faq: []
@@ -71,7 +71,7 @@ export const AdminArticlesTab: React.FC = () => {
     name: '',
     slug: '',
     description: '',
-    imageUrl: 'https://images.unsplash.com/photo-1486006920555-c77dce18193b?w=800&auto=format&fit=crop&q=80',
+    imageUrl: '',
     icon: 'Wrench'
   });
 
@@ -93,12 +93,10 @@ export const AdminArticlesTab: React.FC = () => {
       content: '',
       author: 'تیم فنی چین‌پارت',
       readTimeMinutes: 6,
-      imageUrl: 'https://images.unsplash.com/photo-1486006920555-c77dce18193b?w=800&auto=format&fit=crop&q=80',
-      relatedModelIds: [models[0]?.id || 'kmc-j7'],
-      relatedProductIds: [products[0]?.id || 'prod-water-pump-kmc-j7'],
-      faq: [
-        { q: 'هر چند وقت یکبار باید این قطعه تعویض شود؟', a: 'طبق دفترچه سرویس دوره‌ای هر ۴۰ تا ۵۰ هزار کیلومتر توصیه می‌شود.' }
-      ]
+      imageUrl: '',
+      relatedModelIds: [],
+      relatedProductIds: [],
+      faq: []
     });
     setIsModalOpen(true);
   };
@@ -143,7 +141,7 @@ export const AdminArticlesTab: React.FC = () => {
         author: articleForm.author || 'واحد فنی چین‌پارت',
         date: new Date().toLocaleDateString('fa-IR'),
         readTimeMinutes: Number(articleForm.readTimeMinutes) || 5,
-        imageUrl: articleForm.imageUrl || 'https://images.unsplash.com/photo-1486006920555-c77dce18193b?w=800&auto=format&fit=crop&q=80',
+        imageUrl: articleForm.imageUrl || '',
         relatedModelIds: articleForm.relatedModelIds || [],
         relatedProductIds: articleForm.relatedProductIds || [],
         faq: articleForm.faq || [],
@@ -167,7 +165,7 @@ export const AdminArticlesTab: React.FC = () => {
       name: '',
       slug: '',
       description: '',
-      imageUrl: 'https://images.unsplash.com/photo-1486006920555-c77dce18193b?w=800&auto=format&fit=crop&q=80',
+      imageUrl: '',
       icon: 'Wrench'
     });
     setIsCatModalOpen(true);
@@ -206,7 +204,7 @@ export const AdminArticlesTab: React.FC = () => {
         name: catForm.name,
         slug: generatedSlug || `category-${Date.now()}`,
         description: catForm.description || '',
-        imageUrl: catForm.imageUrl || 'https://images.unsplash.com/photo-1486006920555-c77dce18193b?w=800&auto=format&fit=crop&q=80',
+        imageUrl: catForm.imageUrl || '',
         icon: catForm.icon || 'Wrench',
         articleCount: 0
       };

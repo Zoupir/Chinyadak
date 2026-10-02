@@ -4,32 +4,7 @@ import { sanitizeEmbedHtml } from '../../utils/sanitizeHtml';
 import { FooterColumn, FooterFeatureItem, FooterLink, FooterBadgeItem } from '../../types';
 import { ImageUploadInput } from '../common/ImageUploadInput';
 import { LinkDestinationPicker } from '../common/LinkDestinationPicker';
-import { 
-  ShieldCheck, 
-  Plus, 
-  Trash2, 
-  Edit3, 
-  Check, 
-  X, 
-  ExternalLink, 
-  Layers, 
-  Code, 
-  Eye, 
-  Columns, 
-  Sliders, 
-  HelpCircle,
-  Truck,
-  Clock,
-  Headphones,
-  Wrench,
-  Zap,
-  Package,
-  Globe,
-  CheckCircle,
-  ChevronDown,
-  ArrowUp,
-  ArrowDown
-} from 'lucide-react';
+import { ShieldCheck, Plus, Trash2, Edit3, Check, X, Code, Columns, Sliders, Truck, Clock, Headphones, Wrench, Zap, Package, Globe, CheckCircle, ArrowUp, ArrowDown } from 'lucide-react';
 
 export const AdminFooterTab: React.FC = () => {
   const { settings, updateSettings, showToast, categories, pages } = useStore();

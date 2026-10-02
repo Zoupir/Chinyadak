@@ -2,7 +2,7 @@ import React from 'react';
 import { useStore } from '../../context/StoreContext';
 import { ProductCard } from '../product/ProductCard';
 import { RichTextContent } from '../common/RichTextContent';
-import { Clock, User, ArrowRight, Share2, HelpCircle, BookOpen, Layers } from 'lucide-react';
+import { Clock, User, HelpCircle, Layers } from 'lucide-react';
 
 interface ArticleDetailViewProps {
   articleId: string;

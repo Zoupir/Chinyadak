@@ -1815,7 +1815,7 @@ export const INITIAL_SETTINGS = {
   footerBadges: [],
   footerCustomHtml: '',
   footerCopyrightText: 'تمامی حقوق مادی و معنوی برای فروشگاه اینترنتی فروشگاه محفوظ است. طراحی تخصصی مخصوص صنعت خودروهای چینی.',
-  footerBottomAlign: 'center',
+  footerBottomAlign: 'center' as const,
   footerBottomLinks: [
     { id: 'footer-bottom-terms', title: 'قوانین', url: 'page:terms' },
     { id: 'footer-bottom-privacy', title: 'حریم خصوصی', url: 'page:privacy' },

@@ -696,6 +696,42 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }, 3800);
   };
 
+  type OrderPageResponse = {
+    orders: Order[];
+    pagination?: {
+      page: number;
+      limit: number;
+      total: number;
+      totalPages: number;
+      hasMore: boolean;
+    };
+  };
+
+  const hydrateRemainingOrderPages = async (
+    endpoint: string,
+    firstPage: Order[],
+    totalPages: number,
+    pageSize: number,
+    cancelled: () => boolean
+  ) => {
+    if (totalPages <= 1) return;
+    const byId = new Map(firstPage.map(order => [order.id, order]));
+    for (let page = 2; page <= totalPages; page += 1) {
+      if (cancelled()) return;
+      try {
+        const separator = endpoint.includes('?') ? '&' : '?';
+        const pageData = await apiRequest<OrderPageResponse>(
+          `${endpoint}${separator}page=${page}&limit=${pageSize}`
+        );
+        pageData.orders.forEach(order => byId.set(order.id, order));
+        if (!cancelled()) setOrders(Array.from(byId.values()));
+      } catch (error) {
+        console.error(`Order page ${page} load failed:`, error);
+        return;
+      }
+    }
+  };
+
   const loadAdminData = async (admin: AdminUser, cancelled = false) => {
     const canOrders = admin.role === 'super_admin' || admin.permissions?.canManageOrders;
     const canAdmins = admin.role === 'super_admin' || admin.permissions?.canManageAdmins;
@@ -705,8 +741,18 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     if (canOrders) {
       requests.push(
-        apiRequest<{ orders: Order[] }>('/api/orders')
-          .then(result => { if (!cancelled) setOrders(result.orders); })
+        apiRequest<OrderPageResponse>('/api/orders?page=1&limit=100')
+          .then(result => {
+            if (cancelled) return;
+            setOrders(result.orders);
+            void hydrateRemainingOrderPages(
+              '/api/orders',
+              result.orders,
+              Math.max(1, Number(result.pagination?.totalPages || 1)),
+              100,
+              () => cancelled
+            );
+          })
           .catch(error => console.error('Admin orders load failed:', error))
       );
       requests.push(
@@ -755,8 +801,18 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const loadCustomerPrivateData = async (cancelled = false) => {
     await Promise.allSettled([
-      apiRequest<{ orders: Order[] }>('/api/orders/mine')
-        .then(result => { if (!cancelled) setOrders(result.orders); }),
+      apiRequest<OrderPageResponse>('/api/orders/mine?page=1&limit=50')
+        .then(result => {
+          if (cancelled) return;
+          setOrders(result.orders);
+          void hydrateRemainingOrderPages(
+            '/api/orders/mine',
+            result.orders,
+            Math.max(1, Number(result.pagination?.totalPages || 1)),
+            50,
+            () => cancelled
+          );
+        }),
       apiRequest<{ transactions: LoyaltyTransaction[] }>('/api/auth/customer/loyalty')
         .then(result => { if (!cancelled) setLoyaltyTransactions(result.transactions); }),
       apiRequest<{ requests: PartRequest[] }>('/api/engagement/part-requests/mine')

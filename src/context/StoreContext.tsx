@@ -919,7 +919,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
       const byId = new Map(firstPage.map(product => [product.id, product]));
       for (let page = 2; page <= totalPages; page += 1) {
-        if (isCancelled()) return;
+        if (cancelled) return;
         try {
           const pageData = await apiRequest<ProductPageResponse>(
             `/api/catalog/products?page=${page}&limit=120`
@@ -947,7 +947,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       }>('/api/cms/bundle')
     ])
       .then(([productData, categoryData, vehicleData, cmsData]) => {
-        if (isCancelled()) return;
+        if (cancelled) return;
         setProducts(productData.products);
         setCategories(categoryData.categories);
         setBrands(vehicleData.brands);
@@ -968,7 +968,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         console.error('Public store data load failed:', error);
         if (import.meta.env.DEV) {
           const mock = await import('../data/mockData');
-          if (isCancelled()) return;
+          if (cancelled) return;
           setProducts(mock.PRODUCTS);
           setCategories(mock.CATEGORIES);
           setBrands(mock.BRANDS);
@@ -997,7 +997,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     apiRequest<{ role: 'customer' | 'admin'; customer?: CustomerUser; admin?: AdminUser }>('/api/auth/me')
       .then(data => {
-        if (isCancelled()) return;
+        if (cancelled) return;
         if (data.role === 'customer' && data.customer) {
           setCurrentCustomer(data.customer);
           setCustomers(prev => {

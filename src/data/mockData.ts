@@ -1,4 +1,4 @@
-import { CarBrand, VehicleModel, Category, Product, Article, ArticleCategory, SliderItem, AdminUser, SitePage, PageSection } from '../types';
+import { CarBrand, VehicleModel, Category, Product, Article, ArticleCategory, SliderItem, AdminUser, SitePage } from '../types';
 
 export const BRANDS: CarBrand[] = [
   {

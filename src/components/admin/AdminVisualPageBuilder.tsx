@@ -1,24 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import {
-  AlignCenter,
-  AlignLeft,
-  AlignRight,
-  ArrowDown,
-  ArrowUp,
-  Columns3,
-  CopyPlus,
-  Eye,
-  EyeOff,
-  ExternalLink,
-  Laptop,
-  LayoutTemplate,
-  Monitor,
-  Plus,
-  Save,
-  Smartphone,
-  Tablet,
-  Trash2
-} from 'lucide-react';
+import { AlignCenter, AlignLeft, AlignRight, ArrowDown, ArrowUp, CopyPlus, Eye, EyeOff, ExternalLink, LayoutTemplate, Monitor, Plus, Save, Smartphone, Tablet, Trash2 } from 'lucide-react';
 import { useStore } from '../../context/StoreContext';
 import type { PageSection, PageSectionItem, SeoEntityDraft, SitePage } from '../../types';
 import { ImageUploadInput } from '../common/ImageUploadInput';
@@ -126,7 +107,6 @@ export const AdminVisualPageBuilder: React.FC<{onNavigate?:(view:string,param?:s
     if (/promo|banner|testimonial|service-strip|parts-brands|shipping|hero/i.test(key)) return { kind:'manual' as const, source:'manual' as const, title:'آیتم‌های دستی و قابل ویرایش' };
     return { kind:'flexible' as const, source:(section.contentSource || 'manual') as NonNullable<PageSection['contentSource']>, title:'منبع محتوا' };
   };
-
 
   const ensureRepeaterSlots=(count:number,current:PageSection|null=draft)=>{
     if(!current)return[];

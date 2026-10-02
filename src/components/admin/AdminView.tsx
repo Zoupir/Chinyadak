@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import packageJson from '../../../package.json';
 import { useStore } from '../../context/StoreContext';
 import { Product, Category, CustomerUser, PaymentGatewayConfig, OrderStatus, AdminRole, VehicleFitment } from '../../types';
 import { formatToman, getGradeInfo } from '../../utils/formatters';
@@ -776,7 +777,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
                 کنترل پنل سازمانی {settings.siteTitle || 'فروشگاه'}
               </span>
               <span className="inline-block text-[9px] bg-red-600/90 text-white font-bold px-2 py-0.2 rounded-full mr-2">
-                نسخه سایت 30.1.1
+                نسخه سایت {packageJson.version}
               </span>
             </div>
           </div>

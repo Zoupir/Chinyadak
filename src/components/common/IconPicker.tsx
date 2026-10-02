@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Check, Copy, Search, X } from 'lucide-react';
+import { Check, Search, X } from 'lucide-react';
 import { ICON_CATALOG, IconRenderer } from './IconRenderer';
 
 interface IconPickerProps {

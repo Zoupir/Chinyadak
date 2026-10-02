@@ -1,21 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useStore } from '../../context/StoreContext';
-import { CarBrand, VehicleModel } from '../../types';
-import { 
-  Car, 
-  Search, 
-  ShieldCheck, 
-  Wrench, 
-  Zap, 
-  CheckCircle2, 
-  ChevronRight,
-  ChevronLeft,
-  Sparkles,
-  ArrowLeft,
-  Calendar,
-  Layers,
-  Truck
-} from 'lucide-react';
+
+import { Car, Search, Wrench, CheckCircle2, ChevronRight, ChevronLeft, Sparkles, ArrowLeft, Calendar, Truck } from 'lucide-react';
 
 interface HeroSectionProps {
   onFindParts: () => void;

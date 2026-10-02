@@ -45,8 +45,8 @@ const defaultSection = (order:number):PageSection => ({
   tabletColumns:2,
   mobileColumns:1,
   fullWidth:false,
-  widthPercent:95,
-  tabletWidthPercent:96,
+  widthPercent:100,
+  tabletWidthPercent:100,
   mobileWidthPercent:100,
   maxWidthPx:1280,
   backgroundColor:'#ffffff',
@@ -154,10 +154,9 @@ export const AdminVisualPageBuilder: React.FC<{onNavigate?:(view:string,param?:s
     setDraft({...draft,desktopColumns:count,items:ensureRepeaterSlots(count,draft)});
   };
 
-  const saveDraft=()=>{
+  const saveDraft=async()=>{
     if(!draft) return;
-    updateSection(page.slug,draft);
-    showToast('سکشن ذخیره شد.');
+    await updateSection(page.slug,draft);
   };
 
   const addNewSection=()=>{

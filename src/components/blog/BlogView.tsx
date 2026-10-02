@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useStore } from '../../context/StoreContext';
-import { BookOpen, Clock, User, ArrowLeft, Layers, Sparkles, Filter, Wrench, ShieldCheck } from 'lucide-react';
+import { BookOpen, Clock, User, ArrowLeft } from 'lucide-react';
 
 interface BlogViewProps {
   onNavigate: (view: string, param?: string) => void;

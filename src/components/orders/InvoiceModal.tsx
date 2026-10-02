@@ -1,7 +1,7 @@
 import React from 'react';
 import { Order, SiteSettings } from '../../types';
 import { formatToman } from '../../utils/formatters';
-import { Printer, X, Download, ShieldCheck, CheckCircle2, Wrench, Building2, User, Phone, MapPin, Hash, Calendar, CreditCard, Sparkles, Coins } from 'lucide-react';
+import { Printer, X, ShieldCheck, Wrench, Building2, User, CreditCard, Sparkles, Coins } from 'lucide-react';
 
 interface InvoiceModalProps {
   order: Order | null;
@@ -12,7 +12,7 @@ interface InvoiceModalProps {
 
 // Convert numbers to Persian text words (simplified for currency totals)
 function numberToPersianWords(amount: number): string {
-  if (amount <= 0) return 'صفر ریال';
+  if (amount <= 0) return 'صفر تومان';
   const units = ['', 'یک', 'دو', 'سه', 'چهار', 'پنج', 'شش', 'هفت', 'هشت', 'نه'];
   const teens = ['ده', 'یازده', 'دوازده', 'سیزده', 'چهارده', 'پانزده', 'شانزده', 'هفده', 'هجده', 'نوزده'];
   const tens = ['', 'ده', 'بیست', 'سی', 'چهل', 'پنجاه', 'شصت', 'هفتاد', 'هشتاد', 'نود'];
@@ -30,7 +30,7 @@ function numberToPersianWords(amount: number): string {
   if (th > 0) parts.push(`${th} هزار`);
   if (rem2 > 0) parts.push(`${rem2}`);
 
-  return (parts.length > 0 ? parts.join(' و ') : `${amount}`) + ' ریال';
+  return (parts.length > 0 ? parts.join(' و ') : `${amount}`) + ' تومان';
 }
 
 export const InvoiceModal: React.FC<InvoiceModalProps> = ({ order, settings, onClose, onOpenDedicatedPage }) => {
@@ -139,7 +139,7 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({ order, settings, onC
             {/* Official Meta Serial & Date */}
             <div className="text-left space-y-1 text-[11px] border-r-2 sm:border-r border-neutral-300 pr-4 sm:pr-6">
               <div className="flex items-center justify-between sm:justify-start gap-3">
-                <span className="text-neutral-500">شماره سریال فاکتور:</span>
+                <span className="text-neutral-500">شماره ستومان فاکتور:</span>
                 <strong className="font-mono text-red-600 text-sm font-black">{order.orderNumber}</strong>
               </div>
               <div className="flex items-center justify-between sm:justify-start gap-3">
@@ -231,9 +231,9 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({ order, settings, onC
                   <th className="p-2.5">شرح کالا یا قطعه یدکی</th>
                   <th className="p-2.5 text-center w-20">گرید کیفی</th>
                   <th className="p-2.5 text-center w-14">تعداد</th>
-                  <th className="p-2.5 text-left w-28">مبلغ واحد (ریال)</th>
+                  <th className="p-2.5 text-left w-28">مبلغ واحد (تومان)</th>
                   <th className="p-2.5 text-left w-24">تخفیف</th>
-                  <th className="p-2.5 text-left w-32">مبلغ کل (ریال)</th>
+                  <th className="p-2.5 text-left w-32">مبلغ کل (تومان)</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-neutral-200">
@@ -320,7 +320,7 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({ order, settings, onC
               </div>
               <div className="p-3 flex justify-between items-center bg-white">
                 <span className="text-neutral-600">مالیات بر ارزش افزوده و عوارض:</span>
-                <span className="font-mono font-bold text-neutral-500">۰ ریال (معاف)</span>
+                <span className="font-mono font-bold text-neutral-500">۰ تومان (معاف)</span>
               </div>
               <div className="p-3.5 flex justify-between items-center bg-neutral-900 text-white font-black text-sm">
                 <span>مبلغ نهایی قابل پرداخت:</span>

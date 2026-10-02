@@ -1,17 +1,6 @@
 import React, { useState } from 'react';
 import { useStore } from '../../context/StoreContext';
-import { 
-  Wrench, 
-  Car, 
-  Send, 
-  ShieldCheck, 
-  Upload, 
-  CheckCircle2, 
-  Info,
-  Clock,
-  Sparkles,
-  PhoneCall
-} from 'lucide-react';
+import { Send, Upload, CheckCircle2, Clock, Sparkles, PhoneCall } from 'lucide-react';
 
 interface PartRequestViewProps {
   initialQuery?: string;

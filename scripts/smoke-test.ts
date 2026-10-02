@@ -188,6 +188,7 @@ const run = async () => {
 
   // Public engagement capture.
   const customerPhone = '09120000001';
+  const customerPassword = `CI-${customerPhone}-Aa1!`;
   const partRequest = await json<{ request: any }>('/api/engagement/part-requests', {
     method: 'POST',
     body: JSON.stringify({
@@ -220,7 +221,7 @@ const run = async () => {
       firstName: 'کاربر',
       lastName: 'تست',
       phone: customerPhone,
-      password: 'CI-Customer-Password-123!',
+      password: customerPassword,
       type: 'retail',
       vehicle: 'KMC J7'
     })
@@ -231,6 +232,18 @@ const run = async () => {
     headers: cookieHeaders(customerCookie)
   });
   assert(mine.data.requests.some(item => item.id === partRequest.data.request.id));
+
+  // A normal customer login must issue a versioned session accepted by /auth/me.
+  const customerLogin = await json<{ customer: any }>('/api/auth/customer/login', {
+    method: 'POST',
+    body: JSON.stringify({ phone: customerPhone, password: customerPassword })
+  });
+  const customerLoginCookie = cookieFrom(customerLogin.response);
+  const customerMe = await json<{ role: string; customer: any }>('/api/auth/me', {
+    headers: cookieHeaders(customerLoginCookie)
+  });
+  assert.equal(customerMe.data.role, 'customer');
+  assert.equal(customerMe.data.customer.phone, customerPhone);
 
   // Order creation is recalculated by the server and must be trackable only with phone + order number.
   const orderCreated = await json<{ order: any }>('/api/orders', {

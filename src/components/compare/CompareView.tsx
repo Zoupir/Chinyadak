@@ -1,7 +1,7 @@
 import React from 'react';
 import { useStore } from '../../context/StoreContext';
 import { formatToman, getGradeInfo } from '../../utils/formatters';
-import { ArrowRightLeft, X, ShoppingBag, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { ArrowRightLeft, X, ShoppingBag } from 'lucide-react';
 
 interface CompareViewProps {
   onNavigate: (view: string, param?: string) => void;

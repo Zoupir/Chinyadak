@@ -12,6 +12,8 @@ import {
   type ResultSetHeader,
   type RowDataPacket
 } from '../db';
+import { getCommerceSettings, resolveShipping } from '../commerce-settings';
+import { issuePaymentToken } from '../payment-token';
 
 interface ProductPriceRow extends RowDataPacket {
   id: string;
@@ -21,6 +23,7 @@ interface ProductPriceRow extends RowDataPacket {
   price: number | string;
   discount_price: number | string | null;
   stock: number;
+  reserved_stock: number;
   data_json: any;
 }
 
@@ -55,6 +58,37 @@ interface OrderItemRow extends RowDataPacket {
   metadata_json: any;
 }
 
+const ORDER_COLUMNS = [
+  'id',
+  'order_number',
+  'customer_id',
+  'status',
+  'customer_snapshot',
+  'shipping_snapshot',
+  'payment_method',
+  'subtotal',
+  'discount_amount',
+  'shipping_fee',
+  'total',
+  'payment_status',
+  'payment_reference',
+  'paid_at',
+  'tracking_code',
+  'created_at'
+].join(', ');
+
+const ORDER_ITEM_COLUMNS = [
+  'order_id',
+  'product_id',
+  'sku',
+  'product_name',
+  'oem_number',
+  'unit_price',
+  'quantity',
+  'line_total',
+  'metadata_json'
+].join(', ');
+
 const parseJson = <T>(value: unknown, fallback: T): T => {
   if (value == null) return fallback;
   if (typeof value === 'object') return value as T;
@@ -86,16 +120,12 @@ const normalizePhone = (input: unknown): string => {
   return value;
 };
 
-const shippingById = (id: string) => {
-  switch (id) {
-    case 'express':
-      return { id: 'express', title: 'پیک موتوری ۲ ساعته', cost: 120000, estimatedDelivery: '۲ ساعت کاری' };
-    case 'tipax':
-      return { id: 'tipax', title: 'تیپاکس اکسپرس', cost: 110000, estimatedDelivery: '۲۴ الی ۴۸ ساعت' };
-    default:
-      return { id: 'post', title: 'پست پیشتاز بیمه‌شده', cost: 85000, estimatedDelivery: '۲۴ الی ۴۸ ساعت' };
-  }
-};
+const fallbackShippingSnapshot = () => ({
+  id: 'post',
+  title: 'پست پیشتاز بیمه‌شده',
+  cost: 0,
+  estimatedDelivery: '۲۴ الی ۴۸ ساعت'
+});
 
 const paymentTitle = (id: string) => {
   if (id === 'mellat') return 'به‌پرداخت بانک ملت';
@@ -108,7 +138,7 @@ const createOrderNumber = (): string =>
 
 const orderDto = (row: OrderRow, items: OrderItemRow[]) => {
   const customer = parseJson<any>(row.customer_snapshot, {});
-  const shippingMethod = parseJson<any>(row.shipping_snapshot, shippingById('post'));
+  const shippingMethod = parseJson<any>(row.shipping_snapshot, fallbackShippingSnapshot());
   return {
     id: row.id,
     orderNumber: row.order_number,
@@ -151,16 +181,30 @@ const orderDto = (row: OrderRow, items: OrderItemRow[]) => {
   };
 };
 
-const fetchOrdersByWhere = async (whereSql: string, params: any[]) => {
+const fetchOrdersByWhere = async (
+  whereSql: string,
+  params: unknown[],
+  limit = 100,
+  offset = 0
+) => {
+  const safeLimit = Math.max(1, Math.min(200, Math.floor(limit)));
+  const safeOffset = Math.max(0, Math.floor(offset));
   const [rows] = await pool.query<OrderRow[]>(
-    `SELECT * FROM orders ${whereSql} ORDER BY created_at DESC LIMIT 500`,
-    params
+    `SELECT ${ORDER_COLUMNS}
+     FROM orders
+     ${whereSql}
+     ORDER BY created_at DESC
+     LIMIT ? OFFSET ?`,
+    [...params, safeLimit, safeOffset]
   );
   if (!rows.length) return [];
   const ids = rows.map(row => row.id);
   const placeholders = ids.map(() => '?').join(',');
   const [itemRows] = await pool.query<OrderItemRow[]>(
-    `SELECT * FROM order_items WHERE order_id IN (${placeholders}) ORDER BY id ASC`,
+    `SELECT ${ORDER_ITEM_COLUMNS}
+     FROM order_items
+     WHERE order_id IN (${placeholders})
+     ORDER BY id ASC`,
     ids
   );
   const grouped = new Map<string, OrderItemRow[]>();
@@ -185,7 +229,7 @@ ordersRouter.post('/', async (req: AuthenticatedRequest, res) => {
   const address = String(customerInput.address || '').trim();
   const notes = String(customerInput.notes || '').trim();
   const requestedItems = Array.isArray(req.body?.items) ? req.body.items : [];
-  const shipping = shippingById(String(req.body?.shippingMethodId || 'post'));
+  const shippingMethodId = String(req.body?.shippingMethodId || 'post');
   const paymentMethod = String(req.body?.paymentMethodId || 'saman');
 
   if (!firstName || !lastName || !/^09\d{9}$/.test(phone) || !address) {
@@ -199,9 +243,9 @@ ordersRouter.post('/', async (req: AuthenticatedRequest, res) => {
 
   const compactItems = requestedItems
     .map((item: any) => ({
-      productId: String(item.productId || ''),
+      productId: String(item.productId || '').trim(),
       quantity: Math.max(1, Math.min(100, Math.floor(Number(item.quantity || 1)))),
-      vehicleInfo: item.vehicleInfo ? String(item.vehicleInfo) : ''
+      vehicleInfo: item.vehicleInfo ? String(item.vehicleInfo).slice(0, 255) : ''
     }))
     .filter((item: any) => item.productId);
 
@@ -210,10 +254,28 @@ ordersRouter.post('/', async (req: AuthenticatedRequest, res) => {
     return;
   }
 
-  const productIds = [...new Set(compactItems.map((item: any) => item.productId))];
+  // Collapse duplicate product lines before stock validation and reservation.
+  // This prevents two lines for the same SKU from bypassing per-line stock checks.
+  const aggregatedByProduct = new Map<string, { productId: string; quantity: number; vehicleInfo: string }>();
+  for (const item of compactItems) {
+    const existing = aggregatedByProduct.get(item.productId);
+    if (existing) {
+      existing.quantity += item.quantity;
+      if (!existing.vehicleInfo && item.vehicleInfo) existing.vehicleInfo = item.vehicleInfo;
+    } else {
+      aggregatedByProduct.set(item.productId, { ...item });
+    }
+  }
+  const normalizedRequestItems = Array.from(aggregatedByProduct.values());
+  if (normalizedRequestItems.some(item => item.quantity > 100)) {
+    res.status(400).json({ error: 'ORDER_ITEM_QUANTITY_INVALID' });
+    return;
+  }
+
+  const productIds = normalizedRequestItems.map(item => item.productId);
   const placeholders = productIds.map(() => '?').join(',');
   const [productRows] = await pool.query<ProductPriceRow[]>(
-    `SELECT id, sku, name_fa, oem_number, price, discount_price, stock, data_json
+    `SELECT id, sku, name_fa, oem_number, price, discount_price, stock, reserved_stock, data_json
      FROM products
      WHERE status = 'active' AND id IN (${placeholders})`,
     productIds
@@ -238,13 +300,14 @@ ordersRouter.post('/', async (req: AuthenticatedRequest, res) => {
     vehicleInfo?: string;
   }> = [];
 
-  for (const item of compactItems) {
+  for (const item of normalizedRequestItems) {
     const row = productMap.get(item.productId)!;
-    if (row.stock < item.quantity) {
+    const availableStock = Math.max(0, Number(row.stock) - Number(row.reserved_stock || 0));
+    if (availableStock < item.quantity) {
       res.status(409).json({
         error: 'INSUFFICIENT_STOCK',
         productId: row.id,
-        available: row.stock
+        available: availableStock
       });
       return;
     }
@@ -265,16 +328,23 @@ ordersRouter.post('/', async (req: AuthenticatedRequest, res) => {
     });
   }
 
-  // Coupons and loyalty redemption will be validated server-side in their own modules.
-  // Until then, client-provided discounts are intentionally ignored.
+  const optionalSession = await getOptionalSession(req);
+  const customerId =
+    optionalSession?.role === 'customer' ? optionalSession.sub : null;
+
+  const commerceSettings = await getCommerceSettings();
+  if (!customerId && !commerceSettings.enableGuestCheckout) {
+    res.status(403).json({ error: 'GUEST_CHECKOUT_DISABLED' });
+    return;
+  }
+  const shipping = resolveShipping(shippingMethodId, subtotal, commerceSettings);
+
+  // Coupons and loyalty redemption are intentionally ignored until their
+  // server-side validation modules are enabled. Never trust client totals.
   const discountAmount = 0;
   const total = Math.max(0, subtotal - discountAmount + shipping.cost);
   const orderId = randomUUID();
   const orderNumber = createOrderNumber();
-
-  const optionalSession = getOptionalSession(req);
-  const customerId =
-    optionalSession?.role === 'customer' ? optionalSession.sub : null;
 
   const customerSnapshot = {
     firstName,
@@ -332,7 +402,10 @@ ordersRouter.post('/', async (req: AuthenticatedRequest, res) => {
   });
 
   const created = await fetchOrdersByWhere('WHERE id = ?', [orderId]);
-  res.status(201).json({ order: created[0] });
+  res.status(201).json({
+    order: created[0],
+    paymentToken: issuePaymentToken(orderId, orderNumber)
+  });
 });
 
 ordersRouter.post('/track', async (req, res) => {
@@ -352,7 +425,10 @@ ordersRouter.post('/track', async (req, res) => {
     res.status(404).json({ error: 'ORDER_NOT_FOUND' });
     return;
   }
-  res.json({ order: orders[0] });
+  res.json({
+    order: orders[0],
+    paymentToken: issuePaymentToken(orders[0].id, orders[0].orderNumber)
+  });
 });
 
 ordersRouter.get('/mine', authenticate, async (req: AuthenticatedRequest, res) => {
@@ -360,13 +436,49 @@ ordersRouter.get('/mine', authenticate, async (req: AuthenticatedRequest, res) =
     res.status(403).json({ error: 'CUSTOMER_REQUIRED' });
     return;
   }
-  const orders = await fetchOrdersByWhere('WHERE customer_id = ?', [req.auth.sub]);
-  res.json({ orders });
+  const page = Math.max(1, Math.floor(Number(req.query.page || 1)));
+  const limit = Math.max(1, Math.min(100, Math.floor(Number(req.query.limit || 50))));
+  const offset = (page - 1) * limit;
+
+  const [countRows] = await pool.query<Array<RowDataPacket & { total: number }>>(
+    'SELECT COUNT(*) AS total FROM orders WHERE customer_id = ?',
+    [req.auth.sub]
+  );
+  const total = Number(countRows[0]?.total || 0);
+  const orders = await fetchOrdersByWhere('WHERE customer_id = ?', [req.auth.sub], limit, offset);
+  res.json({
+    orders,
+    pagination: {
+      page,
+      limit,
+      total,
+      totalPages: Math.max(1, Math.ceil(total / limit)),
+      hasMore: offset + orders.length < total
+    }
+  });
 });
 
-ordersRouter.get('/', requireAdminPermission('canManageOrders'), async (_req, res) => {
-  const orders = await fetchOrdersByWhere('', []);
-  res.json({ orders });
+ordersRouter.get('/', requireAdminPermission('canManageOrders'), async (req, res) => {
+  const page = Math.max(1, Math.floor(Number(req.query.page || 1)));
+  const limit = Math.max(1, Math.min(200, Math.floor(Number(req.query.limit || 100))));
+  const offset = (page - 1) * limit;
+
+  const [countRows] = await pool.query<Array<RowDataPacket & { total: number }>>(
+    'SELECT COUNT(*) AS total FROM orders WHERE archived_at IS NULL'
+  );
+  const total = Number(countRows[0]?.total || 0);
+  const orders = await fetchOrdersByWhere('WHERE archived_at IS NULL', [], limit, offset);
+
+  res.json({
+    orders,
+    pagination: {
+      page,
+      limit,
+      total,
+      totalPages: Math.max(1, Math.ceil(total / limit)),
+      hasMore: offset + orders.length < total
+    }
+  });
 });
 
 ordersRouter.patch('/:id/status', requireAdminPermission('canManageOrders'), async (req, res) => {
@@ -403,12 +515,14 @@ ordersRouter.patch('/:id/status', requireAdminPermission('canManageOrders'), asy
 
 ordersRouter.delete('/:id', requireAdminPermission('canManageOrders'), async (req, res) => {
   const [result] = await pool.execute<ResultSetHeader>(
-    'DELETE FROM orders WHERE id = ? OR order_number = ?',
+    `UPDATE orders
+     SET archived_at = COALESCE(archived_at, NOW()), updated_at = NOW()
+     WHERE id = ? OR order_number = ?`,
     [req.params.id, req.params.id]
   );
   if (!result.affectedRows) {
     res.status(404).json({ error: 'ORDER_NOT_FOUND' });
     return;
   }
-  res.json({ ok: true });
+  res.json({ ok: true, archived: true });
 });

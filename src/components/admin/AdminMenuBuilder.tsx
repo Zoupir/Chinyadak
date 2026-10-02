@@ -1,24 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import {
-  AlertTriangle,
-  ArrowDown,
-  ArrowRight,
-  ArrowUp,
-  Car,
-  ChevronDown,
-  ChevronLeft,
-  FileText,
-  GripVertical,
-  Layers,
-  Link2,
-  PackageSearch,
-  Plus,
-  RotateCcw,
-  Save,
-  Search,
-  Settings2,
-  Trash2
-} from 'lucide-react';
+import { AlertTriangle, ArrowDown, ArrowRight, ArrowUp, Car, ChevronLeft, FileText, GripVertical, Layers, Link2, PackageSearch, Plus, RotateCcw, Save, Search, Settings2, Trash2 } from 'lucide-react';
 import { useStore } from '../../context/StoreContext';
 import { HeaderMenuKind, MenuItem, MenuSourceType } from '../../types';
 import { ImageUploadInput } from '../common/ImageUploadInput';

@@ -1,6 +1,6 @@
 import { mellatAdapter } from './mellat';
 import { sepAdapter } from './sep';
-import { ensurePaymentRuntimeConfig } from './runtime-config';
+
 import type { PaymentAdapter, PaymentProvider } from './types';
 
 const adapters: Record<PaymentProvider, PaymentAdapter> = {

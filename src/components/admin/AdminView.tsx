@@ -1,67 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import { useStore } from '../../context/StoreContext';
-import { Product, Category, CustomerUser, PaymentGatewayConfig, OrderStatus, AdminRole, VehicleFitment } from '../../types';
-import { formatToman, getGradeInfo } from '../../utils/formatters';
-import { 
-  Settings, 
-  Layers, 
-  Search, 
-  Upload, 
-  Download, 
-  Edit3, 
-  Check, 
-  AlertTriangle, 
-  Package, 
-  DollarSign, 
-  FileText,
-  BarChart3,
-  Bell,
-  Lock, 
-  LogOut, 
-  Palette, 
-  CreditCard, 
-  Radio, 
-  Users, 
-  Plus, 
-  Trash2, 
-  Eye, 
-  KeyRound, 
-  ShieldAlert, 
-  Send, 
-  Printer, 
-  ChevronDown, 
-  ChevronLeft, 
-  ChevronRight,
-  RefreshCw, 
-  Sliders, 
-  CheckCircle2, 
-  ExternalLink, 
-  PhoneCall, 
-  Car, 
-  BookOpen, 
-  Receipt, 
-  Menu,
-  X,
-  ShieldCheck,
-  ArrowRight,
-  Wrench,
-  Image as ImageIcon,
-  Compass,
-  FileCheck2,
-  Sparkles,
-  LayoutTemplate,
-  Type,
-  PanelsTopLeft
-} from 'lucide-react';
+import { Product, Category, CustomerUser, OrderStatus } from '../../types';
+import { formatToman } from '../../utils/formatters';
+import { Settings, Layers, Search, Download, Edit3, Check, AlertTriangle, Package, BarChart3, LogOut, Palette, CreditCard, Radio, Users, Plus, Trash2, KeyRound, ShieldAlert, Printer, ChevronLeft, ChevronRight, Sliders, ExternalLink, Car, BookOpen, Receipt, Menu, X, ShieldCheck, ArrowRight, Image as ImageIcon, Compass, FileCheck2, Sparkles, LayoutTemplate, PanelsTopLeft } from 'lucide-react';
 import { AdminCarsTab } from './AdminCarsTab';
 import { AdminArticlesTab } from './AdminArticlesTab';
 import { AdminSandboxGateway } from './AdminSandboxGateway';
 import { AdminMenusAndAttributes } from './AdminMenusAndAttributes';
 import { AdminFooterTab } from './AdminFooterTab';
-import { AdminSlidersTab } from './AdminSlidersTab';
 import { AdminSliderStudio } from './AdminSliderStudio';
 import { AdminUsersTab } from './AdminUsersTab';
-import { AdminPagesTab } from './AdminPagesTab';
 import { AdminThemeTab } from './AdminThemeTab';
 import { AdminSeoTab } from './AdminSeoTab';
 import { InvoiceModal } from '../orders/InvoiceModal';
@@ -105,6 +53,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
     customers,
     addCustomer,
     updateCustomer,
+    setCustomerLoginPassword,
     toggleCustomerStatus,
     adminUsers,
     settings,
@@ -153,35 +102,30 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
     oemNumber: '',
     partNumber: '',
     sku: '',
-    brandManufacturer: 'Chery Genuine',
-    partManufacturerCompany: 'Chery Genuine',
+    brandManufacturer: '',
+    partManufacturerCompany: '',
     vehicleManufacturerCompany: '',
-    vehicleBrandIds: ['kmc'],
-    vehicleModelIds: ['kmc-j7'],
-    categorySlug: 'engine',
+    vehicleBrandIds: [],
+    vehicleModelIds: [],
+    categorySlug: '',
     subcategorySlug: undefined,
-    grade: 'genuine',
-    price: 1500000,
-    stock: 10,
-    stockStatus: 'in_stock',
-    countryOfOrigin: 'چین',
-    warrantyMonths: 12,
-    warrantyDescription: '۱۲ ماه ضمانت رسمی تعویض شرکتی',
-    placement: 'موتور',
-    images: ['https://images.unsplash.com/photo-1580273916550-e323be2ae537?w=800&auto=format&fit=crop&q=80'],
+    grade: 'aftermarket',
+    price: 0,
+    stock: 0,
+    stockStatus: 'out_of_stock',
+    countryOfOrigin: '',
+    warrantyMonths: 0,
+    warrantyDescription: '',
+    placement: '',
+    images: [],
     shortDescription: '',
-    description: 'قطعه اصلی و فابریک کارخانه',
-    technicalSpecs: {
-      'نوع قطعه': 'اصلی شرکتی',
-      'سیستم': 'پیشرانه و موتور'
-    },
-    symptomsOfFailure: ['روشن شدن چراغ چک', 'کاهش توان'],
-    replacementInterval: 'هر ۵۰ هزار کیلومتر',
-    installationTips: ['تعویض در نمایندگی مجاز'],
-    genuineVsFakeNotes: 'دارای هولوگرام و کد رهگیری اصالت',
-    fitments: [
-      { id: 'fit-custom', brandId: 'kmc', brandName: 'KMC', modelId: 'kmc-j7', modelName: 'KMC J7', yearFrom: 1401, yearTo: 1404, engine: '1.5 Turbo' }
-    ]
+    description: '',
+    technicalSpecs: {},
+    symptomsOfFailure: [],
+    replacementInterval: '',
+    installationTips: [],
+    genuineVsFakeNotes: '',
+    fitments: []
   });
 
   // Category Modals
@@ -198,13 +142,16 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
 
   // Customer Modal
   const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
+  const [customerPasswordTarget, setCustomerPasswordTarget] = useState<CustomerUser | null>(null);
+  const [customerPasswordInput, setCustomerPasswordInput] = useState('');
   const [custForm, setCustForm] = useState({
     firstName: '',
     lastName: '',
     phone: '',
     type: 'retail' as CustomerUser['type'],
     vehicle: '',
-    address: ''
+    address: '',
+    initialPassword: ''
   });
 
   // Official Invoice Modal
@@ -377,8 +324,8 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
 
   const handleCreateProduct = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newProductForm.nameFa || !newProductForm.oemNumber) {
-      showToast('نام و شماره فنی کالا الزامی است.', 'error');
+    if (!newProductForm.nameFa?.trim() || !newProductForm.oemNumber?.trim() || !newProductForm.categorySlug?.trim()) {
+      showToast('نام، شماره فنی و دسته‌بندی کالا الزامی است.', 'error');
       return;
     }
 
@@ -390,33 +337,33 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
       partNumber: newProductForm.partNumber || newProductForm.oemNumber || '',
       nameFa: newProductForm.nameFa || '',
       nameEn: newProductForm.nameEn || '',
-      categorySlug: newProductForm.categorySlug || 'engine',
+      categorySlug: newProductForm.categorySlug || '',
       subcategorySlug: newProductForm.subcategorySlug,
-      brandManufacturer: newProductForm.partManufacturerCompany || newProductForm.brandManufacturer || 'Chery Genuine',
-      partManufacturerCompany: newProductForm.partManufacturerCompany || newProductForm.brandManufacturer || 'Chery Genuine',
+      brandManufacturer: newProductForm.partManufacturerCompany || newProductForm.brandManufacturer || '',
+      partManufacturerCompany: newProductForm.partManufacturerCompany || newProductForm.brandManufacturer || '',
       vehicleManufacturerCompany: newProductForm.vehicleManufacturerCompany || '',
       vehicleBrandIds: newProductForm.vehicleBrandIds || [],
       vehicleModelIds: newProductForm.vehicleModelIds || [],
-      grade: newProductForm.grade || 'genuine',
-      price: Number(newProductForm.price) || 0,
-      stock: Number(newProductForm.stock) || 0,
+      grade: newProductForm.grade || 'aftermarket',
+      price: Math.max(0, Number(newProductForm.price) || 0),
+      stock: Math.max(0, Math.floor(Number(newProductForm.stock) || 0)),
       stockStatus: (Number(newProductForm.stock) || 0) > 0 ? 'in_stock' : 'out_of_stock',
-      images: newProductForm.images || ['https://images.unsplash.com/photo-1580273916550-e323be2ae537?w=800&auto=format&fit=crop&q=80'],
-      rating: 5,
-      reviewsCount: 1,
-      weightKg: Number(newProductForm.weightKg) || 1.5,
-      dimensionsCm: newProductForm.dimensionsCm || '30x20x15',
-      countryOfOrigin: newProductForm.countryOfOrigin || 'چین',
-      warrantyMonths: Number(newProductForm.warrantyMonths) || 12,
-      warrantyDescription: newProductForm.warrantyDescription || '۱۲ ماه ضمانت رسمی تعویض شرکتی',
-      placement: newProductForm.placement || 'موتور',
+      images: (newProductForm.images || []).filter(Boolean),
+      rating: 0,
+      reviewsCount: 0,
+      weightKg: Math.max(0, Number(newProductForm.weightKg) || 0),
+      dimensionsCm: newProductForm.dimensionsCm || '',
+      countryOfOrigin: newProductForm.countryOfOrigin || '',
+      warrantyMonths: Math.max(0, Math.floor(Number(newProductForm.warrantyMonths) || 0)),
+      warrantyDescription: newProductForm.warrantyDescription || '',
+      placement: newProductForm.placement || '',
       shortDescription: newProductForm.shortDescription || '',
-      description: newProductForm.description || 'قطعه اصلی و فابریک کارخانه',
-      technicalSpecs: newProductForm.technicalSpecs || { 'گرید': 'اصلی' },
-      symptomsOfFailure: ['افت راندمان', 'صدای غیرعادی'],
-      replacementInterval: 'هر ۵۰ هزار کیلومتر',
-      installationTips: ['نصب توسط مکانیک مجرب'],
-      genuineVsFakeNotes: 'هولوگرام شرکتی و بارکد ردیابی',
+      description: newProductForm.description || '',
+      technicalSpecs: newProductForm.technicalSpecs || {},
+      symptomsOfFailure: newProductForm.symptomsOfFailure || [],
+      replacementInterval: newProductForm.replacementInterval || '',
+      installationTips: newProductForm.installationTips || [],
+      genuineVsFakeNotes: newProductForm.genuineVsFakeNotes || '',
       fitments: newProductForm.fitments || [],
       seo: newProductForm.seo
     };
@@ -471,6 +418,10 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
       showToast('لطفا فیلدهای ستاره‌دار را تکمیل نمایید.', 'error');
       return;
     }
+    if (custForm.initialPassword && custForm.initialPassword.length < 8) {
+      showToast('رمز ورود اولیه باید حداقل ۸ کاراکتر باشد.', 'error');
+      return;
+    }
     const typeTitles: Record<CustomerUser['type'], string> = {
       retail: 'مشتری عادی',
       mechanic: 'تعمیرکار / همکار',
@@ -484,7 +435,8 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
       typeTitle: typeTitles[custForm.type],
       status: 'active',
       vehicle: custForm.vehicle || undefined,
-      address: custForm.address || undefined
+      address: custForm.address || undefined,
+      initialPassword: custForm.initialPassword || undefined
     });
     setCustForm({
       firstName: '',
@@ -492,12 +444,27 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
       phone: '',
       type: 'retail',
       vehicle: '',
-      address: ''
+      address: '',
+      initialPassword: ''
     });
     setIsCustomerModalOpen(false);
   };
 
-  const handleSaveTheme = (e: React.FormEvent) => {
+  const handleCustomerPasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!customerPasswordTarget) return;
+    if (customerPasswordInput.length < 8) {
+      showToast('رمز ورود مشتری باید حداقل ۸ کاراکتر باشد.', 'error');
+      return;
+    }
+    const saved = await setCustomerLoginPassword(customerPasswordTarget.id, customerPasswordInput);
+    if (saved) {
+      setCustomerPasswordTarget(null);
+      setCustomerPasswordInput('');
+    }
+  };
+
+    const handleSaveTheme = (e: React.FormEvent) => {
     e.preventDefault();
     updateSettings(themeForm);
   };
@@ -509,7 +476,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
 
   const handleExportCSV = () => {
     const csvContent = "data:text/csv;charset=utf-8,\uFEFF" 
-      + "کد کالا,نام فارسی,شماره فنی OEM,قیمت (ریال),موجودی,دسته,گرید کیفی\n"
+      + "کد کالا,نام فارسی,شماره فنی OEM,قیمت (تومان),موجودی,دسته,گرید کیفی\n"
       + products.map(p => `"${p.sku}","${p.nameFa}","${p.oemNumber}",${p.price},${p.stock},"${p.categorySlug}","${p.grade}"`).join("\n");
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
@@ -1236,6 +1203,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
                       <th className="p-3">نوع کاربری</th>
                       <th className="p-3">تعداد سفارش</th>
                       <th className="p-3">مجموع خرید</th>
+                      <th className="p-3">ورود مشتری</th>
                       <th className="p-3">وضعیت حساب</th>
                       <th className="p-3 text-left">عملیات</th>
                     </tr>
@@ -1260,6 +1228,11 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
                         <td className="p-3 font-mono font-bold">{cust.totalOrders} فاکتور</td>
                         <td className="p-3 font-bold text-neutral-900 font-mono">{formatToman(cust.totalSpent)}</td>
                         <td className="p-3">
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${cust.loginReady ? 'bg-blue-50 text-blue-700' : 'bg-neutral-100 text-neutral-500'}`}>
+                            {cust.loginReady ? 'فعال' : 'فقط CRM'}
+                          </span>
+                        </td>
+                        <td className="p-3">
                           <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${
                             cust.status === 'active' ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'
                           }`}>
@@ -1267,16 +1240,27 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
                           </span>
                         </td>
                         <td className="p-3 text-left">
-                          <button
-                            onClick={() => toggleCustomerStatus(cust.id)}
-                            className={`px-3 py-1 rounded-lg text-[11px] font-bold ${
-                              cust.status === 'active' 
-                                ? 'bg-neutral-100 hover:bg-red-50 hover:text-red-600 text-neutral-600' 
-                                : 'bg-emerald-100 text-emerald-800'
-                            }`}
-                          >
-                            {cust.status === 'active' ? 'مسدودسازی' : 'فعال‌سازی'}
-                          </button>
+                          <div className="flex flex-wrap justify-end gap-1.5">
+                            <button
+                              onClick={() => {
+                                setCustomerPasswordTarget(cust);
+                                setCustomerPasswordInput('');
+                              }}
+                              className="px-3 py-1 rounded-lg text-[10px] font-bold bg-blue-50 text-blue-700 hover:bg-blue-100"
+                            >
+                              {cust.loginReady ? 'تغییر رمز ورود' : 'فعال‌سازی ورود'}
+                            </button>
+                            <button
+                              onClick={() => toggleCustomerStatus(cust.id)}
+                              className={`px-3 py-1 rounded-lg text-[11px] font-bold ${
+                                cust.status === 'active' 
+                                  ? 'bg-neutral-100 hover:bg-red-50 hover:text-red-600 text-neutral-600' 
+                                  : 'bg-emerald-100 text-emerald-800'
+                              }`}
+                            >
+                              {cust.status === 'active' ? 'مسدودسازی' : 'فعال‌سازی'}
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -1408,7 +1392,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
                         <option value="percent">درصدی</option>
                         <option value="fixed">مبلغ ثابت</option>
                       </select>
-                      <input type="number" min={0} value={bulkPriceValue} onChange={e => setBulkPriceValue(Math.max(0,Number(e.target.value)))} className="p-2.5 border rounded-xl bg-white text-xs font-mono" placeholder={bulkPriceMode==='percent'?'مثلاً ۱۰٪':'مبلغ ریال'} />
+                      <input type="number" min={0} value={bulkPriceValue} onChange={e => setBulkPriceValue(Math.max(0,Number(e.target.value)))} className="p-2.5 border rounded-xl bg-white text-xs font-mono" placeholder={bulkPriceMode==='percent'?'مثلاً ۱۰٪':'مبلغ تومان'} />
                     </div>
                   </div>
 
@@ -1613,7 +1597,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-neutral-600 mb-1 font-semibold">قیمت فروش (ریال):</label>
+                  <label className="block text-neutral-600 mb-1 font-semibold">قیمت فروش (تومان):</label>
                   <input
                     type="number"
                     value={editingProduct.price}
@@ -1760,7 +1744,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-neutral-600 mb-1 font-semibold">قیمت فروش (ریال) *:</label>
+                  <label className="block text-neutral-600 mb-1 font-semibold">قیمت فروش (تومان) *:</label>
                   <input
                     type="number"
                     value={newProductForm.price || ''}
@@ -2155,6 +2139,44 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
         </div>
       )}
 
+      {customerPasswordTarget && (
+        <div className="fixed inset-0 z-[215] flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+          <div className="bg-white rounded-3xl p-6 max-w-md w-full text-right shadow-2xl">
+            <div className="flex items-center justify-between pb-3 border-b border-neutral-100">
+              <div>
+                <h3 className="font-black text-sm text-neutral-900">تنظیم رمز ورود مشتری</h3>
+                <p className="text-[10px] text-neutral-500 mt-1">
+                  {customerPasswordTarget.firstName} {customerPasswordTarget.lastName} — {customerPasswordTarget.phone}
+                </p>
+              </div>
+              <button type="button" onClick={() => setCustomerPasswordTarget(null)} className="text-neutral-400 hover:text-neutral-700">✕</button>
+            </div>
+            <form onSubmit={handleCustomerPasswordSubmit} className="mt-4 space-y-4">
+              <label className="block">
+                <span className="block text-xs font-bold text-neutral-700 mb-1">رمز ورود جدید</span>
+                <input
+                  type="password"
+                  value={customerPasswordInput}
+                  onChange={e => setCustomerPasswordInput(e.target.value)}
+                  autoComplete="new-password"
+                  minLength={8}
+                  className="w-full p-3 border border-neutral-300 rounded-xl font-mono text-left"
+                  placeholder="حداقل ۸ کاراکتر"
+                  autoFocus
+                />
+              </label>
+              <p className="text-[9px] leading-5 text-amber-700 bg-amber-50 rounded-xl p-3">
+                با ذخیره رمز جدید، نشست‌های ورود قبلی این مشتری باطل می‌شوند.
+              </p>
+              <div className="flex gap-2">
+                <button type="button" onClick={() => setCustomerPasswordTarget(null)} className="flex-1 py-2.5 rounded-xl bg-neutral-100 text-xs font-bold">انصراف</button>
+                <button type="submit" className="flex-1 py-2.5 rounded-xl bg-blue-600 text-white text-xs font-black">ذخیره رمز</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* =========================================================================
           MODAL: ADD NEW CUSTOMER
       ========================================================================= */}
@@ -2200,6 +2222,21 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
                   className="w-full p-2.5 border border-neutral-300 rounded-xl font-mono text-left"
                   required
                 />
+              </div>
+
+              <div>
+                <label className="block text-neutral-600 mb-1 font-semibold">رمز ورود اولیه (اختیاری):</label>
+                <input
+                  type="password"
+                  value={custForm.initialPassword}
+                  onChange={e => setCustForm({ ...custForm, initialPassword: e.target.value })}
+                  placeholder="حداقل ۸ کاراکتر"
+                  autoComplete="new-password"
+                  className="w-full p-2.5 border border-neutral-300 rounded-xl font-mono text-left"
+                />
+                <p className="mt-1 text-[9px] leading-5 text-neutral-400">
+                  اگر خالی بماند، رکورد فقط برای CRM ساخته می‌شود و ورود مشتری به حساب فعال نخواهد بود.
+                </p>
               </div>
 
               <div>

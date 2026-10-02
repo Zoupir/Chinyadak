@@ -100,6 +100,13 @@ type MediaListItem = {
   seo: MediaSeoMeta;
 };
 
+const MEDIA_LIBRARY_CACHE_TTL_MS = 10_000;
+let mediaLibraryCache: { expiresAt: number; items: MediaListItem[] } | null = null;
+
+const invalidateMediaLibraryCache = () => {
+  mediaLibraryCache = null;
+};
+
 const defaultSeoFromFilename = (filename: string): MediaSeoMeta => {
   const base = path.basename(filename, path.extname(filename))
     .replace(/[-_]+/g, ' ')
@@ -161,6 +168,11 @@ const parseMediaFolder = (relativePath: string) => {
 };
 
 const listMediaFiles = async (): Promise<MediaListItem[]> => {
+  const now = Date.now();
+  if (mediaLibraryCache && mediaLibraryCache.expiresAt > now) {
+    return mediaLibraryCache.items;
+  }
+
   const root = uploadDirectory();
   const items: MediaListItem[] = [];
 
@@ -203,7 +215,12 @@ const listMediaFiles = async (): Promise<MediaListItem[]> => {
   };
 
   await walk(root);
-  return items.sort((a, b) => b.modifiedAt.localeCompare(a.modifiedAt));
+  const sorted = items.sort((a, b) => b.modifiedAt.localeCompare(a.modifiedAt));
+  mediaLibraryCache = {
+    expiresAt: Date.now() + MEDIA_LIBRARY_CACHE_TTL_MS,
+    items: sorted
+  };
+  return sorted;
 };
 
 const safeMediaPath = (relativePath: string): string | null => {
@@ -278,6 +295,7 @@ mediaRouter.post(
       originalName: req.file.originalname
     }, filename);
 
+    invalidateMediaLibraryCache();
     const url = `/uploads/${relativeDir}/${filename}`;
     res.status(201).json({
       url,
@@ -361,6 +379,7 @@ mediaRouter.put('/library/meta', requireAdmin, async (req, res) => {
     description: req.body?.description
   }, filename);
 
+  invalidateMediaLibraryCache();
   res.json({ ok: true, seo });
 });
 
@@ -374,6 +393,7 @@ mediaRouter.delete('/library', requireAdmin, async (req, res) => {
   try {
     await fs.unlink(target);
     await fs.unlink(mediaMetaPath(target)).catch(() => undefined);
+    invalidateMediaLibraryCache();
     res.json({ ok: true });
   } catch (error: any) {
     if (error?.code === 'ENOENT') {

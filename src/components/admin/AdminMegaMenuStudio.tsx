@@ -1,20 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import {
-  ArrowDown,
-  ArrowUp,
-  CheckSquare,
-  ChevronDown,
-  CopyPlus,
-  GripVertical,
-  Layers,
-  LayoutGrid,
-  Plus,
-  Save,
-  Search,
-  Settings2,
-  Trash2,
-  X
-} from 'lucide-react';
+import { ArrowDown, ArrowUp, CheckSquare, GripVertical, LayoutGrid, Plus, Save, Search, Settings2, Trash2, X } from 'lucide-react';
 import { useStore } from '../../context/StoreContext';
 import type { HeaderMenuKind, MenuItem, MenuSourceType } from '../../types';
 import { IconPicker } from '../common/IconPicker';

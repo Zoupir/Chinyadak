@@ -13,6 +13,8 @@ import {
   X
 } from 'lucide-react';
 import { formatToman } from '../../utils/formatters';
+import { apiRequest } from '../../api/client';
+import type { Product } from '../../types';
 
 interface SearchAutocompleteProps {
   onSelectProduct: (productId: string) => void;
@@ -87,6 +89,7 @@ export const SearchAutocomplete: React.FC<SearchAutocompleteProps> = ({
   const { products, models, categories, brands, articles, logSearch } = useStore();
   const [query, setQuery] = useState('');
   const [isOpen, setIsOpen] = useState(false);
+  const [remoteProducts, setRemoteProducts] = useState<Product[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -97,13 +100,42 @@ export const SearchAutocomplete: React.FC<SearchAutocompleteProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  useEffect(() => {
+    const q = normalize(query);
+    if (q.length < 2) {
+      setRemoteProducts([]);
+      return;
+    }
+
+    const controller = new AbortController();
+    const timer = window.setTimeout(() => {
+      apiRequest<{ products: Product[] }>(
+        `/api/catalog/products?q=${encodeURIComponent(query.trim())}&page=1&limit=20`,
+        { signal: controller.signal }
+      )
+        .then(result => setRemoteProducts(result.products))
+        .catch(error => {
+          if (!controller.signal.aborted) console.error('Remote catalog search failed:', error);
+        });
+    }, 220);
+
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+    };
+  }, [query]);
+
   const ranked = useMemo<RankedResult[]>(() => {
     const q = normalize(query);
     if (q.length < 2) return [];
 
     const categoryRows = flattenCategories(categories);
 
-    const productResults: RankedResult[] = products.map(product => {
+    const mergedProducts = Array.from(
+      new Map([...remoteProducts, ...products].map(product => [product.id, product])).values()
+    );
+
+    const productResults: RankedResult[] = mergedProducts.map(product => {
       let score = 0;
       score += scoreText(q, product.oemNumber, 160, 110, 75);
       score += scoreText(q, product.partNumber, 150, 100, 70);
@@ -171,7 +203,7 @@ export const SearchAutocomplete: React.FC<SearchAutocompleteProps> = ({
       .filter(result => result.score > 0)
       .sort((a, b) => b.score - a.score)
       .slice(0, 14);
-  }, [query, products, models, categories, brands, articles]);
+  }, [query, products, remoteProducts, models, categories, brands, articles]);
 
   const byType = <T extends RankedResult['type']>(type: T, count: number) =>
     ranked.filter(result => result.type === type).slice(0, count) as Extract<RankedResult, {type:T}>[];

@@ -1,16 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import {
-  CheckCircle2,
-  CreditCard,
-  Edit3,
-  Eye,
-  EyeOff,
-  KeyRound,
-  Save,
-  ShieldCheck,
-  TestTube2,
-  X
-} from 'lucide-react';
+import { CreditCard, Edit3, Eye, EyeOff, KeyRound, Save, ShieldCheck, TestTube2, X } from 'lucide-react';
 import { useStore } from '../../context/StoreContext';
 import type { PaymentGatewayConfig } from '../../types';
 
@@ -19,13 +8,13 @@ const MASK = '••••••••';
 const providerHelp: Record<string, string> = {
   saman: 'برای SEP معمولاً Terminal ID کافی است. آدرس Token/Payment/Verify/Reverse فقط در صورت تغییر سرویس وارد شود.',
   mellat: 'برای به‌پرداخت ملت Terminal ID، Username و Password لازم است. WSDL و Payment URL قابل ویرایش هستند.',
-  zarinpal: 'این Provider فعلاً در موتور پرداخت فعال نیست؛ تنظیمات برای توسعه آینده ذخیره می‌شود.',
+  zarinpal: 'این ارائه‌دهنده فعلاً به موتور پرداخت متصل نیست؛ امکان فعال‌سازی آن تا تکمیل اتصال وجود ندارد.',
   parsian: 'این Provider فعلاً در موتور پرداخت فعال نیست؛ تنظیمات برای توسعه آینده ذخیره می‌شود.',
   cod: 'پرداخت در محل به اطلاعات محرمانه نیاز ندارد.'
 };
 
 export const AdminPaymentGateways: React.FC = () => {
-  const { paymentGateways, updatePaymentGateway, toggleGatewayActive, showToast } = useStore();
+  const { paymentGateways, updatePaymentGateway, toggleGatewayActive } = useStore();
   const [editingId, setEditingId] = useState<string | null>(null);
   const active = paymentGateways.find(item => item.id === editingId);
   const [form, setForm] = useState<PaymentGatewayConfig | null>(active ? { ...active } : null);
@@ -115,10 +104,11 @@ export const AdminPaymentGateways: React.FC = () => {
                 </div>
                 <button
                   type="button"
-                  onClick={() => toggleGatewayActive(gateway.id)}
-                  className={`px-3 py-1.5 rounded-full text-[10px] font-black ${gateway.isActive ? 'bg-emerald-100 text-emerald-800' : 'bg-neutral-100 text-neutral-500'}`}
+                  disabled={!supported}
+                  onClick={() => supported && toggleGatewayActive(gateway.id)}
+                  className={`px-3 py-1.5 rounded-full text-[10px] font-black ${!supported ? 'bg-amber-50 text-amber-700 cursor-not-allowed' : gateway.isActive ? 'bg-emerald-100 text-emerald-800' : 'bg-neutral-100 text-neutral-500'}`}
                 >
-                  {gateway.isActive ? 'فعال' : 'غیرفعال'}
+                  {!supported ? 'پشتیبانی‌نشده' : gateway.isActive ? 'فعال' : 'غیرفعال'}
                 </button>
               </div>
 
@@ -126,12 +116,12 @@ export const AdminPaymentGateways: React.FC = () => {
 
               <div className="grid grid-cols-2 gap-2">
                 <div className="p-2.5 rounded-xl bg-neutral-50">
-                  <span className="block text-[8px] text-neutral-400">Terminal / Merchant</span>
+                  <span className="block text-[8px] text-neutral-400">شناسه پایانه / پذیرنده</span>
                   <strong className="block mt-1 text-[10px] font-mono">{gateway.terminalId || gateway.merchantId || 'تنظیم نشده'}</strong>
                 </div>
                 <div className="p-2.5 rounded-xl bg-neutral-50">
-                  <span className="block text-[8px] text-neutral-400">حالت</span>
-                  <strong className="block mt-1 text-[10px]">{gateway.isSandbox ? 'Sandbox / آزمایشی' : 'Production / واقعی'}</strong>
+                  <span className="block text-[8px] text-neutral-400">محیط</span>
+                  <strong className="block mt-1 text-[10px]">{gateway.isSandbox ? 'آزمایشی' : 'واقعی'}</strong>
                 </div>
               </div>
 
@@ -176,7 +166,7 @@ export const AdminPaymentGateways: React.FC = () => {
                   <input value={form.name} onChange={e => patch({name:e.target.value})} className="w-full p-2.5 border rounded-xl text-xs" />
                 </label>
                 <label className="block">
-                  <span className="block text-[10px] font-bold mb-1">Provider</span>
+                  <span className="block text-[10px] font-bold mb-1">ارائه‌دهنده</span>
                   <input value={form.provider} readOnly className="w-full p-2.5 border rounded-xl bg-neutral-50 text-xs font-mono text-left" dir="ltr" />
                 </label>
                 <label className="md:col-span-2">
@@ -185,7 +175,12 @@ export const AdminPaymentGateways: React.FC = () => {
                 </label>
                 <label className="p-3 rounded-xl border flex items-center justify-between">
                   <span className="text-[10px] font-bold">درگاه فعال باشد</span>
-                  <input type="checkbox" checked={form.isActive} onChange={e => patch({isActive:e.target.checked})} />
+                  <input
+                    type="checkbox"
+                    disabled={!['saman','mellat'].includes(form.provider)}
+                    checked={['saman','mellat'].includes(form.provider) ? form.isActive : false}
+                    onChange={e => patch({isActive:e.target.checked})}
+                  />
                 </label>
                 <label className="p-3 rounded-xl border flex items-center justify-between">
                   <span className="text-[10px] font-bold inline-flex items-center gap-1"><TestTube2 className="w-4 h-4" /> حالت آزمایشی</span>
@@ -207,7 +202,7 @@ export const AdminPaymentGateways: React.FC = () => {
               </section>
 
               <section className="rounded-2xl border border-neutral-200 p-4 space-y-4">
-                <h4 className="font-black text-sm">Endpointها</h4>
+                <h4 className="font-black text-sm">نشانی‌های اتصال</h4>
                 <div className="grid grid-cols-1 gap-3">
                   <label><span className="block text-[9px] font-bold mb-1">{form.provider === 'mellat' ? 'WSDL URL' : 'Token / API Endpoint'}</span><input dir="ltr" value={form.endpoint || ''} onChange={e => patch({endpoint:e.target.value})} className="w-full p-2.5 border rounded-xl text-xs text-left font-mono" /></label>
                   <label><span className="block text-[9px] font-bold mb-1">Payment URL</span><input dir="ltr" value={form.paymentUrl || ''} onChange={e => patch({paymentUrl:e.target.value})} className="w-full p-2.5 border rounded-xl text-xs text-left font-mono" /></label>

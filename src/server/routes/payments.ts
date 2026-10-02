@@ -9,6 +9,7 @@ import {
   reserveOrderInventory
 } from '../inventory';
 import { ensurePaymentRuntimeConfig, getPaymentAdapter, getPaymentProviderStatus } from '../payments';
+import { verifyPaymentToken } from '../payment-token';
 
 interface PaymentOrderRow extends RowDataPacket {
   id: string;
@@ -82,6 +83,7 @@ paymentsRouter.get('/providers', async (_req, res) => {
 paymentsRouter.post('/start', paymentLimiter, async (req, res) => {
   const orderId = String(req.body?.orderId || '').trim();
   const requestedProvider = String(req.body?.provider || '').trim().toLowerCase();
+  const paymentToken = String(req.body?.paymentToken || '').trim();
   if (!orderId) {
     res.status(400).json({ error: 'ORDER_ID_REQUIRED' });
     return;
@@ -117,6 +119,9 @@ paymentsRouter.post('/start', paymentLimiter, async (req, res) => {
       );
       const order = rows[0];
       if (!order) throw new Error('ORDER_NOT_FOUND');
+      if (!verifyPaymentToken(paymentToken, order.id, order.order_number)) {
+        throw new Error('PAYMENT_TOKEN_INVALID');
+      }
       if (order.payment_status === 'paid' || order.payment_status === 'paid_stock_review') {
         throw new Error('ORDER_ALREADY_PAID');
       }
@@ -174,6 +179,7 @@ paymentsRouter.post('/start', paymentLimiter, async (req, res) => {
     const code = String(error?.message || 'PAYMENT_PREPARE_FAILED').split(':')[0];
     const status =
       code === 'ORDER_NOT_FOUND' ? 404 :
+      code === 'PAYMENT_TOKEN_INVALID' ? 403 :
       code === 'ORDER_ALREADY_PAID' ? 409 :
       code === 'PAYMENT_ALREADY_IN_PROGRESS' ? 409 :
       code === 'INSUFFICIENT_STOCK' ? 409 :

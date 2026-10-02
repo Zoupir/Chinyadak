@@ -1,32 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { useStore } from '../../context/StoreContext';
-import { formatToman, getGradeInfo } from '../../utils/formatters';
+import { formatToman } from '../../utils/formatters';
 import { apiRequest, ApiError } from '../../api/client';
-import { 
-  ShoppingBag, 
-  CreditCard, 
-  Truck, 
-  ShieldCheck, 
-  ArrowLeft, 
-  CheckCircle2, 
-  AlertCircle, 
-  X,
-  Phone,
-  MapPin,
-  Clock,
-  Sparkles,
-  Coins,
-  Award,
-  Gift,
-  Info
-} from 'lucide-react';
+import { ShoppingBag, CreditCard, Truck, ShieldCheck, AlertCircle, Phone, MapPin } from 'lucide-react';
 
 interface CheckoutViewProps {
-  onOrderCompleted: (orderId: string) => void;
   onNavigate: (view: string) => void;
 }
 
-export const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderCompleted, onNavigate }) => {
+export const CheckoutView: React.FC<CheckoutViewProps> = ({ onNavigate }) => {
   const { 
     cart, 
     cartTotal, 
@@ -34,18 +16,8 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderCompleted, on
     clearCart,
     showToast, 
     currentCustomer,
-    getCustomerPoints,
-    calculatePointsEarned,
-    calculatePointsValue,
-    getTierInfo,
     settings 
   } = useStore();
-
-  const customerPoints = getCustomerPoints(currentCustomer?.id);
-  const tierInfo = getTierInfo(customerPoints);
-  const pointValue = settings.loyaltySettings?.tomanPerPoint ?? 1000;
-  const minRedeemPoints = settings.loyaltySettings?.minimumRedeemPoints ?? 50;
-  const maxRedeemPercent = settings.loyaltySettings?.maxRedeemPercent ?? 50;
 
   // Form State
   const [firstName, setFirstName] = useState(currentCustomer?.firstName || '');
@@ -68,18 +40,11 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderCompleted, on
   });
   const [gatewayStatusLoaded, setGatewayStatusLoaded] = useState(false);
 
-  // Coupon state
-  const [couponCode, setCouponCode] = useState('');
-  const [appliedDiscount, setAppliedDiscount] = useState<number>(0);
-
-  // Loyalty Points Redemption State
-  const [useLoyaltyPoints, setUseLoyaltyPoints] = useState(false);
-  const [redeemedPoints, setRedeemedPoints] = useState<number>(0);
-
   // Simulation of payment step
   const [isProcessing, setIsProcessing] = useState(false);
   const [paymentFailed, setPaymentFailed] = useState(false);
   const [pendingOrderId, setPendingOrderId] = useState<string | null>(null);
+  const [pendingPaymentToken, setPendingPaymentToken] = useState<string | null>(null);
 
   // Gateway availability is read from server-side configuration; credentials never reach the browser.
   useEffect(() => {
@@ -111,30 +76,22 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderCompleted, on
     };
   }, []);
 
-  // Loyalty calculations
-  const remainingSubtotal = Math.max(0, cartTotal);
-  const maxDiscountAllowed = 0;
-  const maxPointsAllowed = 0;
-
-  const effectiveRedeemedPoints = 0;
-  const loyaltyDiscount = 0;
-
-  const shippingCost = selectedShipping === 'express' ? 120000 : selectedShipping === 'tipax' ? 110000 : 85000;
-  const finalTotal = Math.max(0, cartTotal - appliedDiscount - loyaltyDiscount + shippingCost);
-
-  const pointsEarnedFromThisOrder = 0;
-
-  const handleToggleLoyalty = (_checked: boolean) => {
-    setUseLoyaltyPoints(false);
-    setRedeemedPoints(0);
-    showToast('استفاده از امتیاز بعد از انتقال کامل باشگاه وفاداری به سرور فعال می‌شود.', 'info');
+  const shippingFees = {
+    express: Math.max(0, Number(settings.expressShippingFee ?? 120000)),
+    tipax: Math.max(0, Number(settings.tipaxShippingFee ?? 110000)),
+    post: Math.max(0, Number(settings.postShippingFee ?? 85000))
   };
+  const freeShippingThreshold = Math.max(0, Number(settings.freeShippingThreshold ?? 0));
+  const hasFreeShipping = freeShippingThreshold > 0 && cartTotal >= freeShippingThreshold;
+  const selectedShippingBaseCost = shippingFees[selectedShipping];
+  const shippingCost = hasFreeShipping ? 0 : selectedShippingBaseCost;
+  const finalTotal = Math.max(0, cartTotal + shippingCost);
 
-  const handleApplyCoupon = (e: React.FormEvent) => {
-    e.preventDefault();
-    setAppliedDiscount(0);
-    showToast('کد تخفیف تا فعال‌شدن اعتبارسنجی سمت سرور غیرفعال است.', 'info');
-  };
+  useEffect(() => {
+    if (province !== 'تهران' && selectedShipping === 'express') {
+      setSelectedShipping('post');
+    }
+  }, [province, selectedShipping]);
 
   const redirectToGateway = (
     redirectUrl: string,
@@ -164,8 +121,21 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderCompleted, on
   };
 
   const handleProcessPayment = async (simulateFailure = false) => {
-    if (!firstName || !lastName || !phone || !address) {
+    if (!settings.enableGuestCheckout && !currentCustomer) {
+      showToast('برای تکمیل خرید ابتدا وارد حساب کاربری شوید.', 'error');
+      return;
+    }
+    if (!firstName.trim() || !lastName.trim() || !address.trim()) {
       showToast('لطفاً اطلاعات هویتی و آدرس پستی را تکمیل فرمایید.', 'error');
+      return;
+    }
+    const normalizedPhone = phone.replace(/\D/g, '');
+    if (!/^09\d{9}$/.test(normalizedPhone)) {
+      showToast('شماره موبایل باید با ۰۹ شروع شود و ۱۱ رقم باشد.', 'error');
+      return;
+    }
+    if (postalCode && !/^\d{10}$/.test(postalCode.replace(/\D/g, ''))) {
+      showToast('کد پستی باید ۱۰ رقم باشد.', 'error');
       return;
     }
 
@@ -196,6 +166,7 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderCompleted, on
       }));
 
       let orderId = pendingOrderId;
+      let paymentToken = pendingPaymentToken;
       if (!orderId) {
         const newOrder = await createOrder({
         status: 'pending',
@@ -214,12 +185,16 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderCompleted, on
         shippingMethod: {
           id: selectedShipping,
           title: selectedShipping === 'express'
-            ? 'پیک موتوری ۲ ساعته'
+            ? 'پیک شهری'
             : selectedShipping === 'tipax'
-              ? 'تیپاکس اکسپرس'
-              : 'پست پیشتاز بیمه‌شده',
+              ? 'تیپاکس'
+              : 'پست پیشتاز',
           cost: shippingCost,
-          estimatedDelivery: selectedShipping === 'express' ? '۲ ساعت کاری' : '۲۴ الی ۴۸ ساعت'
+          estimatedDelivery: selectedShipping === 'express'
+            ? 'طبق هماهنگی فروشگاه'
+            : selectedShipping === 'tipax'
+              ? 'طبق زمان‌بندی شرکت حمل'
+              : 'طبق زمان‌بندی شرکت پست'
         },
         paymentMethod: {
           id: selectedGateway,
@@ -228,13 +203,19 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderCompleted, on
             : 'به‌پرداخت بانک ملت'
         },
         subtotal: cartTotal,
-        discountAmount: appliedDiscount,
-        loyaltyPointsToRedeem: useLoyaltyPoints ? effectiveRedeemedPoints : 0,
+        discountAmount: 0,
+        loyaltyPointsToRedeem: 0,
         shippingFee: shippingCost,
         total: finalTotal
         });
         orderId = newOrder.id;
         setPendingOrderId(newOrder.id);
+        paymentToken = newOrder.paymentToken || null;
+        setPendingPaymentToken(paymentToken);
+      }
+
+      if (!paymentToken) {
+        throw new ApiError(403, 'PAYMENT_TOKEN_MISSING');
       }
 
       const payment = await apiRequest<{
@@ -246,10 +227,11 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderCompleted, on
         fields: Record<string, string>;
       }>('/api/payments/start', {
         method: 'POST',
-        body: JSON.stringify({ orderId, provider: selectedGateway })
+        body: JSON.stringify({ orderId, provider: selectedGateway, paymentToken })
       });
 
       setPendingOrderId(null);
+      setPendingPaymentToken(null);
       clearCart();
       redirectToGateway(payment.redirectUrl, payment.redirectMethod, payment.fields || {});
     } catch (error) {
@@ -296,7 +278,7 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderCompleted, on
       <div>
         <h1 className="text-2xl font-black text-neutral-900">تکمیل اطلاعات و ثبت نهایی سفارش</h1>
         <p className="text-xs text-neutral-500 mt-1">
-          خرید آسان مهمان بدون نیاز به ثبت‌نام اجباری با ضمانت بازگشت وجه ۷ روزه
+          مبلغ کالا و ارسال پیش از ایجاد سفارش دوباره روی سرور محاسبه و کنترل می‌شود.
         </p>
       </div>
 
@@ -387,14 +369,12 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderCompleted, on
                   onChange={e => setProvince(e.target.value)}
                   className="w-full text-xs p-3 border border-neutral-300 rounded-xl focus:border-red-600 focus:outline-hidden cursor-pointer"
                 >
-                  <option value="تهران">تهران</option>
-                  <option value="اصفهان">اصفهان</option>
-                  <option value="فارس">فارس (شیراز)</option>
-                  <option value="خراسان رضوی">خراسان رضوی (مشهد)</option>
-                  <option value="آذربایجان شرقی">آذربایجان شرقی (تبریز)</option>
-                  <option value="مازندران">مازندران</option>
-                  <option value="خوزستان">خوزستان</option>
-                  <option value="گیلان">گیلان</option>
+                  {[
+                    'آذربایجان شرقی','آذربایجان غربی','اردبیل','اصفهان','البرز','ایلام','بوشهر','تهران',
+                    'چهارمحال و بختیاری','خراسان جنوبی','خراسان رضوی','خراسان شمالی','خوزستان','زنجان',
+                    'سمنان','سیستان و بلوچستان','فارس','قزوین','قم','کردستان','کرمان','کرمانشاه',
+                    'کهگیلویه و بویراحمد','گلستان','گیلان','لرستان','مازندران','مرکزی','هرمزگان','همدان','یزد'
+                  ].map(item => <option key={item} value={item}>{item}</option>)}
                 </select>
               </div>
 
@@ -456,26 +436,30 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderCompleted, on
               {[
                 {
                   id: 'post',
-                  title: 'پست پیشتاز بیمه‌شده (سراسر ایران)',
-                  desc: 'تحویل ۲ الی ۳ روز کاری با بیمه کامل شکستگی قطعات',
-                  cost: 85000
+                  title: 'پست پیشتاز',
+                  desc: 'زمان تحویل بر اساس مقصد و زمان‌بندی شرکت پست تعیین می‌شود.',
+                  cost: hasFreeShipping ? 0 : shippingFees.post
                 },
                 {
                   id: 'tipax',
-                  title: 'تیپاکس اکسپرس هوایی',
-                  desc: 'تحویل ۲۴ ساعته درب منزل در کلیه شهرستان‌ها',
-                  cost: 110000
+                  title: 'تیپاکس',
+                  desc: 'زمان و محدوده تحویل مطابق سرویس شرکت حمل محاسبه می‌شود.',
+                  cost: hasFreeShipping ? 0 : shippingFees.tipax
                 },
                 {
                   id: 'express',
-                  title: 'پیک فوری ویژه شهر تهران (۲ ساعته)',
-                  desc: 'ارسال فوری از انبار چراغ برق با پیک اختصاصی',
-                  cost: 120000
+                  title: 'پیک شهری',
+                  desc: province === 'تهران'
+                    ? 'زمان ارسال پس از ثبت سفارش با فروشگاه هماهنگ می‌شود.'
+                    : 'این روش فقط برای نشانی‌های شهر تهران قابل انتخاب است.',
+                  cost: hasFreeShipping ? 0 : shippingFees.express
                 }
-              ].map(opt => (
+              ].map(opt => {
+                const disabled = opt.id === 'express' && province !== 'تهران';
+                return (
                 <label
                   key={opt.id}
-                  className={`p-4 rounded-2xl border flex items-center justify-between cursor-pointer transition-all ${
+                  className={`p-4 rounded-2xl border flex items-center justify-between transition-all ${disabled ? 'opacity-50 cursor-not-allowed bg-neutral-50' : 'cursor-pointer'} ${
                     selectedShipping === opt.id
                       ? 'border-red-600 bg-red-50/40 ring-2 ring-red-600/20'
                       : 'border-neutral-200 hover:border-neutral-300'
@@ -486,7 +470,8 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderCompleted, on
                       type="radio"
                       name="shipping"
                       checked={selectedShipping === opt.id}
-                      onChange={() => setSelectedShipping(opt.id as any)}
+                      disabled={disabled}
+                      onChange={() => !disabled && setSelectedShipping(opt.id as 'express' | 'tipax' | 'post')}
                       className="text-red-600 focus:ring-red-500 w-4 h-4"
                     />
                     <div>
@@ -495,10 +480,11 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderCompleted, on
                     </div>
                   </div>
                   <span className="text-xs font-bold text-neutral-900 font-mono">
-                    {formatToman(opt.cost)}
+                    {opt.cost === 0 && hasFreeShipping ? 'رایگان' : formatToman(opt.cost)}
                   </span>
                 </label>
-              ))}
+                );
+              })}
             </div>
           </div>
 
@@ -526,8 +512,8 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderCompleted, on
                   className="text-red-600 focus:ring-red-500 w-4 h-4"
                 />
                 <div>
-                  <h4 className="font-bold text-xs text-neutral-900">درگاه پرداخت الکترونیک سامان (SEP)</h4>
-                  <p className="text-[10px] text-neutral-500">{gatewayAvailability.saman ? 'پشتیبانی از کلیه کارت‌های عضو شتاب' : 'هنوز روی سرور پیکربندی نشده'}</p>
+                  <h4 className="font-bold text-xs text-neutral-900">درگاه پرداخت الکترونیک سامان</h4>
+                  <p className="text-[10px] text-neutral-500">{gatewayAvailability.saman ? 'درگاه آماده پرداخت است' : 'هنوز روی سرور پیکربندی نشده'}</p>
                 </div>
               </label>
 
@@ -547,8 +533,8 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderCompleted, on
                   className="text-red-600 focus:ring-red-500 w-4 h-4"
                 />
                 <div>
-                  <h4 className="font-bold text-xs text-neutral-900">به‌پرداخت ملت (BPM)</h4>
-                  <p className="text-[10px] text-neutral-500">{gatewayAvailability.mellat ? 'تسویه و تایید آنی با شاپرک' : 'هنوز روی سرور پیکربندی نشده'}</p>
+                  <h4 className="font-bold text-xs text-neutral-900">به‌پرداخت بانک ملت</h4>
+                  <p className="text-[10px] text-neutral-500">{gatewayAvailability.mellat ? 'درگاه آماده پرداخت است' : 'هنوز روی سرور پیکربندی نشده'}</p>
                 </div>
               </label>
             </div>
@@ -588,164 +574,12 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderCompleted, on
               ))}
             </div>
 
-            {/* Coupon Code Input */}
-            <form onSubmit={handleApplyCoupon} className="pt-3 border-t border-neutral-100 flex gap-2">
-              <input
-                type="text"
-                value={couponCode}
-                onChange={e => setCouponCode(e.target.value)}
-                placeholder="کد تخفیف (مثال: CHINPART)"
-                className="flex-1 text-xs p-2.5 border border-neutral-300 rounded-xl focus:border-red-600 focus:outline-hidden font-mono uppercase"
-              />
-              <button
-                type="submit"
-                className="px-4 py-2.5 bg-neutral-900 hover:bg-neutral-800 text-white rounded-xl text-xs font-bold transition-colors cursor-pointer"
-              >
-                اعمال
-              </button>
-            </form>
-
-            {/* Loyalty Points Redemption Card */}
-            <div className="pt-3 border-t border-neutral-100 space-y-3">
-              {currentCustomer ? (
-                <div className={`p-4 rounded-2xl border transition-all ${
-                  useLoyaltyPoints 
-                    ? 'border-amber-400 bg-amber-50/40 ring-1 ring-amber-400/30' 
-                    : 'border-neutral-200 bg-neutral-50/60'
-                }`}>
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-8 h-8 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center font-bold shrink-0">
-                        <Sparkles className="w-4 h-4 text-amber-600" />
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-1.5">
-                          <h4 className="font-bold text-xs text-neutral-900">باشگاه وفاداری چین‌پارت</h4>
-                          <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${tierInfo.badgeClass}`}>
-                            {tierInfo.title}
-                          </span>
-                        </div>
-                        <p className="text-[11px] text-neutral-500 font-medium mt-0.5">
-                          موجودی: <strong className="text-amber-700 font-mono font-bold">{customerPoints.toLocaleString('fa-IR')}</strong> امتیاز
-                          {customerPoints > 0 && ` (معادل ${formatToman(calculatePointsValue(customerPoints))})`}
-                        </p>
-                      </div>
-                    </div>
-
-                    {customerPoints >= minRedeemPoints && maxPointsAllowed > 0 && (
-                      <label className="relative inline-flex items-center cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={useLoyaltyPoints}
-                          onChange={(e) => handleToggleLoyalty(e.target.checked)}
-                          className="sr-only peer"
-                        />
-                        <div className="w-9 h-5 bg-neutral-300 peer-focus:outline-hidden rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:right-[2px] after:bg-white after:border-neutral-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-amber-500"></div>
-                      </label>
-                    )}
-                  </div>
-
-                  {customerPoints < minRedeemPoints ? (
-                    <div className="mt-2 text-[11px] text-neutral-500 bg-white/80 p-2 rounded-xl border border-neutral-200 flex items-center gap-1.5">
-                      <Info className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
-                      <span>حداقل موجودی مجاز برای تسویه ۵۰ امتیاز است (موجودی فعلی شما: {customerPoints} امتیاز).</span>
-                    </div>
-                  ) : useLoyaltyPoints ? (
-                    <div className="mt-3 pt-3 border-t border-amber-200/60 space-y-2.5">
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="font-bold text-neutral-700">تعداد امتیاز جهت تبدیل به تخفیف:</span>
-                        <span className="font-mono font-black text-amber-700">
-                          {effectiveRedeemedPoints.toLocaleString('fa-IR')} امتیاز
-                        </span>
-                      </div>
-
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="range"
-                          min={minRedeemPoints}
-                          max={maxPointsAllowed}
-                          step={10}
-                          value={effectiveRedeemedPoints}
-                          onChange={(e) => setRedeemedPoints(Number(e.target.value))}
-                          className="flex-1 accent-amber-500 cursor-pointer"
-                        />
-                        <span className="text-[11px] font-mono text-neutral-500 font-bold">
-                          {maxPointsAllowed} حداکثر
-                        </span>
-                      </div>
-
-                      <div className="flex items-center justify-between gap-2 pt-1">
-                        <div className="flex gap-1.5">
-                          <button
-                            type="button"
-                            onClick={() => setRedeemedPoints(maxPointsAllowed)}
-                            className="px-2 py-0.5 text-[10px] font-bold bg-amber-100 hover:bg-amber-200 text-amber-900 rounded-md transition-colors cursor-pointer"
-                          >
-                            حداکثر مجاز
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setRedeemedPoints(Math.floor(maxPointsAllowed / 2))}
-                            className="px-2 py-0.5 text-[10px] font-bold bg-neutral-200/80 hover:bg-neutral-300 text-neutral-700 rounded-md transition-colors cursor-pointer"
-                          >
-                            ۵۰٪
-                          </button>
-                        </div>
-
-                        <span className="text-xs font-bold text-emerald-700 font-mono">
-                          تخفیف: {formatToman(loyaltyDiscount)}
-                        </span>
-                      </div>
-                    </div>
-                  ) : (
-                    <p className="mt-2 text-[11px] text-neutral-500">
-                      برای فعال‌سازی و کسر تخفیف تا سقف {formatToman(calculatePointsValue(maxPointsAllowed))} کلید بالا را روشن نمایید.
-                    </p>
-                  )}
-                </div>
-              ) : (
-                <div className="p-3.5 rounded-2xl bg-amber-50/60 border border-amber-200/70 text-xs space-y-2">
-                  <div className="flex items-center gap-2 text-amber-900 font-bold">
-                    <Sparkles className="w-4 h-4 text-amber-600 shrink-0" />
-                    <span>باشگاه وفاداری و تخفیف با امتیاز</span>
-                  </div>
-                  <p className="text-[11px] text-amber-800 leading-relaxed">
-                    با ورود به حساب یا ثبت‌نام در سایت، می‌توانید از امتیازات وفاداری خود برای تخفیف این سفارش استفاده کنید.
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => onNavigate('account')}
-                    className="text-[11px] font-bold text-amber-900 underline hover:text-amber-700 cursor-pointer block"
-                  >
-                    ورود به حساب کاربری
-                  </button>
-                </div>
-              )}
-            </div>
-
             {/* Price Calculations */}
             <div className="space-y-2 pt-3 border-t border-neutral-100 text-xs text-neutral-600">
               <div className="flex justify-between">
                 <span>مجموع ارزش قطعات:</span>
                 <span className="font-bold text-neutral-900">{formatToman(cartTotal)}</span>
               </div>
-
-              {appliedDiscount > 0 && (
-                <div className="flex justify-between text-emerald-700 font-bold">
-                  <span>تخفیف ویژه کوپن:</span>
-                  <span>- {formatToman(appliedDiscount)}</span>
-                </div>
-              )}
-
-              {loyaltyDiscount > 0 && (
-                <div className="flex justify-between text-amber-700 font-bold animate-in fade-in">
-                  <span className="flex items-center gap-1">
-                    <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-                    <span>تخفیف امتیاز وفاداری ({effectiveRedeemedPoints} امتیاز):</span>
-                  </span>
-                  <span>- {formatToman(loyaltyDiscount)}</span>
-                </div>
-              )}
 
               <div className="flex justify-between">
                 <span>هزینه بسته‌بندی و ارسال:</span>
@@ -755,17 +589,6 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderCompleted, on
               <div className="pt-3 border-t border-neutral-200 flex justify-between text-base font-black text-neutral-900">
                 <span>مبلغ نهایی پرداخت:</span>
                 <span className="text-red-600 font-mono text-lg">{formatToman(finalTotal)}</span>
-              </div>
-
-              {/* Points to be earned notification */}
-              <div className="mt-2 p-2.5 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-between text-xs text-emerald-800">
-                <span className="flex items-center gap-1.5 font-medium">
-                  <Coins className="w-4 h-4 text-emerald-600 shrink-0" />
-                  <span>امتیاز وفاداری دریافتی از این خرید:</span>
-                </span>
-                <span className="font-black font-mono text-emerald-700">
-                  +{pointsEarnedFromThisOrder.toLocaleString('fa-IR')} امتیاز
-                </span>
               </div>
             </div>
 
@@ -800,9 +623,9 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderCompleted, on
             <div className="p-3 bg-neutral-50 rounded-xl border border-neutral-100 text-[11px] text-neutral-500 space-y-1">
               <div className="flex items-center gap-1.5 text-neutral-700 font-bold">
                 <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-                <span>گارانتی خرید بدون ریسک:</span>
+                <span>کنترل نهایی سفارش:</span>
               </div>
-              <p>در صورت مغایرت قطعه یا عدم رضایت مکانیک، وجه شما ظرف ۲۴ ساعت بدون کسر هزینه مسترد می‌گردد.</p>
+              <p>قیمت کالا، موجودی و هزینه ارسال در سرور کنترل می‌شود و مبلغ معتبر برای پرداخت از سفارش ثبت‌شده دریافت می‌شود.</p>
             </div>
           </div>
         </div>

@@ -1,4 +1,5 @@
 import 'dotenv/config';
+import { randomUUID } from 'crypto';
 import express from 'express';
 import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
@@ -22,6 +23,9 @@ import { seoRouter } from './src/server/routes/seo';
 import { uploadDirectory } from './src/server/media';
 import { checkDatabase } from './src/server/db';
 import { config } from './src/server/config';
+import { auditMutationMiddleware } from './src/server/audit';
+import { releaseExpiredReservations } from './src/server/inventory';
+import { logError, logInfo } from './src/server/logger';
 import {
   buildHtmlSitemap,
   buildSitemapChunkXml,
@@ -41,10 +45,36 @@ const app = express();
 app.disable('x-powered-by');
 app.set('trust proxy', config.trustProxy);
 
+app.use((req, res, next) => {
+  const incoming = String(req.get('x-request-id') || '').trim();
+  const requestId = (/^[a-zA-Z0-9._:-]{8,100}$/.test(incoming) ? incoming : randomUUID());
+  (req as express.Request & { requestId?: string }).requestId = requestId;
+  res.setHeader('x-request-id', requestId);
+  next();
+});
+
 app.use(
   helmet({
-    contentSecurityPolicy: false,
-    crossOriginResourcePolicy: { policy: 'cross-origin' }
+    contentSecurityPolicy: config.nodeEnv === 'production'
+      ? {
+          directives: {
+            defaultSrc: ["'self'"],
+            scriptSrc: ["'self'"],
+            styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
+            fontSrc: ["'self'", 'data:', 'https://fonts.gstatic.com'],
+            imgSrc: ["'self'", 'data:', 'blob:', 'https:'],
+            connectSrc: ["'self'", 'https:', 'wss:'],
+            frameSrc: ["'self'", 'https:'],
+            formAction: ["'self'", 'https:'],
+            objectSrc: ["'none'"],
+            baseUri: ["'self'"],
+            frameAncestors: ["'self'"],
+            upgradeInsecureRequests: []
+          }
+        }
+      : false,
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+    referrerPolicy: { policy: 'strict-origin-when-cross-origin' }
   })
 );
 app.use(express.json({ limit: '1mb' }));
@@ -120,6 +150,7 @@ const apiLimiter = rateLimit({
   legacyHeaders: false
 });
 app.use('/api', apiLimiter);
+app.use('/api', auditMutationMiddleware);
 
 app.use('/api/auth', authRouter);
 app.use('/api/catalog', catalogRouter);
@@ -143,8 +174,8 @@ const aiLimiter = rateLimit({
 
 app.post('/api/ai/search-advisor', aiLimiter, async (req, res) => {
   const query = String(req.body?.query ?? '').trim();
-  const vehicle = String(req.body?.vehicle ?? '').trim();
-  const partCategory = String(req.body?.partCategory ?? '').trim();
+  const vehicle = String(req.body?.vehicle ?? '').trim().slice(0, 160);
+  const partCategory = String(req.body?.partCategory ?? '').trim().slice(0, 120);
 
   if (query.length < 2 || query.length > 500) {
     res.status(400).json({ error: 'INVALID_QUERY' });
@@ -193,7 +224,9 @@ ${partCategory ? `دسته‌بندی قطعه: ${partCategory}` : ''}
       isFallback: false
     });
   } catch (error) {
-    console.error('AI advisor error:', error);
+    logError('ai_advisor_error', error, {
+      requestId: (req as express.Request & { requestId?: string }).requestId
+    });
     res.status(502).json({
       error: 'AI_PROVIDER_ERROR',
       message: 'در حال حاضر دریافت پاسخ معتبر از سرویس هوش مصنوعی ممکن نیست.'
@@ -243,17 +276,35 @@ async function startServer() {
     app.use(vite.middlewares);
   }
 
-  app.use((error: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
-    console.error('Unhandled server error:', error);
-    res.status(500).json({ error: 'INTERNAL_SERVER_ERROR' });
+  app.use((error: unknown, req: express.Request, res: express.Response, _next: express.NextFunction) => {
+    const requestId = (req as express.Request & { requestId?: string }).requestId;
+    logError('unhandled_server_error', error, {
+      requestId,
+      method: req.method,
+      path: req.originalUrl.split('?')[0]
+    });
+    res.status(500).json({ error: 'INTERNAL_SERVER_ERROR', requestId });
   });
 
   app.listen(config.port, '0.0.0.0', () => {
-    console.log(`ChinPart server running on port ${config.port} (${config.nodeEnv})`);
+    logInfo('server_started', { port: config.port, environment: config.nodeEnv });
+
+    // Reservations must expire even when no new payment is started. Relying
+    // only on request traffic can leave sellable inventory hidden indefinitely.
+    if (config.nodeEnv === 'production') {
+      const cleanupTimer = setInterval(() => {
+        releaseExpiredReservations()
+          .then(released => {
+            if (released > 0) logInfo('expired_reservations_released', { released });
+          })
+          .catch(error => logError('expired_reservation_cleanup_failed', error));
+      }, 5 * 60 * 1000);
+      cleanupTimer.unref();
+    }
   });
 }
 
 startServer().catch(error => {
-  console.error('Server startup failed:', error);
+  logError('server_startup_failed', error);
   process.exit(1);
 });

@@ -1,44 +1,8 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { 
-  Product, 
-  GarageCar, 
-  CartItem, 
-  Order, 
-  OrderStatus,
-  PartRequest,
-  CarBrand,
-  VehicleModel,
-  Category,
-  Article,
-  ArticleCategory,
-  CustomerUser,
-  SiteSettings,
-  PaymentGatewayConfig,
-  ApiIntegrationsConfig,
-  AdminAuthState,
-  SliderItem,
-  AdminUser,
-  SitePage,
-  PageSection,
-  LoyaltyTier,
-  LoyaltyTransaction,
-  LoyaltySettings,
-  SeoEntityDraft
-} from '../types';
-import { 
-  PRODUCTS as INITIAL_PRODUCTS, 
-  BRANDS as INITIAL_BRANDS, 
-  VEHICLE_MODELS as INITIAL_MODELS, 
-  CATEGORIES as INITIAL_CATEGORIES,
-  ARTICLES as INITIAL_ARTICLES,
-  INITIAL_ARTICLE_CATEGORIES,
-  INITIAL_GARAGE, 
-  INITIAL_SETTINGS,
-  INITIAL_PAYMENT_GATEWAYS,
-  INITIAL_SLIDERS,
-  INITIAL_PAGES
-} from '../data/mockData';
+import { Product, GarageCar, CartItem, Order, OrderStatus, PartRequest, CarBrand, VehicleModel, Category, Article, ArticleCategory, CustomerUser, SiteSettings, PaymentGatewayConfig, ApiIntegrationsConfig, AdminAuthState, SliderItem, AdminUser, SitePage, PageSection, LoyaltyTier, LoyaltyTransaction, SeoEntityDraft } from '../types';
+import { DEFAULT_SITE_SETTINGS } from '../data/siteDefaults';
 import { apiRequest, ApiError } from '../api/client';
+import { readJsonStorage, writeJsonStorage } from '../utils/storage';
 
 interface SearchQueryLog {
   query: string;
@@ -62,7 +26,7 @@ const EMPTY_API_INTEGRATIONS: ApiIntegrationsConfig = {
 };
 
 const HOME_SECTION_DEFAULTS: PageSection[] = [
-  { id: 'home-hero', sectionKey: 'hero', title: 'قطعات مطمئن برای خودروی شما', subtitle: 'خرید تخصصی قطعات خودروهای چینی با تضمین اصالت، فیتمنت دقیق و ارسال سریع.', badge: 'پیشنهاد ویژه قطعات خودرو', buttonText: 'مشاهده محصولات', buttonLink: 'shop', isVisible: true, order: 1, layout: 'full', desktopColumns: 1, mobileColumns: 1, borderRadiusPx: 8, itemRadiusPx: 0, gapPx: 0, fullWidth: true, widthPercent: 95, tabletWidthPercent: 96, mobileWidthPercent: 100, maxWidthPx: 0, marginTopPx: 12, finderWidthPx: 300, finderPaddingPx: 18, finderRadiusPx: 8, finderTitleFontSizePx: 15, finderTextFontSizePx: 11, finderLabelFontSizePx: 10, finderValueFontSizePx: 11, finderButtonFontSizePx: 11, finderBackgroundColor: '#ffffff', finderTextColor: '#111827', finderFieldBackgroundColor: '#fafafa', finderFieldTextColor: '#222b35', finderButtonBackgroundColor: '#f5a000', finderButtonTextColor: '#111827', finderSide: 'left' },
+  { id: 'home-hero', sectionKey: 'hero', title: 'قطعات مطمئن برای خودروی شما', subtitle: 'قطعه مناسب را بر اساس خودرو، دسته‌بندی و مشخصات فنی پیدا کنید.', badge: 'پیشنهاد ویژه قطعات خودرو', buttonText: 'مشاهده محصولات', buttonLink: 'shop', isVisible: true, order: 1, layout: 'full', desktopColumns: 1, mobileColumns: 1, borderRadiusPx: 8, itemRadiusPx: 0, gapPx: 0, fullWidth: true, widthPercent: 95, tabletWidthPercent: 96, mobileWidthPercent: 100, maxWidthPx: 0, marginTopPx: 12, finderWidthPx: 300, finderPaddingPx: 18, finderRadiusPx: 8, finderTitleFontSizePx: 15, finderTextFontSizePx: 11, finderLabelFontSizePx: 10, finderValueFontSizePx: 11, finderButtonFontSizePx: 11, finderBackgroundColor: '#ffffff', finderTextColor: '#111827', finderFieldBackgroundColor: '#fafafa', finderFieldTextColor: '#222b35', finderButtonBackgroundColor: '#f5a000', finderButtonTextColor: '#111827', finderSide: 'left' },
   { id: 'home-featured-categories', sectionKey: 'featured-categories', title: 'دسته‌بندی‌های ویژه', subtitle: '', isVisible: true, order: 2, layout: 'grid', desktopColumns: 9, mobileColumns: 3, borderRadiusPx: 8, itemRadiusPx: 999, gapPx: 14, maxItems: 9, imageSizePx: 68, widthPercent: 95, tabletWidthPercent: 96, mobileWidthPercent: 100, maxWidthPx: 1280, paddingTopPx: 22, paddingBottomPx: 24 },
   { id: 'home-promo-small', sectionKey: 'promo-small', title: 'بنرهای کوچک صفحه اصلی', isVisible: true, order: 3, layout: 'grid', desktopColumns: 3, mobileColumns: 1, borderRadiusPx: 10, itemRadiusPx: 10, gapPx: 12, widthPercent: 95, tabletWidthPercent: 96, mobileWidthPercent: 100, maxWidthPx: 1280, itemMinHeightPx: 178, items: [
     { id: 'promo-small-1', title: 'باتری و برق خودرو', subtitle: 'پیشنهاد روز', buttonText: 'مشاهده محصولات', link: 'shop', isVisible: true, order: 1, widthPercent: 34, tabletWidthPercent: 34, mobileWidthPercent: 100, heightPx: 178 },
@@ -73,28 +37,7 @@ const HOME_SECTION_DEFAULTS: PageSection[] = [
   { id: 'home-wide-banner-1', sectionKey: 'wide-banner-1', title: 'بنر عریض میانی', isVisible: true, order: 5, layout: 'full', desktopColumns: 1, mobileColumns: 1, borderRadiusPx: 10, minHeightPx: 330, fullWidth: true, widthPercent: 95, tabletWidthPercent: 96, mobileWidthPercent: 100, maxWidthPx: 0, items: [
     { id: 'wide-banner-1-item', title: 'برای توقف مطمئن، قطعه مطمئن انتخاب کنید', subtitle: 'سیستم ترمز و ایمنی', buttonText: 'مشاهده محصولات', link: 'shop', isVisible: true, order: 1, widthPercent: 100, tabletWidthPercent: 100, mobileWidthPercent: 100, heightPx: 330, titleColor: '#ffffff', subtitleColor: '#f5a000', buttonBgColor: '#ffffff', buttonTextColor: '#111827', textAlignment: 'right' }
   ] },
-  { id: 'home-manufacturers', sectionKey: 'manufacturers', title: 'برندهای خودرو', isVisible: true, order: 6, layout: 'grid', desktopColumns: 10, mobileColumns: 3, borderRadiusPx: 8, itemRadiusPx: 999, gapPx: 10, maxItems: 20, imageSizePx: 58, widthPercent: 95, tabletWidthPercent: 96, mobileWidthPercent: 100, maxWidthPx: 1280, paddingTopPx: 24, paddingBottomPx: 24, items: [
-    { id: 'manufacturer-kmc', title: 'KMC', imageUrl: 'https://www.google.com/s2/favicons?domain=kermanmotor.com&sz=128', link: 'car-brand:kmc', isVisible: true, order: 1 },
-    { id: 'manufacturer-chery', title: 'Chery', imageUrl: 'https://www.google.com/s2/favicons?domain=cheryinternational.com&sz=128', link: 'car-brand:chery', isVisible: true, order: 2 },
-    { id: 'manufacturer-mvm', title: 'MVM', imageUrl: 'https://www.google.com/s2/favicons?domain=mvmco.ir&sz=128', link: 'car-brand:mvm', isVisible: true, order: 3 },
-    { id: 'manufacturer-fownix', title: 'Fownix', imageUrl: 'https://www.google.com/s2/favicons?domain=fownix.com&sz=128', link: 'car-brand:fownix', isVisible: true, order: 4 },
-    { id: 'manufacturer-jac', title: 'JAC', imageUrl: 'https://www.google.com/s2/favicons?domain=jac.com.cn&sz=128', link: 'car-brand:jac', isVisible: true, order: 5 },
-    { id: 'manufacturer-lamari', title: 'Lamari', imageUrl: 'https://www.google.com/s2/favicons?domain=lamari.ir&sz=128', link: 'car-brand:lamari', isVisible: true, order: 6 },
-    { id: 'manufacturer-changan', title: 'Changan', imageUrl: 'https://www.google.com/s2/favicons?domain=globalchangan.com&sz=128', link: 'car-brand:changan', isVisible: true, order: 7 },
-    { id: 'manufacturer-jetour', title: 'Jetour', imageUrl: 'https://www.google.com/s2/favicons?domain=jetourglobal.com&sz=128', link: 'car-brand:jetour', isVisible: true, order: 8 },
-    { id: 'manufacturer-byd', title: 'BYD', imageUrl: 'https://www.google.com/s2/favicons?domain=bydglobal.com&sz=128', link: 'shop', isVisible: true, order: 9 },
-    { id: 'manufacturer-geely', title: 'Geely', imageUrl: 'https://www.google.com/s2/favicons?domain=global.geely.com&sz=128', link: 'shop', isVisible: true, order: 10 },
-    { id: 'manufacturer-haval', title: 'Haval', imageUrl: 'https://www.google.com/s2/favicons?domain=haval-global.com&sz=128', link: 'shop', isVisible: true, order: 11 },
-    { id: 'manufacturer-gac', title: 'GAC', imageUrl: 'https://www.google.com/s2/favicons?domain=gac-motor.com&sz=128', link: 'shop', isVisible: true, order: 12 },
-    { id: 'manufacturer-dongfeng', title: 'Dongfeng', imageUrl: 'https://www.google.com/s2/favicons?domain=dongfeng-global.com&sz=128', link: 'shop', isVisible: true, order: 13 },
-    { id: 'manufacturer-faw', title: 'FAW', imageUrl: 'https://www.google.com/s2/favicons?domain=faw.com&sz=128', link: 'shop', isVisible: true, order: 14 },
-    { id: 'manufacturer-bestune', title: 'Bestune', imageUrl: 'https://www.google.com/s2/favicons?domain=bestune-global.com&sz=128', link: 'shop', isVisible: true, order: 15 },
-    { id: 'manufacturer-baic', title: 'BAIC', imageUrl: 'https://www.google.com/s2/favicons?domain=baicglobal.com&sz=128', link: 'shop', isVisible: true, order: 16 },
-    { id: 'manufacturer-haima', title: 'Haima', imageUrl: 'https://www.google.com/s2/favicons?domain=haima.com&sz=128', link: 'shop', isVisible: true, order: 17 },
-    { id: 'manufacturer-swm', title: 'SWM', imageUrl: 'https://www.google.com/s2/favicons?domain=swmmotors.com&sz=128', link: 'shop', isVisible: true, order: 18 },
-    { id: 'manufacturer-omoda', title: 'Omoda', imageUrl: 'https://www.google.com/s2/favicons?domain=omodajaecoo.com&sz=128', link: 'shop', isVisible: true, order: 19 },
-    { id: 'manufacturer-jaecoo', title: 'Jaecoo', imageUrl: 'https://www.google.com/s2/favicons?domain=omodajaecoo.com&sz=128', link: 'shop', isVisible: true, order: 20 }
-  ]},
+  { id: 'home-manufacturers', sectionKey: 'manufacturers', title: 'برندهای خودرو', isVisible: true, order: 6, layout: 'grid', desktopColumns: 10, mobileColumns: 3, borderRadiusPx: 8, itemRadiusPx: 999, gapPx: 10, maxItems: 20, imageSizePx: 58, widthPercent: 95, tabletWidthPercent: 96, mobileWidthPercent: 100, maxWidthPx: 1280, paddingTopPx: 24, paddingBottomPx: 24 },
   { id: 'home-parts-brands', sectionKey: 'parts-brands', title: 'برندهای محبوب قطعات', isVisible: true, order: 7, layout: 'grid', desktopColumns: 8, mobileColumns: 2, borderRadiusPx: 8, itemRadiusPx: 4, gapPx: 7, maxItems: 16, imageSizePx: 48, widthPercent: 95, tabletWidthPercent: 96, mobileWidthPercent: 100, maxWidthPx: 1280, paddingTopPx: 24, paddingBottomPx: 24 },
   { id: 'home-promo-medium', sectionKey: 'promo-medium', title: 'بنرهای متوسط', isVisible: true, order: 8, layout: 'grid', desktopColumns: 2, mobileColumns: 1, borderRadiusPx: 10, itemRadiusPx: 10, gapPx: 12, widthPercent: 95, tabletWidthPercent: 96, mobileWidthPercent: 100, maxWidthPx: 1280, itemMinHeightPx: 205, items: [
     { id: 'promo-medium-1', title: 'جلوبندی، تایر و سیستم تعلیق', subtitle: 'آماده برای جاده', buttonText: 'خرید کنید', link: 'shop', isVisible: true, order: 1, widthPercent: 50, tabletWidthPercent: 50, mobileWidthPercent: 100, heightPx: 205 },
@@ -108,31 +51,26 @@ const HOME_SECTION_DEFAULTS: PageSection[] = [
     { id: 'promo-large-4', title: 'محصولات نگهداری و لوازم جانبی', subtitle: 'مراقبت خودرو', buttonText: 'مشاهده محصولات', link: 'shop', isVisible: true, order: 4, widthPercent: 67, tabletWidthPercent: 50, mobileWidthPercent: 100, heightPx: 220 }
   ]},
   { id: 'home-maintenance-products', sectionKey: 'maintenance-products', title: 'قطعات مصرفی و سرویس دوره‌ای', subtitle: 'انتخاب‌های سریع برای نگهداری اصولی خودرو', isVisible: false, order: 11, layout: 'grid', desktopColumns: 4, mobileColumns: 2, borderRadiusPx: 8, itemRadiusPx: 10, gapPx: 10, maxItems: 8, widthPercent: 95, tabletWidthPercent: 96, mobileWidthPercent: 100, maxWidthPx: 1280 },
-  { id: 'home-testimonials', sectionKey: 'testimonials', title: 'نظر مشتریان ما', subtitle: 'تجربه خرید از فروشگاه تخصصی قطعات', isVisible: true, order: 12, layout: 'cards', desktopColumns: 4, mobileColumns: 2, borderRadiusPx: 10, itemRadiusPx: 10, gapPx: 10, fullWidth: true, widthPercent: 95, tabletWidthPercent: 96, mobileWidthPercent: 100, maxWidthPx: 0, paddingTopPx: 26, paddingBottomPx: 30, items: [
-    { id: 'testimonial-1', title: 'خریدار قطعات موتور', content: 'اصالت قطعه دقیق بود و خیلی سریع به دستم رسید.', isVisible: true, order: 1 },
-    { id: 'testimonial-2', title: 'مشتری فروشگاه', content: 'قبل از خرید شماره فنی را بررسی کردند و قطعه کاملاً مناسب بود.', isVisible: true, order: 2 },
-    { id: 'testimonial-3', title: 'خریدار عمده', content: 'بسته‌بندی و پیگیری سفارش حرفه‌ای بود.', isVisible: true, order: 3 },
-    { id: 'testimonial-4', title: 'تعمیرکار', content: 'برای قطعه کمیاب خیلی سریع استعلام انجام شد.', isVisible: true, order: 4 }
-  ]},
-  { id: 'home-shipping-banner', sectionKey: 'shipping-banner', title: 'ارسال سریع', subtitle: 'برای سفارش‌های واجد شرایط', isVisible: true, order: 13, layout: 'full', desktopColumns: 1, mobileColumns: 1, borderRadiusPx: 8, widthPercent: 92, tabletWidthPercent: 95, mobileWidthPercent: 96, maxWidthPx: 1040, minHeightPx: 112 },
+  { id: 'home-testimonials', sectionKey: 'testimonials', title: 'نظر مشتریان', subtitle: 'پس از ثبت نظر واقعی مشتریان این بخش را فعال کنید', isVisible: false, order: 12, layout: 'cards', desktopColumns: 4, mobileColumns: 2, borderRadiusPx: 10, itemRadiusPx: 10, gapPx: 10, fullWidth: true, widthPercent: 95, tabletWidthPercent: 96, mobileWidthPercent: 100, maxWidthPx: 0, paddingTopPx: 26, paddingBottomPx: 30, items: [] },
+  { id: 'home-shipping-banner', sectionKey: 'shipping-banner', title: 'روش‌های ارسال سفارش', subtitle: 'هزینه و روش ارسال در مرحله تسویه حساب نمایش داده می‌شود', isVisible: true, order: 13, layout: 'full', desktopColumns: 1, mobileColumns: 1, borderRadiusPx: 8, widthPercent: 92, tabletWidthPercent: 95, mobileWidthPercent: 96, maxWidthPx: 1040, minHeightPx: 112 },
   { id: 'home-articles', sectionKey: 'articles', title: 'راهنما و مقالات', subtitle: 'آموزش، نگهداری و انتخاب صحیح قطعات خودرو', buttonText: 'مشاهده همه مقالات', buttonLink: 'blog', isVisible: true, order: 14, layout: 'grid', desktopColumns: 3, mobileColumns: 2, borderRadiusPx: 8, itemRadiusPx: 8, gapPx: 10, maxItems: 3, widthPercent: 95, tabletWidthPercent: 96, mobileWidthPercent: 100, maxWidthPx: 1280, paddingTopPx: 28, paddingBottomPx: 30 },
   { id: 'home-service-strip', sectionKey: 'service-strip', title: 'مزایای فروشگاه', isVisible: true, order: 15, layout: 'grid', desktopColumns: 4, mobileColumns: 2, borderRadiusPx: 8, itemRadiusPx: 6, gapPx: 10, fullWidth: true, widthPercent: 95, tabletWidthPercent: 96, mobileWidthPercent: 100, maxWidthPx: 0, items: [
-    { id: 'service-1', title: 'تضمین اصالت', content: 'کنترل اصالت و کیفیت قطعه', isVisible: true, order: 1 },
-    { id: 'service-2', title: 'ارزش خرید', content: 'قیمت‌گذاری شفاف و رقابتی', isVisible: true, order: 2 },
-    { id: 'service-3', title: 'ارسال سریع', content: 'بسته‌بندی ایمن و رهگیری سفارش', isVisible: true, order: 3 },
-    { id: 'service-4', title: 'پشتیبانی تخصصی', content: 'مشاوره قبل و بعد از خرید', isVisible: true, order: 4 }
+    { id: 'service-1', title: 'مشخصات فنی', content: 'اطلاعات قطعه و شماره فنی در صفحه محصول', isVisible: true, order: 1 },
+    { id: 'service-2', title: 'موجودی و قیمت', content: 'نمایش وضعیت موجودی و مبلغ فروش', isVisible: true, order: 2 },
+    { id: 'service-3', title: 'روش‌های ارسال', content: 'انتخاب روش ارسال در مرحله تسویه حساب', isVisible: true, order: 3 },
+    { id: 'service-4', title: 'پشتیبانی فروشگاه', content: 'راه‌های ارتباطی از بخش تماس با ما', isVisible: true, order: 4 }
   ]}
 ];
 
 const PART_REQUEST_SECTION_DEFAULTS: PageSection[] = [
-  { id: 'request-hero', sectionKey: 'request-hero', title: 'استعلام و واردات قطعه کمیاب خودروهای چینی', subtitle: 'اگر قطعه مورد نظر شما در سایت موجود نیست، مشخصات خودرو و قطعه را ارسال کنید تا واحد تامین بررسی کند.', badge: 'سفارش اختصاصی و استعلام فوری', isVisible: true, order: 1, layout: 'boxed', desktopColumns: 1, mobileColumns: 1, borderRadiusPx: 16, paddingTopPx: 16, paddingBottomPx: 16 },
+  { id: 'request-hero', sectionKey: 'request-hero', title: 'استعلام و واردات قطعه کمیاب خودروهای چینی', subtitle: 'اگر قطعه مورد نظر شما در سایت موجود نیست، مشخصات خودرو و قطعه را ارسال کنید تا واحد تامین بررسی کند.', badge: 'ثبت درخواست استعلام', isVisible: true, order: 1, layout: 'boxed', desktopColumns: 1, mobileColumns: 1, borderRadiusPx: 16, paddingTopPx: 16, paddingBottomPx: 16 },
   { id: 'request-form', sectionKey: 'request-form', title: 'فرم استعلام قطعه', subtitle: 'اطلاعات خودرو، قطعه و راه ارتباطی را وارد کنید.', isVisible: true, order: 2, layout: 'boxed', desktopColumns: 1, mobileColumns: 1, borderRadiusPx: 20 },
   { id: 'request-info', sectionKey: 'request-info', title: 'زمان‌بندی پاسخگویی به استعلام', subtitle: 'استعلام‌های داخلی معمولاً سریع‌تر و استعلام وارداتی پس از بررسی تامین‌کننده اعلام می‌شود.', isVisible: true, order: 3, layout: 'cards', desktopColumns: 1, mobileColumns: 1, borderRadiusPx: 20, items: [
     { id: 'request-info-1', title: 'تطبیق با شماره شاسی', content: 'بررسی قطعه براساس VIN و مشخصات خودرو', isVisible: true, order: 1 },
     { id: 'request-info-2', title: 'اعلام قیمت و زمان تحویل', content: 'نتیجه استعلام پس از بررسی موجودی و تامین اعلام می‌شود.', isVisible: true, order: 2 },
     { id: 'request-info-3', title: 'ارسال مطمئن', content: 'امکان ارسال به تعمیرگاه یا آدرس خریدار', isVisible: true, order: 3 }
   ]},
-  { id: 'request-contact', sectionKey: 'request-contact', title: 'نیاز به استعلام تلفنی فوری دارید؟', subtitle: 'شماره تماس این بخش را از Page Builder تغییر دهید.', buttonText: 'تماس با واحد تامین', buttonLink: 'tel:02100000000', isVisible: true, order: 4, layout: 'boxed', desktopColumns: 1, mobileColumns: 1, borderRadiusPx: 20 }
+  { id: 'request-contact', sectionKey: 'request-contact', title: 'راه ارتباطی واحد تامین', subtitle: 'شماره تماس یا لینک دلخواه را از صفحه‌ساز تنظیم کنید.', buttonText: '', buttonLink: '', isVisible: true, order: 4, layout: 'boxed', desktopColumns: 1, mobileColumns: 1, borderRadiusPx: 20 }
 ];
 
 const upgradeLegacyHomeSection = (section: PageSection): PageSection => {
@@ -166,6 +104,9 @@ const upgradeLegacyHomeSection = (section: PageSection): PageSection => {
     };
   }
   if (key === 'hero') {
+    if (section.subtitle === 'خرید تخصصی قطعات خودروهای چینی با تضمین اصالت، فیتمنت دقیق و ارسال سریع.') {
+      section = { ...section, subtitle: 'قطعه مناسب را بر اساس خودرو، دسته‌بندی و مشخصات فنی پیدا کنید.' };
+    }
     return {
       ...section,
       fullWidth: true,
@@ -203,6 +144,10 @@ const upgradeLegacyHomeSection = (section: PageSection): PageSection => {
     return { ...section, isVisible: false };
   }
   if (key === 'manufacturers') {
+    const legacyFaviconItems = Boolean(
+      section.items?.length &&
+      section.items.every(item => /^https:\/\/www\.google\.com\/s2\/favicons\?/i.test(item.imageUrl || ''))
+    );
     const manufacturerDefaults = HOME_SECTION_DEFAULTS.find(item => item.sectionKey === 'manufacturers');
     const shouldUpgradeGrid = section.desktopColumns == null || section.desktopColumns === 6 || section.desktopColumns === 12;
     return {
@@ -212,10 +157,46 @@ const upgradeLegacyHomeSection = (section: PageSection): PageSection => {
       maxItems: section.maxItems === 12 || section.maxItems === 24 || section.maxItems == null ? 20 : section.maxItems,
       imageSizePx: section.imageSizePx || 58,
       gapPx: section.gapPx ?? 10,
-      items: section.items?.length ? section.items : manufacturerDefaults?.items
+      items: legacyFaviconItems ? [] : (section.items?.length ? section.items : manufacturerDefaults?.items)
     };
   }
-  if (key === 'parts-brands' && (section.desktopColumns == null || section.desktopColumns === 4)) {
+  if (key === 'testimonials') {
+    const legacyTestimonials = (section.items || []).length === 4 &&
+      (section.items || []).every((item, index) => item.id === `testimonial-${index + 1}`);
+    if (legacyTestimonials) {
+      return {
+        ...section,
+        title: 'نظر مشتریان',
+        subtitle: 'پس از ثبت نظر واقعی مشتریان این بخش را فعال کنید',
+        isVisible: false,
+        items: []
+      };
+    }
+  }
+  if (
+    key === 'shipping-banner' &&
+    section.title === 'ارسال سریع' &&
+    section.subtitle === 'برای سفارش‌های واجد شرایط'
+  ) {
+    return {
+      ...section,
+      title: 'روش‌های ارسال سفارش',
+      subtitle: 'هزینه و روش ارسال در مرحله تسویه حساب نمایش داده می‌شود'
+    };
+  }
+  if (key === 'service-strip') {
+    const legacyServiceIds = ['service-1','service-2','service-3','service-4'];
+    const isLegacy = (section.items || []).length === 4 &&
+      (section.items || []).every((item,index) => item.id === legacyServiceIds[index]);
+    if (isLegacy) {
+      return {
+        ...section,
+        items: HOME_SECTION_DEFAULTS.find(item => item.sectionKey === 'service-strip')?.items || []
+      };
+    }
+  }
+
+    if (key === 'parts-brands' && (section.desktopColumns == null || section.desktopColumns === 4)) {
     return {
       ...section,
       desktopColumns: 8,
@@ -501,13 +482,15 @@ interface StoreContextType {
   
   // Customers (CRM)
   customers: CustomerUser[];
-  addCustomer: (cust: Omit<CustomerUser, 'id' | 'registeredAt' | 'totalOrders' | 'totalSpent'>) => void;
+  addCustomer: (cust: Omit<CustomerUser, 'id' | 'registeredAt' | 'totalOrders' | 'totalSpent'> & { initialPassword?: string }) => void;
   updateCustomer: (cust: CustomerUser) => void;
+  setCustomerLoginPassword: (id: string, newPassword: string) => Promise<boolean>;
   toggleCustomerStatus: (id: string) => void;
 
   // Store Settings (Theme, Font, Color, Contact, Shipping)
   settings: SiteSettings;
   isStoreReady: boolean;
+  storeLoadError: string | null;
   updateSettings: (newSettings: Partial<SiteSettings>) => void;
 
   // Payment Gateways
@@ -639,9 +622,10 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [loyaltyTransactions, setLoyaltyTransactions] = useState<LoyaltyTransaction[]>([]);
 
   // Settings
-  const [settings, setSettings] = useState<SiteSettings>(INITIAL_SETTINGS);
+  const [settings, setSettings] = useState<SiteSettings>(DEFAULT_SITE_SETTINGS);
   // Prevent rendering a wrong/default template before the persisted CMS settings arrive.
   const [isStoreReady, setIsStoreReady] = useState(false);
+  const [storeLoadError, setStoreLoadError] = useState<string | null>(null);
 
   // Payment Gateways
   const [paymentGateways, setPaymentGateways] = useState<PaymentGatewayConfig[]>([]);
@@ -667,29 +651,22 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     isMustChangePassword: false
   });
 
-  // Selected Vehicle for active fitment filtering
-  const [selectedVehicle, setSelectedVehicleState] = useState<GarageCar | null>(() => {
-    const saved = localStorage.getItem('chinpart_selected_car');
-    return saved ? JSON.parse(saved) : INITIAL_GARAGE[0];
-  });
+  // Browser-only shopping state. Corrupt/stale storage must never crash app startup.
+  const [selectedVehicle, setSelectedVehicleState] = useState<GarageCar | null>(() =>
+    readJsonStorage<GarageCar | null>('chinpart_selected_car', null)
+  );
 
-  // Garage
-  const [garage, setGarage] = useState<GarageCar[]>(() => {
-    const saved = localStorage.getItem('chinpart_garage');
-    return saved ? JSON.parse(saved) : INITIAL_GARAGE;
-  });
+  const [garage, setGarage] = useState<GarageCar[]>(() =>
+    readJsonStorage<GarageCar[]>('chinpart_garage', [])
+  );
 
-  // Cart
-  const [cart, setCart] = useState<CartItem[]>(() => {
-    const saved = localStorage.getItem('chinpart_cart');
-    return saved ? JSON.parse(saved) : [];
-  });
+  const [cart, setCart] = useState<CartItem[]>(() =>
+    readJsonStorage<CartItem[]>('chinpart_cart', [])
+  );
 
-  // Wishlist
-  const [wishlist, setWishlist] = useState<string[]>(() => {
-    const saved = localStorage.getItem('chinpart_wishlist');
-    return saved ? JSON.parse(saved) : ['prod-water-pump-kmc-j7'];
-  });
+  const [wishlist, setWishlist] = useState<string[]>(() =>
+    readJsonStorage<string[]>('chinpart_wishlist', [])
+  );
 
   // Compare List
   const [compareList, setCompareList] = useState<Product[]>([]);
@@ -712,7 +689,102 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }, 3800);
   };
 
-  const loadAdminData = async (admin: AdminUser, cancelled = false) => {
+  type PaginationMeta = {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+    hasMore: boolean;
+  };
+
+  type OrderPageResponse = {
+    orders: Order[];
+    pagination?: PaginationMeta;
+  };
+
+  type CustomerPageResponse = {
+    customers: CustomerUser[];
+    pagination?: PaginationMeta;
+  };
+
+  type LoyaltyPageResponse = {
+    transactions: LoyaltyTransaction[];
+    pagination?: PaginationMeta;
+  };
+
+  const hydrateRemainingOrderPages = async (
+    endpoint: string,
+    firstPage: Order[],
+    totalPages: number,
+    pageSize: number,
+    cancelled: () => boolean
+  ) => {
+    if (totalPages <= 1) return;
+    const byId = new Map(firstPage.map(order => [order.id, order]));
+    for (let page = 2; page <= totalPages; page += 1) {
+      if (cancelled()) return;
+      try {
+        const separator = endpoint.includes('?') ? '&' : '?';
+        const pageData = await apiRequest<OrderPageResponse>(
+          `${endpoint}${separator}page=${page}&limit=${pageSize}`
+        );
+        pageData.orders.forEach(order => byId.set(order.id, order));
+        if (!cancelled()) setOrders(Array.from(byId.values()));
+      } catch (error) {
+        console.error(`Order page ${page} load failed:`, error);
+        return;
+      }
+    }
+  };
+
+  const hydrateRemainingCustomers = async (
+    firstPage: CustomerUser[],
+    totalPages: number,
+    isCancelled: () => boolean
+  ) => {
+    if (totalPages <= 1) return;
+    const byId = new Map(firstPage.map(customer => [customer.id, customer]));
+    for (let page = 2; page <= totalPages; page += 1) {
+      if (isCancelled()) return;
+      try {
+        const pageData = await apiRequest<CustomerPageResponse>(
+          `/api/admin-data/customers?page=${page}&limit=100`
+        );
+        pageData.customers.forEach(customer => byId.set(customer.id, customer));
+        if (!isCancelled()) setCustomers(Array.from(byId.values()));
+      } catch (error) {
+        console.error(`Customer page ${page} load failed:`, error);
+        return;
+      }
+    }
+  };
+
+  const hydrateRemainingLoyalty = async (
+    firstPage: LoyaltyTransaction[],
+    totalPages: number,
+    isCancelled: () => boolean
+  ) => {
+    if (totalPages <= 1) return;
+    const byId = new Map(firstPage.map(transaction => [transaction.id, transaction]));
+    for (let page = 2; page <= totalPages; page += 1) {
+      if (isCancelled()) return;
+      try {
+        const pageData = await apiRequest<LoyaltyPageResponse>(
+          `/api/admin-data/loyalty?page=${page}&limit=150`
+        );
+        pageData.transactions.forEach(transaction => byId.set(transaction.id, transaction));
+        if (!isCancelled()) setLoyaltyTransactions(Array.from(byId.values()));
+      } catch (error) {
+        console.error(`Loyalty page ${page} load failed:`, error);
+        return;
+      }
+    }
+  };
+
+  const loadAdminData = async (
+    admin: AdminUser,
+    isCancelled: () => boolean = () => false
+  ) => {
     const canOrders = admin.role === 'super_admin' || admin.permissions?.canManageOrders;
     const canAdmins = admin.role === 'super_admin' || admin.permissions?.canManageAdmins;
     const canSettings = admin.role === 'super_admin' || admin.permissions?.canManageSettings;
@@ -721,16 +793,42 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     if (canOrders) {
       requests.push(
-        apiRequest<{ orders: Order[] }>('/api/orders')
-          .then(result => { if (!cancelled) setOrders(result.orders); })
+        apiRequest<OrderPageResponse>('/api/orders?page=1&limit=100')
+          .then(result => {
+            if (isCancelled()) return;
+            setOrders(result.orders);
+            void hydrateRemainingOrderPages(
+              '/api/orders',
+              result.orders,
+              Math.max(1, Number(result.pagination?.totalPages || 1)),
+              100,
+              isCancelled
+            );
+          })
           .catch(error => console.error('Admin orders load failed:', error))
       );
       requests.push(
-        apiRequest<{ customers: CustomerUser[] }>('/api/admin-data/customers')
-          .then(result => { if (!cancelled) setCustomers(result.customers); })
+        apiRequest<CustomerPageResponse>('/api/admin-data/customers?page=1&limit=100')
+          .then(result => {
+            if (isCancelled()) return;
+            setCustomers(result.customers);
+            void hydrateRemainingCustomers(
+              result.customers,
+              Math.max(1, Number(result.pagination?.totalPages || 1)),
+              isCancelled
+            );
+          })
           .catch(error => console.error('CRM customers load failed:', error)),
-        apiRequest<{ transactions: LoyaltyTransaction[] }>('/api/admin-data/loyalty')
-          .then(result => { if (!cancelled) setLoyaltyTransactions(result.transactions); })
+        apiRequest<LoyaltyPageResponse>('/api/admin-data/loyalty?page=1&limit=150')
+          .then(result => {
+            if (isCancelled()) return;
+            setLoyaltyTransactions(result.transactions);
+            void hydrateRemainingLoyalty(
+              result.transactions,
+              Math.max(1, Number(result.pagination?.totalPages || 1)),
+              isCancelled
+            );
+          })
           .catch(error => console.error('Loyalty data load failed:', error)),
         apiRequest<{
           partRequests: PartRequest[];
@@ -738,7 +836,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           searchLogs: SearchQueryLog[];
         }>('/api/engagement/admin')
           .then(result => {
-            if (cancelled) return;
+            if (isCancelled()) return;
             setPartRequests(result.partRequests);
             setStockAlerts(result.stockAlerts);
             setSearchLogs(result.searchLogs);
@@ -750,7 +848,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (canAdmins) {
       requests.push(
         apiRequest<{ admins: AdminUser[] }>('/api/admin-data/admins')
-          .then(result => { if (!cancelled) setAdminUsers(result.admins); })
+          .then(result => { if (!isCancelled()) setAdminUsers(result.admins); })
           .catch(error => console.error('Admin users load failed:', error))
       );
     }
@@ -758,10 +856,10 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (canSettings) {
       requests.push(
         apiRequest<{ integrations: ApiIntegrationsConfig }>('/api/integrations')
-          .then(result => { if (!cancelled) setApiIntegrations(result.integrations); })
+          .then(result => { if (!isCancelled()) setApiIntegrations(result.integrations); })
           .catch(error => console.error('Integration settings load failed:', error)),
         apiRequest<{ gateways: PaymentGatewayConfig[] }>('/api/integrations/payment-gateways')
-          .then(result => { if (!cancelled) setPaymentGateways(result.gateways); })
+          .then(result => { if (!isCancelled()) setPaymentGateways(result.gateways); })
           .catch(error => console.error('Secure payment gateway settings load failed:', error))
       );
     }
@@ -769,22 +867,67 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     await Promise.allSettled(requests);
   };
 
-  const loadCustomerPrivateData = async (cancelled = false) => {
+  const loadCustomerPrivateData = async (
+    isCancelled: () => boolean = () => false
+  ) => {
     await Promise.allSettled([
-      apiRequest<{ orders: Order[] }>('/api/orders/mine')
-        .then(result => { if (!cancelled) setOrders(result.orders); }),
+      apiRequest<OrderPageResponse>('/api/orders/mine?page=1&limit=50')
+        .then(result => {
+          if (isCancelled()) return;
+          setOrders(result.orders);
+          void hydrateRemainingOrderPages(
+            '/api/orders/mine',
+            result.orders,
+            Math.max(1, Number(result.pagination?.totalPages || 1)),
+            50,
+            isCancelled
+          );
+        }),
       apiRequest<{ transactions: LoyaltyTransaction[] }>('/api/auth/customer/loyalty')
-        .then(result => { if (!cancelled) setLoyaltyTransactions(result.transactions); }),
+        .then(result => { if (!isCancelled()) setLoyaltyTransactions(result.transactions); }),
       apiRequest<{ requests: PartRequest[] }>('/api/engagement/part-requests/mine')
-        .then(result => { if (!cancelled) setPartRequests(result.requests); })
+        .then(result => { if (!isCancelled()) setPartRequests(result.requests); })
     ]);
   };
 
   useEffect(() => {
     let cancelled = false;
 
+    type ProductPageResponse = {
+      products: Product[];
+      pagination?: {
+        page: number;
+        limit: number;
+        total: number;
+        totalPages: number;
+        hasMore: boolean;
+      };
+    };
+
+    const loadRemainingProductPages = async (
+      firstPage: Product[],
+      totalPages: number
+    ) => {
+      if (totalPages <= 1) return;
+
+      const byId = new Map(firstPage.map(product => [product.id, product]));
+      for (let page = 2; page <= totalPages; page += 1) {
+        if (cancelled) return;
+        try {
+          const pageData = await apiRequest<ProductPageResponse>(
+            `/api/catalog/products?page=${page}&limit=120`
+          );
+          pageData.products.forEach(product => byId.set(product.id, product));
+          if (!cancelled) setProducts(Array.from(byId.values()));
+        } catch (error) {
+          console.error(`Catalog background page ${page} load failed:`, error);
+          return;
+        }
+      }
+    };
+
     Promise.all([
-      apiRequest<{ products: Product[] }>('/api/catalog/products'),
+      apiRequest<ProductPageResponse>('/api/catalog/products?page=1&limit=120'),
       apiRequest<{ categories: Category[] }>('/api/catalog/categories'),
       apiRequest<{ brands: CarBrand[]; models: VehicleModel[] }>('/api/vehicles'),
       apiRequest<{
@@ -806,23 +949,32 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         setArticleCategories(cmsData.articleCategories);
         setSliders(cmsData.sliders);
         setPages(normalizeBuilderPages(cmsData.pages));
-        if (cmsData.settings) setSettings({ ...INITIAL_SETTINGS, ...cmsData.settings });
+        if (cmsData.settings) setSettings({ ...DEFAULT_SITE_SETTINGS, ...cmsData.settings });
         setPaymentGateways(cmsData.paymentGateways);
+        setStoreLoadError(null);
         setIsStoreReady(true);
+
+        const totalPages = Math.max(1, Number(productData.pagination?.totalPages || 1));
+        void loadRemainingProductPages(productData.products, totalPages);
       })
-      .catch(error => {
+      .catch(async error => {
         console.error('Public store data load failed:', error);
         if (import.meta.env.DEV) {
-          setProducts(INITIAL_PRODUCTS);
-          setCategories(INITIAL_CATEGORIES);
-          setBrands(INITIAL_BRANDS);
-          setModels(INITIAL_MODELS);
-          setArticles(INITIAL_ARTICLES);
-          setArticleCategories(INITIAL_ARTICLE_CATEGORIES);
-          setSliders(INITIAL_SLIDERS);
-          setPages(normalizeBuilderPages(INITIAL_PAGES));
-          setSettings(INITIAL_SETTINGS);
-          setPaymentGateways(INITIAL_PAYMENT_GATEWAYS);
+          const mock = await import('../data/mockData');
+          if (cancelled) return;
+          setProducts(mock.PRODUCTS);
+          setCategories(mock.CATEGORIES);
+          setBrands(mock.BRANDS);
+          setModels(mock.VEHICLE_MODELS);
+          setArticles(mock.ARTICLES);
+          setArticleCategories(mock.INITIAL_ARTICLE_CATEGORIES);
+          setSliders(mock.INITIAL_SLIDERS);
+          setPages(normalizeBuilderPages(mock.INITIAL_PAGES));
+          setSettings({ ...DEFAULT_SITE_SETTINGS, ...mock.INITIAL_SETTINGS });
+          setPaymentGateways(mock.INITIAL_PAYMENT_GATEWAYS);
+          setStoreLoadError(null);
+        } else {
+          setStoreLoadError('STORE_BOOTSTRAP_FAILED');
         }
         if (!cancelled) setIsStoreReady(true);
       });
@@ -845,7 +997,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             const exists = prev.some(item => item.id === data.customer!.id);
             return exists ? prev.map(item => item.id === data.customer!.id ? data.customer! : item) : [data.customer!, ...prev];
           });
-          void loadCustomerPrivateData(cancelled);
+          void loadCustomerPrivateData(() => cancelled);
         } else if (data.role === 'admin' && data.admin) {
           setAdminAuth({
             isAuthenticated: true,
@@ -853,7 +1005,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             currentUser: data.admin,
             isMustChangePassword: false
           });
-          void loadAdminData(data.admin, cancelled);
+          void loadAdminData(data.admin, () => cancelled);
         }
       })
       .catch(error => {
@@ -869,38 +1021,21 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   // Sync state to local storage
 
-
-
-
-
-
-
-
-
-
   useEffect(() => {
-    localStorage.setItem('chinpart_selected_car', JSON.stringify(selectedVehicle));
+    writeJsonStorage('chinpart_selected_car', selectedVehicle);
   }, [selectedVehicle]);
 
   useEffect(() => {
-    localStorage.setItem('chinpart_garage', JSON.stringify(garage));
+    writeJsonStorage('chinpart_garage', garage);
   }, [garage]);
 
   useEffect(() => {
-    localStorage.setItem('chinpart_cart', JSON.stringify(cart));
+    writeJsonStorage('chinpart_cart', cart);
   }, [cart]);
 
   useEffect(() => {
-    localStorage.setItem('chinpart_wishlist', JSON.stringify(wishlist));
+    writeJsonStorage('chinpart_wishlist', wishlist);
   }, [wishlist]);
-
-
-
-
-
-
-
-
 
   // Dynamic Theme Styling Application (Colors, Glow, Typography, Border Radius, Font Scale)
   useEffect(() => {
@@ -1187,10 +1322,10 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       method: 'DELETE'
     }).then(() => {
       setAdminUsers(prev => prev.filter(user => user.id !== id));
-      showToast('مدیر حذف شد.', 'info');
+      showToast('حساب مدیر بایگانی شد.', 'info');
     }).catch(error => {
       console.error(error);
-      showToast('حذف مدیر انجام نشد.', 'error');
+      showToast('بایگانی حساب مدیر انجام نشد.', 'error');
     });
   };
 
@@ -1213,7 +1348,6 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   // Pages & Section Builder Methods
-  // Pages & Section Builder Methods
 
   const persistPage = (page: SitePage, successMessage: string) => {
     const normalized = { ...page, updatedAt: new Date().toLocaleDateString('fa-IR') };
@@ -1231,8 +1365,18 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         console.error('Page SEO sync failed:', seoError);
       }
       showToast(successMessage);
-    }).catch(error => {
+    }).catch(async error => {
       console.error(error);
+      if (error instanceof ApiError && error.code === 'PAGE_EDIT_CONFLICT') {
+        showToast('این برگه هم‌زمان در جای دیگری تغییر کرده است. آخرین نسخه سرور بارگذاری شد؛ تغییرات را روی نسخه جدید دوباره اعمال کنید.', 'error');
+        try {
+          const cmsData = await apiRequest<{ pages: SitePage[] }>('/api/cms/bundle');
+          setPages(normalizeBuilderPages(cmsData.pages));
+        } catch (reloadError) {
+          console.error('Page conflict reload failed:', reloadError);
+        }
+        return;
+      }
       showToast('ذخیره برگه در سرور انجام نشد.', 'error');
     });
   };
@@ -1431,7 +1575,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   // Customers (CRM)
-  const addCustomer = (custData: Omit<CustomerUser, 'id' | 'registeredAt' | 'totalOrders' | 'totalSpent'>) => {
+  const addCustomer = (custData: Omit<CustomerUser, 'id' | 'registeredAt' | 'totalOrders' | 'totalSpent'> & { initialPassword?: string }) => {
     void apiRequest<{ customer: CustomerUser }>('/api/admin-data/customers', {
       method: 'POST',
       body: JSON.stringify(custData)
@@ -1440,9 +1584,12 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       showToast(`مشتری ${customer.firstName} ${customer.lastName} ثبت شد.`);
     }).catch(error => {
       console.error(error);
-      const message = error instanceof ApiError && error.code === 'PHONE_ALREADY_REGISTERED'
-        ? 'این شماره موبایل قبلاً ثبت شده است.'
-        : 'ثبت مشتری انجام نشد.';
+      const message =
+        error instanceof ApiError && error.code === 'PHONE_ALREADY_REGISTERED'
+          ? 'این شماره موبایل قبلاً ثبت شده است.'
+          : error instanceof ApiError && error.code === 'CUSTOMER_INITIAL_PASSWORD_TOO_SHORT'
+            ? 'رمز ورود اولیه باید حداقل ۸ کاراکتر باشد.'
+            : 'ثبت مشتری انجام نشد.';
       showToast(message, 'error');
     });
   };
@@ -1461,7 +1608,32 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     });
   };
 
-  const toggleCustomerStatus = (id: string) => {
+  const setCustomerLoginPassword = async (id: string, newPassword: string): Promise<boolean> => {
+    try {
+      const result = await apiRequest<{ id: string; loginReady: boolean }>(
+        `/api/admin-data/customers/${encodeURIComponent(id)}/login-password`,
+        {
+          method: 'PATCH',
+          body: JSON.stringify({ newPassword })
+        }
+      );
+      setCustomers(prev => prev.map(customer =>
+        customer.id === result.id ? { ...customer, loginReady: result.loginReady } : customer
+      ));
+      showToast('رمز ورود مشتری ذخیره شد و نشست‌های قبلی او باطل شدند.');
+      return true;
+    } catch (error) {
+      console.error(error);
+      const message =
+        error instanceof ApiError && error.code === 'CUSTOMER_PASSWORD_TOO_SHORT'
+          ? 'رمز ورود مشتری باید حداقل ۸ کاراکتر باشد.'
+          : 'تنظیم رمز ورود مشتری انجام نشد.';
+      showToast(message, 'error');
+      return false;
+    }
+  };
+
+    const toggleCustomerStatus = (id: string) => {
     void apiRequest<{ id: string; status: 'active' | 'blocked' }>(`/api/admin-data/customers/${encodeURIComponent(id)}/status`, {
       method: 'PATCH'
     }).then(result => {
@@ -2179,7 +2351,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const createOrder = async (
     orderData: Omit<Order, 'id' | 'orderNumber' | 'date'> & { loyaltyPointsToRedeem?: number }
   ): Promise<Order> => {
-    const response = await apiRequest<{ order: Order }>('/api/orders', {
+    const response = await apiRequest<{ order: Order; paymentToken: string }>('/api/orders', {
       method: 'POST',
       body: JSON.stringify({
         customer: orderData.customer,
@@ -2193,9 +2365,10 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       })
     });
 
-    setOrders(prev => [response.order, ...prev.filter(item => item.id !== response.order.id)]);
-    showToast(`سفارش ${response.order.orderNumber} در سرور ثبت شد.`);
-    return response.order;
+    const order = { ...response.order, paymentToken: response.paymentToken };
+    setOrders(prev => [order, ...prev.filter(item => item.id !== order.id)]);
+    showToast(`سفارش ${order.orderNumber} در سرور ثبت شد.`);
+    return order;
   };
 
   const updateOrderStatus = (orderId: string, status: OrderStatus, trackingCode?: string) => {
@@ -2218,10 +2391,10 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       method: 'DELETE'
     }).then(() => {
       setOrders(prev => prev.filter(o => o.id !== orderId && o.orderNumber !== orderId));
-      showToast('سفارش حذف شد.', 'info');
+      showToast('سفارش بایگانی شد.', 'info');
     }).catch(error => {
       console.error(error);
-      showToast('حذف سفارش روی سرور انجام نشد.', 'error');
+      showToast('بایگانی سفارش روی سرور انجام نشد.', 'error');
     });
   };
 
@@ -2230,12 +2403,13 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const getOrderByTracking = async (orderNumber: string, phone: string) => {
     try {
-      const response = await apiRequest<{ order: Order }>('/api/orders/track', {
+      const response = await apiRequest<{ order: Order; paymentToken: string }>('/api/orders/track', {
         method: 'POST',
         body: JSON.stringify({ orderNumber, phone })
       });
-      setOrders(prev => [response.order, ...prev.filter(item => item.id !== response.order.id)]);
-      return response.order;
+      const order = { ...response.order, paymentToken: response.paymentToken };
+      setOrders(prev => [order, ...prev.filter(item => item.id !== order.id)]);
+      return order;
     } catch (error) {
       if (error instanceof ApiError && error.status === 404) return undefined;
       console.error(error);
@@ -2403,6 +2577,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       customerLogout,
       addCustomer,
       updateCustomer,
+      setCustomerLoginPassword,
       toggleCustomerStatus,
       sliders,
       addSlider,
@@ -2426,6 +2601,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       setIsLiveEditActive,
       settings,
       isStoreReady,
+      storeLoadError,
       updateSettings,
       paymentGateways,
       updatePaymentGateway,

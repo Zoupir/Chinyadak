@@ -1,11 +1,5 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import {
-  Activity, AlertTriangle, ArrowUpLeft, BarChart3, Bot, BrainCircuit, Check,
-  CheckCircle2, ChevronLeft, CircleGauge, Code2, ExternalLink, FileSearch,
-  FileText, Gauge, GitBranch, Globe2, History, KeyRound, Link2, ListChecks,
-  Loader2, Network, RefreshCw, Route, Save, Search, Settings2, ShieldCheck,
-  Sparkles, Trash2, WandSparkles, XCircle, Zap
-} from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Activity, AlertTriangle, BarChart3, Bot, Check, CheckCircle2, CircleGauge, Code2, FileSearch, FileText, Gauge, Globe2, ListChecks, Loader2, Network, RefreshCw, Route, Save, Search, Settings2, Sparkles, Trash2, WandSparkles, XCircle, Zap } from 'lucide-react';
 
 type SeoTab =
   | 'wizard' | 'dashboard' | 'content' | 'audit' | 'links' | 'schema'

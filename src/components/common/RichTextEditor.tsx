@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useId, useState } from 'react';
 import { 
   Bold, 
   Italic, 
@@ -14,6 +14,7 @@ import {
   Edit3,
   HelpCircle
 } from 'lucide-react';
+import { RichTextContent } from './RichTextContent';
 
 interface RichTextEditorProps {
   label: string;
@@ -33,9 +34,10 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
   helperText
 }) => {
   const [activeTab, setActiveTab] = useState<'write' | 'preview'>('write');
+  const editorId = useId();
 
   const insertText = (before: string, after: string = '', defaultText: string = '') => {
-    const textarea = document.getElementById(`editor-${label}`) as HTMLTextAreaElement | null;
+    const textarea = document.getElementById(editorId) as HTMLTextAreaElement | null;
     if (!textarea) {
       onChange(value + before + defaultText + after);
       return;
@@ -55,53 +57,15 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
     }, 0);
   };
 
-  // Simple Markdown to HTML preview converter
   const renderPreview = (text: string) => {
     if (!text.trim()) {
       return <p className="text-neutral-400 italic text-xs">هیچ متنی برای پیش‌نمایش وارد نشده است.</p>;
     }
-
-    // Split lines
-    const lines = text.split('\n');
     return (
-      <div className="space-y-2 text-xs leading-relaxed text-neutral-800 font-sans">
-        {lines.map((line, idx) => {
-          const trimmed = line.trim();
-          if (trimmed.startsWith('### ')) {
-            return <h4 key={idx} className="font-black text-sm text-neutral-900 mt-2 mb-1">{trimmed.replace('### ', '')}</h4>;
-          }
-          if (trimmed.startsWith('## ')) {
-            return <h3 key={idx} className="font-black text-base text-neutral-900 border-b border-neutral-200 pb-1 mt-3 mb-1.5">{trimmed.replace('## ', '')}</h3>;
-          }
-          if (trimmed.startsWith('> ⚠️') || trimmed.startsWith('> [!WARNING]')) {
-            return (
-              <div key={idx} className="p-3 bg-amber-50 border-r-4 border-amber-500 rounded-lg text-amber-900 font-semibold my-2 flex items-start gap-2">
-                <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-                <span>{trimmed.replace(/^>\s*(⚠️|\[!WARNING\])?\s*/, '')}</span>
-              </div>
-            );
-          }
-          if (trimmed.startsWith('> ')) {
-            return (
-              <blockquote key={idx} className="p-2.5 bg-neutral-100 border-r-4 border-neutral-400 rounded-lg text-neutral-700 italic my-1.5 pr-3">
-                {trimmed.replace('> ', '')}
-              </blockquote>
-            );
-          }
-          if (trimmed.startsWith('• ') || trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
-            return (
-              <div key={idx} className="flex items-start gap-2 pr-2">
-                <span className="w-1.5 h-1.5 rounded-full bg-red-600 mt-1.5 shrink-0"></span>
-                <span>{trimmed.substring(2)}</span>
-              </div>
-            );
-          }
-          if (!trimmed) {
-            return <div key={idx} className="h-2"></div>;
-          }
-          return <p key={idx} className="text-neutral-700">{line}</p>;
-        })}
-      </div>
+      <RichTextContent
+        value={text}
+        className="space-y-2 text-xs leading-relaxed text-neutral-800 font-sans"
+      />
     );
   };
 
@@ -188,6 +152,22 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
             >
               <List className="w-3.5 h-3.5" />
             </button>
+            <button
+              type="button"
+              onClick={() => insertText('\n1. ', '', 'مورد اول')}
+              className="p-1.5 hover:bg-neutral-200 rounded-md transition-colors"
+              title="لیست شماره‌دار"
+            >
+              <ListOrdered className="w-3.5 h-3.5" />
+            </button>
+            <button
+              type="button"
+              onClick={() => insertText('[', '](https://example.com)', 'متن لینک')}
+              className="p-1.5 hover:bg-neutral-200 rounded-md transition-colors"
+              title="درج لینک"
+            >
+              <LinkIcon className="w-3.5 h-3.5" />
+            </button>
 
             <button
               type="button"
@@ -227,7 +207,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
         {/* Text Area or Live Preview */}
         {activeTab === 'write' ? (
           <textarea
-            id={`editor-${label}`}
+            id={editorId}
             rows={rows}
             value={value}
             onChange={e => onChange(e.target.value)}

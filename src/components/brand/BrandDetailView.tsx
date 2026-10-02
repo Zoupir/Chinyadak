@@ -1,7 +1,7 @@
 import React from 'react';
 import { useStore } from '../../context/StoreContext';
 import { ProductCard } from '../product/ProductCard';
-import { Car, ShieldCheck, ArrowLeft, Layers, Wrench, HelpCircle, CheckCircle2, ChevronLeft } from 'lucide-react';
+import { Car, ArrowLeft, Layers, Wrench, HelpCircle } from 'lucide-react';
 
 interface BrandDetailViewProps {
   brandSlug: string;

@@ -2,24 +2,8 @@ import React, { useState } from 'react';
 import { useStore } from '../../context/StoreContext';
 import { PageSection } from '../../types';
 import { LiveSectionModal } from '../common/LiveSectionModal';
-import { 
-  ChevronLeft, 
-  Home, 
-  FileText, 
-  Sparkles, 
-  Edit3, 
-  ArrowLeft, 
-  ExternalLink,
-  ShieldCheck,
-  EyeOff,
-  CheckCircle2,
-  HelpCircle,
-  PackageOpen,
-  Plus,
-  Trash2,
-  ArrowUp,
-  ArrowDown
-} from 'lucide-react';
+import { RichTextContent } from '../common/RichTextContent';
+import { ChevronLeft, Home, FileText, Edit3, ArrowLeft, EyeOff, PackageOpen, Plus, Trash2, ArrowUp, ArrowDown } from 'lucide-react';
 
 interface PageViewProps {
   pageSlug: string;
@@ -104,15 +88,15 @@ export const PageView: React.FC<PageViewProps> = ({ pageSlug, onNavigate }) => {
       paddingInline: section.paddingInlinePx != null ? `${section.paddingInlinePx}px` : undefined,
       minHeight: section.minHeightPx ? `${section.minHeightPx}px` : undefined,
       textAlign: section.contentAlign || undefined,
-      width: section.fullWidth ? '100%' : `${Math.max(20, Math.min(100, Number(section.widthPercent ?? 100)))}%`,
+      width: `${Math.max(20, Math.min(100, Number(section.widthPercent ?? 100)))}%`,
       maxWidth: section.fullWidth || section.maxWidthPx === 0 ? 'none' : `${Number(section.maxWidthPx || 1280)}px`,
       marginInline: 'auto',
       ['--builder-cols' as any]: String(section.desktopColumns || 3),
       ['--builder-tablet-cols' as any]: String(section.tabletColumns || Math.min(section.desktopColumns || 3, 2)),
       ['--builder-mobile-cols' as any]: String(section.mobileColumns || 1),
-      ['--builder-width' as any]: section.fullWidth ? '100%' : `${Math.max(20, Math.min(100, Number(section.widthPercent ?? 100)))}%`,
-      ['--builder-tablet-width' as any]: section.fullWidth ? '100%' : `${Math.max(20, Math.min(100, Number(section.tabletWidthPercent ?? section.widthPercent ?? 100)))}%`,
-      ['--builder-mobile-width' as any]: section.fullWidth ? '100%' : `${Math.max(20, Math.min(100, Number(section.mobileWidthPercent ?? section.widthPercent ?? 100)))}%`,
+      ['--builder-width' as any]: `${Math.max(20, Math.min(100, Number(section.widthPercent ?? 100)))}%`,
+      ['--builder-tablet-width' as any]: `${Math.max(20, Math.min(100, Number(section.tabletWidthPercent ?? section.widthPercent ?? 100)))}%`,
+      ['--builder-mobile-width' as any]: `${Math.max(20, Math.min(100, Number(section.mobileWidthPercent ?? section.widthPercent ?? 100)))}%`,
       ['--builder-gap' as any]: `${section.gapPx ?? 16}px`,
       ['--builder-item-radius' as any]: `${section.itemRadiusPx ?? 10}px`,
       ['--builder-image-size' as any]: `${section.imageSizePx ?? 72}px`,
@@ -234,7 +218,6 @@ export const PageView: React.FC<PageViewProps> = ({ pageSlug, onNavigate }) => {
         </div>
       )}
 
-
       {/* Hero Header */}
       <section className="bg-neutral-900 text-white py-12 px-4 border-b border-neutral-800">
         <div className="max-w-7xl mx-auto space-y-4">
@@ -346,9 +329,10 @@ export const PageView: React.FC<PageViewProps> = ({ pageSlug, onNavigate }) => {
                         </p>
                       )}
                       {section.content && (
-                        <div className="text-xs sm:text-sm text-neutral-300 leading-loose space-y-3 pt-1 whitespace-pre-line">
-                          {section.content}
-                        </div>
+                        <RichTextContent
+                          value={section.content}
+                          className="text-xs sm:text-sm text-neutral-300 leading-loose space-y-3 pt-1"
+                        />
                       )}
                       {section.buttonText && (
                         <div className="pt-3">
@@ -431,9 +415,10 @@ export const PageView: React.FC<PageViewProps> = ({ pageSlug, onNavigate }) => {
                         </p>
                       )}
                       {section.content && (
-                        <div className="text-xs sm:text-sm text-neutral-600 leading-loose space-y-3 pt-1 whitespace-pre-line">
-                          {section.content}
-                        </div>
+                        <RichTextContent
+                          value={section.content}
+                          className="text-xs sm:text-sm text-neutral-600 leading-loose space-y-3 pt-1"
+                        />
                       )}
                       {section.buttonText && (
                         <div className="pt-2">

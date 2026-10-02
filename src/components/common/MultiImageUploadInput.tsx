@@ -23,15 +23,17 @@ export const MultiImageUploadInput: React.FC<MultiImageUploadInputProps> = ({
   maxImages = 8
 }) => {
   const [isMediaOpen,setIsMediaOpen]=useState(false);
+  const [errorMessage,setErrorMessage]=useState('');
 
   const addImage=(url:string)=>{
     const clean=url.trim();
     if(!clean)return;
     if(images.includes(clean))return;
     if(images.length>=maxImages){
-      window.alert(`حداکثر می‌توانید ${maxImages} تصویر اضافه کنید.`);
+      setErrorMessage(`حداکثر می‌توانید ${maxImages} تصویر اضافه کنید.`);
       return;
     }
+    setErrorMessage('');
     onChange([...images,clean]);
   };
 
@@ -48,6 +50,7 @@ export const MultiImageUploadInput: React.FC<MultiImageUploadInputProps> = ({
         <div>
           <label className="block text-neutral-700 font-bold text-xs">{label}</label>
           {helperText&&<p className="text-[9px] text-neutral-400 mt-1">{helperText}</p>}
+          {errorMessage&&<p className="text-[9px] text-red-600 mt-1" role="alert">{errorMessage}</p>}
         </div>
         <button
           type="button"
@@ -62,7 +65,7 @@ export const MultiImageUploadInput: React.FC<MultiImageUploadInputProps> = ({
       {images.length ? (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {images.map((url,index)=>(
-            <article key={`${url}-${index}`} className={`relative rounded-2xl border p-1 bg-neutral-50 overflow-hidden ${index===0?'border-blue-500 ring-2 ring-blue-100':'border-neutral-200'}`}>
+            <article key={`${url}-${index}`} className={`group relative rounded-2xl border p-1 bg-neutral-50 overflow-hidden ${index===0?'border-blue-500 ring-2 ring-blue-100':'border-neutral-200'}`}>
               <div className="aspect-square rounded-xl overflow-hidden bg-white grid place-items-center relative">
                 <img src={url} alt="" className="w-full h-full object-contain"/>
                 {index===0?(

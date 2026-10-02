@@ -2,33 +2,9 @@ import React, { useState } from 'react';
 import { useStore } from '../../context/StoreContext';
 import { HeroSection } from './HeroSection';
 import { MarketplaceRtlHome } from './MarketplaceRtlHome';
-import { BannerSlider } from './BannerSlider';
 import { ProductCard } from '../product/ProductCard';
 import { LiveSectionModal } from '../common/LiveSectionModal';
-import { 
-  Car, 
-  Layers, 
-  Flame, 
-  Sparkles, 
-  HelpCircle, 
-  ArrowLeft, 
-  ShieldCheck, 
-  BookOpen, 
-  Clock, 
-  CheckCircle2,
-  ChevronDown,
-  Filter,
-  Wrench,
-  Thermometer,
-  Cpu,
-  Disc,
-  Cog,
-  Zap,
-  Sun,
-  Edit3,
-  MonitorCheck
-} from 'lucide-react';
-import { ARTICLES } from '../../data/mockData';
+import { Car, Layers, Flame, HelpCircle, ArrowLeft, BookOpen, Clock, CheckCircle2, Wrench, Thermometer, Cpu, Disc, Cog, Zap, Sun, Edit3 } from 'lucide-react';
 
 interface HomeViewProps {
   onNavigate: (view: string, param?: string) => void;
@@ -39,7 +15,8 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigate, onOpenVehicleMod
   const { 
     products, 
     brands, 
-    categories, 
+    categories,
+    articles, 
     selectedVehicle, 
     clearSelectedVehicle,
     pages,
@@ -443,7 +420,7 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigate, onOpenVehicleMod
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {ARTICLES.map((article) => (
+            {articles.slice(0, 3).map((article) => (
               <div 
                 key={article.id}
                 onClick={() => onNavigate('article', article.id)}

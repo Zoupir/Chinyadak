@@ -1,25 +1,12 @@
 import React, { useState } from 'react';
 import { useStore } from '../../context/StoreContext';
 import { formatToman } from '../../utils/formatters';
-import { 
-  CreditCard, 
-  ShieldCheck, 
-  CheckCircle2, 
-  AlertTriangle, 
-  XCircle, 
-  RefreshCw, 
-  ArrowLeft,
-  KeyRound,
-  Check,
-  Package,
-  Receipt
-} from 'lucide-react';
+import { CreditCard, ShieldCheck, XCircle, RefreshCw, KeyRound, Check, Receipt } from 'lucide-react';
 
 export const AdminSandboxGateway: React.FC = () => {
   const { 
     paymentGateways, 
     orders, 
-    updateOrderStatus, 
     simulateAdminPayment, 
     showToast 
   } = useStore();
@@ -62,6 +49,10 @@ export const AdminSandboxGateway: React.FC = () => {
 
   const handleRunPaymentTest = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!selectedGatewayId) {
+      showToast('ابتدا یک درگاه فعال کنید.', 'error');
+      return;
+    }
     setIsProcessing(true);
     setTestResult(null);
 
@@ -71,12 +62,7 @@ export const AdminSandboxGateway: React.FC = () => {
       setIsProcessing(false);
 
       if (res.success) {
-        showToast('تست تراکنش با موفقیت انجام شد و رسید صادر گردید.');
-        // If an actual order was linked, update its status to 'paid'
-        if (selectedOrderId) {
-          updateOrderStatus(selectedOrderId, 'paid', res.trackingNumber);
-          showToast(`وضعیت سفارش ${selectedOrderId} به پرداخت‌شده تغییر یافت.`);
-        }
+        showToast('تست تراکنش با موفقیت انجام شد. این شبیه‌سازی هیچ سفارش واقعی را تغییر نمی‌دهد.');
       } else {
         showToast(res.message, 'error');
       }
@@ -84,6 +70,16 @@ export const AdminSandboxGateway: React.FC = () => {
   };
 
   const activeGateways = paymentGateways.filter(g => g.isActive);
+
+  React.useEffect(() => {
+    if (!activeGateways.length) {
+      setSelectedGatewayId('');
+      return;
+    }
+    if (!activeGateways.some(g => g.id === selectedGatewayId)) {
+      setSelectedGatewayId(activeGateways[0].id);
+    }
+  }, [paymentGateways, selectedGatewayId]);
 
   return (
     <div className="bg-white rounded-3xl border border-neutral-200 p-6 sm:p-8 shadow-xs space-y-6">
@@ -99,13 +95,13 @@ export const AdminSandboxGateway: React.FC = () => {
             <span>درگاه شبیه‌ساز پرداخت آزمایشی (Sandbox Gateway Simulator)</span>
           </h3>
           <p className="text-xs text-neutral-500 mt-1">
-            بررسی فرآیند پرداخت، تست سناریوهای خطا یا موفقیت و صدور رسید الکترونیکی شاپرک
+            بررسی رابط و سناریوهای پرداخت در محیط شبیه‌سازی. هیچ تراکنش بانکی واقعی انجام نمی‌شود و وضعیت سفارش واقعی تغییر نمی‌کند.
           </p>
         </div>
 
         <div className="flex items-center gap-1.5 bg-neutral-100 px-3 py-1.5 rounded-xl text-xs font-mono">
-          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-          <span>وضعیت سوییچ شاپرک: متصل (Code 200)</span>
+          <span className="w-2 h-2 rounded-full bg-amber-500"></span>
+          <span>شبیه‌ساز محلی — بدون اتصال واقعی به شاپرک</span>
         </div>
       </div>
 
@@ -120,11 +116,13 @@ export const AdminSandboxGateway: React.FC = () => {
               onChange={e => setSelectedGatewayId(e.target.value)}
               className="w-full p-2.5 border border-neutral-300 rounded-xl bg-white text-xs font-bold"
             >
-              {paymentGateways.map(g => (
+              {activeGateways.length ? activeGateways.map(g => (
                 <option key={g.id} value={g.id}>
-                  {g.name} ({g.isActive ? 'فعال' : 'غیرفعال'})
+                  {g.name}
                 </option>
-              ))}
+              )) : (
+                <option value="">هیچ درگاه فعالی وجود ندارد</option>
+              )}
             </select>
           </div>
 
@@ -147,7 +145,7 @@ export const AdminSandboxGateway: React.FC = () => {
             </div>
 
             <div>
-              <label className="block text-neutral-700 font-bold mb-1">مبلغ آزمایشی تراکنش (ریال):</label>
+              <label className="block text-neutral-700 font-bold mb-1">مبلغ آزمایشی تراکنش (تومان):</label>
               <input
                 type="number"
                 value={testAmount}

@@ -1,17 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import {
-  ChevronDown,
-  ChevronLeft,
-  ChevronRight,
-  FolderTree,
-  GripVertical,
-  Image as ImageIcon,
-  Plus,
-  Save,
-  Search,
-  Trash2,
-  ExternalLink
-} from 'lucide-react';
+import { ChevronDown, ChevronLeft, FolderTree, GripVertical, Plus, Save, Search, Trash2, ExternalLink } from 'lucide-react';
 import { useStore } from '../../context/StoreContext';
 import type { Category, CategoryChild, SeoEntityDraft } from '../../types';
 import { ImageUploadInput } from '../common/ImageUploadInput';

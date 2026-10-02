@@ -19,6 +19,7 @@ interface CustomerRow extends RowDataPacket {
   address: string | null;
   loyalty_points: number;
   loyalty_tier: string;
+  password_initialized: number;
   created_at: Date;
   total_orders: number | string;
   total_spent: number | string;
@@ -34,6 +35,7 @@ interface AdminRow extends RowDataPacket {
   role: string;
   permissions_json: string | object | null;
   is_active: number;
+  session_version: number;
   created_at: Date;
 }
 
@@ -88,7 +90,8 @@ const customerDto = (row: CustomerRow) => ({
   vehicle: row.vehicle || '',
   address: row.address || '',
   loyaltyPoints: Number(row.loyalty_points || 0),
-  loyaltyTier: row.loyalty_tier
+  loyaltyTier: row.loyalty_tier,
+  loginReady: Boolean(row.password_initialized)
 });
 
 const adminDto = (row: AdminRow) => ({
@@ -134,20 +137,56 @@ const requesterIsSuperAdmin = async (req: AuthenticatedRequest): Promise<boolean
 
 export const adminDataRouter = Router();
 
-adminDataRouter.get('/customers', requireAdminPermission('canManageOrders'), async (_req, res) => {
+adminDataRouter.get('/customers', requireAdminPermission('canManageOrders'), async (req, res) => {
+  const page = Math.max(1, Math.floor(Number(req.query.page || 1)));
+  const limit = Math.max(1, Math.min(200, Math.floor(Number(req.query.limit || 100))));
+  const offset = (page - 1) * limit;
+  const q = String(req.query.q || '').trim().slice(0, 120);
+  const status = String(req.query.status || '').trim();
+  const clauses: string[] = [];
+  const params: unknown[] = [];
+
+  if (q) {
+    const like = `%${q}%`;
+    clauses.push('(c.first_name LIKE ? OR c.last_name LIKE ? OR c.phone LIKE ? OR c.email LIKE ?)');
+    params.push(like, like, like, like);
+  }
+  if (status === 'active' || status === 'blocked') {
+    clauses.push('c.status = ?');
+    params.push(status);
+  }
+
+  const where = clauses.length ? `WHERE ${clauses.join(' AND ')}` : '';
+  const [countRows] = await pool.query<Array<RowDataPacket & { total: number }>>(
+    `SELECT COUNT(*) AS total FROM customers c ${where}`,
+    params
+  );
+  const total = Number(countRows[0]?.total || 0);
+
   const [rows] = await pool.query<CustomerRow[]>(
     `SELECT
        c.id, c.first_name, c.last_name, c.phone, c.email, c.customer_type, c.status,
-       c.vehicle, c.address, c.loyalty_points, c.loyalty_tier, c.created_at,
+       c.vehicle, c.address, c.loyalty_points, c.loyalty_tier, c.password_initialized, c.created_at,
        COUNT(o.id) AS total_orders,
        COALESCE(SUM(CASE WHEN o.payment_status IN ('paid','paid_stock_review') THEN o.total ELSE 0 END), 0) AS total_spent
      FROM customers c
      LEFT JOIN orders o ON o.customer_id = c.id
+     ${where}
      GROUP BY c.id
      ORDER BY c.created_at DESC
-     LIMIT 5000`
+     LIMIT ? OFFSET ?`,
+    [...params, limit, offset]
   );
-  res.json({ customers: rows.map(customerDto) });
+  res.json({
+    customers: rows.map(customerDto),
+    pagination: {
+      page,
+      limit,
+      total,
+      totalPages: Math.max(1, Math.ceil(total / limit)),
+      hasMore: offset + rows.length < total
+    }
+  });
 });
 
 adminDataRouter.post('/customers', requireAdminPermission('canManageOrders'), async (req, res) => {
@@ -159,6 +198,7 @@ adminDataRouter.post('/customers', requireAdminPermission('canManageOrders'), as
   const status = req.body?.status === 'blocked' ? 'blocked' : 'active';
   const vehicle = String(req.body?.vehicle || '').trim() || null;
   const address = String(req.body?.address || '').trim() || null;
+  const initialPassword = String(req.body?.initialPassword || '');
 
   if (!firstName || !lastName || !/^09\d{9}$/.test(phone)) {
     res.status(400).json({ error: 'CUSTOMER_DATA_INVALID' });
@@ -168,17 +208,22 @@ adminDataRouter.post('/customers', requireAdminPermission('canManageOrders'), as
     res.status(400).json({ error: 'CUSTOMER_TYPE_INVALID' });
     return;
   }
+  if (initialPassword && initialPassword.length < 8) {
+    res.status(400).json({ error: 'CUSTOMER_INITIAL_PASSWORD_TOO_SHORT' });
+    return;
+  }
 
-  const temporarySecret = randomBytes(32).toString('hex');
+  const temporarySecret = initialPassword || randomBytes(32).toString('hex');
   const passwordHash = await hashPassword(temporarySecret);
+  const passwordInitialized = initialPassword ? 1 : 0;
   const id = randomUUID();
 
   try {
     await pool.execute(
       `INSERT INTO customers
        (id, first_name, last_name, phone, password_hash, password_initialized, email, customer_type, status, vehicle, address)
-       VALUES (?, ?, ?, ?, ?, 0, ?, ?, ?, ?, ?)`,
-      [id, firstName, lastName, phone, passwordHash, email, type, status, vehicle, address]
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [id, firstName, lastName, phone, passwordHash, passwordInitialized, email, type, status, vehicle, address]
     );
   } catch (error: any) {
     if (error?.code === 'ER_DUP_ENTRY') {
@@ -241,6 +286,32 @@ adminDataRouter.put('/customers/:id', requireAdminPermission('canManageOrders'),
   res.json({ customer: customerDto(rows[0]) });
 });
 
+adminDataRouter.patch('/customers/:id/login-password', requireAdminPermission('canManageOrders'), async (req, res) => {
+  const id = String(req.params.id || '').trim();
+  const newPassword = String(req.body?.newPassword || '');
+  if (newPassword.length < 8) {
+    res.status(400).json({ error: 'CUSTOMER_PASSWORD_TOO_SHORT' });
+    return;
+  }
+
+  const passwordHash = await hashPassword(newPassword);
+  const [result] = await pool.execute<ResultSetHeader>(
+    `UPDATE customers
+     SET password_hash = ?,
+         password_initialized = 1,
+         session_version = session_version + 1,
+         updated_at = NOW()
+     WHERE id = ?`,
+    [passwordHash, id]
+  );
+  if (!result.affectedRows) {
+    res.status(404).json({ error: 'CUSTOMER_NOT_FOUND' });
+    return;
+  }
+
+  res.json({ id, loginReady: true });
+});
+
 adminDataRouter.patch('/customers/:id/status', requireAdminPermission('canManageOrders'), async (req, res) => {
   const [rows] = await pool.query<Array<RowDataPacket & { status: string }>>(
     'SELECT status FROM customers WHERE id = ? LIMIT 1',
@@ -252,17 +323,44 @@ adminDataRouter.patch('/customers/:id/status', requireAdminPermission('canManage
   }
   const status = rows[0].status === 'active' ? 'blocked' : 'active';
   await pool.execute(
-    'UPDATE customers SET status = ?, updated_at = NOW() WHERE id = ?',
+    'UPDATE customers SET status = ?, session_version = session_version + 1, updated_at = NOW() WHERE id = ?',
     [status, req.params.id]
   );
   res.json({ id: req.params.id, status });
 });
 
-adminDataRouter.get('/loyalty', requireAdminPermission('canManageOrders'), async (_req, res) => {
-  const [rows] = await pool.query<LoyaltyRow[]>(
-    'SELECT * FROM loyalty_transactions ORDER BY created_at DESC LIMIT 10000'
+adminDataRouter.get('/loyalty', requireAdminPermission('canManageOrders'), async (req, res) => {
+  const page = Math.max(1, Math.floor(Number(req.query.page || 1)));
+  const limit = Math.max(1, Math.min(250, Math.floor(Number(req.query.limit || 150))));
+  const offset = (page - 1) * limit;
+  const customerId = String(req.query.customerId || '').trim();
+  const where = customerId ? 'WHERE customer_id = ?' : '';
+  const params: unknown[] = customerId ? [customerId] : [];
+
+  const [countRows] = await pool.query<Array<RowDataPacket & { total: number }>>(
+    `SELECT COUNT(*) AS total FROM loyalty_transactions ${where}`,
+    params
   );
-  res.json({ transactions: rows.map(loyaltyDto) });
+  const total = Number(countRows[0]?.total || 0);
+
+  const [rows] = await pool.query<LoyaltyRow[]>(
+    `SELECT id, customer_id, transaction_type, points, description, order_number, balance_after, created_at
+     FROM loyalty_transactions
+     ${where}
+     ORDER BY created_at DESC
+     LIMIT ? OFFSET ?`,
+    [...params, limit, offset]
+  );
+  res.json({
+    transactions: rows.map(loyaltyDto),
+    pagination: {
+      page,
+      limit,
+      total,
+      totalPages: Math.max(1, Math.ceil(total / limit)),
+      hasMore: offset + rows.length < total
+    }
+  });
 });
 
 adminDataRouter.post('/loyalty', requireAdminPermission('canManageOrders'), async (req, res) => {
@@ -322,7 +420,7 @@ adminDataRouter.post('/loyalty', requireAdminPermission('canManageOrders'), asyn
 
 adminDataRouter.get('/admins', requireAdminPermission('canManageAdmins'), async (_req, res) => {
   const [rows] = await pool.query<AdminRow[]>(
-    'SELECT * FROM admin_users ORDER BY created_at ASC'
+    'SELECT * FROM admin_users WHERE deleted_at IS NULL ORDER BY created_at ASC'
   );
   res.json({ admins: rows.map(adminDto) });
 });
@@ -422,7 +520,7 @@ adminDataRouter.put('/admins/:id', requireAdminPermission('canManageAdmins'), as
       await pool.execute(
         `UPDATE admin_users
          SET username = ?, password_hash = ?, full_name = ?, email = ?, phone = ?, avatar_url = ?,
-             role = ?, permissions_json = ?, is_active = ?, updated_at = NOW()
+             role = ?, permissions_json = ?, is_active = ?, session_version = session_version + 1, updated_at = NOW()
          WHERE id = ?`,
         [username, passwordHash, fullName, email, phone, avatar, role, JSON.stringify(permissions), isActive, id]
       );
@@ -430,7 +528,7 @@ adminDataRouter.put('/admins/:id', requireAdminPermission('canManageAdmins'), as
       await pool.execute(
         `UPDATE admin_users
          SET username = ?, full_name = ?, email = ?, phone = ?, avatar_url = ?,
-             role = ?, permissions_json = ?, is_active = ?, updated_at = NOW()
+             role = ?, permissions_json = ?, is_active = ?, session_version = session_version + 1, updated_at = NOW()
          WHERE id = ?`,
         [username, fullName, email, phone, avatar, role, JSON.stringify(permissions), isActive, id]
       );
@@ -466,7 +564,7 @@ adminDataRouter.patch('/admins/:id/status', requireAdminPermission('canManageAdm
   }
 
   const isActive = target.is_active ? 0 : 1;
-  await pool.execute('UPDATE admin_users SET is_active = ?, updated_at = NOW() WHERE id = ?', [isActive, id]);
+  await pool.execute('UPDATE admin_users SET is_active = ?, session_version = session_version + 1, updated_at = NOW() WHERE id = ?', [isActive, id]);
   res.json({ id, isActive: Boolean(isActive) });
 });
 
@@ -488,6 +586,14 @@ adminDataRouter.delete('/admins/:id', requireAdminPermission('canManageAdmins'),
     return;
   }
 
-  await pool.execute('DELETE FROM admin_users WHERE id = ?', [id]);
-  res.json({ ok: true });
+  await pool.execute(
+    `UPDATE admin_users
+     SET is_active = 0,
+         session_version = session_version + 1,
+         deleted_at = NOW(),
+         updated_at = NOW()
+     WHERE id = ?`,
+    [id]
+  );
+  res.json({ ok: true, archived: true });
 });

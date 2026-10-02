@@ -1,85 +1,31 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useStore } from '../../context/StoreContext';
-import { HeaderMenuKind, MenuItem, PopularPartsBrandItem, ProductAttributeDefinition } from '../../types';
+import { PopularPartsBrandItem, ProductAttributeDefinition } from '../../types';
 import { ImageUploadInput } from '../common/ImageUploadInput';
 import { AdminMenuBuilder } from './AdminMenuBuilder';
-import {
-  ArrowDown, ArrowUp, Car, Check, Edit3, Eye, EyeOff, Globe2, Layers,
-  Link2, Menu, Plus, Save, Sliders, Tag, Trash2, X
-} from 'lucide-react';
-
-const defaultHeaderMenus = (legacy: MenuItem[] = []): MenuItem[] => [
-  {
-    id: 'header-categories',
-    title: 'دسته‌بندی قطعات خودرو',
-    link: 'shop',
-    kind: 'categories',
-    isVisible: true
-  },
-  {
-    id: 'header-brands',
-    title: 'برندهای خودرو',
-    link: 'shop',
-    kind: 'brands',
-    isVisible: true
-  },
-  ...legacy.map(item => ({
-    ...item,
-    kind: item.kind || 'link' as HeaderMenuKind,
-    isVisible: item.isVisible !== false
-  }))
-];
-
-const systemOptions = [
-  { link: 'home', title: 'صفحه اصلی' },
-  { link: 'shop', title: 'فروشگاه قطعات' },
-  { link: 'shop:maintenance', title: 'قطعات مصرفی و سرویس دوره‌ای' },
-  { link: 'part-request', title: 'استعلام قطعه نایاب' },
-  { link: 'tracking', title: 'پیگیری سفارش' },
-  { link: 'blog', title: 'مقالات و آموزش' },
-  { link: 'account:garage', title: 'گاراژ خودروهای من' },
-  { link: 'account:wishlist', title: 'علاقه‌مندی‌ها' }
-];
+import { Car, Check, Edit3, Menu, Plus, Save, Sliders, Tag, Trash2, X } from 'lucide-react';
 
 const defaultPopularPartsBrands: PopularPartsBrandItem[] = [
-  { id: 'pb-bosch', title: 'BOSCH', subtitle: 'Bosch Mobility', imageUrl: 'https://www.google.com/s2/favicons?domain=bosch.com&sz=128', link: 'shop', isVisible: true },
-  { id: 'pb-mahle', title: 'MAHLE', subtitle: 'Engine Components', imageUrl: 'https://www.google.com/s2/favicons?domain=mahle.com&sz=128', link: 'shop', isVisible: true },
-  { id: 'pb-valeo', title: 'VALEO', subtitle: 'Clutch & Electrical', imageUrl: 'https://www.google.com/s2/favicons?domain=valeo.com&sz=128', link: 'shop', isVisible: true },
-  { id: 'pb-skf', title: 'SKF', subtitle: 'Bearings', imageUrl: 'https://www.google.com/s2/favicons?domain=skf.com&sz=128', link: 'shop', isVisible: true },
-  { id: 'pb-ngk', title: 'NGK', subtitle: 'Ignition', imageUrl: 'https://www.google.com/s2/favicons?domain=ngkntk.com&sz=128', link: 'shop', isVisible: true },
-  { id: 'pb-castrol', title: 'Castrol', subtitle: 'Lubricants', imageUrl: 'https://www.google.com/s2/favicons?domain=castrol.com&sz=128', link: 'shop', isVisible: true }
+  { id: 'pb-bosch', title: 'BOSCH', subtitle: 'قطعات برقی و موتوری', imageUrl: '', link: 'shop', isVisible: true },
+  { id: 'pb-mahle', title: 'MAHLE', subtitle: 'قطعات موتور', imageUrl: '', link: 'shop', isVisible: true },
+  { id: 'pb-valeo', title: 'VALEO', subtitle: 'کلاچ و برق خودرو', imageUrl: '', link: 'shop', isVisible: true },
+  { id: 'pb-skf', title: 'SKF', subtitle: 'بلبرینگ و متعلقات', imageUrl: '', link: 'shop', isVisible: true },
+  { id: 'pb-ngk', title: 'NGK', subtitle: 'سیستم جرقه و شمع', imageUrl: '', link: 'shop', isVisible: true },
+  { id: 'pb-castrol', title: 'Castrol', subtitle: 'روان‌کارها', imageUrl: '', link: 'shop', isVisible: true }
 ];
 
 export const AdminMenusAndAttributes: React.FC = () => {
   const {
-    settings, updateSettings, showToast, categories, brands, pages
+    settings, updateSettings, showToast, categories
   } = useStore();
 
   const [activeSection, setActiveSection] = useState<'menus' | 'brands' | 'attributes'>('menus');
-  const [menus, setMenus] = useState<MenuItem[]>(
-    settings.headerMenus?.length
-      ? settings.headerMenus
-      : defaultHeaderMenus(settings.navigationMenus || [])
-  );
   const [attributes, setAttributes] = useState<ProductAttributeDefinition[]>(
     settings.productAttributes || []
   );
   const [popularBrands, setPopularBrands] = useState<PopularPartsBrandItem[]>(
     settings.popularPartsBrands?.length ? settings.popularPartsBrands : defaultPopularPartsBrands
   );
-
-  const [isMenuModalOpen, setIsMenuModalOpen] = useState(false);
-  const [editingMenu, setEditingMenu] = useState<MenuItem | null>(null);
-  const [menuType, setMenuType] = useState<HeaderMenuKind>('system');
-  const [menuForm, setMenuForm] = useState<MenuItem>({
-    id: '',
-    title: '',
-    link: 'shop',
-    kind: 'system',
-    badge: '',
-    isVisible: true,
-    openInNewTab: false
-  });
 
   const [isAttrModalOpen, setIsAttrModalOpen] = useState(false);
   const [editingAttr, setEditingAttr] = useState<ProductAttributeDefinition | null>(null);
@@ -90,183 +36,12 @@ export const AdminMenusAndAttributes: React.FC = () => {
   });
 
   useEffect(() => {
-    const next = settings.headerMenus?.length
-      ? settings.headerMenus
-      : defaultHeaderMenus(settings.navigationMenus || []);
-    setMenus(next);
-  }, [settings.headerMenus, settings.navigationMenus]);
-
-  useEffect(() => {
     setAttributes(settings.productAttributes || []);
   }, [settings.productAttributes]);
 
   useEffect(() => {
     setPopularBrands(settings.popularPartsBrands?.length ? settings.popularPartsBrands : defaultPopularPartsBrands);
   }, [settings.popularPartsBrands]);
-
-  const visibleCount = useMemo(
-    () => menus.filter(item => item.isVisible !== false).length,
-    [menus]
-  );
-
-  const persistMenus = (next: MenuItem[], toast?: string) => {
-    setMenus(next);
-    updateSettings({ headerMenus: next });
-    if (toast) showToast(toast);
-  };
-
-  const handleMove = (index: number, direction: 'up' | 'down') => {
-    const target = direction === 'up' ? index - 1 : index + 1;
-    if (target < 0 || target >= menus.length) return;
-    const next = [...menus];
-    const [item] = next.splice(index, 1);
-    next.splice(target, 0, item);
-    persistMenus(next);
-  };
-
-  const toggleVisibility = (id: string) => {
-    persistMenus(
-      menus.map(item =>
-        item.id === id ? { ...item, isVisible: item.isVisible === false } : item
-      )
-    );
-  };
-
-  const openNewMenu = (parentId?: string) => {
-    setEditingMenu(null);
-    setMenuType('system');
-    setMenuForm({
-      id: '',
-      title: 'فروشگاه قطعات',
-      link: 'shop',
-      kind: 'system',
-      badge: '',
-      isVisible: true,
-      openInNewTab: false,
-      parentId
-    });
-    setIsMenuModalOpen(true);
-  };
-
-  const openEditMenu = (item: MenuItem) => {
-    const kind = item.kind || (
-      item.link.startsWith('category:') ? 'category' :
-      item.link.startsWith('car-brand:') ? 'brand' :
-      item.link.startsWith('page:') ? 'page' :
-      /^https?:\/\//.test(item.link) ? 'custom' : 'system'
-    );
-    setEditingMenu(item);
-    setMenuType(kind);
-    setMenuForm({
-      ...item,
-      kind,
-      isVisible: item.isVisible !== false,
-      openInNewTab: Boolean(item.openInNewTab)
-    });
-    setIsMenuModalOpen(true);
-  };
-
-  const chooseMenuType = (kind: HeaderMenuKind) => {
-    setMenuType(kind);
-    if (kind === 'categories') {
-      setMenuForm(prev => ({
-        ...prev,
-        kind,
-        title: prev.title || 'دسته‌بندی قطعات خودرو',
-        link: 'shop'
-      }));
-    } else if (kind === 'brands') {
-      setMenuForm(prev => ({
-        ...prev,
-        kind,
-        title: prev.title || 'برندهای خودرو',
-        link: 'shop'
-      }));
-    } else if (kind === 'category' && categories[0]) {
-      setMenuForm(prev => ({
-        ...prev,
-        kind,
-        title: categories[0].nameFa,
-        link: 'category:' + categories[0].slug
-      }));
-    } else if (kind === 'brand' && brands[0]) {
-      setMenuForm(prev => ({
-        ...prev,
-        kind,
-        title: brands[0].nameFa,
-        link: 'car-brand:' + brands[0].slug
-      }));
-    } else if (kind === 'page' && pages[0]) {
-      setMenuForm(prev => ({
-        ...prev,
-        kind,
-        title: pages[0].title,
-        link: 'page:' + pages[0].slug
-      }));
-    } else if (kind === 'custom') {
-      setMenuForm(prev => ({ ...prev, kind, link: 'https://' }));
-    } else if (kind === 'system') {
-      setMenuForm(prev => ({
-        ...prev,
-        kind,
-        title: 'فروشگاه قطعات',
-        link: 'shop'
-      }));
-    }
-  };
-
-  const saveMenu = (e: React.FormEvent) => {
-    e.preventDefault();
-    const title = String(menuForm.title || '').trim();
-    const link = String(menuForm.link || '').trim();
-    if (!title || !link) {
-      showToast('عنوان و مقصد منو الزامی است.', 'error');
-      return;
-    }
-
-    if (
-      !editingMenu &&
-      (menuType === 'categories' || menuType === 'brands') &&
-      menus.some(item => item.kind === menuType)
-    ) {
-      showToast(
-        menuType === 'categories'
-          ? 'منوی اصلی دسته‌بندی‌ها از قبل وجود دارد.'
-          : 'منوی اصلی برندها از قبل وجود دارد.',
-        'error'
-      );
-      return;
-    }
-
-    const item: MenuItem = {
-      ...menuForm,
-      id: editingMenu?.id || 'header-' + Date.now(),
-      title,
-      link,
-      kind: menuType,
-      badge: String(menuForm.badge || '').trim() || undefined,
-      isVisible: menuForm.isVisible !== false,
-      openInNewTab: menuType === 'custom' ? Boolean(menuForm.openInNewTab) : false
-    };
-
-    const next = editingMenu
-      ? menus.map(row => row.id === editingMenu.id ? item : row)
-      : [...menus, item];
-
-    persistMenus(next, 'منوی بالای سایت ذخیره شد.');
-    setIsMenuModalOpen(false);
-  };
-
-  const deleteMenu = (item: MenuItem) => {
-    const childCount = menus.filter(row => row.parentId === item.id).length;
-    if (!confirm(childCount
-      ? `آیتم «${item.title}» و ${childCount} زیرمنوی آن حذف شود؟`
-      : `آیتم «${item.title}» حذف شود؟`)) return;
-    persistMenus(
-      menus.filter(row => row.id !== item.id && row.parentId !== item.id),
-      'آیتم منو حذف شد.'
-    );
-  };
 
   const persistPopularBrands = (next: PopularPartsBrandItem[], message = 'برندهای محبوب ذخیره شدند.') => {
     setPopularBrands(next);
@@ -294,34 +69,6 @@ export const AdminMenusAndAttributes: React.FC = () => {
     ]);
   };
 
-  const orderedMenus = useMemo(() => {
-    const roots = menus.filter(item => !item.parentId);
-    const rows: Array<{ item: MenuItem; depth: number }> = [];
-    roots.forEach(root => {
-      rows.push({ item: root, depth: 0 });
-      menus.filter(child => child.parentId === root.id).forEach(child => rows.push({ item: child, depth: 1 }));
-    });
-    menus.filter(item => item.parentId && !menus.some(parent => parent.id === item.parentId))
-      .forEach(item => rows.push({ item, depth: 0 }));
-    return rows;
-  }, [menus]);
-
-  const restoreDefaultMenus = () => {
-    if (!confirm('چیدمان منوی بالا به حالت استاندارد برگردد؟')) return;
-    const next: MenuItem[] = [
-      { id: 'header-categories', title: 'دسته‌بندی قطعات خودرو', link: 'shop', kind: 'categories', isVisible: true },
-      { id: 'header-brands', title: 'برندهای خودرو', link: 'shop', kind: 'brands', isVisible: true },
-      { id: 'header-maintenance', title: 'سرویس دوره‌ای', link: 'shop:maintenance', kind: 'system', badge: 'سرویس', isVisible: true },
-      { id: 'header-request', title: 'استعلام قطعه', link: 'part-request', kind: 'system', badge: 'فوری', isVisible: true },
-      { id: 'header-blog', title: 'مقالات و آموزش', link: 'blog', kind: 'system', isVisible: true },
-      { id: 'header-cat-engine', title: 'قطعات موتور', link: 'category:engine', kind: 'category', parentId: 'header-categories', isVisible: true },
-      { id: 'header-cat-brakes', title: 'سیستم ترمز', link: 'category:brakes', kind: 'category', parentId: 'header-categories', isVisible: true },
-      { id: 'header-cat-filters', title: 'فیلترها و سرویس', link: 'category:filters', kind: 'category', parentId: 'header-categories', isVisible: true },
-      { id: 'header-cat-suspension', title: 'جلوبندی و تعلیق', link: 'category:suspension', kind: 'category', parentId: 'header-categories', isVisible: true }
-    ];
-    persistMenus(next, 'چیدمان استاندارد منو بازیابی شد.');
-  };
-
   const saveAttribute = (e: React.FormEvent) => {
     e.preventDefault();
     if (!attrForm.nameFa.trim()) {
@@ -343,21 +90,6 @@ export const AdminMenusAndAttributes: React.FC = () => {
     showToast('ویژگی فنی ذخیره شد.');
   };
 
-  const typeLabel = (item: MenuItem) => {
-    const kind = item.kind || 'link';
-    const map: Record<string, string> = {
-      categories: 'مگامنو دسته‌بندی‌ها',
-      brands: 'منوی برندها',
-      category: 'دسته‌بندی مستقیم',
-      brand: 'برند مستقیم',
-      page: 'برگه',
-      system: 'صفحه سیستمی',
-      custom: 'لینک خارجی',
-      link: 'لینک'
-    };
-    return map[kind] || kind;
-  };
-
   return (
     <div className="bg-white rounded-3xl border border-neutral-200 p-6 sm:p-8 shadow-xs space-y-6">
       <div className="border-b border-neutral-100 pb-4 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
@@ -372,7 +104,7 @@ export const AdminMenusAndAttributes: React.FC = () => {
         </div>
         <div className="flex flex-wrap gap-2">
           <button onClick={() => setActiveSection('menus')} className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 ${activeSection === 'menus' ? 'bg-neutral-900 text-white' : 'bg-neutral-100 text-neutral-600'}`}>
-            <Menu className="w-4 h-4" /> فهرست اصلی ({visibleCount}/{menus.length})
+            <Menu className="w-4 h-4" /> فهرست اصلی
           </button>
           <button onClick={() => setActiveSection('brands')} className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 ${activeSection === 'brands' ? 'bg-neutral-900 text-white' : 'bg-neutral-100 text-neutral-600'}`}>
             <Car className="w-4 h-4" /> برندهای محبوب
@@ -466,160 +198,6 @@ export const AdminMenusAndAttributes: React.FC = () => {
                 <button onClick={() => { if (confirm('این ویژگی حذف شود؟')) { const next = attributes.filter(x => x.id !== attr.id); setAttributes(next); updateSettings({ productAttributes: next }); } }} className="p-2"><Trash2 className="w-4 h-4 text-red-600" /></button>
               </div>
             ))}
-          </div>
-        </div>
-      )}
-
-      {isMenuModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl w-full max-w-2xl p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between pb-4 border-b">
-              <div>
-                <h4 className="font-black">{editingMenu ? 'ویرایش آیتم Header' : 'افزودن آیتم Header'}</h4>
-                <p className="text-[10px] text-neutral-500 mt-1">هر آیتم می‌تواند مگامنو، برند، دسته‌بندی، برگه، صفحه سیستمی یا لینک خارجی باشد.</p>
-              </div>
-              <button onClick={() => setIsMenuModalOpen(false)} className="p-2 rounded-full bg-neutral-100"><X className="w-4 h-4" /></button>
-            </div>
-
-            <form onSubmit={saveMenu} className="space-y-4 mt-4 text-xs">
-              <div>
-                <label className="font-bold text-neutral-700 block mb-2">نوع آیتم</label>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                  {[
-                    ['categories', 'مگامنو دسته‌ها', Layers],
-                    ['brands', 'منوی برندها', Car],
-                    ['category', 'یک دسته‌بندی', Layers],
-                    ['brand', 'یک برند', Car],
-                    ['page', 'برگه', Link2],
-                    ['system', 'سیستمی', Menu],
-                    ['custom', 'لینک خارجی', Globe2]
-                  ].map(([kind, label, Icon]: any) => (
-                    <button
-                      key={kind}
-                      type="button"
-                      onClick={() => chooseMenuType(kind)}
-                      className={`p-3 rounded-xl border text-center font-bold ${menuType === kind ? 'border-red-500 bg-red-50 text-red-700' : 'border-neutral-200'}`}
-                    >
-                      <Icon className="w-4 h-4 mx-auto mb-1" /> {label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {menuType === 'category' && (
-                <label className="block">
-                  <span className="font-bold text-neutral-700 block mb-1">دسته‌بندی</span>
-                  <select
-                    value={menuForm.link.replace('category:', '')}
-                    onChange={e => {
-                      const item = categories.find(x => x.slug === e.target.value);
-                      if (item) setMenuForm(prev => ({ ...prev, title: item.nameFa, link: 'category:' + item.slug }));
-                    }}
-                    className="w-full p-3 border rounded-xl"
-                  >
-                    {categories.map(item => <option key={item.id} value={item.slug}>{item.nameFa}</option>)}
-                  </select>
-                </label>
-              )}
-
-              {menuType === 'brand' && (
-                <label className="block">
-                  <span className="font-bold text-neutral-700 block mb-1">برند خودرو</span>
-                  <select
-                    value={menuForm.link.replace('car-brand:', '')}
-                    onChange={e => {
-                      const item = brands.find(x => x.slug === e.target.value);
-                      if (item) setMenuForm(prev => ({ ...prev, title: item.nameFa, link: 'car-brand:' + item.slug }));
-                    }}
-                    className="w-full p-3 border rounded-xl"
-                  >
-                    {brands.map(item => <option key={item.id} value={item.slug}>{item.nameFa} ({item.nameEn})</option>)}
-                  </select>
-                </label>
-              )}
-
-              {menuType === 'page' && (
-                <label className="block">
-                  <span className="font-bold text-neutral-700 block mb-1">برگه</span>
-                  <select
-                    value={menuForm.link.replace('page:', '')}
-                    onChange={e => {
-                      const item = pages.find(x => x.slug === e.target.value);
-                      if (item) setMenuForm(prev => ({ ...prev, title: item.title, link: 'page:' + item.slug }));
-                    }}
-                    className="w-full p-3 border rounded-xl"
-                  >
-                    {pages.map(item => <option key={item.id} value={item.slug}>{item.title}</option>)}
-                  </select>
-                </label>
-              )}
-
-              {menuType === 'system' && (
-                <label className="block">
-                  <span className="font-bold text-neutral-700 block mb-1">صفحه سیستمی</span>
-                  <select
-                    value={menuForm.link}
-                    onChange={e => {
-                      const item = systemOptions.find(x => x.link === e.target.value);
-                      if (item) setMenuForm(prev => ({ ...prev, title: item.title, link: item.link }));
-                    }}
-                    className="w-full p-3 border rounded-xl"
-                  >
-                    {systemOptions.map(item => <option key={item.link} value={item.link}>{item.title}</option>)}
-                  </select>
-                </label>
-              )}
-
-              <label className="block">
-                <span className="font-bold text-neutral-700 block mb-1">ساختار منو / والد</span>
-                <select
-                  value={menuForm.parentId || ''}
-                  onChange={e => setMenuForm(prev => ({ ...prev, parentId: e.target.value || undefined }))}
-                  className="w-full p-3 border rounded-xl"
-                >
-                  <option value="">آیتم اصلی منو</option>
-                  {menus
-                    .filter(item => !item.parentId && item.id !== editingMenu?.id)
-                    .map(item => <option key={item.id} value={item.id}>↳ زیرمنوی «{item.title}»</option>)}
-                </select>
-                <span className="text-[10px] text-neutral-400 mt-1 block">مثل منوی وردپرس: با انتخاب والد، این آیتم داخل Dropdown همان منو قرار می‌گیرد.</span>
-              </label>
-
-              <div className="grid sm:grid-cols-2 gap-3">
-                <label>
-                  <span className="font-bold text-neutral-700 block mb-1">عنوان نمایش داده‌شده</span>
-                  <input value={menuForm.title} onChange={e => setMenuForm(prev => ({ ...prev, title: e.target.value }))} className="w-full p-3 border rounded-xl" />
-                </label>
-                <label>
-                  <span className="font-bold text-neutral-700 block mb-1">Badge اختیاری</span>
-                  <input value={menuForm.badge || ''} onChange={e => setMenuForm(prev => ({ ...prev, badge: e.target.value }))} placeholder="مثلاً جدید / فوری" className="w-full p-3 border rounded-xl" />
-                </label>
-              </div>
-
-              {menuType === 'custom' && (
-                <label className="block">
-                  <span className="font-bold text-neutral-700 block mb-1">URL</span>
-                  <input dir="ltr" value={menuForm.link} onChange={e => setMenuForm(prev => ({ ...prev, link: e.target.value }))} className="w-full p-3 border rounded-xl text-left font-mono" />
-                </label>
-              )}
-
-              <div className="grid sm:grid-cols-2 gap-2">
-                <label className="p-3 rounded-xl border flex items-center gap-2">
-                  <input type="checkbox" checked={menuForm.isVisible !== false} onChange={e => setMenuForm(prev => ({ ...prev, isVisible: e.target.checked }))} />
-                  <span className="font-bold">نمایش در Header</span>
-                </label>
-                {menuType === 'custom' && (
-                  <label className="p-3 rounded-xl border flex items-center gap-2">
-                    <input type="checkbox" checked={Boolean(menuForm.openInNewTab)} onChange={e => setMenuForm(prev => ({ ...prev, openInNewTab: e.target.checked }))} />
-                    <span className="font-bold">باز شدن در تب جدید</span>
-                  </label>
-                )}
-              </div>
-
-              <button type="submit" className="w-full py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl font-black flex items-center justify-center gap-2">
-                <Save className="w-4 h-4" /> ذخیره منوی Header
-              </button>
-            </form>
           </div>
         </div>
       )}

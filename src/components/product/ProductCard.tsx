@@ -2,7 +2,7 @@ import React from 'react';
 import { Product } from '../../types';
 import { useStore } from '../../context/StoreContext';
 import { checkProductFitment, formatToman, getGradeInfo } from '../../utils/formatters';
-import { ShoppingBag, Heart, ArrowRightLeft, Star, CheckCircle2, AlertTriangle, ShieldCheck } from 'lucide-react';
+import { ShoppingBag, Heart, ArrowRightLeft, Star, CheckCircle2, AlertTriangle } from 'lucide-react';
 
 interface ProductCardProps {
   product: Product;

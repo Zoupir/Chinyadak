@@ -1,6 +1,12 @@
 SET NAMES utf8mb4;
 SET time_zone = '+00:00';
 
+CREATE TABLE IF NOT EXISTS schema_migrations (
+  migration_id VARCHAR(190) PRIMARY KEY,
+  applied_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+
 CREATE TABLE IF NOT EXISTS customers (
   id CHAR(36) PRIMARY KEY,
   first_name VARCHAR(100) NOT NULL,
@@ -8,6 +14,7 @@ CREATE TABLE IF NOT EXISTS customers (
   phone VARCHAR(20) NOT NULL UNIQUE,
   password_hash VARCHAR(255) NOT NULL,
   password_initialized TINYINT(1) NOT NULL DEFAULT 1,
+  session_version INT UNSIGNED NOT NULL DEFAULT 1,
   email VARCHAR(190) NULL,
   customer_type VARCHAR(30) NOT NULL DEFAULT 'retail',
   status VARCHAR(20) NOT NULL DEFAULT 'active',
@@ -33,7 +40,9 @@ CREATE TABLE IF NOT EXISTS admin_users (
   role VARCHAR(50) NOT NULL DEFAULT 'manager',
   permissions_json JSON NULL,
   is_active TINYINT(1) NOT NULL DEFAULT 1,
+  session_version INT UNSIGNED NOT NULL DEFAULT 1,
   last_login_at DATETIME NULL,
+  deleted_at DATETIME NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   INDEX idx_admin_active (is_active)
@@ -131,12 +140,14 @@ CREATE TABLE IF NOT EXISTS orders (
   paid_at DATETIME NULL,
   reservation_expires_at DATETIME NULL,
   tracking_code VARCHAR(190) NULL,
+  archived_at DATETIME NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   CONSTRAINT fk_orders_customer FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE SET NULL,
   INDEX idx_orders_customer (customer_id),
   INDEX idx_orders_status (status),
-  INDEX idx_orders_created (created_at)
+  INDEX idx_orders_created (created_at),
+  INDEX idx_orders_archived (archived_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS order_items (
@@ -216,6 +227,7 @@ CREATE TABLE IF NOT EXISTS site_pages (
   slug VARCHAR(190) NOT NULL UNIQUE,
   title VARCHAR(255) NOT NULL,
   is_system TINYINT(1) NOT NULL DEFAULT 0,
+  revision INT UNSIGNED NOT NULL DEFAULT 1,
   data_json JSON NOT NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,

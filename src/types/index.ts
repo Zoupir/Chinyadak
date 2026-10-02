@@ -258,6 +258,8 @@ export interface Order {
   paymentStatus?: string;
   paymentReference?: string;
   paidAt?: string;
+  /** Short-lived server-signed token authorizing payment initialization. */
+  paymentToken?: string;
 }
 
 export interface ArticleCategory {
@@ -355,6 +357,7 @@ export interface CustomerUser {
   address?: string;
   loyaltyPoints?: number;
   loyaltyTier?: LoyaltyTier;
+  loginReady?: boolean;
 }
 
 export interface PaymentGatewayConfig {
@@ -613,7 +616,7 @@ export interface SiteSettings {
   themeRadiusPx?: number;
   headerStyle?: 'light' | 'dark' | 'primary';
   containerWidth?: 'normal' | 'wide';
-  currencyUnit?: 'rial';
+  currencyUnit?: 'toman' | 'rial';
   freeShippingThreshold: number;
   expressShippingFee: number;
   postShippingFee: number;
@@ -849,6 +852,8 @@ export interface SitePage {
   description?: string;
   sections: PageSection[];
   isSystem?: boolean;
+  /** Server revision used to prevent silent concurrent overwrites. */
+  revision?: number;
   updatedAt: string;
   seo?: SeoEntityDraft;
 }

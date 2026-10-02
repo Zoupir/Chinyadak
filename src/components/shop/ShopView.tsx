@@ -1,20 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { useStore } from '../../context/StoreContext';
 import { ProductCard } from '../product/ProductCard';
-import { Product, QualityGrade } from '../../types';
-import { 
-  Filter, 
-  X, 
-  Car, 
-  Layers, 
-  Check, 
-  SlidersHorizontal, 
-  ArrowUpDown, 
-  Sparkles,
-  ShieldCheck,
-  ChevronDown
-} from 'lucide-react';
-import { formatToman } from '../../utils/formatters';
+import { QualityGrade } from '../../types';
+import { Filter, Car, Layers, SlidersHorizontal, ArrowUpDown } from 'lucide-react';
 
 interface ShopViewProps {
   initialCategory?: string;

@@ -52,7 +52,7 @@ export const AdminFooterTab: React.FC = () => {
   // Footer layout / visual controls
   const [footerGridColumnsDesktop, setFooterGridColumnsDesktop] = useState(settings.footerGridColumnsDesktop || 5);
   const [footerGridColumnsTablet, setFooterGridColumnsTablet] = useState(settings.footerGridColumnsTablet || 2);
-  const [footerGridColumnsMobile, setFooterGridColumnsMobile] = useState(settings.footerGridColumnsMobile || 1);
+  const [footerGridColumnsMobile, setFooterGridColumnsMobile] = useState(settings.footerGridColumnsMobile || 2);
   const [footerGridRowsDesktop, setFooterGridRowsDesktop] = useState(settings.footerGridRowsDesktop || 1);
   const [footerGridRowsTablet, setFooterGridRowsTablet] = useState(settings.footerGridRowsTablet || 0);
   const [footerGridRowsMobile, setFooterGridRowsMobile] = useState(settings.footerGridRowsMobile || 0);

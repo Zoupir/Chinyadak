@@ -155,8 +155,8 @@ const upgradeLegacyHomeSection = (section: PageSection): PageSection => {
     return {
       ...section,
       fullWidth: true,
-      widthPercent: section.widthPercent ?? 95,
-      tabletWidthPercent: section.tabletWidthPercent ?? 96,
+      widthPercent: section.widthPercent ?? 100,
+      tabletWidthPercent: section.tabletWidthPercent ?? 100,
       mobileWidthPercent: section.mobileWidthPercent ?? 100,
       maxWidthPx: 0,
       borderRadiusPx: section.borderRadiusPx ?? 8,
@@ -262,8 +262,8 @@ const upgradeLegacyHomeSection = (section: PageSection): PageSection => {
       ...section,
       title: section.items?.length ? section.title : 'بنر عریض میانی',
       fullWidth: true,
-      widthPercent: section.widthPercent ?? 95,
-      tabletWidthPercent: section.tabletWidthPercent ?? 96,
+      widthPercent: section.widthPercent ?? 100,
+      tabletWidthPercent: section.tabletWidthPercent ?? 100,
       mobileWidthPercent: section.mobileWidthPercent ?? 100,
       maxWidthPx: 0,
       borderRadiusPx: section.borderRadiusPx ?? 10,
@@ -275,8 +275,8 @@ const upgradeLegacyHomeSection = (section: PageSection): PageSection => {
     return {
       ...section,
       fullWidth: true,
-      widthPercent: section.widthPercent ?? 95,
-      tabletWidthPercent: section.tabletWidthPercent ?? 96,
+      widthPercent: section.widthPercent ?? 100,
+      tabletWidthPercent: section.tabletWidthPercent ?? 100,
       mobileWidthPercent: section.mobileWidthPercent ?? 100,
       maxWidthPx: 0,
       borderRadiusPx: section.borderRadiusPx ?? 10,
@@ -298,8 +298,8 @@ const upgradeLegacyHomeSection = (section: PageSection): PageSection => {
     return {
       ...section,
       fullWidth: true,
-      widthPercent: section.widthPercent ?? 95,
-      tabletWidthPercent: section.tabletWidthPercent ?? 96,
+      widthPercent: section.widthPercent ?? 100,
+      tabletWidthPercent: section.tabletWidthPercent ?? 100,
       mobileWidthPercent: section.mobileWidthPercent ?? 100,
       maxWidthPx: 0,
       borderRadiusPx: section.borderRadiusPx ?? 10
@@ -308,9 +308,9 @@ const upgradeLegacyHomeSection = (section: PageSection): PageSection => {
   if (key === 'shipping-banner') {
     return {
       ...section,
-      widthPercent: section.widthPercent === 100 || section.widthPercent == null ? 92 : section.widthPercent,
-      tabletWidthPercent: section.tabletWidthPercent ?? 95,
-      mobileWidthPercent: section.mobileWidthPercent ?? 96,
+      widthPercent: section.widthPercent ?? 100,
+      tabletWidthPercent: section.tabletWidthPercent ?? 100,
+      mobileWidthPercent: section.mobileWidthPercent ?? 100,
       maxWidthPx: section.maxWidthPx == null || section.maxWidthPx === 1280 ? 1040 : section.maxWidthPx,
       minHeightPx: section.minHeightPx || 112,
       borderRadiusPx: section.borderRadiusPx === 3 ? 8 : (section.borderRadiusPx ?? 8)

@@ -629,6 +629,7 @@ export const AdminSlidersTab: React.FC = () => {
                       src={imageUrl} 
                       alt="" 
                       className="absolute inset-0 w-full h-full object-cover" 
+                      style={{ objectFit: imageMode === 'contain' ? 'contain' : imageMode === 'stretch' ? 'fill' : imageMode === 'original' ? 'none' : 'cover' }}
                     />
                   )}
                   {gradientOverlay && (

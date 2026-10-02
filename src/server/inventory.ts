@@ -12,6 +12,31 @@ interface ReservedItemRow extends RowDataPacket {
   quantity: number;
 }
 
+const aggregateReservedItems = (items: ReservedItemRow[]): ReservedItemRow[] => {
+  const totals = new Map<string, number>();
+  let missingQuantity = 0;
+
+  for (const item of items) {
+    const quantity = Math.max(0, Math.floor(Number(item.quantity || 0)));
+    if (!quantity) continue;
+    if (!item.product_id) {
+      missingQuantity += quantity;
+      continue;
+    }
+    totals.set(item.product_id, (totals.get(item.product_id) || 0) + quantity);
+  }
+
+  const aggregated = Array.from(totals, ([product_id, quantity]) => ({
+    product_id,
+    quantity
+  })) as ReservedItemRow[];
+
+  if (missingQuantity > 0) {
+    aggregated.push({ product_id: null, quantity: missingQuantity } as ReservedItemRow);
+  }
+  return aggregated;
+};
+
 interface InventoryProductRow extends RowDataPacket {
   id: string;
   stock: number;
@@ -42,10 +67,11 @@ const releaseReservationLocked = async (
   connection: PoolConnection,
   orderId: string
 ): Promise<void> => {
-  const [items] = await connection.query<ReservedItemRow[]>(
+  const [rawItems] = await connection.query<ReservedItemRow[]>(
     'SELECT product_id, quantity FROM order_items WHERE order_id = ?',
     [orderId]
   );
+  const items = aggregateReservedItems(rawItems);
 
   for (const item of items) {
     if (!item.product_id) continue;
@@ -96,10 +122,11 @@ export const reserveOrderInventory = async (
     await releaseReservationLocked(connection, orderId);
   }
 
-  const [items] = await connection.query<ReservedItemRow[]>(
+  const [rawItems] = await connection.query<ReservedItemRow[]>(
     'SELECT product_id, quantity FROM order_items WHERE order_id = ?',
     [orderId]
   );
+  const items = aggregateReservedItems(rawItems);
   if (!items.length) throw new Error('ORDER_ITEMS_MISSING');
 
   for (const item of items) {
@@ -176,10 +203,11 @@ export const finalizePaidInventory = async (
   if (order.payment_status === 'paid') return { stockConflict: false };
   if (order.payment_status === 'paid_stock_review') return { stockConflict: true };
 
-  const [items] = await connection.query<ReservedItemRow[]>(
+  const [rawItems] = await connection.query<ReservedItemRow[]>(
     'SELECT product_id, quantity FROM order_items WHERE order_id = ?',
     [orderId]
   );
+  const items = aggregateReservedItems(rawItems);
 
   const products = new Map<string, InventoryProductRow>();
   let stockConflict = false;

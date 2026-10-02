@@ -7793,3 +7793,76 @@ html[data-layout="marketplace-rtl"] [data-section-key="parts-brands"] .marketpla
     flex-basis: calc(var(--builder-mobile-item-basis, 33.333%) - var(--builder-gap, 10px)) !important;
   }
 }
+
+
+/* Independent proportional grids for each editable banner section. */
+html[data-layout="marketplace-rtl"] .marketplace-rtl-home > [data-section-key="promo-small"].builder-section-grid,
+html[data-layout="marketplace-rtl"] .marketplace-rtl-home > [data-section-key="promo-medium"].builder-section-grid,
+html[data-layout="marketplace-rtl"] .marketplace-rtl-home > [data-section-key="promo-large"].builder-section-grid,
+html[data-layout="marketplace-rtl"] .marketplace-rtl-home > [data-section-key="wide-banner-1"].builder-section-grid {
+  grid-template-columns: repeat(12, minmax(0, 1fr)) !important;
+  grid-auto-flow: row !important;
+  align-items: stretch !important;
+}
+html[data-layout="marketplace-rtl"] .marketplace-rtl-home > [data-section-key="promo-small"].builder-section-grid > *,
+html[data-layout="marketplace-rtl"] .marketplace-rtl-home > [data-section-key="promo-medium"].builder-section-grid > *,
+html[data-layout="marketplace-rtl"] .marketplace-rtl-home > [data-section-key="promo-large"].builder-section-grid > *,
+html[data-layout="marketplace-rtl"] .marketplace-rtl-home > [data-section-key="wide-banner-1"].builder-section-grid > * {
+  grid-column: span var(--banner-cols-desktop, 12) !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: none !important;
+  justify-self: stretch !important;
+  box-sizing: border-box !important;
+}
+@media (min-width: 701px) and (max-width: 1024px) {
+  html[data-layout="marketplace-rtl"] .marketplace-rtl-home > [data-section-key="promo-small"].builder-section-grid > *,
+  html[data-layout="marketplace-rtl"] .marketplace-rtl-home > [data-section-key="promo-medium"].builder-section-grid > *,
+  html[data-layout="marketplace-rtl"] .marketplace-rtl-home > [data-section-key="promo-large"].builder-section-grid > *,
+  html[data-layout="marketplace-rtl"] .marketplace-rtl-home > [data-section-key="wide-banner-1"].builder-section-grid > * {
+    grid-column: span var(--banner-cols-tablet, var(--banner-cols-desktop, 12)) !important;
+  }
+}
+@media (max-width: 700px) {
+  html[data-layout="marketplace-rtl"] .marketplace-rtl-home > [data-section-key="promo-small"].builder-section-grid > *,
+  html[data-layout="marketplace-rtl"] .marketplace-rtl-home > [data-section-key="promo-medium"].builder-section-grid > *,
+  html[data-layout="marketplace-rtl"] .marketplace-rtl-home > [data-section-key="promo-large"].builder-section-grid > *,
+  html[data-layout="marketplace-rtl"] .marketplace-rtl-home > [data-section-key="wide-banner-1"].builder-section-grid > * {
+    grid-column: span var(--banner-cols-mobile, 12) !important;
+  }
+}
+html[data-layout="marketplace-rtl"] .marketplace-rtl-home > [data-section-key="promo-large"] > button {
+  grid-row: auto !important;
+}
+html[data-layout="marketplace-rtl"] .marketplace-rtl-home > [data-section-key="service-strip"] > div {
+  border: 0 !important;
+}
+html[data-layout="marketplace-rtl"] .marketplace-ref-footer-bottom .marketplace-ref-container {
+  justify-content: center !important;
+}
+html[data-layout="marketplace-rtl"] .marketplace-ref-footer-copyright {
+  display: block;
+  width: 100%;
+  text-align: center !important;
+}
+html[data-layout="marketplace-rtl"] .marketplace-ref-footer-bottom-links {
+  justify-content: center !important;
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-rtl-home > .marketplace-wide-banner[data-section-key="wide-banner-1"] {
+  grid-template-columns: repeat(12, minmax(0, 1fr)) !important;
+  grid-auto-flow: row !important;
+  align-items: stretch !important;
+}
+html[data-layout="marketplace-rtl"] .marketplace-rtl-home > .marketplace-wide-banner[data-section-key="wide-banner-1"] > .marketplace-wide-banner-item {
+  grid-column: span var(--banner-cols-desktop, 12) !important;
+  width: 100% !important;
+  max-width: none !important;
+  min-width: 0 !important;
+  justify-self: stretch !important;
+}
+html[data-layout="marketplace-rtl"] .marketplace-ref-footer-bottom .marketplace-ref-container {
+  flex-direction: column !important;
+  gap: 8px !important;
+  padding-block: 10px !important;
+}

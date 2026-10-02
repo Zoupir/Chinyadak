@@ -345,15 +345,30 @@ const upgradeLegacyHomeSection = (section: PageSection): PageSection => {
 };
 
 const mergeSystemSections = (page: SitePage, defaults: PageSection[], inferredKeys: Record<string, string> = {}): SitePage => {
-  const existing = (page.sections || []).map(section => upgradeLegacyHomeSection({
-    ...section,
-    sectionKey: section.sectionKey || inferredKeys[section.id]
-  }));
+  const migrateWidthDefaults = page.slug === 'home' && Number(page.builderConfigVersion || 0) < 30101;
+  const existing = (page.sections || []).map(section => {
+    const normalized = upgradeLegacyHomeSection({
+      ...section,
+      sectionKey: section.sectionKey || inferredKeys[section.id]
+    });
+    if (!migrateWidthDefaults) return normalized;
+
+    const legacyDefaultWidth =
+      (Number(normalized.widthPercent) === 95 && Number(normalized.tabletWidthPercent) === 96) ||
+      (Number(normalized.widthPercent) === 92 && Number(normalized.tabletWidthPercent) === 95);
+    return legacyDefaultWidth
+      ? { ...normalized, widthPercent: 100, tabletWidthPercent: 100 }
+      : normalized;
+  });
   const existingKeys = new Set(existing.map(section => section.sectionKey).filter(Boolean));
   const missing = defaults
     .filter(section => !section.sectionKey || !existingKeys.has(section.sectionKey))
     .map(section => ({ ...section }));
-  return { ...page, sections: [...existing, ...missing].sort((a, b) => a.order - b.order) };
+  return {
+    ...page,
+    ...(page.slug === 'home' ? { builderConfigVersion: 30101 } : {}),
+    sections: [...existing, ...missing].sort((a, b) => a.order - b.order)
+  };
 };
 
 const normalizeBuilderPages = (inputPages: SitePage[]): SitePage[] => {

@@ -408,11 +408,19 @@ export const AdminSliderStudio:React.FC=()=>{
     : device==='mobile'
       ? '360px'
       : device==='tablet'
-        ? (bannerKey==='promo-small'?'300px':bannerKey==='promo-medium'?'520px':bannerKey==='promo-large'&&activeBannerIndex%3===0?'620px':'320px')
-        : (bannerKey==='promo-small'?'360px':bannerKey==='promo-medium'?'520px':bannerKey==='promo-large'&&activeBannerIndex%3===0?'700px':'340px');
+        ? (bannerKey==='wide-banner-1'?'820px':bannerKey==='promo-small'?'300px':bannerKey==='promo-medium'?'520px':bannerKey==='promo-large'&&activeBannerIndex%3===0?'620px':'320px')
+        : (bannerKey==='wide-banner-1'?'1000px':bannerKey==='promo-small'?'360px':bannerKey==='promo-medium'?'520px':bannerKey==='promo-large'&&activeBannerIndex%3===0?'700px':'340px');
   const previewHeight=mode==='slides'
     ? (device==='desktop'?430:device==='tablet'?430:560)
-    : Math.max(150,Number(activeBannerSection?.itemMinHeightPx || (bannerKey==='promo-large'?220:178)));
+    : Math.max(150,Number(
+        device==='mobile'
+          ? bannerDraft?.mobileHeightPx ?? bannerDraft?.tabletHeightPx ?? bannerDraft?.heightPx
+          : device==='tablet'
+            ? bannerDraft?.tabletHeightPx ?? bannerDraft?.heightPx
+            : bannerDraft?.heightPx
+        || activeBannerSection?.itemMinHeightPx
+        || (bannerKey==='wide-banner-1'?330:bannerKey==='promo-large'?220:178)
+      ));
 
   const previewBackgroundStyle=():React.CSSProperties=>{
     if(!owner?.imageUrl) return {};
@@ -598,6 +606,45 @@ export const AdminSliderStudio:React.FC=()=>{
                 <option value="repeat-y">تکرار عمودی</option>
               </select>
             </label>
+
+            {mode==='banners'&&bannerDraft&&(
+              <section className="p-3 rounded-xl border border-amber-200 bg-amber-50/30 space-y-3">
+                <div>
+                  <strong className="block text-[9px]">ابعاد مستقل این بنر</strong>
+                  <p className="text-[8px] text-neutral-500 mt-1">عرض و ارتفاع این بنر برای هر دستگاه مستقل است؛ مثلاً می‌توانید یک بنر را ۷۰٪ و بنر کناری را ۳۰٪ تنظیم کنید.</p>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <label>
+                    <span className="block text-[8px] font-bold mb-1">عرض در {device==='desktop'?'دسکتاپ':device==='tablet'?'تبلت':'موبایل'} ٪</span>
+                    <input
+                      type="number"
+                      min="10"
+                      max="100"
+                      value={device==='desktop'?(bannerDraft.widthPercent??100):device==='tablet'?(bannerDraft.tabletWidthPercent??bannerDraft.widthPercent??100):(bannerDraft.mobileWidthPercent??100)}
+                      onChange={event=>{
+                        const value=Math.max(10,Math.min(100,Number(event.target.value||100)));
+                        patchBanner(device==='desktop'?{widthPercent:value}:device==='tablet'?{tabletWidthPercent:value}:{mobileWidthPercent:value});
+                      }}
+                      className="w-full p-2 border rounded-lg font-mono"
+                    />
+                  </label>
+                  <label>
+                    <span className="block text-[8px] font-bold mb-1">ارتفاع در {device==='desktop'?'دسکتاپ':device==='tablet'?'تبلت':'موبایل'} px</span>
+                    <input
+                      type="number"
+                      min="80"
+                      max="900"
+                      value={device==='desktop'?(bannerDraft.heightPx??previewHeight):device==='tablet'?(bannerDraft.tabletHeightPx??bannerDraft.heightPx??previewHeight):(bannerDraft.mobileHeightPx??bannerDraft.tabletHeightPx??bannerDraft.heightPx??previewHeight)}
+                      onChange={event=>{
+                        const value=Math.max(80,Math.min(900,Number(event.target.value||178)));
+                        patchBanner(device==='desktop'?{heightPx:value}:device==='tablet'?{tabletHeightPx:value}:{mobileHeightPx:value});
+                      }}
+                      className="w-full p-2 border rounded-lg font-mono"
+                    />
+                  </label>
+                </div>
+              </section>
+            )}
 
             <section className="p-3 rounded-xl border border-blue-200 bg-blue-50/20 space-y-3">
               <strong className="block text-[9px]">جانمایی دقیق عنصر انتخاب‌شده</strong>

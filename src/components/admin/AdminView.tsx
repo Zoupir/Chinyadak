@@ -151,35 +151,30 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
     oemNumber: '',
     partNumber: '',
     sku: '',
-    brandManufacturer: 'Chery Genuine',
-    partManufacturerCompany: 'Chery Genuine',
+    brandManufacturer: '',
+    partManufacturerCompany: '',
     vehicleManufacturerCompany: '',
-    vehicleBrandIds: ['kmc'],
-    vehicleModelIds: ['kmc-j7'],
-    categorySlug: 'engine',
+    vehicleBrandIds: [],
+    vehicleModelIds: [],
+    categorySlug: '',
     subcategorySlug: undefined,
-    grade: 'genuine',
-    price: 1500000,
-    stock: 10,
-    stockStatus: 'in_stock',
-    countryOfOrigin: 'چین',
-    warrantyMonths: 12,
-    warrantyDescription: '۱۲ ماه ضمانت رسمی تعویض شرکتی',
-    placement: 'موتور',
-    images: ['https://images.unsplash.com/photo-1580273916550-e323be2ae537?w=800&auto=format&fit=crop&q=80'],
+    grade: 'aftermarket',
+    price: 0,
+    stock: 0,
+    stockStatus: 'out_of_stock',
+    countryOfOrigin: '',
+    warrantyMonths: 0,
+    warrantyDescription: '',
+    placement: '',
+    images: [],
     shortDescription: '',
-    description: 'قطعه اصلی و فابریک کارخانه',
-    technicalSpecs: {
-      'نوع قطعه': 'اصلی شرکتی',
-      'سیستم': 'پیشرانه و موتور'
-    },
-    symptomsOfFailure: ['روشن شدن چراغ چک', 'کاهش توان'],
-    replacementInterval: 'هر ۵۰ هزار کیلومتر',
-    installationTips: ['تعویض در نمایندگی مجاز'],
-    genuineVsFakeNotes: 'دارای هولوگرام و کد رهگیری اصالت',
-    fitments: [
-      { id: 'fit-custom', brandId: 'kmc', brandName: 'KMC', modelId: 'kmc-j7', modelName: 'KMC J7', yearFrom: 1401, yearTo: 1404, engine: '1.5 Turbo' }
-    ]
+    description: '',
+    technicalSpecs: {},
+    symptomsOfFailure: [],
+    replacementInterval: '',
+    installationTips: [],
+    genuineVsFakeNotes: '',
+    fitments: []
   });
 
   // Category Modals
@@ -375,8 +370,8 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
 
   const handleCreateProduct = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newProductForm.nameFa || !newProductForm.oemNumber) {
-      showToast('نام و شماره فنی کالا الزامی است.', 'error');
+    if (!newProductForm.nameFa?.trim() || !newProductForm.oemNumber?.trim() || !newProductForm.categorySlug?.trim()) {
+      showToast('نام، شماره فنی و دسته‌بندی کالا الزامی است.', 'error');
       return;
     }
 
@@ -388,33 +383,33 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
       partNumber: newProductForm.partNumber || newProductForm.oemNumber || '',
       nameFa: newProductForm.nameFa || '',
       nameEn: newProductForm.nameEn || '',
-      categorySlug: newProductForm.categorySlug || 'engine',
+      categorySlug: newProductForm.categorySlug || '',
       subcategorySlug: newProductForm.subcategorySlug,
-      brandManufacturer: newProductForm.partManufacturerCompany || newProductForm.brandManufacturer || 'Chery Genuine',
-      partManufacturerCompany: newProductForm.partManufacturerCompany || newProductForm.brandManufacturer || 'Chery Genuine',
+      brandManufacturer: newProductForm.partManufacturerCompany || newProductForm.brandManufacturer || '',
+      partManufacturerCompany: newProductForm.partManufacturerCompany || newProductForm.brandManufacturer || '',
       vehicleManufacturerCompany: newProductForm.vehicleManufacturerCompany || '',
       vehicleBrandIds: newProductForm.vehicleBrandIds || [],
       vehicleModelIds: newProductForm.vehicleModelIds || [],
-      grade: newProductForm.grade || 'genuine',
-      price: Number(newProductForm.price) || 0,
-      stock: Number(newProductForm.stock) || 0,
+      grade: newProductForm.grade || 'aftermarket',
+      price: Math.max(0, Number(newProductForm.price) || 0),
+      stock: Math.max(0, Math.floor(Number(newProductForm.stock) || 0)),
       stockStatus: (Number(newProductForm.stock) || 0) > 0 ? 'in_stock' : 'out_of_stock',
-      images: newProductForm.images || ['https://images.unsplash.com/photo-1580273916550-e323be2ae537?w=800&auto=format&fit=crop&q=80'],
-      rating: 5,
-      reviewsCount: 1,
-      weightKg: Number(newProductForm.weightKg) || 1.5,
-      dimensionsCm: newProductForm.dimensionsCm || '30x20x15',
-      countryOfOrigin: newProductForm.countryOfOrigin || 'چین',
-      warrantyMonths: Number(newProductForm.warrantyMonths) || 12,
-      warrantyDescription: newProductForm.warrantyDescription || '۱۲ ماه ضمانت رسمی تعویض شرکتی',
-      placement: newProductForm.placement || 'موتور',
+      images: (newProductForm.images || []).filter(Boolean),
+      rating: 0,
+      reviewsCount: 0,
+      weightKg: Math.max(0, Number(newProductForm.weightKg) || 0),
+      dimensionsCm: newProductForm.dimensionsCm || '',
+      countryOfOrigin: newProductForm.countryOfOrigin || '',
+      warrantyMonths: Math.max(0, Math.floor(Number(newProductForm.warrantyMonths) || 0)),
+      warrantyDescription: newProductForm.warrantyDescription || '',
+      placement: newProductForm.placement || '',
       shortDescription: newProductForm.shortDescription || '',
-      description: newProductForm.description || 'قطعه اصلی و فابریک کارخانه',
-      technicalSpecs: newProductForm.technicalSpecs || { 'گرید': 'اصلی' },
-      symptomsOfFailure: ['افت راندمان', 'صدای غیرعادی'],
-      replacementInterval: 'هر ۵۰ هزار کیلومتر',
-      installationTips: ['نصب توسط مکانیک مجرب'],
-      genuineVsFakeNotes: 'هولوگرام شرکتی و بارکد ردیابی',
+      description: newProductForm.description || '',
+      technicalSpecs: newProductForm.technicalSpecs || {},
+      symptomsOfFailure: newProductForm.symptomsOfFailure || [],
+      replacementInterval: newProductForm.replacementInterval || '',
+      installationTips: newProductForm.installationTips || [],
+      genuineVsFakeNotes: newProductForm.genuineVsFakeNotes || '',
       fitments: newProductForm.fitments || [],
       seo: newProductForm.seo
     };
@@ -507,7 +502,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
 
   const handleExportCSV = () => {
     const csvContent = "data:text/csv;charset=utf-8,\uFEFF" 
-      + "کد کالا,نام فارسی,شماره فنی OEM,قیمت (ریال),موجودی,دسته,گرید کیفی\n"
+      + "کد کالا,نام فارسی,شماره فنی OEM,قیمت (تومان),موجودی,دسته,گرید کیفی\n"
       + products.map(p => `"${p.sku}","${p.nameFa}","${p.oemNumber}",${p.price},${p.stock},"${p.categorySlug}","${p.grade}"`).join("\n");
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
@@ -1406,7 +1401,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
                         <option value="percent">درصدی</option>
                         <option value="fixed">مبلغ ثابت</option>
                       </select>
-                      <input type="number" min={0} value={bulkPriceValue} onChange={e => setBulkPriceValue(Math.max(0,Number(e.target.value)))} className="p-2.5 border rounded-xl bg-white text-xs font-mono" placeholder={bulkPriceMode==='percent'?'مثلاً ۱۰٪':'مبلغ ریال'} />
+                      <input type="number" min={0} value={bulkPriceValue} onChange={e => setBulkPriceValue(Math.max(0,Number(e.target.value)))} className="p-2.5 border rounded-xl bg-white text-xs font-mono" placeholder={bulkPriceMode==='percent'?'مثلاً ۱۰٪':'مبلغ تومان'} />
                     </div>
                   </div>
 
@@ -1611,7 +1606,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-neutral-600 mb-1 font-semibold">قیمت فروش (ریال):</label>
+                  <label className="block text-neutral-600 mb-1 font-semibold">قیمت فروش (تومان):</label>
                   <input
                     type="number"
                     value={editingProduct.price}
@@ -1758,7 +1753,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-neutral-600 mb-1 font-semibold">قیمت فروش (ریال) *:</label>
+                  <label className="block text-neutral-600 mb-1 font-semibold">قیمت فروش (تومان) *:</label>
                   <input
                     type="number"
                     value={newProductForm.price || ''}

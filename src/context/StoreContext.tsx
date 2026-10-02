@@ -1,30 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { 
-  Product, 
-  GarageCar, 
-  CartItem, 
-  Order, 
-  OrderStatus,
-  PartRequest,
-  CarBrand,
-  VehicleModel,
-  Category,
-  Article,
-  ArticleCategory,
-  CustomerUser,
-  SiteSettings,
-  PaymentGatewayConfig,
-  ApiIntegrationsConfig,
-  AdminAuthState,
-  SliderItem,
-  AdminUser,
-  SitePage,
-  PageSection,
-  LoyaltyTier,
-  LoyaltyTransaction,
-  LoyaltySettings,
-  SeoEntityDraft
-} from '../types';
+import { Product, GarageCar, CartItem, Order, OrderStatus, PartRequest, CarBrand, VehicleModel, Category, Article, ArticleCategory, CustomerUser, SiteSettings, PaymentGatewayConfig, ApiIntegrationsConfig, AdminAuthState, SliderItem, AdminUser, SitePage, PageSection, LoyaltyTier, LoyaltyTransaction, SeoEntityDraft } from '../types';
 import { DEFAULT_SITE_SETTINGS } from '../data/siteDefaults';
 import { apiRequest, ApiError } from '../api/client';
 import { readJsonStorage, writeJsonStorage } from '../utils/storage';
@@ -1028,15 +1003,6 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   // Sync state to local storage
 
-
-
-
-
-
-
-
-
-
   useEffect(() => {
     writeJsonStorage('chinpart_selected_car', selectedVehicle);
   }, [selectedVehicle]);
@@ -1052,14 +1018,6 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   useEffect(() => {
     writeJsonStorage('chinpart_wishlist', wishlist);
   }, [wishlist]);
-
-
-
-
-
-
-
-
 
   // Dynamic Theme Styling Application (Colors, Glow, Typography, Border Radius, Font Scale)
   useEffect(() => {

@@ -137,6 +137,21 @@ const PART_REQUEST_SECTION_DEFAULTS: PageSection[] = [
 
 const upgradeLegacyHomeSection = (section: PageSection): PageSection => {
   const key = section.sectionKey;
+
+  const centeredLegacyKeys = new Set([
+    'hero','featured-categories','promo-small','featured-products','wide-banner-1',
+    'manufacturers','parts-brands','promo-medium','weekly-deals','promo-large',
+    'maintenance-products','testimonials','articles','service-strip'
+  ]);
+  if (centeredLegacyKeys.has(key || '') && Number(section.widthPercent ?? 100) === 100) {
+    section = {
+      ...section,
+      widthPercent: 95,
+      tabletWidthPercent: section.tabletWidthPercent == null || section.tabletWidthPercent === 100 ? 96 : section.tabletWidthPercent,
+      mobileWidthPercent: section.mobileWidthPercent ?? 100
+    };
+  }
+
   if (!section.contentSource) {
     const liveSource =
       key === 'featured-categories' ? 'categories' :
@@ -150,14 +165,32 @@ const upgradeLegacyHomeSection = (section: PageSection): PageSection => {
       contentSourceLimit: section.contentSourceLimit || section.maxItems
     };
   }
-  if (key === 'hero' && (!section.fullWidth || section.maxWidthPx !== 0)) {
+  if (key === 'hero') {
     return {
       ...section,
       fullWidth: true,
-      widthPercent: 100,
+      widthPercent: section.widthPercent ?? 95,
+      tabletWidthPercent: section.tabletWidthPercent ?? 96,
+      mobileWidthPercent: section.mobileWidthPercent ?? 100,
       maxWidthPx: 0,
-      borderRadiusPx: 0,
-      paddingInlinePx: 0
+      borderRadiusPx: section.borderRadiusPx ?? 8,
+      paddingInlinePx: section.paddingInlinePx ?? 0,
+      marginTopPx: section.marginTopPx ?? 12,
+      finderWidthPx: section.finderWidthPx ?? 300,
+      finderPaddingPx: section.finderPaddingPx ?? 18,
+      finderRadiusPx: section.finderRadiusPx ?? 8,
+      finderTitleFontSizePx: section.finderTitleFontSizePx ?? 15,
+      finderTextFontSizePx: section.finderTextFontSizePx ?? 11,
+      finderLabelFontSizePx: section.finderLabelFontSizePx ?? 10,
+      finderValueFontSizePx: section.finderValueFontSizePx ?? 11,
+      finderButtonFontSizePx: section.finderButtonFontSizePx ?? 11,
+      finderBackgroundColor: section.finderBackgroundColor ?? '#ffffff',
+      finderTextColor: section.finderTextColor ?? '#111827',
+      finderFieldBackgroundColor: section.finderFieldBackgroundColor ?? '#fafafa',
+      finderFieldTextColor: section.finderFieldTextColor ?? '#222b35',
+      finderButtonBackgroundColor: section.finderButtonBackgroundColor ?? '#f5a000',
+      finderButtonTextColor: section.finderButtonTextColor ?? '#111827',
+      finderSide: section.finderSide ?? 'left'
     };
   }
   if (
@@ -202,17 +235,108 @@ const upgradeLegacyHomeSection = (section: PageSection): PageSection => {
       gapPx: section.gapPx ?? 14
     };
   }
-  if (key === 'promo-large' && (section.desktopColumns == null || section.desktopColumns === 2)) {
-    return { ...section, desktopColumns: 3, mobileColumns: section.mobileColumns || 1, itemRadiusPx: section.itemRadiusPx ?? 3 };
+  if (key === 'promo-large') {
+    const widths = [67,33,33,67];
+    return {
+      ...section,
+      desktopColumns: section.desktopColumns == null || section.desktopColumns === 2 ? 3 : section.desktopColumns,
+      mobileColumns: section.mobileColumns || 1,
+      itemRadiusPx: section.itemRadiusPx === 3 ? 10 : (section.itemRadiusPx ?? 10),
+      itemMinHeightPx: section.itemMinHeightPx ?? 220,
+      items: (section.items || []).map((item,index)=>({
+        ...item,
+        widthPercent: item.widthPercent ?? widths[index % widths.length],
+        tabletWidthPercent: item.tabletWidthPercent ?? 50,
+        mobileWidthPercent: item.mobileWidthPercent ?? 100,
+        heightPx: item.heightPx ?? 220
+      }))
+    };
   }
-  if (key === 'wide-banner-1' && !section.fullWidth && (section.maxWidthPx == null || section.maxWidthPx === 1280)) {
-    return { ...section, fullWidth: true, widthPercent: 100, maxWidthPx: 0, borderRadiusPx: 0, minHeightPx: section.minHeightPx || 330 };
+  if (key === 'wide-banner-1') {
+    const item = section.items?.[0] || {
+      id: 'wide-banner-1-item',
+      title: section.title || '',
+      subtitle: section.subtitle || '',
+      buttonText: section.buttonText || '',
+      link: section.buttonLink || '',
+      imageUrl: section.imageUrl || '',
+      isVisible: true,
+      order: 1,
+      widthPercent: 100,
+      tabletWidthPercent: 100,
+      mobileWidthPercent: 100,
+      heightPx: section.minHeightPx || 330,
+      titleColor: '#ffffff',
+      subtitleColor: '#f5a000',
+      buttonBgColor: '#ffffff',
+      buttonTextColor: '#111827',
+      textAlignment: 'right'
+    };
+    return {
+      ...section,
+      title: section.items?.length ? section.title : 'بنر عریض میانی',
+      fullWidth: true,
+      widthPercent: section.widthPercent ?? 95,
+      tabletWidthPercent: section.tabletWidthPercent ?? 96,
+      mobileWidthPercent: section.mobileWidthPercent ?? 100,
+      maxWidthPx: 0,
+      borderRadiusPx: section.borderRadiusPx ?? 10,
+      minHeightPx: section.minHeightPx || 330,
+      items: [item, ...(section.items?.slice(1) || [])]
+    };
   }
-  if ((key === 'weekly-deals' || key === 'testimonials' || key === 'service-strip') && !section.fullWidth && (section.maxWidthPx == null || section.maxWidthPx === 1280)) {
-    return { ...section, fullWidth: true, widthPercent: 100, maxWidthPx: 0, borderRadiusPx: 0 };
+  if (key === 'weekly-deals') {
+    return {
+      ...section,
+      fullWidth: true,
+      widthPercent: section.widthPercent ?? 95,
+      tabletWidthPercent: section.tabletWidthPercent ?? 96,
+      mobileWidthPercent: section.mobileWidthPercent ?? 100,
+      maxWidthPx: 0,
+      borderRadiusPx: section.borderRadiusPx ?? 10,
+      paddingTopPx: section.paddingTopPx ?? 28,
+      paddingBottomPx: section.paddingBottomPx ?? 34,
+      itemRadiusPx: section.itemRadiusPx === 3 ? 14 : (section.itemRadiusPx ?? 14),
+      headingFontSizePx: section.headingFontSizePx ?? 20,
+      subtitleFontSizePx: section.subtitleFontSizePx ?? 11,
+      dealTimerAlign: section.dealTimerAlign ?? 'left',
+      dealTimerFontSizePx: section.dealTimerFontSizePx ?? 18,
+      dealTitleColor: section.dealTitleColor ?? '#ffffff',
+      dealSubtitleColor: section.dealSubtitleColor ?? '#fff7ed',
+      dealTimerTextColor: section.dealTimerTextColor ?? '#b45309',
+      dealTimerBoxBgColor: section.dealTimerBoxBgColor ?? '#ffffff',
+      dealContentVerticalAlign: section.dealContentVerticalAlign ?? 'center'
+    };
+  }
+  if ((key === 'testimonials' || key === 'service-strip')) {
+    return {
+      ...section,
+      fullWidth: true,
+      widthPercent: section.widthPercent ?? 95,
+      tabletWidthPercent: section.tabletWidthPercent ?? 96,
+      mobileWidthPercent: section.mobileWidthPercent ?? 100,
+      maxWidthPx: 0,
+      borderRadiusPx: section.borderRadiusPx ?? 10
+    };
   }
   if (key === 'shipping-banner' && (section.maxWidthPx == null || section.maxWidthPx === 1280)) {
     return { ...section, widthPercent: 100, maxWidthPx: 1040, minHeightPx: section.minHeightPx || 128, borderRadiusPx: section.borderRadiusPx ?? 3 };
+  }
+  if (key === 'promo-small' || key === 'promo-medium') {
+    const count=Math.max(1,section.items?.length || (key === 'promo-small' ? 3 : 2));
+    return {
+      ...section,
+      borderRadiusPx: section.borderRadiusPx ?? 10,
+      itemRadiusPx: section.itemRadiusPx ?? 10,
+      itemMinHeightPx: section.itemMinHeightPx ?? (key === 'promo-small' ? 178 : 205),
+      items: (section.items || []).map((item,index)=>({
+        ...item,
+        widthPercent: item.widthPercent ?? (key === 'promo-small' ? (index === 0 ? 34 : 33) : Math.floor(100/count)),
+        tabletWidthPercent: item.tabletWidthPercent ?? (key === 'promo-small' ? (index === 0 ? 34 : 33) : Math.floor(100/count)),
+        mobileWidthPercent: item.mobileWidthPercent ?? 100,
+        heightPx: item.heightPx ?? (key === 'promo-small' ? 178 : 205)
+      }))
+    };
   }
   if (key === 'articles') {
     return {

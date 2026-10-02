@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { useStore } from '../../context/StoreContext';
 import { FooterBadgeItem, FooterFeatureItem } from '../../types';
+import { sanitizeEmbedHtml } from '../../utils/sanitizeHtml';
 
 interface FooterProps {
   onNavigate: (view: string, param?: string) => void;
@@ -387,7 +388,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenAuthModal }) =
                   <div key={b.id} className="transition-transform hover:-translate-y-1">
                     {b.htmlCode ? (
                       <div 
-                        dangerouslySetInnerHTML={{ __html: b.htmlCode }} 
+                        dangerouslySetInnerHTML={{ __html: sanitizeEmbedHtml(b.htmlCode) }} 
                         className="cursor-pointer"
                         onClick={() => {
                           if (b.linkUrl && b.linkUrl !== '#') {
@@ -421,7 +422,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenAuthModal }) =
                 {/* Additional Custom Raw HTML Embed (if configured by admin) */}
                 {settings.footerCustomHtml && (
                   <div 
-                    dangerouslySetInnerHTML={{ __html: settings.footerCustomHtml }} 
+                    dangerouslySetInnerHTML={{ __html: sanitizeEmbedHtml(settings.footerCustomHtml) }} 
                     className="footer-custom-html-block"
                   />
                 )}

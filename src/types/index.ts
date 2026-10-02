@@ -740,6 +740,12 @@ export interface PageSectionItem {
   badgeBgColor?: string;
   badgeTextColor?: string;
   textAlignment?: 'right' | 'center' | 'left';
+  widthPercent?: number;
+  tabletWidthPercent?: number;
+  mobileWidthPercent?: number;
+  heightPx?: number;
+  tabletHeightPx?: number;
+  mobileHeightPx?: number;
 }
 
 export interface PageSection {

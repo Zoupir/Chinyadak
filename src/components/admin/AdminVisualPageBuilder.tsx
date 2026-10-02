@@ -6,6 +6,7 @@ import { ImageUploadInput } from '../common/ImageUploadInput';
 import { LinkDestinationPicker } from '../common/LinkDestinationPicker';
 import { RichTextEditor } from '../common/RichTextEditor';
 import { AdminEntitySeoPanel } from './AdminEntitySeoPanel';
+import { ConfirmDialog } from '../common/ConfirmDialog';
 
 type Device = 'desktop' | 'tablet' | 'mobile';
 type InspectorTab = 'content' | 'layout' | 'style' | 'items' | 'seo';
@@ -79,6 +80,11 @@ export const AdminVisualPageBuilder: React.FC<{onNavigate?:(view:string,param?:s
   const [device,setDevice] = useState<Device>('desktop');
   const [inspectorTab,setInspectorTab] = useState<InspectorTab>('content');
   const [seoDraft,setSeoDraft] = useState<SeoEntityDraft | undefined>(page?.seo);
+  const [isCreatePageOpen,setIsCreatePageOpen] = useState(false);
+  const [newPageTitle,setNewPageTitle] = useState('');
+  const [newPageSlug,setNewPageSlug] = useState('');
+  const [pageDeletePending,setPageDeletePending] = useState(false);
+  const [sectionDeletePending,setSectionDeletePending] = useState<string | null>(null);
 
   useEffect(()=>{
     if(!page) return;
@@ -165,13 +171,62 @@ export const AdminVisualPageBuilder: React.FC<{onNavigate?:(view:string,param?:s
   };
 
   const createPage=()=>{
-    const title=window.prompt('نام برگه جدید:','برگه جدید')?.trim();
-    if(!title)return;
-    const slugInput=window.prompt('Slug انگلیسی:','new-page')?.trim().toLowerCase().replace(/\s+/g,'-');
-    if(!slugInput)return;
-    const newPage:SitePage={id:`page-${Date.now()}`,slug:slugInput,title,description:'',updatedAt:new Date().toLocaleDateString('fa-IR'),isSystem:false,sections:[defaultSection(1)]};
+    setNewPageTitle('');
+    setNewPageSlug('');
+    setIsCreatePageOpen(true);
+  };
+
+  const submitCreatePage=(event:React.FormEvent)=>{
+    event.preventDefault();
+    const title=newPageTitle.trim();
+    const slug=newPageSlug
+      .trim()
+      .toLowerCase()
+      .replace(/[^\u0600-\u06ffa-z0-9]+/g,'-')
+      .replace(/^-+|-+$/g,'');
+    if(!title||!slug){
+      showToast('عنوان و نامک برگه الزامی است.','error');
+      return;
+    }
+    if(pages.some(item=>item.slug===slug)){
+      showToast('این نامک قبلاً برای یک برگه استفاده شده است.','error');
+      return;
+    }
+    const newPage:SitePage={
+      id:`page-${Date.now()}`,
+      slug,
+      title,
+      description:'',
+      updatedAt:new Date().toLocaleDateString('fa-IR'),
+      isSystem:false,
+      sections:[defaultSection(1)]
+    };
     updatePage(newPage);
     setPageId(newPage.id);
+    setSectionId(newPage.sections[0].id);
+    setDraft({...newPage.sections[0]});
+    setIsCreatePageOpen(false);
+  };
+
+  const confirmDeletePage=()=>{
+    if(page.isSystem){
+      showToast('برگه‌های اصلی سیستمی قابل حذف نیستند.','error');
+      setPageDeletePending(false);
+      return;
+    }
+    const fallback=pages.find(item=>item.id!==page.id);
+    deletePage(page.id);
+    setPageId(fallback?.id||'');
+    setSectionId(fallback?.sections?.[0]?.id||'');
+    setPageDeletePending(false);
+  };
+
+  const confirmDeleteSection=()=>{
+    if(!sectionDeletePending)return;
+    const remaining=sortedSections.filter(item=>item.id!==sectionDeletePending);
+    deleteSection(page.slug,sectionDeletePending);
+    setSectionId(remaining[0]?.id||'');
+    setSectionDeletePending(null);
   };
 
   const previewWidth=device==='desktop'?'100%':device==='tablet'?'820px':'390px';
@@ -300,7 +355,12 @@ export const AdminVisualPageBuilder: React.FC<{onNavigate?:(view:string,param?:s
           <select value={page.id} onChange={e=>setPageId(e.target.value)} className="h-9 min-w-44 px-2 rounded-lg bg-neutral-800 border border-neutral-700 text-xs font-bold">
             {pages.map(item=><option key={item.id} value={item.id}>{item.title}</option>)}
           </select>
-          <button onClick={createPage} className="h-9 px-3 rounded-lg bg-neutral-800 text-[10px] font-bold inline-flex items-center gap-1"><Plus className="w-3.5 h-3.5"/>برگه</button>
+          <button onClick={createPage} className="h-9 px-3 rounded-lg bg-neutral-800 text-[10px] font-bold inline-flex items-center gap-1"><Plus className="w-3.5 h-3.5"/>برگه جدید</button>
+          {!page.isSystem&&(
+            <button onClick={()=>setPageDeletePending(true)} className="h-9 px-3 rounded-lg bg-red-950/70 text-red-200 text-[10px] font-bold inline-flex items-center gap-1">
+              <Trash2 className="w-3.5 h-3.5"/>حذف برگه
+            </button>
+          )}
         </div>
         <div className="flex items-center gap-1 bg-neutral-800 p-1 rounded-lg">
           <button onClick={()=>setDevice('desktop')} className={`p-2 rounded ${device==='desktop'?'bg-blue-600':'text-neutral-400'}`} title="دسکتاپ"><Monitor className="w-4 h-4"/></button>
@@ -497,12 +557,58 @@ export const AdminVisualPageBuilder: React.FC<{onNavigate?:(view:string,param?:s
               <div className="pt-3 border-t flex gap-2">
                 <button onClick={saveDraft} className="flex-1 py-2.5 rounded-xl bg-emerald-600 text-white font-black inline-flex items-center justify-center gap-1"><Save className="w-3.5 h-3.5"/>ذخیره سکشن</button>
                 <button onClick={()=>patch({isVisible:!draft.isVisible})} className="w-10 grid place-items-center rounded-xl border">{draft.isVisible?<Eye className="w-4 h-4"/>:<EyeOff className="w-4 h-4"/>}</button>
-                <button onClick={()=>{if(window.confirm('سکشن حذف شود؟')){deleteSection(page.slug,draft.id);setSectionId('');}}} className="w-10 grid place-items-center rounded-xl bg-red-50 text-red-600"><Trash2 className="w-4 h-4"/></button>
+                <button onClick={()=>setSectionDeletePending(draft.id)} className="w-10 grid place-items-center rounded-xl bg-red-50 text-red-600"><Trash2 className="w-4 h-4"/></button>
               </div>
             </div>
           )}
         </aside>
       </div>
+
+      {isCreatePageOpen&&(
+        <div className="fixed inset-0 z-[90] bg-black/55 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-md rounded-3xl bg-white border border-neutral-200 shadow-2xl overflow-hidden">
+            <div className="p-5 border-b">
+              <h3 className="font-black text-sm">ساخت برگه جدید</h3>
+              <p className="mt-1 text-[10px] text-neutral-500">عنوان و نامک را وارد کنید. نامک می‌تواند فارسی یا انگلیسی باشد.</p>
+            </div>
+            <form onSubmit={submitCreatePage} className="p-5 space-y-4 text-xs">
+              <label className="block">
+                <span className="font-bold block mb-1">عنوان برگه</span>
+                <input autoFocus value={newPageTitle} onChange={e=>setNewPageTitle(e.target.value)} className="w-full p-3 border rounded-xl" placeholder="مثلاً درباره ما"/>
+              </label>
+              <label className="block">
+                <span className="font-bold block mb-1">نامک برگه</span>
+                <input dir="ltr" value={newPageSlug} onChange={e=>setNewPageSlug(e.target.value)} className="w-full p-3 border rounded-xl text-left" placeholder="about-us"/>
+                <small className="block mt-1 text-[9px] text-neutral-400">فاصله‌ها هنگام ذخیره به خط تیره تبدیل می‌شوند.</small>
+              </label>
+              <div className="flex justify-end gap-2">
+                <button type="button" onClick={()=>setIsCreatePageOpen(false)} className="px-4 py-2.5 rounded-xl border font-bold">انصراف</button>
+                <button type="submit" className="px-4 py-2.5 rounded-xl bg-blue-600 text-white font-black">ساخت برگه</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      <ConfirmDialog
+        open={pageDeletePending}
+        title="حذف برگه"
+        message={<>برگه «{page.title}» حذف شود؟ این عمل برگه و سکشن‌های آن را از مدیریت محتوا حذف می‌کند.</>}
+        confirmLabel="حذف برگه"
+        danger
+        onCancel={()=>setPageDeletePending(false)}
+        onConfirm={confirmDeletePage}
+      />
+
+      <ConfirmDialog
+        open={Boolean(sectionDeletePending)}
+        title="حذف سکشن"
+        message="این سکشن از برگه حذف شود؟"
+        confirmLabel="حذف سکشن"
+        danger
+        onCancel={()=>setSectionDeletePending(null)}
+        onConfirm={confirmDeleteSection}
+      />
     </div>
   );
 };

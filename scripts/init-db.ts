@@ -57,6 +57,9 @@ const main = async () => {
     await ensureColumn('orders', 'reservation_expires_at', 'DATETIME NULL');
     await ensureColumn('admin_users', 'avatar_url', 'TEXT NULL');
     await ensureColumn('customers', 'password_initialized', 'TINYINT(1) NOT NULL DEFAULT 1');
+    await ensureColumn('customers', 'session_version', 'INT UNSIGNED NOT NULL DEFAULT 1');
+    await ensureColumn('admin_users', 'session_version', 'INT UNSIGNED NOT NULL DEFAULT 1');
+    await ensureColumn('orders', 'archived_at', 'DATETIME NULL');
 
     await connection.query(
       `ALTER TABLE payment_transactions

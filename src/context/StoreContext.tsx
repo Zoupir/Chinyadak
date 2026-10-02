@@ -482,7 +482,7 @@ interface StoreContextType {
   
   // Customers (CRM)
   customers: CustomerUser[];
-  addCustomer: (cust: Omit<CustomerUser, 'id' | 'registeredAt' | 'totalOrders' | 'totalSpent'>) => void;
+  addCustomer: (cust: Omit<CustomerUser, 'id' | 'registeredAt' | 'totalOrders' | 'totalSpent'> & { initialPassword?: string }) => void;
   updateCustomer: (cust: CustomerUser) => void;
   toggleCustomerStatus: (id: string) => void;
 
@@ -1574,7 +1574,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   // Customers (CRM)
-  const addCustomer = (custData: Omit<CustomerUser, 'id' | 'registeredAt' | 'totalOrders' | 'totalSpent'>) => {
+  const addCustomer = (custData: Omit<CustomerUser, 'id' | 'registeredAt' | 'totalOrders' | 'totalSpent'> & { initialPassword?: string }) => {
     void apiRequest<{ customer: CustomerUser }>('/api/admin-data/customers', {
       method: 'POST',
       body: JSON.stringify(custData)
@@ -1583,9 +1583,12 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       showToast(`مشتری ${customer.firstName} ${customer.lastName} ثبت شد.`);
     }).catch(error => {
       console.error(error);
-      const message = error instanceof ApiError && error.code === 'PHONE_ALREADY_REGISTERED'
-        ? 'این شماره موبایل قبلاً ثبت شده است.'
-        : 'ثبت مشتری انجام نشد.';
+      const message =
+        error instanceof ApiError && error.code === 'PHONE_ALREADY_REGISTERED'
+          ? 'این شماره موبایل قبلاً ثبت شده است.'
+          : error instanceof ApiError && error.code === 'CUSTOMER_INITIAL_PASSWORD_TOO_SHORT'
+            ? 'رمز ورود اولیه باید حداقل ۸ کاراکتر باشد.'
+            : 'ثبت مشتری انجام نشد.';
       showToast(message, 'error');
     });
   };

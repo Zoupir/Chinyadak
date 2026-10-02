@@ -71,29 +71,29 @@ export const resolveShipping = (
   if (normalized === 'express') {
     return {
       id: 'express',
-      title: 'پیک موتوری ۲ ساعته',
+      title: 'پیک شهری',
       cost: free ? 0 : baseCost,
       baseCost,
       free,
-      estimatedDelivery: '۲ ساعت کاری'
+      estimatedDelivery: 'طبق هماهنگی فروشگاه'
     };
   }
   if (normalized === 'tipax') {
     return {
       id: 'tipax',
-      title: 'تیپاکس اکسپرس',
+      title: 'تیپاکس',
       cost: free ? 0 : baseCost,
       baseCost,
       free,
-      estimatedDelivery: '۲۴ الی ۴۸ ساعت'
+      estimatedDelivery: 'طبق زمان‌بندی شرکت حمل'
     };
   }
   return {
     id: 'post',
-    title: 'پست پیشتاز بیمه‌شده',
+    title: 'پست پیشتاز',
     cost: free ? 0 : baseCost,
     baseCost,
     free,
-    estimatedDelivery: '۲۴ الی ۴۸ ساعت'
+    estimatedDelivery: 'طبق زمان‌بندی شرکت پست'
   };
 };

@@ -50,6 +50,10 @@ export const AdminSandboxGateway: React.FC = () => {
 
   const handleRunPaymentTest = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!selectedGatewayId) {
+      showToast('ابتدا یک درگاه فعال کنید.', 'error');
+      return;
+    }
     setIsProcessing(true);
     setTestResult(null);
 
@@ -73,6 +77,16 @@ export const AdminSandboxGateway: React.FC = () => {
 
   const activeGateways = paymentGateways.filter(g => g.isActive);
 
+  React.useEffect(() => {
+    if (!activeGateways.length) {
+      setSelectedGatewayId('');
+      return;
+    }
+    if (!activeGateways.some(g => g.id === selectedGatewayId)) {
+      setSelectedGatewayId(activeGateways[0].id);
+    }
+  }, [paymentGateways, selectedGatewayId]);
+
   return (
     <div className="bg-white rounded-3xl border border-neutral-200 p-6 sm:p-8 shadow-xs space-y-6">
       <div className="border-b border-neutral-100 pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -92,8 +106,8 @@ export const AdminSandboxGateway: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-1.5 bg-neutral-100 px-3 py-1.5 rounded-xl text-xs font-mono">
-          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-          <span>وضعیت سوییچ شاپرک: متصل (Code 200)</span>
+          <span className="w-2 h-2 rounded-full bg-amber-500"></span>
+          <span>شبیه‌ساز محلی — بدون اتصال واقعی به شاپرک</span>
         </div>
       </div>
 
@@ -108,11 +122,13 @@ export const AdminSandboxGateway: React.FC = () => {
               onChange={e => setSelectedGatewayId(e.target.value)}
               className="w-full p-2.5 border border-neutral-300 rounded-xl bg-white text-xs font-bold"
             >
-              {paymentGateways.map(g => (
+              {activeGateways.length ? activeGateways.map(g => (
                 <option key={g.id} value={g.id}>
-                  {g.name} ({g.isActive ? 'فعال' : 'غیرفعال'})
+                  {g.name}
                 </option>
-              ))}
+              )) : (
+                <option value="">هیچ درگاه فعالی وجود ندارد</option>
+              )}
             </select>
           </div>
 

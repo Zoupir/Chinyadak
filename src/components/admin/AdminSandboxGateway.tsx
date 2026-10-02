@@ -1,19 +1,7 @@
 import React, { useState } from 'react';
 import { useStore } from '../../context/StoreContext';
 import { formatToman } from '../../utils/formatters';
-import { 
-  CreditCard, 
-  ShieldCheck, 
-  CheckCircle2, 
-  AlertTriangle, 
-  XCircle, 
-  RefreshCw, 
-  ArrowLeft,
-  KeyRound,
-  Check,
-  Package,
-  Receipt
-} from 'lucide-react';
+import { CreditCard, ShieldCheck, XCircle, RefreshCw, KeyRound, Check, Receipt } from 'lucide-react';
 
 export const AdminSandboxGateway: React.FC = () => {
   const { 

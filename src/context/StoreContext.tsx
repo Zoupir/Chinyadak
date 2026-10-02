@@ -484,6 +484,7 @@ interface StoreContextType {
   customers: CustomerUser[];
   addCustomer: (cust: Omit<CustomerUser, 'id' | 'registeredAt' | 'totalOrders' | 'totalSpent'> & { initialPassword?: string }) => void;
   updateCustomer: (cust: CustomerUser) => void;
+  setCustomerLoginPassword: (id: string, newPassword: string) => Promise<boolean>;
   toggleCustomerStatus: (id: string) => void;
 
   // Store Settings (Theme, Font, Color, Contact, Shipping)
@@ -1607,7 +1608,32 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     });
   };
 
-  const toggleCustomerStatus = (id: string) => {
+  const setCustomerLoginPassword = async (id: string, newPassword: string): Promise<boolean> => {
+    try {
+      const result = await apiRequest<{ id: string; loginReady: boolean }>(
+        `/api/admin-data/customers/${encodeURIComponent(id)}/login-password`,
+        {
+          method: 'PATCH',
+          body: JSON.stringify({ newPassword })
+        }
+      );
+      setCustomers(prev => prev.map(customer =>
+        customer.id === result.id ? { ...customer, loginReady: result.loginReady } : customer
+      ));
+      showToast('رمز ورود مشتری ذخیره شد و نشست‌های قبلی او باطل شدند.');
+      return true;
+    } catch (error) {
+      console.error(error);
+      const message =
+        error instanceof ApiError && error.code === 'CUSTOMER_PASSWORD_TOO_SHORT'
+          ? 'رمز ورود مشتری باید حداقل ۸ کاراکتر باشد.'
+          : 'تنظیم رمز ورود مشتری انجام نشد.';
+      showToast(message, 'error');
+      return false;
+    }
+  };
+
+    const toggleCustomerStatus = (id: string) => {
     void apiRequest<{ id: string; status: 'active' | 'blocked' }>(`/api/admin-data/customers/${encodeURIComponent(id)}/status`, {
       method: 'PATCH'
     }).then(result => {
@@ -2551,6 +2577,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       customerLogout,
       addCustomer,
       updateCustomer,
+      setCustomerLoginPassword,
       toggleCustomerStatus,
       sliders,
       addSlider,

@@ -262,7 +262,7 @@ export const MediaPickerModal: React.FC<MediaPickerModalProps> = ({
                 )}
               </div>
               {selected && (
-                <div className="lg:hidden p-3 border-t border-neutral-200 flex items-center gap-3 bg-white shrink-0">
+                <div className="2xl:hidden p-3 border-t border-neutral-200 flex items-center gap-3 bg-white shrink-0">
                   <img src={selected.url} alt="" className="w-12 h-12 rounded-lg object-cover border" />
                   <span className="flex-1 min-w-0 text-[10px] font-bold truncate">{selected.filename}</span>
                   <button type="button" onClick={() => { onSelect(selected.url, selected); onClose(); }} className="px-3 py-2 rounded-lg bg-blue-600 text-white text-[10px] font-black shrink-0">انتخاب</button>

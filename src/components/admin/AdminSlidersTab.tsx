@@ -33,6 +33,7 @@ export const AdminSlidersTab: React.FC = () => {
   const [subtitle, setSubtitle] = useState('');
   const [tag, setTag] = useState('');
   const [imageUrl, setImageUrl] = useState('');
+  const [imageMode, setImageMode] = useState<NonNullable<SliderItem['imageMode']>>('cover');
   const [link, setLink] = useState('shop');
   const [buttonText, setButtonText] = useState('مشاهده و خرید قطعات');
   const [isActive, setIsActive] = useState(true);
@@ -56,6 +57,7 @@ export const AdminSlidersTab: React.FC = () => {
     setSubtitle('');
     setTag('پیشنهاد ویژه');
     setImageUrl('https://images.unsplash.com/photo-1617788138017-80ad40651399?w=1600&auto=format&fit=crop&q=80');
+    setImageMode('cover');
     setLink('shop');
     setButtonText('مشاهده قطعات');
     setIsActive(true);
@@ -81,6 +83,7 @@ export const AdminSlidersTab: React.FC = () => {
     setSubtitle(slide.subtitle);
     setTag(slide.tag || '');
     setImageUrl(slide.imageUrl);
+    setImageMode(slide.imageMode || 'cover');
     setLink(slide.link);
     setButtonText(slide.buttonText);
     setIsActive(slide.isActive);
@@ -109,6 +112,7 @@ export const AdminSlidersTab: React.FC = () => {
       subtitle,
       tag,
       imageUrl,
+      imageMode,
       link,
       buttonText,
       isActive,
@@ -470,6 +474,19 @@ export const AdminSlidersTab: React.FC = () => {
                 placeholder="https://..."
                 helperText="تصویر افقی با نسبت عریض جهت نمایش چشم‌نواز در اسلایدر هدر"
               />
+
+              <label className="block mt-3">
+                <span className="block text-xs font-bold mb-1.5">نحوه نمایش تصویر اسلاید</span>
+                <select value={imageMode} onChange={event => setImageMode(event.target.value as NonNullable<SliderItem['imageMode']>)} className="w-full p-2.5 border border-neutral-300 rounded-xl bg-white text-xs">
+                  <option value="cover">پوشش کامل کادر (با برش متناسب)</option>
+                  <option value="contain">نمایش کامل بدون برش</option>
+                  <option value="stretch">کشیده‌شدن اجباری تا کادر</option>
+                  <option value="original">اندازه اصلی تصویر</option>
+                  <option value="repeat">تکرار تصویر</option>
+                  <option value="repeat-x">تکرار افقی</option>
+                  <option value="repeat-y">تکرار عمودی</option>
+                </select>
+              </label>
 
               {/* Color & Gradient Settings */}
               <div className="p-4 bg-neutral-50 rounded-2xl border border-neutral-200 space-y-3">

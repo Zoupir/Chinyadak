@@ -7761,3 +7761,35 @@ html[data-layout="marketplace-rtl"] .marketplace-ref-footer[data-bottom-align="l
     min-height: var(--banner-height-tablet, var(--banner-height-desktop, 178px)) !important;
   }
 }
+
+
+/* Center incomplete catalog/logo rows instead of leaving a large empty side. */
+html[data-layout="marketplace-rtl"] [data-section-key="featured-categories"] .marketplace-round-list,
+html[data-layout="marketplace-rtl"] [data-section-key="manufacturers"] .marketplace-brand-row,
+html[data-layout="marketplace-rtl"] [data-section-key="parts-brands"] .marketplace-logo-tiles {
+  display: flex !important;
+  flex-wrap: wrap;
+  justify-content: center !important;
+  align-items: stretch;
+  gap: var(--builder-gap, 10px) !important;
+}
+html[data-layout="marketplace-rtl"] [data-section-key="featured-categories"] .marketplace-round-list > *,
+html[data-layout="marketplace-rtl"] [data-section-key="manufacturers"] .marketplace-brand-row > *,
+html[data-layout="marketplace-rtl"] [data-section-key="parts-brands"] .marketplace-logo-tiles > * {
+  flex: 0 1 calc(var(--builder-item-basis, 12.5%) - var(--builder-gap, 10px)) !important;
+  min-width: 74px;
+}
+@media (min-width: 701px) and (max-width: 1024px) {
+  html[data-layout="marketplace-rtl"] [data-section-key="featured-categories"] .marketplace-round-list > *,
+  html[data-layout="marketplace-rtl"] [data-section-key="manufacturers"] .marketplace-brand-row > *,
+  html[data-layout="marketplace-rtl"] [data-section-key="parts-brands"] .marketplace-logo-tiles > * {
+    flex-basis: calc(var(--builder-tablet-item-basis, 25%) - var(--builder-gap, 10px)) !important;
+  }
+}
+@media (max-width: 700px) {
+  html[data-layout="marketplace-rtl"] [data-section-key="featured-categories"] .marketplace-round-list > *,
+  html[data-layout="marketplace-rtl"] [data-section-key="manufacturers"] .marketplace-brand-row > *,
+  html[data-layout="marketplace-rtl"] [data-section-key="parts-brands"] .marketplace-logo-tiles > * {
+    flex-basis: calc(var(--builder-mobile-item-basis, 33.333%) - var(--builder-gap, 10px)) !important;
+  }
+}

@@ -9,7 +9,7 @@ interface BannerPlacementProps {
 
 const navigateTo = (link: string, onNavigate: BannerPlacementProps['onNavigate']) => {
   if (!link) return;
-  if (/^https?:\\/\\//i.test(link)) {
+  if (link.startsWith('http://') || link.startsWith('https://')) {
     window.open(link, '_blank', 'noopener,noreferrer');
     return;
   }

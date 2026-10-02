@@ -195,6 +195,7 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
 
 
 
+  const sourceItemsFor = (
     source: NonNullable<PageSection['contentSource']>,
     limit: number
   ): PageSectionItem[] => {
@@ -491,7 +492,7 @@ export const MarketplaceRtlHome: React.FC<MarketplaceRtlHomeProps> = ({
       : fillProducts(products.filter(product => ['engine', 'turbo', 'cooling'].includes(product.categorySlug || '') || product.isFeatured), 8);
 
 
-event: React.MouseEvent<HTMLDivElement>) => {
+const handleLiveEditCapture = (event: React.MouseEvent<HTMLDivElement>) => {
     if (!isLiveEditActive || !adminAuth.isAuthenticated) return;
     const target = event.target as HTMLElement;
     const sectionElement = target.closest<HTMLElement>('[data-section-key]');

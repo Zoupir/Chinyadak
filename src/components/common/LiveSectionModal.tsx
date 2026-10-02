@@ -420,6 +420,7 @@ export const LiveSectionModal: React.FC<LiveSectionModalProps> = ({
               <LinkDestinationPicker label="مقصد دکمه" value={form.buttonLink || ''} onChange={value=>patch({buttonLink:value})} />
             </section>
           </>
+          )
         )}
 
         {tab === 'layout' && (
@@ -686,12 +687,12 @@ export const LiveSectionModal: React.FC<LiveSectionModalProps> = ({
         )}
       </div>
 
-      <footer className="p-3 border-t border-neutral-200 bg-white shrink-0 grid grid-cols-[40px_1fr_1fr] gap-2">
+      <footer className="p-3 border-t border-neutral-200 bg-white shrink-0 flex gap-2">
         {!isBannerSection && <>
         <button type="button" onClick={deleteCurrent} className="grid place-items-center rounded-xl bg-red-50 text-red-600" title="حذف سکشن"><Trash2 className="w-4 h-4" /></button>
         </>}
-        <button type="button" onClick={cancel} className="py-2.5 rounded-xl bg-neutral-100 text-neutral-700 text-xs font-bold">لغو و بازگردانی</button>
-        <button type="button" onClick={save} className="py-2.5 rounded-xl bg-emerald-600 text-white text-xs font-black inline-flex items-center justify-center gap-1"><Save className="w-4 h-4" /> ذخیره</button>
+        <button type="button" onClick={cancel} className="flex-1 py-2.5 rounded-xl bg-neutral-100 text-neutral-700 text-xs font-bold">لغو و بازگردانی</button>
+        {!isBannerSection && <button type="button" onClick={save} className="flex-1 py-2.5 rounded-xl bg-emerald-600 text-white text-xs font-black inline-flex items-center justify-center gap-1"><Save className="w-4 h-4" /> ذخیره</button>}
       </footer>
       </aside>
     </>,

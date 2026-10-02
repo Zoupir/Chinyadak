@@ -767,8 +767,41 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   useEffect(() => {
     let cancelled = false;
 
+    type ProductPageResponse = {
+      products: Product[];
+      pagination?: {
+        page: number;
+        limit: number;
+        total: number;
+        totalPages: number;
+        hasMore: boolean;
+      };
+    };
+
+    const loadRemainingProductPages = async (
+      firstPage: Product[],
+      totalPages: number
+    ) => {
+      if (totalPages <= 1) return;
+
+      const byId = new Map(firstPage.map(product => [product.id, product]));
+      for (let page = 2; page <= totalPages; page += 1) {
+        if (cancelled) return;
+        try {
+          const pageData = await apiRequest<ProductPageResponse>(
+            `/api/catalog/products?page=${page}&limit=120`
+          );
+          pageData.products.forEach(product => byId.set(product.id, product));
+          if (!cancelled) setProducts(Array.from(byId.values()));
+        } catch (error) {
+          console.error(`Catalog background page ${page} load failed:`, error);
+          return;
+        }
+      }
+    };
+
     Promise.all([
-      apiRequest<{ products: Product[] }>('/api/catalog/products'),
+      apiRequest<ProductPageResponse>('/api/catalog/products?page=1&limit=120'),
       apiRequest<{ categories: Category[] }>('/api/catalog/categories'),
       apiRequest<{ brands: CarBrand[]; models: VehicleModel[] }>('/api/vehicles'),
       apiRequest<{
@@ -794,6 +827,9 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         setPaymentGateways(cmsData.paymentGateways);
         setStoreLoadError(null);
         setIsStoreReady(true);
+
+        const totalPages = Math.max(1, Number(productData.pagination?.totalPages || 1));
+        void loadRemainingProductPages(productData.products, totalPages);
       })
       .catch(async error => {
         console.error('Public store data load failed:', error);

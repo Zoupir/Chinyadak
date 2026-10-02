@@ -263,7 +263,7 @@ ordersRouter.post('/', async (req: AuthenticatedRequest, res) => {
     });
   }
 
-  const optionalSession = getOptionalSession(req);
+  const optionalSession = await getOptionalSession(req);
   const customerId =
     optionalSession?.role === 'customer' ? optionalSession.sub : null;
 

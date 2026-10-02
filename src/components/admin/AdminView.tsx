@@ -147,7 +147,8 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
     phone: '',
     type: 'retail' as CustomerUser['type'],
     vehicle: '',
-    address: ''
+    address: '',
+    initialPassword: ''
   });
 
   // Official Invoice Modal
@@ -414,6 +415,10 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
       showToast('لطفا فیلدهای ستاره‌دار را تکمیل نمایید.', 'error');
       return;
     }
+    if (custForm.initialPassword && custForm.initialPassword.length < 8) {
+      showToast('رمز ورود اولیه باید حداقل ۸ کاراکتر باشد.', 'error');
+      return;
+    }
     const typeTitles: Record<CustomerUser['type'], string> = {
       retail: 'مشتری عادی',
       mechanic: 'تعمیرکار / همکار',
@@ -427,7 +432,8 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
       typeTitle: typeTitles[custForm.type],
       status: 'active',
       vehicle: custForm.vehicle || undefined,
-      address: custForm.address || undefined
+      address: custForm.address || undefined,
+      initialPassword: custForm.initialPassword || undefined
     });
     setCustForm({
       firstName: '',
@@ -435,7 +441,8 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
       phone: '',
       type: 'retail',
       vehicle: '',
-      address: ''
+      address: '',
+      initialPassword: ''
     });
     setIsCustomerModalOpen(false);
   };
@@ -1179,6 +1186,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
                       <th className="p-3">نوع کاربری</th>
                       <th className="p-3">تعداد سفارش</th>
                       <th className="p-3">مجموع خرید</th>
+                      <th className="p-3">ورود مشتری</th>
                       <th className="p-3">وضعیت حساب</th>
                       <th className="p-3 text-left">عملیات</th>
                     </tr>
@@ -1202,6 +1210,11 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
                         </td>
                         <td className="p-3 font-mono font-bold">{cust.totalOrders} فاکتور</td>
                         <td className="p-3 font-bold text-neutral-900 font-mono">{formatToman(cust.totalSpent)}</td>
+                        <td className="p-3">
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${cust.loginReady ? 'bg-blue-50 text-blue-700' : 'bg-neutral-100 text-neutral-500'}`}>
+                            {cust.loginReady ? 'فعال' : 'فقط CRM'}
+                          </span>
+                        </td>
                         <td className="p-3">
                           <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${
                             cust.status === 'active' ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'
@@ -2143,6 +2156,21 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
                   className="w-full p-2.5 border border-neutral-300 rounded-xl font-mono text-left"
                   required
                 />
+              </div>
+
+              <div>
+                <label className="block text-neutral-600 mb-1 font-semibold">رمز ورود اولیه (اختیاری):</label>
+                <input
+                  type="password"
+                  value={custForm.initialPassword}
+                  onChange={e => setCustForm({ ...custForm, initialPassword: e.target.value })}
+                  placeholder="حداقل ۸ کاراکتر"
+                  autoComplete="new-password"
+                  className="w-full p-2.5 border border-neutral-300 rounded-xl font-mono text-left"
+                />
+                <p className="mt-1 text-[9px] leading-5 text-neutral-400">
+                  اگر خالی بماند، رکورد فقط برای CRM ساخته می‌شود و ورود مشتری به حساب فعال نخواهد بود.
+                </p>
               </div>
 
               <div>

@@ -615,7 +615,7 @@ export interface SiteSettings {
   themeRadiusPx?: number;
   headerStyle?: 'light' | 'dark' | 'primary';
   containerWidth?: 'normal' | 'wide';
-  currencyUnit?: 'rial';
+  currencyUnit?: 'toman' | 'rial';
   freeShippingThreshold: number;
   expressShippingFee: number;
   postShippingFee: number;

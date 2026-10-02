@@ -1,20 +1,5 @@
 import React from 'react';
-import { 
-  Wrench, 
-  ShieldCheck, 
-  Truck, 
-  Clock, 
-  Headphones, 
-  MapPin, 
-  Phone, 
-  Mail, 
-  ChevronLeft,
-  Edit3,
-  ExternalLink,
-  Zap,
-  CheckCircle,
-  Package
-} from 'lucide-react';
+import { Wrench, ShieldCheck, Truck, Clock, Headphones, MapPin, Phone, Mail, ChevronLeft, Edit3, Zap, CheckCircle, Package } from 'lucide-react';
 import { useStore } from '../../context/StoreContext';
 import { FooterBadgeItem, FooterFeatureItem } from '../../types';
 import { sanitizeEmbedHtml } from '../../utils/sanitizeHtml';

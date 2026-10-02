@@ -147,11 +147,13 @@ export const LiveSectionModal: React.FC<LiveSectionModalProps> = ({
 
   const contentPolicy = (() => {
     const key = form.sectionKey || '';
-    if (key === 'featured-categories') return { kind:'fixed' as const, source:'categories' as const, title:'دسته‌بندی‌های قطعات', description:'این بخش مستقیماً از دسته‌بندی‌های ثبت‌شده فروشگاه خوانده می‌شود.' };
-    if (key === 'manufacturers') return { kind:'fixed' as const, source:'brands' as const, title:'برندهای خودرو', description:'این بخش مستقیماً از برندهای خودرو خوانده می‌شود.' };
-    if (['featured-products','weekly-deals','maintenance-products'].includes(key)) return { kind:'fixed' as const, source:'products' as const, title:'محصولات فروشگاه', description:'کارت‌ها از محصولات واقعی فروشگاه ساخته می‌شوند و استاتیک نیستند.' };
-    if (key === 'articles') return { kind:'fixed' as const, source:'articles' as const, title:'مقالات', description:'این بخش مستقیماً از مقالات منتشرشده خوانده می‌شود.' };
-    if (/promo|banner|testimonial|service-strip|parts-brands|shipping|hero/i.test(key)) return { kind:'manual' as const, source:'manual' as const, title:'آیتم‌های قابل ویرایش', description:'محتوای این بخش دستی است و هر آیتم از تب «آیتم‌ها» قابل ویرایش، حذف، افزودن و مرتب‌سازی است.' };
+    if (key === 'featured-categories') return { kind:'flexible' as const, source:(form.contentSource || 'categories') as NonNullable<PageSection['contentSource']>, title:'محتوای سکشن دسته‌بندی‌ها', description:'می‌توانید دسته‌بندی‌ها یا برندهای فروشگاه را به‌صورت خودکار نمایش دهید.' };
+    if (key === 'manufacturers') return { kind:'flexible' as const, source:(form.contentSource || 'brands') as NonNullable<PageSection['contentSource']>, title:'محتوای سکشن برندها', description:'می‌توانید برندها یا دسته‌بندی‌های فروشگاه را به‌صورت خودکار نمایش دهید.' };
+    if (key === 'hero') return { kind:'fixed' as const, source:'sliders' as const, title:'اسلایدهای فعال مدیریت اسلایدر', description:'اسلایدهای فعال در بخش مدیریت اسلایدر نمایش داده می‌شوند.' };
+    if (['featured-products','weekly-deals','maintenance-products'].includes(key)) return { kind:'fixed' as const, source:'products' as const, title:'محصولات فروشگاه', description:'این بخش از محصولات واقعی فروشگاه تغذیه می‌شود.' };
+    if (key === 'articles') return { kind:'fixed' as const, source:'articles' as const, title:'مقالات', description:'این بخش از مقالات منتشرشده تغذیه می‌شود.' };
+    if (/promo|banner/i.test(key)) return { kind:'flexible' as const, source:(form.contentSource || 'manual') as NonNullable<PageSection['contentSource']>, title:'محتوای بنرها', description:'بنرها را دستی ویرایش کنید یا اسلایدهای فعال مدیریت اسلایدر را به این سکشن وصل کنید.' };
+    if (/testimonial|service-strip|parts-brands|shipping/i.test(key)) return { kind:'manual' as const, source:'manual' as const, title:'آیتم‌های قابل ویرایش', description:'محتوای این بخش از تنظیمات اختصاصی خودش خوانده می‌شود.' };
     return { kind:'flexible' as const, source:(form.contentSource || 'manual') as NonNullable<PageSection['contentSource']>, title:'منبع محتوا', description:'انتخاب کنید محتوای این بخش دستی باشد یا به‌صورت زنده از اطلاعات فروشگاه خوانده شود.' };
   })();
 
@@ -160,7 +162,7 @@ export const LiveSectionModal: React.FC<LiveSectionModalProps> = ({
   };
 
   const isBannerSection = /promo|banner/i.test(form.sectionKey || '');
-  const isDynamicSource = contentPolicy.kind === 'fixed' || Boolean(form.contentSource && form.contentSource !== 'manual');
+  const isDynamicSource = contentPolicy.kind === 'fixed' || (form.contentSource || contentPolicy.source) !== 'manual';
 
   const ensureSlots = (count: number, base = form): PageSectionItem[] => {
     const current = [...(base.items || [])];
@@ -322,7 +324,7 @@ export const LiveSectionModal: React.FC<LiveSectionModalProps> = ({
                 <label className="block">
                   <span className="block text-[9px] font-bold mb-1">محتوا از کجا خوانده شود؟</span>
                   <select
-                    value={form.contentSource || 'manual'}
+                    value={form.contentSource || contentPolicy.source}
                     onChange={e => changeContentSource(e.target.value as NonNullable<PageSection['contentSource']>)}
                     className="w-full p-2.5 border rounded-xl bg-white text-xs"
                   >
@@ -331,11 +333,12 @@ export const LiveSectionModal: React.FC<LiveSectionModalProps> = ({
                     <option value="brands">برندهای خودرو</option>
                     <option value="products">محصولات فروشگاه</option>
                     <option value="articles">مقالات و آموزش‌ها</option>
+                    <option value="sliders">اسلایدهای فعال مدیریت اسلایدر</option>
                   </select>
                 </label>
               )}
 
-              {contentPolicy.kind !== 'manual' && (
+              {(contentPolicy.kind === 'fixed' || (contentPolicy.kind === 'flexible' && (form.contentSource || contentPolicy.source) !== 'manual')) && (
                 <label className="block">
                   <span className="block text-[9px] font-bold mb-1">تعداد آیتمی که نمایش داده شود</span>
                   <input
@@ -345,7 +348,7 @@ export const LiveSectionModal: React.FC<LiveSectionModalProps> = ({
                     value={form.contentSourceLimit || form.maxItems || 12}
                     onChange={e => {
                       const limit=Math.max(1,Math.min(100,Number(e.target.value||12)));
-                      patch({contentSource:contentPolicy.kind==='fixed'?contentPolicy.source:(form.contentSource||'manual'),contentSourceLimit:limit,maxItems:limit});
+                      patch({contentSource:contentPolicy.source,contentSourceLimit:limit,maxItems:limit});
                     }}
                     className="w-full p-2.5 border rounded-xl text-xs"
                   />

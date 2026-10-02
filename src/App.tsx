@@ -396,7 +396,6 @@ const AppContent: React.FC = () => {
 
         {route.view === 'checkout' && (
           <CheckoutView
-            onOrderCompleted={(orderNumber) => handleNavigate('tracking', orderNumber)}
             onNavigate={handleNavigate}
           />
         )}

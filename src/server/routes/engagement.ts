@@ -2,7 +2,7 @@ import { createHash, randomUUID } from 'crypto';
 import { Router } from 'express';
 import { rateLimit } from 'express-rate-limit';
 import { authenticate, requireAdminPermission, type AuthenticatedRequest } from '../auth';
-import { pool, type ResultSetHeader, type RowDataPacket } from '../db';
+import { pool, type RowDataPacket } from '../db';
 
 interface JsonRow extends RowDataPacket {
   id: string;

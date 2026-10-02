@@ -5,6 +5,7 @@ import type { PageSection, PageSectionItem, SeoEntityDraft, SitePage } from '../
 import { ImageUploadInput } from '../common/ImageUploadInput';
 import { LinkDestinationPicker } from '../common/LinkDestinationPicker';
 import { RichTextEditor } from '../common/RichTextEditor';
+import { RichTextContent } from '../common/RichTextContent';
 import { AdminEntitySeoPanel } from './AdminEntitySeoPanel';
 import { ConfirmDialog } from '../common/ConfirmDialog';
 

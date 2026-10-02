@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useStore } from '../../context/StoreContext';
 import { FooterColumn, FooterFeatureItem, FooterLink, FooterBadgeItem } from '../../types';
 import { ImageUploadInput } from '../common/ImageUploadInput';
+import { LinkDestinationPicker } from '../common/LinkDestinationPicker';
 import { 
   ShieldCheck, 
   Plus, 
@@ -39,6 +40,12 @@ export const AdminFooterTab: React.FC = () => {
   const [footerAboutTitle, setFooterAboutTitle] = useState(settings.footerAboutTitle || settings.siteTitle || 'فروشگاه اینترنتی');
   const [footerAboutText, setFooterAboutText] = useState(settings.footerAboutText || '');
   const [footerCopyrightText, setFooterCopyrightText] = useState(settings.footerCopyrightText || '');
+  const [footerBottomLinks, setFooterBottomLinks] = useState<FooterLink[]>(settings.footerBottomLinks || [
+    { id: 'footer-bottom-terms', title: 'قوانین', url: 'page:terms' },
+    { id: 'footer-bottom-privacy', title: 'حریم خصوصی', url: 'page:privacy' },
+    { id: 'footer-bottom-payment', title: 'پرداخت امن', url: 'page:payment' }
+  ]);
+  const [footerBottomAlign, setFooterBottomAlign] = useState<'right'|'center'|'left'>(settings.footerBottomAlign || 'center');
   const [footerCustomHtml, setFooterCustomHtml] = useState(settings.footerCustomHtml || '');
   const [showHtmlPreview, setShowHtmlPreview] = useState(true);
 
@@ -49,7 +56,7 @@ export const AdminFooterTab: React.FC = () => {
   const [footerGridRowsDesktop, setFooterGridRowsDesktop] = useState(settings.footerGridRowsDesktop || 1);
   const [footerGridRowsTablet, setFooterGridRowsTablet] = useState(settings.footerGridRowsTablet || 0);
   const [footerGridRowsMobile, setFooterGridRowsMobile] = useState(settings.footerGridRowsMobile || 0);
-  const [footerLogoUrl, setFooterLogoUrl] = useState(settings.footerLogoUrl || settings.logoUrl || '');
+  const [footerLogoUrl, setFooterLogoUrl] = useState(settings.footerLogoUrl || '');
   const [footerLogoWidthPx, setFooterLogoWidthPx] = useState(settings.footerLogoWidthPx || 160);
   const [footerHeadingFontSizePx, setFooterHeadingFontSizePx] = useState(settings.footerHeadingFontSizePx || 14);
   const [footerTextFontSizePx, setFooterTextFontSizePx] = useState(settings.footerTextFontSizePx || 12);
@@ -175,12 +182,30 @@ export const AdminFooterTab: React.FC = () => {
     { id: 'Package', label: 'جعبه / قطعات', icon: Package }
   ];
 
+  const addFooterBottomLink = () => {
+    setFooterBottomLinks(current => [...current, {
+      id: `footer-bottom-${Date.now()}`,
+      title: 'لینک جدید',
+      url: ''
+    }]);
+  };
+
+  const updateFooterBottomLink = (id:string, partial:Partial<FooterLink>) => {
+    setFooterBottomLinks(current => current.map(link => link.id === id ? { ...link, ...partial } : link));
+  };
+
+  const removeFooterBottomLink = (id:string) => {
+    setFooterBottomLinks(current => current.filter(link => link.id !== id));
+  };
+
   // Save all to store
   const handleSaveAll = () => {
     updateSettings({
       footerAboutTitle,
       footerAboutText,
       footerCopyrightText,
+      footerBottomLinks,
+      footerBottomAlign,
       footerCustomHtml,
       footerShowFeatures,
       footerFeatures: features,
@@ -887,16 +912,55 @@ export const AdminFooterTab: React.FC = () => {
               />
             </div>
 
+            <div className="rounded-2xl border border-neutral-200 p-4 space-y-3">
+              <div>
+                <strong className="block text-xs">لوگوی بخش درباره ما در فوتر</strong>
+                <p className="text-[10px] text-neutral-500 mt-1">این لوگو مستقل از لوگوی هدر است و فقط در فوتر استفاده می‌شود.</p>
+              </div>
+              <ImageUploadInput label="انتخاب لوگوی فوتر" value={footerLogoUrl} onChange={setFooterLogoUrl} aspectRatio="banner" presetCategory="logos" />
+              <label className="block"><span className="block text-[10px] font-bold mb-1">عرض لوگو (پیکسل)</span><input type="number" min="40" max="500" value={footerLogoWidthPx} onChange={e=>setFooterLogoWidthPx(Number(e.target.value))} className="w-full p-2.5 border rounded-xl"/></label>
+            </div>
+
+            <div className="rounded-2xl border border-neutral-200 p-4 space-y-3">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <strong className="block text-xs">لینک‌های ردیف پایانی فوتر</strong>
+                  <p className="text-[10px] text-neutral-500 mt-1">قوانین، حریم خصوصی، پرداخت امن یا هر لینک دیگری را اینجا مدیریت کنید.</p>
+                </div>
+                <button type="button" onClick={addFooterBottomLink} className="px-3 py-2 rounded-xl bg-blue-600 text-white text-[10px] font-black inline-flex items-center gap-1"><Plus className="w-3.5 h-3.5"/>افزودن لینک</button>
+              </div>
+              <label className="block">
+                <span className="block text-[10px] font-bold mb-1">تراز ردیف پایانی</span>
+                <select value={footerBottomAlign} onChange={e=>setFooterBottomAlign(e.target.value as 'right'|'center'|'left')} className="w-full p-2.5 border rounded-xl bg-white">
+                  <option value="right">راست</option>
+                  <option value="center">وسط</option>
+                  <option value="left">چپ</option>
+                </select>
+              </label>
+              <div className="space-y-3">
+                {footerBottomLinks.map((link,index)=>(
+                  <div key={link.id} className="p-3 rounded-xl border bg-neutral-50 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <strong className="text-[10px]">لینک {index+1}</strong>
+                      <button type="button" onClick={()=>removeFooterBottomLink(link.id)} className="w-7 h-7 grid place-items-center rounded-lg bg-red-50 text-red-600"><Trash2 className="w-3.5 h-3.5"/></button>
+                    </div>
+                    <input value={link.title} onChange={e=>updateFooterBottomLink(link.id,{title:e.target.value})} className="w-full p-2 border rounded-lg" placeholder="عنوان لینک"/>
+                    <LinkDestinationPicker label="مقصد لینک" value={link.url} onChange={value=>updateFooterBottomLink(link.id,{url:value})}/>
+                  </div>
+                ))}
+              </div>
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               <label><span className="block text-[10px] font-bold mb-1">عنوان تماس</span><input value={footerContactTitle} onChange={e=>setFooterContactTitle(e.target.value)} className="w-full p-2.5 border rounded-xl"/></label>
               <label><span className="block text-[10px] font-bold mb-1">زیرمتن تماس</span><input value={footerContactSubtitle} onChange={e=>setFooterContactSubtitle(e.target.value)} className="w-full p-2.5 border rounded-xl"/></label>
-              <label><span className="block text-[10px] font-bold mb-1">Placeholder خبرنامه</span><input value={footerNewsletterPlaceholder} onChange={e=>setFooterNewsletterPlaceholder(e.target.value)} className="w-full p-2.5 border rounded-xl"/></label>
+              <label><span className="block text-[10px] font-bold mb-1">متن راهنمای خبرنامه</span><input value={footerNewsletterPlaceholder} onChange={e=>setFooterNewsletterPlaceholder(e.target.value)} className="w-full p-2.5 border rounded-xl"/></label>
             </div>
             <button
               onClick={handleSaveAll}
               className="px-6 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold shadow-md cursor-pointer"
             >
-              ذخیره متن درباره ما و کپی‌رایت
+              ذخیره درباره ما و ردیف پایانی
             </button>
           </div>
         </div>

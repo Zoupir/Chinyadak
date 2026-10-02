@@ -319,8 +319,16 @@ const upgradeLegacyHomeSection = (section: PageSection): PageSection => {
       borderRadiusPx: section.borderRadiusPx ?? 10
     };
   }
-  if (key === 'shipping-banner' && (section.maxWidthPx == null || section.maxWidthPx === 1280)) {
-    return { ...section, widthPercent: 100, maxWidthPx: 1040, minHeightPx: section.minHeightPx || 128, borderRadiusPx: section.borderRadiusPx ?? 3 };
+  if (key === 'shipping-banner') {
+    return {
+      ...section,
+      widthPercent: section.widthPercent === 100 || section.widthPercent == null ? 92 : section.widthPercent,
+      tabletWidthPercent: section.tabletWidthPercent ?? 95,
+      mobileWidthPercent: section.mobileWidthPercent ?? 96,
+      maxWidthPx: section.maxWidthPx == null || section.maxWidthPx === 1280 ? 1040 : section.maxWidthPx,
+      minHeightPx: section.minHeightPx || 112,
+      borderRadiusPx: section.borderRadiusPx === 3 ? 8 : (section.borderRadiusPx ?? 8)
+    };
   }
   if (key === 'promo-small' || key === 'promo-medium') {
     const count=Math.max(1,section.items?.length || (key === 'promo-small' ? 3 : 2));

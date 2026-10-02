@@ -4,28 +4,7 @@ import { Article, ArticleCategory } from '../../types';
 import { RichTextEditor } from '../common/RichTextEditor';
 import { ImageUploadInput } from '../common/ImageUploadInput';
 import { AdminEntitySeoPanel } from './AdminEntitySeoPanel';
-import { 
-  FileText, 
-  Plus, 
-  Trash2, 
-  Edit3, 
-  Search, 
-  X, 
-  Clock, 
-  User, 
-  Sparkles, 
-  Check, 
-  ExternalLink,
-  BookOpen,
-  Layers,
-  FolderPlus,
-  Image as ImageIcon,
-  Tag,
-  Wrench,
-  ShieldCheck,
-  Car,
-  AlertTriangle
-} from 'lucide-react';
+import { Plus, Trash2, Edit3, Search, ExternalLink, BookOpen, Layers, FolderPlus } from 'lucide-react';
 
 export const AdminArticlesTab: React.FC = () => {
   const { 

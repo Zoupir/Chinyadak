@@ -1,32 +1,8 @@
 import { randomUUID } from 'crypto';
 import { GoogleGenAI } from '@google/genai';
 import { config } from '../config';
-import { pool, type ResultSetHeader, type RowDataPacket } from '../db';
-import {
-  absoluteSiteUrl,
-  analyzeSeoEntity,
-  deriveSeoMeta,
-  getInternalLinkSuggestions,
-  getSeoIntegrationSettingsForClient,
-  getSeoMetaRecord,
-  getSeoSecretValues,
-  getSeoSettings,
-  isSeoEntityType,
-  loadEntity,
-  normalizePath,
-  normalizeSeoText,
-  parseJson,
-  runtimeLog,
-  saveSeoMeta,
-  sha256,
-  storeGscTokens,
-  updateSeoIntegrationSecrets,
-  writeAppSetting,
-  readAppSetting,
-  writeSeoHistory,
-  type SeoEntity,
-  type SeoEntityType
-} from './platform';
+import { pool, type RowDataPacket } from '../db';
+import { absoluteSiteUrl, deriveSeoMeta, getInternalLinkSuggestions, getSeoIntegrationSettingsForClient, getSeoMetaRecord, getSeoSecretValues, getSeoSettings, loadEntity, normalizeSeoText, parseJson, runtimeLog, saveSeoMeta, sha256, storeGscTokens, updateSeoIntegrationSecrets, writeAppSetting, readAppSetting, writeSeoHistory, type SeoEntity, type SeoEntityType } from './platform';
 
 type AiPackage = {
   primaryKeyword: string;

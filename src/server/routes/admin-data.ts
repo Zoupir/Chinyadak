@@ -34,6 +34,7 @@ interface AdminRow extends RowDataPacket {
   role: string;
   permissions_json: string | object | null;
   is_active: number;
+  session_version: number;
   created_at: Date;
 }
 
@@ -252,7 +253,7 @@ adminDataRouter.patch('/customers/:id/status', requireAdminPermission('canManage
   }
   const status = rows[0].status === 'active' ? 'blocked' : 'active';
   await pool.execute(
-    'UPDATE customers SET status = ?, updated_at = NOW() WHERE id = ?',
+    'UPDATE customers SET status = ?, session_version = session_version + 1, updated_at = NOW() WHERE id = ?',
     [status, req.params.id]
   );
   res.json({ id: req.params.id, status });
@@ -422,7 +423,7 @@ adminDataRouter.put('/admins/:id', requireAdminPermission('canManageAdmins'), as
       await pool.execute(
         `UPDATE admin_users
          SET username = ?, password_hash = ?, full_name = ?, email = ?, phone = ?, avatar_url = ?,
-             role = ?, permissions_json = ?, is_active = ?, updated_at = NOW()
+             role = ?, permissions_json = ?, is_active = ?, session_version = session_version + 1, updated_at = NOW()
          WHERE id = ?`,
         [username, passwordHash, fullName, email, phone, avatar, role, JSON.stringify(permissions), isActive, id]
       );
@@ -430,7 +431,7 @@ adminDataRouter.put('/admins/:id', requireAdminPermission('canManageAdmins'), as
       await pool.execute(
         `UPDATE admin_users
          SET username = ?, full_name = ?, email = ?, phone = ?, avatar_url = ?,
-             role = ?, permissions_json = ?, is_active = ?, updated_at = NOW()
+             role = ?, permissions_json = ?, is_active = ?, session_version = session_version + 1, updated_at = NOW()
          WHERE id = ?`,
         [username, fullName, email, phone, avatar, role, JSON.stringify(permissions), isActive, id]
       );
@@ -466,7 +467,7 @@ adminDataRouter.patch('/admins/:id/status', requireAdminPermission('canManageAdm
   }
 
   const isActive = target.is_active ? 0 : 1;
-  await pool.execute('UPDATE admin_users SET is_active = ?, updated_at = NOW() WHERE id = ?', [isActive, id]);
+  await pool.execute('UPDATE admin_users SET is_active = ?, session_version = session_version + 1, updated_at = NOW() WHERE id = ?', [isActive, id]);
   res.json({ id, isActive: Boolean(isActive) });
 });
 

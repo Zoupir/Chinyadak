@@ -403,13 +403,18 @@ export const AdminSliderStudio:React.FC=()=>{
     ? Math.max(0,(activeBannerSection.items||[]).findIndex(item=>item.id===bannerDraft.id))
     : 0;
   const bannerKey=activeBannerSection?.sectionKey || '';
+  const activeBannerWidthPercent = bannerDraft
+    ? device==='desktop'
+      ? (bannerDraft.widthPercent ?? (bannerKey==='promo-large'&&activeBannerIndex%3===0?67:bannerKey==='promo-small'?34:bannerKey==='promo-medium'?50:100))
+      : device==='tablet'
+        ? (bannerDraft.tabletWidthPercent ?? bannerDraft.widthPercent ?? 100)
+        : (bannerDraft.mobileWidthPercent ?? 100)
+    : 100;
+  const bannerPreviewBase = device==='mobile' ? 360 : device==='tablet' ? 820 : (bannerKey==='wide-banner-1' ? 1000 : 1040);
+  const bannerPreviewWidth = Math.max(device==='mobile'?300:240, Math.round(bannerPreviewBase * Math.max(10,Math.min(100,activeBannerWidthPercent)) / 100));
   const width=mode==='slides'
     ? (device==='desktop'?'100%':device==='tablet'?'820px':'390px')
-    : device==='mobile'
-      ? '360px'
-      : device==='tablet'
-        ? (bannerKey==='wide-banner-1'?'820px':bannerKey==='promo-small'?'300px':bannerKey==='promo-medium'?'520px':bannerKey==='promo-large'&&activeBannerIndex%3===0?'620px':'320px')
-        : (bannerKey==='wide-banner-1'?'1000px':bannerKey==='promo-small'?'360px':bannerKey==='promo-medium'?'520px':bannerKey==='promo-large'&&activeBannerIndex%3===0?'700px':'340px');
+    : `${bannerPreviewWidth}px`;
   const previewHeight=mode==='slides'
     ? (device==='desktop'?430:device==='tablet'?430:560)
     : Math.max(150,Number(

@@ -789,7 +789,7 @@ export interface PageSection {
   imageSizePx?: number;
   backgroundImageOpacity?: number;
   itemAspectRatio?: 'square' | 'landscape' | 'portrait' | 'auto';
-  contentSource?: 'manual' | 'categories' | 'brands' | 'products' | 'articles';
+  contentSource?: 'manual' | 'categories' | 'brands' | 'products' | 'articles' | 'sliders';
   contentSourceLimit?: number;
   itemBackgroundColor?: string;
   itemTextColor?: string;

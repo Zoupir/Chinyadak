@@ -1,6 +1,12 @@
 SET NAMES utf8mb4;
 SET time_zone = '+00:00';
 
+CREATE TABLE IF NOT EXISTS schema_migrations (
+  migration_id VARCHAR(190) PRIMARY KEY,
+  applied_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+
 CREATE TABLE IF NOT EXISTS customers (
   id CHAR(36) PRIMARY KEY,
   first_name VARCHAR(100) NOT NULL,

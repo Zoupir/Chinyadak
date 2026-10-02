@@ -204,19 +204,17 @@ export const AdminSliderStudio:React.FC=()=>{
     setBannerDraft(clone(item));
   };
 
-  const save=()=>{
+  const save=async()=>{
     if(mode==='slides'){
       if(!draft)return;
       updateSlider(draft);
-      showToast('اسلاید و جانمایی واکنش‌گرا ذخیره شد.');
       return;
     }
     if(!homePage||!activeBannerSection||!bannerDraft)return;
-    updateSection(homePage.slug,{
+    await updateSection(homePage.slug,{
       ...activeBannerSection,
       items:(activeBannerSection.items||[]).map(item=>item.id===bannerDraft.id?bannerDraft:item)
     });
-    showToast('بنر و جانمایی واکنش‌گرا ذخیره شد.');
   };
 
   const add=()=>{

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Order, SiteSettings } from '../../types';
 import { formatToman } from '../../utils/formatters';
-import { Printer, X, Download, ShieldCheck, CheckCircle2, Wrench, Building2, User, Phone, MapPin, Hash, Calendar, CreditCard, Sparkles, Coins } from 'lucide-react';
+import { Printer, X, ShieldCheck, Wrench, Building2, User, CreditCard, Sparkles, Coins } from 'lucide-react';
 
 interface InvoiceModalProps {
   order: Order | null;

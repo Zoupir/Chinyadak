@@ -55,6 +55,17 @@ export const AdminBannerPlacements: React.FC = () => {
     patchPlacement({ items: items.map((item, index) => ({ ...item, order: index + 1 })) });
   };
 
+  const reorderContent = (from: 'badge' | 'title' | 'subtitle' | 'button', to: 'badge' | 'title' | 'subtitle' | 'button', id: string) => {
+    const item = selected?.items.find(row => row.id === id);
+    const current = item?.contentOrder?.length ? [...item.contentOrder] : ['badge','title','subtitle','button'] as Array<'badge' | 'title' | 'subtitle' | 'button'>;
+    const fromIndex = current.indexOf(from);
+    const toIndex = current.indexOf(to);
+    if (fromIndex < 0 || toIndex < 0) return;
+    const [entry] = current.splice(fromIndex, 1);
+    current.splice(toIndex, 0, entry);
+    patchItem(id, { contentOrder: current });
+  };
+
   const moveItem = (id: string, direction: -1 | 1) => {
     if (!selected) return;
     const items = [...selected.items].sort((a, b) => a.order - b.order);
@@ -145,6 +156,18 @@ export const AdminBannerPlacements: React.FC = () => {
                       <label className="block"><span className="block text-[9px] font-bold mb-1">رنگ عنوان</span><input type="color" value={item.titleColor || '#ffffff'} onChange={e=>patchItem(item.id,{titleColor:e.target.value})} className="w-full h-9 p-1 border rounded-lg" /></label>
                       <label className="block"><span className="block text-[9px] font-bold mb-1">رنگ زیرعنوان</span><input type="color" value={item.subtitleColor || '#ffffff'} onChange={e=>patchItem(item.id,{subtitleColor:e.target.value})} className="w-full h-9 p-1 border rounded-lg" /></label>
                       <label className="block col-span-2"><span className="block text-[9px] font-bold mb-1">موقعیت متن</span><select value={item.textAlignment} onChange={e=>patchItem(item.id,{textAlignment:e.target.value as BannerCreative['textAlignment']})} className="w-full p-2 border rounded-lg bg-white text-[10px]"><option value="right">راست</option><option value="center">وسط</option><option value="left">چپ</option></select></label>
+                    </div>
+                    <div className="rounded-xl border border-dashed border-neutral-300 p-3">
+                      <strong className="text-[9px] block mb-2">ترتیب المان‌ها را بکشید و جابه‌جا کنید</strong>
+                      <div className="flex flex-wrap gap-1.5">
+                        {(['badge','title','subtitle','button'] as const).map((key, i) => {
+                          const labels = { badge: 'نشان', title: 'عنوان', subtitle: 'زیرعنوان', button: 'دکمه' };
+                          return <span key={key} draggable onDragStart={event => event.dataTransfer.setData('text/plain', key)}
+                            onDragOver={event => event.preventDefault()}
+                            onDrop={event => { event.preventDefault(); reorderContent(event.dataTransfer.getData('text/plain') as typeof key, key, item.id); }}
+                            className="cursor-grab rounded-lg border bg-white px-2 py-1 text-[9px] font-bold">{i + 1}. {labels[key]}</span>;
+                        })}
+                      </div>
                     </div>
                     <div className="grid grid-cols-2 gap-2">
                       <label className="block col-span-2"><span className="block text-[9px] font-bold mb-1">موقعیت عمودی متن</span><select value={item.contentPosition || 'bottom'} onChange={e=>patchItem(item.id,{contentPosition:e.target.value as BannerCreative['contentPosition']})} className="w-full p-2 border rounded-lg bg-white text-[10px]"><option value="top">بالا</option><option value="center">وسط</option><option value="bottom">پایین</option></select></label>

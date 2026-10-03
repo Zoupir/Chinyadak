@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useStore } from '../../context/StoreContext';
 import { Article, ArticleCategory } from '../../types';
 import { RichTextEditor } from '../common/RichTextEditor';
@@ -27,7 +27,9 @@ import {
   AlertTriangle
 } from 'lucide-react';
 
-export const AdminArticlesTab: React.FC = () => {
+interface AdminArticlesTabProps { initialArticleId?: string; }
+
+export const AdminArticlesTab: React.FC<AdminArticlesTabProps> = ({ initialArticleId }) => {
   const { 
     articles, 
     articleCategories,
@@ -63,6 +65,17 @@ export const AdminArticlesTab: React.FC = () => {
     relatedProductIds: [],
     faq: []
   });
+
+  useEffect(() => {
+    if (!initialArticleId) return;
+    const article = articles.find(item => item.id === initialArticleId || item.slug === initialArticleId);
+    if (article) {
+      setActiveSubTab('articles');
+      setEditingArticle(article);
+      setArticleForm({ ...article });
+      setIsModalOpen(true);
+    }
+  }, [initialArticleId, articles]);
 
   // Category Modal State
   const [isCatModalOpen, setIsCatModalOpen] = useState(false);

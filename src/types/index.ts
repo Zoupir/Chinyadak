@@ -606,6 +606,7 @@ export interface BannerCreative {
   titleFontSize?: number;
   subtitleFontSize?: number;
   contentPosition?: 'top' | 'center' | 'bottom';
+  contentOrder?: Array<'badge' | 'title' | 'subtitle' | 'button'>;
 }
 
 export interface BannerPlacementConfig {

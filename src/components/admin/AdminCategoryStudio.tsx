@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   ChevronDown,
   ChevronLeft,
@@ -51,12 +51,38 @@ const descendants = (node:CategoryChild):string[] => [
   ...(node.subcategories||[]).flatMap(descendants)
 ];
 
-export const AdminCategoryStudio:React.FC = ()=>{
+export const AdminCategoryStudio:React.FC<{initialCategoryId?:string}> = ({initialCategoryId})=>{
   const {categories,addCategory,updateCategory,deleteCategory,showToast}=useStore();
   const [query,setQuery]=useState('');
   const [selected,setSelected]=useState<NodeRef|null>(categories[0]?{rootId:categories[0].id,nodeId:categories[0].id,depth:0,isRoot:true}:null);
   const [draftRoot,setDraftRoot]=useState<Category|null>(categories[0]?cloneCategory(categories[0]):null);
   const [openIds,setOpenIds]=useState<Set<string>>(new Set(categories.map(c=>c.id)));
+  useEffect(() => {
+    if (!initialCategoryId) return;
+    for (const root of categories) {
+      if (root.id === initialCategoryId || root.slug === initialCategoryId) {
+        setSelected({rootId:root.id,nodeId:root.id,depth:0,isRoot:true});
+        setDraftRoot(cloneCategory(root));
+        setOpenIds(new Set([root.id]));
+        return;
+      }
+      const walk = (nodes:CategoryChild[] = [], depth = 1): {node:CategoryChild;depth:number} | null => {
+        for (const node of nodes) {
+          if (node.id === initialCategoryId || node.slug === initialCategoryId) return {node,depth};
+          const found = walk(node.subcategories || [], depth + 1);
+          if (found) return found;
+        }
+        return null;
+      };
+      const found = walk(root.subcategories || []);
+      if (found) {
+        setSelected({rootId:root.id,nodeId:found.node.id,depth:found.depth,isRoot:false});
+        setDraftRoot(cloneCategory(root));
+        setOpenIds(new Set([root.id]));
+        return;
+      }
+    }
+  }, [categories, initialCategoryId]);
   const [iconPickerOpen,setIconPickerOpen]=useState(false);
   const [dragging,setDragging]=useState<NodeRef|null>(null);
 

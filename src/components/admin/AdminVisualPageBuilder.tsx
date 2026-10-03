@@ -76,7 +76,7 @@ const defaultSection = (order:number):PageSection => ({
   items:[]
 });
 
-export const AdminVisualPageBuilder: React.FC<{onNavigate?:(view:string,param?:string)=>void}> = ({onNavigate}) => {
+export const AdminVisualPageBuilder: React.FC<{initialPageId?:string;onNavigate?:(view:string,param?:string)=>void}> = ({initialPageId,onNavigate}) => {
   const {
     pages,
     updatePage,
@@ -89,7 +89,8 @@ export const AdminVisualPageBuilder: React.FC<{onNavigate?:(view:string,param?:s
     showToast
   } = useStore();
 
-  const [pageId,setPageId] = useState(pages[0]?.id || '');
+  const [pageId,setPageId] = useState(initialPageId || pages[0]?.id || '');
+  useEffect(()=>{const target=pages.find(item=>item.id===initialPageId||item.slug===initialPageId);if(target)setPageId(target.id);},[initialPageId,pages]);
   const page = pages.find(item=>item.id===pageId) || pages[0];
   const sortedSections = useMemo(()=>[...(page?.sections||[])].sort((a,b)=>a.order-b.order),[page]);
   const [sectionId,setSectionId] = useState<string>(sortedSections[0]?.id || '');

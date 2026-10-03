@@ -22,6 +22,8 @@ const navigateTo = (link: string, onNavigate: BannerPlacementProps['onNavigate']
   onNavigate(link);
 };
 
+const BANNER_CONTENT_ORDER: Array<'badge' | 'title' | 'subtitle' | 'button'> = ['badge','title','subtitle','button'];
+
 const BannerCard: React.FC<{ item: BannerCreative; onNavigate: BannerPlacementProps['onNavigate']; ratio: string; mobileRatio: string }> = ({ item, onNavigate, ratio, mobileRatio }) => (
   <button
     type="button"
@@ -47,10 +49,13 @@ const BannerCard: React.FC<{ item: BannerCreative; onNavigate: BannerPlacementPr
     </picture>
     {(item.title || item.subtitle || item.badge || item.buttonText) && (
       <span className="banner-placement-copy" aria-hidden="true">
-        {item.badge && <span className="banner-placement-badge">{item.badge}</span>}
-        {item.title && <strong>{item.title}</strong>}
-        {item.subtitle && <span>{item.subtitle}</span>}
-        {item.buttonText && <small>{item.buttonText}</small>}
+        {(item.contentOrder?.length ? [...item.contentOrder, ...BANNER_CONTENT_ORDER.filter(key => !item.contentOrder?.includes(key))] : BANNER_CONTENT_ORDER).map(key => {
+          if (key === 'badge' && item.badge) return <span key={key} className="banner-placement-badge">{item.badge}</span>;
+          if (key === 'title' && item.title) return <strong key={key}>{item.title}</strong>;
+          if (key === 'subtitle' && item.subtitle) return <span key={key}>{item.subtitle}</span>;
+          if (key === 'button' && item.buttonText) return <small key={key}>{item.buttonText}</small>;
+          return null;
+        })}
       </span>
     )}
   </button>

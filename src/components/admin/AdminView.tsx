@@ -1082,7 +1082,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ initialTarget, onExitToSto
 
           {/* TAB 4: CATEGORIES — RECURSIVE TREE + TAKRANK SEO */}
           {activeTab === 'categories' && (
-            <AdminCategoryStudio />
+            <AdminCategoryStudio initialCategoryId={initialTarget?.startsWith('category:') ? initialTarget.slice('category:'.length) : undefined} />
           )}
 
           {/* TAB 5: MENUS AND ATTRIBUTES */}
@@ -1109,7 +1109,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ initialTarget, onExitToSto
 
           {/* TAB: VISUAL PAGE BUILDER */}
           {activeTab === 'pages' && (
-            <AdminVisualPageBuilder onNavigate={(view, param) => {
+            <AdminVisualPageBuilder initialPageId={initialTarget?.startsWith('page:') ? initialTarget.slice('page:'.length) : undefined} onNavigate={(view, param) => {
               if (onExitToStore) onExitToStore();
               if (onNavigate) onNavigate(view, param);
             }} />
@@ -1117,7 +1117,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ initialTarget, onExitToSto
 
           {/* TAB 6: ARTICLES (BLOG) */}
           {activeTab === 'articles' && (
-            <AdminArticlesTab />
+            <AdminArticlesTab initialArticleId={initialTarget?.startsWith('article:') ? initialTarget.slice('article:'.length) : undefined} />
           )}
 
           {/* TAB 7: SLIDERS & BANNERS */}

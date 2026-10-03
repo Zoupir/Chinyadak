@@ -95,6 +95,21 @@ export const AdminThemeTab: React.FC = () => {
       primaryHover: '#d97706',
       accentGlowColor: '#f59e0b'
     }
+    {
+      id: 'atelier-rtl',
+      name: 'Chinyadak Atelier',
+      desc: 'قالب مستقل با هویت گرم و مهندسی؛ انتخاب خودرو و جستجوی قطعه در مرکز تجربه، نمایش تمام‌عرض و چیدمان اختصاصی موبایل.',
+      layoutPreset: 'atelier-rtl' as const,
+      themeMode: 'light' as const,
+      siteBgColor: '#f5f6f3',
+      cardBgColor: '#ffffff',
+      headerBgColor: '#ffffff',
+      footerBgColor: '#132533',
+      textColor: '#142736',
+      primaryColor: '#d9593f',
+      primaryHover: '#b84531',
+      accentGlowColor: '#d9593f'
+    }
   ];
 
   const applyLayoutPreset = (preset: typeof LAYOUT_PRESETS[number]) => {

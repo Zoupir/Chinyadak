@@ -52,7 +52,7 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigate, onOpenVehicleMod
 
   const [activeEditingSectionId, setActiveEditingSectionId] = useState<string | null>(null);
 
-  if (settings.layoutPreset === 'marketplace-rtl') {
+  if (settings.layoutPreset === 'marketplace-rtl' || settings.layoutPreset === 'atelier-rtl') {
     return <MarketplaceRtlHome onNavigate={onNavigate} onOpenVehicleModal={onOpenVehicleModal} />;
   }
 

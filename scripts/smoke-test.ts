@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { markdownToSafeHtml } from '../src/utils/richText';
 
 const base = String(process.env.TEST_BASE_URL || 'http://127.0.0.1:3000').replace(/\/$/, '');
 
@@ -40,6 +41,13 @@ const cookieFrom = (response: Response): string => {
 const cookieHeaders = (cookie: string) => ({ Cookie: cookie });
 
 const run = async () => {
+  const formattedHtml = markdownToSafeHtml('<p style="text-align: right;"><span style="color: #c2410c;">سلام</span> <a href="https://example.com">پیوند</a></p>');
+  assert.match(formattedHtml, /text-align:right/i, 'Rich text sanitizer dropped paragraph alignment.');
+  assert.match(formattedHtml, /color:#c2410c/i, 'Rich text sanitizer dropped inline text color.');
+  assert.match(formattedHtml, /href="https:\/\/example\.com"/i, 'Rich text sanitizer dropped a safe link.');
+  const unsafeHtml = markdownToSafeHtml('<p style="text-align: right; background-image: url(javascript:alert(1))"><span style="color: red; position: fixed">متن</span></p>');
+  assert.doesNotMatch(unsafeHtml, /background-image|javascript:|position:/i, 'Rich text sanitizer retained unsafe CSS.');
+  
   const health = await json<{ ok: boolean; database: string }>('/api/health');
   assert.equal(health.data.ok, true);
   assert.equal(health.data.database, 'connected');

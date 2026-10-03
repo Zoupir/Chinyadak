@@ -74,8 +74,10 @@ export const sanitizeRichHtml = (value: string): string => {
     if (name === 'TD' || name === 'TH') {
       const spans: string[] = [];
       for (const attr of ['colspan', 'rowspan']) {
-        const match = rawAttrs.match(new RegExp('\\b' + attr + '\\s*=\\s*(["\\']?)(\\d{1,2})\\1', 'i'));
-        const number = Number(match?.[2] || 1);
+        const match = attr === 'colspan'
+          ? rawAttrs.match(/\bcolspan\s*=\s*["']?(\d{1,2})/i)
+          : rawAttrs.match(/\browspan\s*=\s*["']?(\d{1,2})/i);
+        const number = Number(match?.[1] || 1);
         if (number >= 1 && number <= 20) spans.push(attr + '="' + number + '"');
       }
       return '<' + name.toLowerCase() + (spans.length ? ' ' + spans.join(' ') : '') + safeStyleFor(name, rawAttrs) + '>';

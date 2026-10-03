@@ -28,7 +28,8 @@ export const ArticleDetailView: React.FC<ArticleDetailViewProps> = ({ articleId,
   const linkedProducts = products.filter(p => article.relatedProductIds.includes(p.id));
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8 space-y-8">
+    <div className="max-w-7xl mx-auto px-4 py-8 grid grid-cols-1 lg:grid-cols-4 gap-6">
+      <main className="lg:col-span-3 space-y-8">
       {/* Breadcrumb */}
       <div className="site-breadcrumb flex items-center gap-2 text-xs text-neutral-400">
         <button onClick={() => onNavigate('home')} className="hover:text-red-600">خانه</button>

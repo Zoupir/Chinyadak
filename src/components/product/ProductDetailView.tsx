@@ -358,7 +358,7 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
             {/* Actions */}
             <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 pt-2">
               {/* Quantity Adjuster */}
-              <div className={`${Number(product.discountPrice || product.price) > 0 ? 'sm:col-span-4' : 'hidden'} flex items-center justify-between bg-neutral-800 border border-neutral-700 rounded-xl px-3 py-2">
+              <div className={`${Number(product.discountPrice || product.price) > 0 ? 'sm:col-span-4' : 'hidden'} flex items-center justify-between bg-neutral-800 border border-neutral-700 rounded-xl px-3 py-2`}>
                 <button
                   onClick={() => setQuantity(Math.max(1, quantity - 1))}
                   className="w-8 h-8 rounded-lg bg-neutral-700 hover:bg-neutral-600 flex items-center justify-center text-white"

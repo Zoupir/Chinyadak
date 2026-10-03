@@ -603,6 +603,9 @@ export interface BannerCreative {
   textAlignment: 'right' | 'center' | 'left';
   titleColor: string;
   subtitleColor: string;
+  titleFontSize?: number;
+  subtitleFontSize?: number;
+  contentPosition?: 'top' | 'center' | 'bottom';
 }
 
 export interface BannerPlacementConfig {

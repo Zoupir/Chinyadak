@@ -7994,7 +7994,7 @@ html[data-layout] .shop-view h1 {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  justify-content: flex-end;
+  justify-content: var(--banner-copy-position, flex-end);
   gap: 6px;
   padding: clamp(14px, 3vw, 32px);
   text-align: var(--banner-copy-align, right);
@@ -8004,13 +8004,13 @@ html[data-layout] .shop-view h1 {
 :is(html[data-layout="marketplace-rtl"], html[data-layout="atelier-rtl"]) .banner-placement-copy strong {
   max-width: 100%;
   color: var(--banner-title-color, #fff);
-  font-size: clamp(14px, 2vw, 28px);
+  font-size: var(--banner-title-size, clamp(14px, 2vw, 28px));
   font-weight: 900;
   line-height: 1.35;
 }
 :is(html[data-layout="marketplace-rtl"], html[data-layout="atelier-rtl"]) .banner-placement-copy > span:not(.banner-placement-badge) {
   color: var(--banner-subtitle-color, #fff);
-  font-size: clamp(10px, 1.1vw, 14px);
+  font-size: var(--banner-subtitle-size, clamp(10px, 1.1vw, 14px));
 }
 :is(html[data-layout="marketplace-rtl"], html[data-layout="atelier-rtl"]) .banner-placement-badge {
   align-self: flex-start;

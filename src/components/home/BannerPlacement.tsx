@@ -33,7 +33,10 @@ const BannerCard: React.FC<{ item: BannerCreative; onNavigate: BannerPlacementPr
       ['--banner-title-color' as any]: item.titleColor,
       ['--banner-subtitle-color' as any]: item.subtitleColor,
       ['--banner-overlay' as any]: Math.max(0, Math.min(80, Number(item.overlayOpacity || 0))) / 100,
-      ['--banner-copy-align' as any]: item.textAlignment
+      ['--banner-copy-align' as any]: item.textAlignment,
+      ['--banner-title-size' as any]: `${Math.max(12, Math.min(64, Number(item.titleFontSize || 28)))}px`,
+      ['--banner-subtitle-size' as any]: `${Math.max(10, Math.min(36, Number(item.subtitleFontSize || 14)))}px`,
+      ['--banner-copy-position' as any]: item.contentPosition === 'top' ? 'flex-start' : item.contentPosition === 'center' ? 'center' : 'flex-end'
     }}
     aria-label={item.alt || item.title || 'بنر فروشگاه'}
     onClick={() => navigateTo(item.link, onNavigate)}

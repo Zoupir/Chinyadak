@@ -94,7 +94,7 @@ export const AdminThemeTab: React.FC = () => {
       primaryColor: '#f59e0b',
       primaryHover: '#d97706',
       accentGlowColor: '#f59e0b'
-    }
+    },
     {
       id: 'atelier-rtl',
       name: 'Chinyadak Atelier',

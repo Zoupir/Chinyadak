@@ -112,8 +112,8 @@ export const MediaPickerModal: React.FC<MediaPickerModalProps> = ({
     setUploading(true);
     setUploadError('');
     try {
-      const uploads = [];
-      for (const file of list) uploads.push(await uploadImage(file, category));
+      const uploadedUrls: string[] = [];
+      for (const file of list) uploadedUrls.push((await uploadImage(file, category)).url);
       const refreshed = await listMediaLibrary({ category, limit: 1200 });
       setItems(refreshed.items || []);
       setCategories(refreshed.categories || []);
@@ -123,7 +123,7 @@ export const MediaPickerModal: React.FC<MediaPickerModalProps> = ({
       setFilterYear('all');
       setFilterMonth('all');
       if (list.length === 1) {
-        const item = refreshed.items.find(media => media.url === uploads[0].url);
+        const item = refreshed.items.find(media => media.url === uploadedUrls[0]);
         if (item) {
           setSelected(item);
           setPendingSeoPath(item.relativePath);

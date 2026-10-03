@@ -6,9 +6,6 @@ import {
   AlignRight,
   Bold,
   Eraser,
-  Heading2,
-  Heading3,
-  Heading4,
   Italic,
   Link as LinkIcon,
   List,
@@ -76,6 +73,7 @@ export const RichTextComposer: React.FC<RichTextComposerProps> = ({
   const [linkUrl, setLinkUrl] = useState('');
   const [linkError, setLinkError] = useState('');
   const [fontSize, setFontSize] = useState('');
+  const [textColor, setTextColor] = useState('#c2410c');
   const linkInputRef = useRef<HTMLInputElement>(null);
 
   const extensions = useMemo(() => [
@@ -121,7 +119,8 @@ export const RichTextComposer: React.FC<RichTextComposerProps> = ({
         onChangeRef.current(nextHtml);
       }
     },
-    onSelectionUpdate: () => setToolbarRevision(revision => revision + 1)
+    onSelectionUpdate: () => setToolbarRevision(revision => revision + 1),
+    onTransaction: () => setToolbarRevision(revision => revision + 1)
   });
 
   useEffect(() => {
@@ -176,6 +175,7 @@ export const RichTextComposer: React.FC<RichTextComposerProps> = ({
 
   const active = (name: string, attributes?: Record<string, unknown>) =>
     editor.isActive(name, attributes as never);
+  const activeAlign = (alignment: string) => editor.isActive({ textAlign: alignment });
 
   return (
     <div className="rich-text-editor__frame">
@@ -242,12 +242,16 @@ export const RichTextComposer: React.FC<RichTextComposerProps> = ({
             <Strikethrough aria-hidden="true" />
           </ToolButton>
           <label className="rich-text-color-picker" title="رنگ متن">
-            <Palette aria-hidden="true" />
+            <Palette aria-hidden="true" style={{ color: textColor }} />
             <input
               type="color"
               aria-label="رنگ متن"
-              value="#c2410c"
-              onChange={event => editor.chain().focus().setColor(event.currentTarget.value).run()}
+              value={textColor}
+              onChange={event => {
+                const color = event.currentTarget.value;
+                setTextColor(color);
+                editor.chain().focus().setColor(color).run();
+              }}
             />
           </label>
           <ToolButton title="پاک‌کردن قالب‌بندی" onClick={() => editor.chain().focus().unsetAllMarks().clearNodes().run()}>
@@ -272,16 +276,16 @@ export const RichTextComposer: React.FC<RichTextComposerProps> = ({
         <span className="rich-text-toolbar__separator" />
 
         <div className="rich-text-toolbar__group">
-          <ToolButton title="راست‌چین" active={active('textAlign', { textAlign: 'right' })} onClick={() => editor.chain().focus().setTextAlign('right').run()}>
+          <ToolButton title="راست‌چین" active={activeAlign('right')} onClick={() => editor.chain().focus().setTextAlign('right').run()}>
             <AlignRight aria-hidden="true" />
           </ToolButton>
-          <ToolButton title="وسط‌چین" active={active('textAlign', { textAlign: 'center' })} onClick={() => editor.chain().focus().setTextAlign('center').run()}>
+          <ToolButton title="وسط‌چین" active={activeAlign('center')} onClick={() => editor.chain().focus().setTextAlign('center').run()}>
             <AlignCenter aria-hidden="true" />
           </ToolButton>
-          <ToolButton title="چپ‌چین" active={active('textAlign', { textAlign: 'left' })} onClick={() => editor.chain().focus().setTextAlign('left').run()}>
+          <ToolButton title="چپ‌چین" active={activeAlign('left')} onClick={() => editor.chain().focus().setTextAlign('left').run()}>
             <AlignLeft aria-hidden="true" />
           </ToolButton>
-          <ToolButton title="تراز دوطرفه" active={active('textAlign', { textAlign: 'justify' })} onClick={() => editor.chain().focus().setTextAlign('justify').run()}>
+          <ToolButton title="تراز دوطرفه" active={activeAlign('justify')} onClick={() => editor.chain().focus().setTextAlign('justify').run()}>
             <AlignJustify aria-hidden="true" />
           </ToolButton>
         </div>
@@ -306,7 +310,7 @@ export const RichTextComposer: React.FC<RichTextComposerProps> = ({
             <input
               id="rich-text-link-url"
               ref={linkInputRef}
-              type="url"
+              type="text"
               inputMode="url"
               value={linkUrl}
               placeholder="https://example.com"

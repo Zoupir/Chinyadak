@@ -8,6 +8,8 @@ import { LinkDestinationPicker } from '../common/LinkDestinationPicker';
 
 const BANNER_ITEM_DRAG_TYPE = 'application/x-chinyadak-banner-item';
 
+const BANNER_CONTENT_ORDER: Array<'badge' | 'title' | 'subtitle' | 'button'> = ['badge', 'title', 'subtitle', 'button'];
+
 const ASPECT_RATIOS = [
   ['16 / 4', 'عریض ۴:۱'], ['16 / 5', 'عریض ۳.۲:۱'], ['16 / 7', 'افقی ۱۶:۷'],
   ['16 / 9', 'واید ۱۶:۹'], ['4 / 3', 'چهار به سه'], ['1 / 1', 'مربع']
@@ -59,7 +61,8 @@ export const AdminBannerPlacements: React.FC = () => {
 
   const reorderContent = (from: 'badge' | 'title' | 'subtitle' | 'button', to: 'badge' | 'title' | 'subtitle' | 'button', id: string) => {
     const item = selected?.items.find(row => row.id === id);
-    const current = item?.contentOrder?.length ? [...item.contentOrder] : ['badge','title','subtitle','button'] as Array<'badge' | 'title' | 'subtitle' | 'button'>;
+    const storedOrder = item?.contentOrder || [];
+    const current = [...storedOrder.filter((key, index, order) => BANNER_CONTENT_ORDER.includes(key) && order.indexOf(key) === index), ...BANNER_CONTENT_ORDER.filter(key => !storedOrder.includes(key))];
     const fromIndex = current.indexOf(from);
     const toIndex = current.indexOf(to);
     if (fromIndex < 0 || toIndex < 0) return;
@@ -163,6 +166,7 @@ export const AdminBannerPlacements: React.FC = () => {
                   <div className="space-y-3">
                     <label className="block"><span className="block text-[10px] font-bold mb-1">عنوان داخلی / ALT</span><input value={item.title} onChange={e=>patchItem(item.id,{title:e.target.value,alt:item.alt===item.title?e.target.value:item.alt})} className="w-full p-2.5 border rounded-xl text-xs" /></label>
                     <label className="block"><span className="block text-[10px] font-bold mb-1">متن جایگزین تصویر</span><input value={item.alt} onChange={e=>patchItem(item.id,{alt:e.target.value})} className="w-full p-2.5 border rounded-xl text-xs" /></label>
+                    <label className="block"><span className="block text-[9px] font-bold mb-1">نشان / برچسب روی بنر (اختیاری)</span><input value={item.badge || ''} onChange={e=>patchItem(item.id,{badge:e.target.value})} className="w-full p-2.5 border rounded-xl text-xs" /></label>
                     <label className="block"><span className="block text-[10px] font-bold mb-1">متن کوتاه روی بنر (اختیاری)</span><input value={item.subtitle || ''} onChange={e=>patchItem(item.id,{subtitle:e.target.value})} className="w-full p-2.5 border rounded-xl text-xs" /></label>
                     <label className="block"><span className="block text-[10px] font-bold mb-1">متن دکمه (اختیاری)</span><input value={item.buttonText || ''} onChange={e=>patchItem(item.id,{buttonText:e.target.value})} className="w-full p-2.5 border rounded-xl text-xs" /></label>
                     <LinkDestinationPicker label="مقصد کلیک بنر" value={item.link} onChange={value=>patchItem(item.id,{link:value})} />
@@ -175,15 +179,22 @@ export const AdminBannerPlacements: React.FC = () => {
                       <label className="block"><span className="block text-[9px] font-bold mb-1">رنگ زیرعنوان</span><input type="color" value={item.subtitleColor || '#ffffff'} onChange={e=>patchItem(item.id,{subtitleColor:e.target.value})} className="w-full h-9 p-1 border rounded-lg" /></label>
                       <label className="block col-span-2"><span className="block text-[9px] font-bold mb-1">موقعیت متن</span><select value={item.textAlignment} onChange={e=>patchItem(item.id,{textAlignment:e.target.value as BannerCreative['textAlignment']})} className="w-full p-2 border rounded-lg bg-white text-[10px]"><option value="right">راست</option><option value="center">وسط</option><option value="left">چپ</option></select></label>
                     </div>
-                    <div className="rounded-xl border border-dashed border-neutral-300 p-3">
-                      <strong className="text-[9px] block mb-2">ترتیب المان‌ها را بکشید و جابه‌جا کنید</strong>
-                      <div className="flex flex-wrap gap-1.5">
-                        {(['badge','title','subtitle','button'] as const).map((key, i) => {
+                    <div className="rounded-xl border border-dashed border-neutral-300 p-3 space-y-2">
+                      <strong className="text-[9px] block">ترتیب نمایش متن‌های روی بنر</strong>
+                      <p className="text-[8px] leading-4 text-neutral-500">فهرست زیر ترتیب فعلی را از بالا به پایین نشان می‌دهد. با فلش‌ها هر مورد را جابه‌جا کنید.</p>
+                      <div className="space-y-1.5">
+                        {(item.contentOrder?.length
+                          ? [...item.contentOrder.filter((key, index, order) => BANNER_CONTENT_ORDER.includes(key) && order.indexOf(key) === index), ...BANNER_CONTENT_ORDER.filter(key => !item.contentOrder?.includes(key))]
+                          : BANNER_CONTENT_ORDER
+                        ).map((key, i, order) => {
                           const labels = { badge: 'نشان', title: 'عنوان', subtitle: 'زیرعنوان', button: 'دکمه' };
-                          return <span key={key} draggable onDragStart={event => event.dataTransfer.setData('text/plain', key)}
-                            onDragOver={event => event.preventDefault()}
-                            onDrop={event => { event.preventDefault(); reorderContent(event.dataTransfer.getData('text/plain') as typeof key, key, item.id); }}
-                            className="cursor-grab rounded-lg border bg-white px-2 py-1 text-[9px] font-bold">{i + 1}. {labels[key]}</span>;
+                          const samples = { badge: item.badge || 'متن نشان', title: item.title || 'عنوان بنر', subtitle: item.subtitle || 'زیرعنوان بنر', button: item.buttonText || 'متن دکمه' };
+                          return <div key={key} className="flex items-center gap-2 rounded-lg border bg-white px-2 py-1.5">
+                            <span className="w-5 h-5 rounded-full bg-blue-50 text-blue-700 grid place-items-center text-[8px] font-black shrink-0">{i + 1}</span>
+                            <div className="min-w-0 flex-1"><strong className="block text-[9px]">{labels[key]}</strong><span className="block text-[8px] text-neutral-400 truncate">{samples[key]}</span></div>
+                            <button type="button" disabled={i === 0} onClick={() => reorderContent(key, order[i - 1], item.id)} title="یک پله بالاتر" className="w-7 h-7 rounded border grid place-items-center disabled:opacity-30"><ArrowUp className="w-3 h-3"/></button>
+                            <button type="button" disabled={i === order.length - 1} onClick={() => reorderContent(key, order[i + 1], item.id)} title="یک پله پایین‌تر" className="w-7 h-7 rounded border grid place-items-center disabled:opacity-30"><ArrowDown className="w-3 h-3"/></button>
+                          </div>;
                         })}
                       </div>
                     </div>
@@ -194,7 +205,15 @@ export const AdminBannerPlacements: React.FC = () => {
 
                     </div>
                     <div className="rounded-xl overflow-hidden border bg-neutral-100" style={{aspectRatio:selected.desktopAspectRatio}}>
-                      {item.desktopImageUrl ? <div className="relative h-full w-full"><img src={item.desktopImageUrl} alt={item.alt} className="w-full h-full" style={{objectFit:item.imageFit}}/><div className="absolute inset-0 flex flex-col p-3" style={{justifyContent:item.contentPosition === 'top' ? 'flex-start' : item.contentPosition === 'center' ? 'center' : 'flex-end',background:`linear-gradient(0deg,rgba(0,0,0,${item.overlayOpacity/100}),transparent 78%)`,textAlign:item.textAlignment}}><strong className="text-xs" style={{color:item.titleColor || '#fff',fontSize:item.titleFontSize || 28}}>{item.title || 'پیش‌نمایش بنر'}</strong>{item.subtitle&&<span className="text-[9px] mt-1" style={{color:item.subtitleColor || '#fff',fontSize:item.subtitleFontSize || 14}}>{item.subtitle}</span>}</div></div> : <div className="h-full grid place-items-center text-[10px] text-neutral-400">انتخاب تصویر برای پیش‌نمایش</div>}
+                      {item.desktopImageUrl ? <div className="relative h-full w-full"><img src={item.desktopImageUrl} alt={item.alt} className="w-full h-full" style={{objectFit:item.imageFit}}/><div className="absolute inset-0 flex flex-col p-3" style={{justifyContent:item.contentPosition === 'top' ? 'flex-start' : item.contentPosition === 'center' ? 'center' : 'flex-end',gap:4,backgroundColor:'rgba(0,0,0,' + item.overlayOpacity / 100 + ')',textAlign:item.textAlignment}}>
+                        {(item.contentOrder?.length ? [...item.contentOrder.filter((key, index, order) => BANNER_CONTENT_ORDER.includes(key) && order.indexOf(key) === index), ...BANNER_CONTENT_ORDER.filter(key => !item.contentOrder?.includes(key))] : BANNER_CONTENT_ORDER).map(key => {
+                          if (key === 'badge' && item.badge) return <span key={key} className="self-start rounded-full px-2 py-0.5 text-[9px] font-black" style={{background:'#16a34a',color:'#fff'}}>{item.badge}</span>;
+                          if (key === 'title' && item.title) return <strong key={key} className="text-xs" style={{color:item.titleColor || '#fff',fontSize:item.titleFontSize || 28}}>{item.title}</strong>;
+                          if (key === 'subtitle' && item.subtitle) return <span key={key} className="text-[9px]" style={{color:item.subtitleColor || '#fff',fontSize:item.subtitleFontSize || 14}}>{item.subtitle}</span>;
+                          if (key === 'button' && item.buttonText) return <small key={key} className="self-start rounded-lg px-2 py-1" style={{background:'#f59e0b',color:'#111827'}}>{item.buttonText}</small>;
+                          return null;
+                        })}
+                      </div></div> : <div className="h-full grid place-items-center text-[10px] text-neutral-400">انتخاب تصویر برای پیش‌نمایش</div>}
                     </div>
                   </div>
                 </div>

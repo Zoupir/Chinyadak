@@ -38,7 +38,7 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
     }
   };
 
-  if (settings.layoutPreset === 'marketplace-rtl') {
+  if (settings.layoutPreset === 'marketplace-rtl' || settings.layoutPreset === 'atelier-rtl') {
     const focusSearch = () => {
       window.scrollTo({ top: 0, behavior: 'smooth' });
       window.setTimeout(() => {

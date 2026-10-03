@@ -256,7 +256,7 @@ export const AdminCategoryStudio:React.FC = ()=>{
 
             <section className="space-y-4">
               <ImageUploadInput label="تصویر عریض نوار دسته‌بندی (Hero)" value={(selectedNode as any).heroImageUrl||''} onChange={url=>patchSelected({heroImageUrl:url})} aspectRatio="banner" presetCategory="banners"/>
-              <ImageUploadInput label="آیکن کنار نام دسته‌بندی" value={(selectedNode as any).iconUrl||(selectedNode as any).imageUrl||''} onChange={url=>patchSelected({iconUrl:url})} aspectRatio="square" presetCategory="categories"/>
+              <ImageUploadInput label="آیکن کنار نام دسته‌بندی" value={(selectedNode as any).iconUrl||(selectedNode as any).imageUrl||''} onChange={url=>patchSelected({iconUrl:url})} aspectRatio="square" presetCategory="logos"/>
               <button onClick={()=>setIconPickerOpen(true)} className="w-full p-3 rounded-xl border flex items-center justify-between">
                 <span className="flex items-center gap-2"><IconRenderer icon={(selectedNode as any).icon} className="w-5 h-5"/><strong className="text-xs">آیکن دسته‌بندی</strong></span>
                 <span className="text-[9px] text-blue-600">{iconClassFor((selectedNode as any).icon)||'انتخاب'}</span>

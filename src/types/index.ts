@@ -630,7 +630,7 @@ export interface SiteSettings {
   primaryHover?: string;
   accentGlowColor?: string; // red highlight/glow under buttons and hover states
   themeMode?: 'dark' | 'light' | 'slate' | 'navy' | 'custom';
-  layoutPreset?: 'classic' | 'catalog-pro' | 'showroom' | 'marketplace-rtl';
+  layoutPreset?: 'classic' | 'catalog-pro' | 'showroom' | 'marketplace-rtl' | 'atelier-rtl';
   siteBgColor?: string;
   cardBgColor?: string;
   headerBgColor?: string;

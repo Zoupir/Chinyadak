@@ -112,7 +112,8 @@ export const MediaPickerModal: React.FC<MediaPickerModalProps> = ({
     setUploading(true);
     setUploadError('');
     try {
-      const uploads = await Promise.all(list.map(file => uploadImage(file, category)));
+      const uploads = [];
+      for (const file of list) uploads.push(await uploadImage(file, category));
       const refreshed = await listMediaLibrary({ category, limit: 1200 });
       setItems(refreshed.items || []);
       setCategories(refreshed.categories || []);

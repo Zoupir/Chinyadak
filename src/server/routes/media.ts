@@ -4,6 +4,7 @@ import { Router } from 'express';
 import multer from 'multer';
 import { requireAdmin } from '../auth';
 import { maxUploadBytes, uploadDirectory } from '../media';
+import { decodeMultipartFilename, normalizeUploadedImageFilename, publicUploadUrl } from '../media-filenames';
 
 type SupportedImage = {
   extension: 'jpg' | 'png' | 'webp' | 'gif';
@@ -35,36 +36,6 @@ const detectImageType = (buffer: Buffer): SupportedImage | null => {
   ) return { extension: 'gif', mime: 'image/gif' };
 
   return null;
-};
-
-const decodeTransportFilename = (originalName: string): string => {
-  const raw = String(originalName || '');
-  // Some multipart clients expose UTF-8 filenames as latin1 mojibake.
-  // Repair only when the tell-tale mojibake markers are present; otherwise keep
-  // the original JavaScript string byte-for-byte as far as the filesystem API allows.
-  if (/[ÃÂØÙ]/.test(raw)) {
-    try {
-      const repaired = Buffer.from(raw, 'latin1').toString('utf8');
-      if (repaired && !repaired.includes('\uFFFD')) return repaired;
-    } catch {}
-  }
-  return raw;
-};
-
-const preserveOriginalFilename = (originalName: string, detected: SupportedImage): string | null => {
-  const decoded = decodeTransportFilename(originalName);
-  if (!decoded || decoded.length > 240) return null;
-  if (/[\u0000-\u001f\u007f]/.test(decoded)) return null;
-  if (decoded.includes('/') || decoded.includes('\\') || decoded === '.' || decoded === '..') return null;
-
-  const ext = path.extname(decoded).slice(1).toLowerCase();
-  const equivalent =
-    detected.extension === 'jpg'
-      ? ['jpg', 'jpeg']
-      : [detected.extension];
-
-  if (!equivalent.includes(ext)) return null;
-  return decoded;
 };
 
 const upload = multer({
@@ -183,12 +154,13 @@ const listMediaFiles = async (): Promise<MediaListItem[]> => {
       try {
         const stat = await fs.stat(full);
         const folder = parseMediaFolder(rel);
-        const seo = await readMediaSeo(full, entry.name);
+        const displayName = decodeMultipartFilename(entry.name);
+        const seo = await readMediaSeo(full, displayName);
         items.push({
-          url: '/uploads/' + rel,
+          url: publicUploadUrl(rel),
           relativePath: rel,
-          filename: entry.name,
-          extension: path.extname(entry.name).slice(1).toLowerCase(),
+          filename: displayName,
+          extension: path.extname(displayName).slice(1).toLowerCase(),
           category: folder.category,
           year: folder.year,
           month: folder.month,
@@ -247,7 +219,7 @@ mediaRouter.post(
     const targetDir = path.join(uploadDirectory(), category, year, month);
     await fs.mkdir(targetDir, { recursive: true });
 
-    const filename = preserveOriginalFilename(req.file.originalname, detected);
+    const filename = normalizeUploadedImageFilename(req.file.originalname, detected.extension);
     if (!filename) {
       res.status(400).json({ error: 'MEDIA_FILENAME_INVALID_OR_EXTENSION_MISMATCH' });
       return;
@@ -270,20 +242,22 @@ mediaRouter.post(
       throw error;
     }
 
-    const originalBase = path.basename(req.file.originalname, path.extname(req.file.originalname))
-      .trim();
+    const originalBase = path.basename(filename, path.extname(filename)).trim();
     const seo = await writeMediaSeo(targetPath, {
       alt: originalBase,
       title: originalBase,
-      originalName: req.file.originalname
+      originalName: filename
     }, filename);
 
-    const url = `/uploads/${relativeDir}/${filename}`;
+    const relativePath = path.posix.join(relativeDir, filename);
+    const url = publicUploadUrl(relativePath);
     res.status(201).json({
       url,
       mime: detected.mime,
       size: req.file.size,
-      originalName: req.file.originalname,
+      originalName: filename,
+      filename,
+      relativePath,
       category,
       year,
       month,

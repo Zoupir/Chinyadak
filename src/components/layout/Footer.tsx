@@ -138,7 +138,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenAuthModal }) =
     { id: 'footer-bottom-payment', title: 'پرداخت امن', url: 'page:payment' }
   ];
 
-  if (settings.layoutPreset === 'marketplace-rtl') {
+  if (settings.layoutPreset === 'marketplace-rtl' || settings.layoutPreset === 'atelier-rtl') {
     const footerRows = (value?: number) => value && value > 0 ? `repeat(${value}, minmax(0, auto))` : 'none';
     const footerStyle = {
       ['--footer-cols-desktop' as any]: settings.footerGridColumnsDesktop || 5,

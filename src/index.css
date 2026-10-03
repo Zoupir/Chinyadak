@@ -229,6 +229,53 @@ body {
     page-break-after: auto;
   }
 
+  /* When printing from the invoice modal, isolate that exact modal view. */
+  body:has(.invoice-modal-print-overlay) > * {
+    visibility: hidden !important;
+  }
+
+  body:has(.invoice-modal-print-overlay) .invoice-modal-print-overlay,
+  body:has(.invoice-modal-print-overlay) .invoice-modal-print-overlay * {
+    visibility: visible !important;
+  }
+
+  .invoice-modal-print-overlay {
+    position: fixed !important;
+    inset: 0 !important;
+    z-index: 999999 !important;
+    display: block !important;
+    width: 100% !important;
+    height: auto !important;
+    overflow: visible !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+    backdrop-filter: none !important;
+  }
+
+  .invoice-modal-print-shell {
+    position: static !important;
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    background: #ffffff !important;
+  }
+
+  #invoice-printable.invoice-modal-print-content {
+    box-sizing: border-box !important;
+    width: 190mm !important;
+    max-width: 100% !important;
+    margin: 0 auto !important;
+    padding: 8mm !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    background: #ffffff !important;
+  }
+
   tr {
     page-break-inside: avoid !important;
   }

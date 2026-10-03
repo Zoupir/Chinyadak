@@ -14,7 +14,9 @@ import {
   listMediaLibrary,
   MediaLibraryItem,
   MediaUploadError,
-  uploadImage
+  uploadImage,
+  updateMediaSeo,
+  MediaSeoMeta
 } from '../../api/media';
 
 interface MediaPickerModalProps {
@@ -52,6 +54,9 @@ export const MediaPickerModal: React.FC<MediaPickerModalProps> = ({
   const [uploadError, setUploadError] = useState('');
   const [directUrl, setDirectUrl] = useState('');
   const fileRef = useRef<HTMLInputElement>(null);
+  const [pendingSeoPath, setPendingSeoPath] = useState('');
+  const [seoDraft, setSeoDraft] = useState<MediaSeoMeta>({ alt: '', title: '', caption: '', description: '' });
+  const [savingSeo, setSavingSeo] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -86,6 +91,7 @@ export const MediaPickerModal: React.FC<MediaPickerModalProps> = ({
       setQuery('');
       setUploadError('');
       setDirectUrl('');
+      setPendingSeoPath('');
     }
   }, [isOpen]);
 
@@ -105,22 +111,29 @@ export const MediaPickerModal: React.FC<MediaPickerModalProps> = ({
     if (!list.length) return;
     setUploading(true);
     setUploadError('');
-    let lastUrl = '';
     try {
-      for (const file of list) {
-        const uploaded = await uploadImage(file, category);
-        lastUrl = uploaded.url;
-      }
+      const uploads = await Promise.all(list.map(file => uploadImage(file, category)));
+      const refreshed = await listMediaLibrary({ category, limit: 1200 });
+      setItems(refreshed.items || []);
+      setCategories(refreshed.categories || []);
+      setYears(refreshed.years || []);
+      setMonths(refreshed.months || []);
       setFilterCategory(category);
       setFilterYear('all');
       setFilterMonth('all');
-      setTab('library');
-      await load();
-      if (list.length === 1 && lastUrl) {
-        const refreshed = await listMediaLibrary({ category, limit: 1200 });
-        const item = refreshed.items.find(media => media.url === lastUrl);
-        if (item) setSelected(item);
+      if (list.length === 1) {
+        const item = refreshed.items.find(media => media.url === uploads[0].url);
+        if (item) {
+          setSelected(item);
+          setPendingSeoPath(item.relativePath);
+          setSeoDraft({ alt: item.seo?.alt || '', title: item.seo?.title || '', caption: item.seo?.caption || '', description: item.seo?.description || '' });
+          setTab('upload');
+          return;
+        }
       }
+      setSelected(null);
+      setPendingSeoPath('');
+      setTab('library');
     } catch (error) {
       setUploadError(
         error instanceof MediaUploadError
@@ -135,6 +148,28 @@ export const MediaPickerModal: React.FC<MediaPickerModalProps> = ({
       setUploading(false);
       if (fileRef.current) fileRef.current.value = '';
     }
+  };
+  const saveUploadedSeoAndSelect = async () => {
+    if (!selected || selected.relativePath !== pendingSeoPath) return;
+    setSavingSeo(true);
+    setUploadError('');
+    try {
+      const seo = await updateMediaSeo(selected.relativePath, seoDraft);
+      const updated = { ...selected, seo };
+      setSelected(updated);
+      setItems(current => current.map(item => item.relativePath === updated.relativePath ? updated : item));
+      onSelect(updated.url, updated);
+      onClose();
+    } catch (error) {
+      setUploadError(error instanceof MediaUploadError ? `ذخیره اطلاعات سئو ناموفق بود: ${error.code}` : 'ذخیره اطلاعات سئو ناموفق بود.');
+    } finally {
+      setSavingSeo(false);
+    }
+  };
+  const useUploadedWithoutSeo = () => {
+    if (!selected || selected.relativePath !== pendingSeoPath) return;
+    onSelect(selected.url, selected);
+    onClose();
   };
 
   if (!isOpen) return null;
@@ -239,7 +274,7 @@ export const MediaPickerModal: React.FC<MediaPickerModalProps> = ({
                     <div className="text-center"><Loader2 className="w-7 h-7 animate-spin mx-auto mb-2" />در حال بارگذاری...</div>
                   </div>
                 ) : visible.length ? (
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-2">
+                  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 xl:grid-cols-7 2xl:grid-cols-5 gap-2">
                     {visible.map(item => (
                       <button
                         key={item.relativePath}
@@ -248,7 +283,7 @@ export const MediaPickerModal: React.FC<MediaPickerModalProps> = ({
                         className={`relative rounded-xl border overflow-hidden bg-neutral-50 text-right ${selected?.relativePath === item.relativePath ? 'border-blue-600 ring-2 ring-blue-100' : 'border-neutral-200 hover:border-neutral-400'}`}
                       >
                         {selected?.relativePath === item.relativePath && <span className="absolute top-1.5 left-1.5 z-10 w-5 h-5 rounded-full bg-blue-600 text-white grid place-items-center"><Check className="w-3 h-3" /></span>}
-                        <div className="aspect-square bg-white"><img src={item.url} alt={item.seo?.alt || item.filename} className="w-full h-full object-cover" /></div>
+                        <div className="aspect-square bg-neutral-50 p-2"><img src={item.url} alt={item.seo?.alt || item.filename} className="w-full h-full object-contain" /></div>
                         <div className="p-2"><strong className="block text-[8px] truncate">{item.seo?.title || item.filename}</strong><span className="block text-[7px] text-neutral-400 truncate">{item.category}/{item.year}/{item.month}</span></div>
                       </button>
                     ))}
@@ -263,7 +298,7 @@ export const MediaPickerModal: React.FC<MediaPickerModalProps> = ({
               </div>
               {selected && (
                 <div className="2xl:hidden p-3 border-t border-neutral-200 flex items-center gap-3 bg-white shrink-0">
-                  <img src={selected.url} alt="" className="w-12 h-12 rounded-lg object-cover border" />
+                  <img src={selected.url} alt="" className="w-12 h-12 rounded-lg object-contain p-1 border" />
                   <span className="flex-1 min-w-0 text-[10px] font-bold truncate">{selected.filename}</span>
                   <button type="button" onClick={() => { onSelect(selected.url, selected); onClose(); }} className="px-3 py-2 rounded-lg bg-blue-600 text-white text-[10px] font-black shrink-0">انتخاب</button>
                 </div>
@@ -292,24 +327,41 @@ export const MediaPickerModal: React.FC<MediaPickerModalProps> = ({
 
         {tab === 'upload' && (
           <div className="min-h-0 flex-1 overflow-y-auto p-3 sm:p-6 lg:p-10 grid place-items-center">
-            <div className="w-full max-w-3xl">
-              <input ref={fileRef} type="file" accept="image/*" multiple className="hidden" onChange={e => e.target.files && void uploadFiles(e.target.files)} />
-              <button
-                type="button"
-                disabled={uploading}
-                onClick={() => fileRef.current?.click()}
-                onDragOver={e => e.preventDefault()}
-                onDrop={e => { e.preventDefault(); void uploadFiles(e.dataTransfer.files); }}
-                className="w-full min-h-[min(320px,45dvh)] border-2 border-dashed border-neutral-300 hover:border-blue-500 rounded-3xl bg-neutral-50 flex flex-col items-center justify-center gap-4 text-neutral-600 disabled:opacity-50"
-              >
-                {uploading ? <Loader2 className="w-12 h-12 animate-spin text-blue-600" /> : <Upload className="w-12 h-12 text-blue-600" />}
-                <div>
-                  <strong className="block text-base">فایل‌ها را اینجا رها کنید یا کلیک کنید</strong>
-                  <span className="block text-xs text-neutral-400 mt-2">فایل جدید خودکار در {category}/سال/ماه ذخیره می‌شود.</span>
+            {pendingSeoPath && selected?.relativePath === pendingSeoPath ? (
+              <div className="w-full max-w-4xl space-y-4">
+                <div className="flex items-center gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-3">
+                  <div className="w-20 h-20 shrink-0 rounded-xl border bg-white p-1 grid place-items-center"><img src={selected.url} alt={seoDraft.alt} className="max-w-full max-h-full object-contain" /></div>
+                  <div className="min-w-0"><strong className="block text-xs">تصویر بارگذاری شد — اطلاعات سئو را همین‌جا وارد کنید</strong><span className="block mt-1 text-[10px] text-neutral-500 truncate">{selected.filename}</span><p className="mt-1 text-[9px] text-neutral-500">این اطلاعات برای همین فایل در کتابخانه رسانه ذخیره می‌شود.</p></div>
                 </div>
-              </button>
-              {uploadError && <div className="mt-3 p-3 rounded-xl bg-red-50 text-red-700 text-xs font-bold">{uploadError}</div>}
-            </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <label className="block text-[10px] font-bold">متن جایگزین تصویر (ALT)<input value={seoDraft.alt} onChange={e => setSeoDraft(current => ({ ...current, alt: e.target.value }))} className="w-full mt-1 p-2.5 border rounded-xl text-xs font-normal" /></label>
+                  <label className="block text-[10px] font-bold">عنوان تصویر<input value={seoDraft.title} onChange={e => setSeoDraft(current => ({ ...current, title: e.target.value }))} className="w-full mt-1 p-2.5 border rounded-xl text-xs font-normal" /></label>
+                  <label className="block text-[10px] font-bold">توضیح کوتاه<textarea rows={2} value={seoDraft.caption} onChange={e => setSeoDraft(current => ({ ...current, caption: e.target.value }))} className="w-full mt-1 p-2.5 border rounded-xl text-xs font-normal" /></label>
+                  <label className="block text-[10px] font-bold">توضیح کامل تصویر<textarea rows={2} value={seoDraft.description} onChange={e => setSeoDraft(current => ({ ...current, description: e.target.value }))} className="w-full mt-1 p-2.5 border rounded-xl text-xs font-normal" /></label>
+                </div>
+                {uploadError && <div className="p-3 rounded-xl bg-red-50 text-red-700 text-xs font-bold">{uploadError}</div>}
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <button type="button" disabled={savingSeo} onClick={() => void saveUploadedSeoAndSelect()} className="flex-1 py-3 rounded-xl bg-emerald-600 disabled:bg-emerald-300 text-white text-xs font-black">{savingSeo ? 'در حال ذخیره...' : 'ذخیره سئو و استفاده از تصویر'}</button>
+                  <button type="button" disabled={savingSeo} onClick={useUploadedWithoutSeo} className="px-4 py-3 rounded-xl border text-neutral-600 text-xs font-bold disabled:opacity-50">استفاده بدون تغییر سئو</button>
+                </div>
+              </div>
+            ) : (
+              <div className="w-full max-w-3xl">
+                <input ref={fileRef} type="file" accept="image/*" multiple className="hidden" onChange={e => e.target.files && void uploadFiles(e.target.files)} />
+                <button
+                  type="button"
+                  disabled={uploading}
+                  onClick={() => fileRef.current?.click()}
+                  onDragOver={e => e.preventDefault()}
+                  onDrop={e => { e.preventDefault(); void uploadFiles(e.dataTransfer.files); }}
+                  className="w-full min-h-[min(320px,45dvh)] border-2 border-dashed border-neutral-300 hover:border-blue-500 rounded-3xl bg-neutral-50 flex flex-col items-center justify-center gap-4 text-neutral-600 disabled:opacity-50"
+                >
+                  {uploading ? <Loader2 className="w-12 h-12 animate-spin text-blue-600" /> : <Upload className="w-12 h-12 text-blue-600" />}
+                  <div><strong className="block text-base">فایل‌ها را اینجا رها کنید یا کلیک کنید</strong><span className="block text-xs text-neutral-400 mt-2">فایل جدید خودکار در {category}/سال/ماه ذخیره می‌شود.</span></div>
+                </button>
+                {uploadError && <div className="mt-3 p-3 rounded-xl bg-red-50 text-red-700 text-xs font-bold">{uploadError}</div>}
+              </div>
+            )}
           </div>
         )}
 

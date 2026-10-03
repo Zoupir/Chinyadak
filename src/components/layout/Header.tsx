@@ -386,7 +386,7 @@ export const Header: React.FC<HeaderProps> = ({
     );
   };
 
-  if (settings.layoutPreset === 'marketplace-rtl') {
+  if (settings.layoutPreset === 'marketplace-rtl' || settings.layoutPreset === 'atelier-rtl') {
     const renderCategoryRows = () => {
       if (categoriesTreeControlled) {
         return editableCategoryChildren.map(item => {

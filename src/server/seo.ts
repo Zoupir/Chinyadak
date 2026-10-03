@@ -197,7 +197,8 @@ const entitySchemas = (
       description,
       url: canonical,
       sku: entity.data?.sku || undefined,
-      mpn: entity.data?.oemNumber || entity.data?.partNumber || undefined,
+      mpn: entity.data?.partNumber || undefined,
+      additionalProperty: entity.data?.oemNumber ? [{ '@type': 'PropertyValue', name: 'OEM', value: entity.data.oemNumber }] : undefined,
       image: image ? [image] : undefined,
       brand: entity.data?.brandManufacturer
         ? { '@type': 'Brand', name: entity.data.brandManufacturer }

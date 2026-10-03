@@ -553,7 +553,7 @@ export const AdminUsersTab: React.FC = () => {
                     type="email"
                     value={email}
                     onChange={e => setEmail(e.target.value)}
-                    placeholder="admin@chinpart.ir"
+                    placeholder="admin@example.com"
                     className="w-full p-2.5 border border-neutral-300 rounded-xl font-mono text-left"
                   />
                 </div>

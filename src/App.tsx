@@ -31,22 +31,73 @@ interface RouteState {
 }
 
 const AppContent: React.FC = () => {
-  const { toast, products, categories, models, brands, articles } = useStore();
+  const { toast, products, categories, models, brands, articles, settings, isStoreReady } = useStore();
   const [route, setRoute] = useState<RouteState>(() => {
     if (typeof window === 'undefined') return { view: 'home' };
     const legacy = parseLegacyHash(window.location.hash);
     return legacy || parseRoutePath(window.location.pathname);
   });
+  // Increments on every explicit navigation, even when the target route is the
+  // current route. This intentionally re-initializes the page when Home/logo or
+  // the active menu item is clicked again.
+  const [routeRevision, setRouteRevision] = useState(0);
   const [isVehicleModalOpen, setIsVehicleModalOpen] = useState(false);
   const [isCartDrawerOpen, setIsCartDrawerOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authModalMode, setAuthModalMode] = useState<'login' | 'register'>('login');
   const [isAiSearchOpen, setIsAiSearchOpen] = useState(false);
 
+  // Apply admin-controlled identity/theme variables to the whole storefront.
+  useEffect(() => {
+    if (!isStoreReady) return;
+    const root = document.documentElement;
+    const baseFontSize = Math.max(12, Math.min(24, Number(settings.baseFontSizePx || 16)));
+
+    root.dataset.layout = settings.layoutPreset || 'classic';
+    root.dataset.mobileProductColumns = String(settings.mobileProductColumns || 2);
+    root.dataset.mobileFooterColumns = String(settings.mobileFooterColumns || 2);
+    root.style.setProperty('--site-base-font-size', `${baseFontSize}px`);
+    root.style.setProperty('--theme-radius', `${Math.max(0, Math.min(60, Number(settings.themeRadiusPx || 12)))}px`);
+    root.style.setProperty('--primary-color', settings.primaryColor || '#DC2626');
+    root.style.setProperty('--primary-hover', settings.primaryHover || settings.primaryColor || '#b91c1c');
+    root.style.setProperty('--site-bg', settings.siteBgColor || '#f8fafc');
+    root.style.setProperty('--card-bg', settings.cardBgColor || '#ffffff');
+    root.style.setProperty('--header-bg', settings.headerBgColor || '#ffffff');
+    root.style.setProperty('--footer-bg', settings.footerBgColor || '#111827');
+    root.style.setProperty('--text-color', settings.textColor || '#111827');
+    root.style.setProperty('--site-font', `"${settings.fontFamily || 'Vazirmatn'}", system-ui, sans-serif`);
+
+    if (settings.faviconUrl) {
+      let favicon = document.head.querySelector<HTMLLinkElement>('link[rel="icon"]');
+      if (!favicon) {
+        favicon = document.createElement('link');
+        favicon.rel = 'icon';
+        document.head.appendChild(favicon);
+      }
+      favicon.href = settings.faviconUrl;
+    }
+  }, [
+    settings.layoutPreset,
+    settings.mobileProductColumns,
+    settings.mobileFooterColumns,
+    settings.baseFontSizePx,
+    settings.themeRadiusPx,
+    settings.primaryColor,
+    settings.primaryHover,
+    settings.siteBgColor,
+    settings.cardBgColor,
+    settings.headerBgColor,
+    settings.footerBgColor,
+    settings.textColor,
+    settings.fontFamily,
+    settings.faviconUrl,
+    isStoreReady
+  ]);
+
   // Scroll to top on navigation
   useEffect(() => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  }, [route]);
+    window.scrollTo({ top: 0, behavior: 'auto' });
+  }, [route, routeRevision]);
 
   // TakRank SEO Native owns browser metadata during History API navigation.
   // Initial page-load metadata is injected server-side for crawlers; this keeps
@@ -144,6 +195,7 @@ const AppContent: React.FC = () => {
 
     const handlePopState = () => {
       setRoute(parseRoutePath(window.location.pathname));
+      setRouteRevision(current => current + 1);
     };
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
@@ -170,12 +222,27 @@ const AppContent: React.FC = () => {
       window.history.pushState({}, '', targetPath);
     }
     setRoute({ view, param: canonicalParam });
+    setRouteRevision(current => current + 1);
   };
 
   const handleOpenAuthModal = (mode: 'login' | 'register' = 'login') => {
     setAuthModalMode(mode);
     setIsAuthModalOpen(true);
   };
+
+  if (!isStoreReady) {
+    return (
+      <div className="min-h-screen bg-[#f4f6f8] flex items-center justify-center" aria-label="در حال بارگذاری فروشگاه">
+        <div className="w-full max-w-5xl px-5 animate-pulse">
+          <div className="h-16 rounded-xl bg-neutral-200" />
+          <div className="mt-4 h-[420px] rounded-2xl bg-neutral-200" />
+          <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-3">
+            {Array.from({ length: 4 }).map((_, index) => <div key={index} className="h-32 rounded-xl bg-neutral-200" />)}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // Dedicated Full-Screen Enterprise Admin Layout
   if (route.view === 'admin') {
@@ -201,7 +268,8 @@ const AppContent: React.FC = () => {
             </div>
           </div>
         )}
-        <AdminView 
+        <AdminView
+          initialTarget={route.param}
           onExitToStore={() => {
             handleNavigate('home');
           }} 
@@ -247,7 +315,7 @@ const AppContent: React.FC = () => {
       />
 
       {/* Main View Container */}
-      <main className="flex-1">
+      <main key={`${route.view}:${route.param || ''}:${routeRevision}`} className="flex-1">
         {route.view === 'home' && (
           <HomeView
             onNavigate={handleNavigate}
@@ -340,6 +408,7 @@ const AppContent: React.FC = () => {
 
         {route.view === 'blog' && (
           <BlogView
+            initialCategory={route.param}
             onNavigate={handleNavigate}
           />
         )}

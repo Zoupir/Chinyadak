@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { markdownToSafeHtml } from '../src/utils/richText';
 
 const base = String(process.env.TEST_BASE_URL || 'http://127.0.0.1:3000').replace(/\/$/, '');
 
@@ -40,6 +41,13 @@ const cookieFrom = (response: Response): string => {
 const cookieHeaders = (cookie: string) => ({ Cookie: cookie });
 
 const run = async () => {
+  const formattedHtml = markdownToSafeHtml('<p style="text-align: right;"><span style="color: #c2410c;">سلام</span> <a href="https://example.com">پیوند</a></p>');
+  assert.match(formattedHtml, /text-align:right/i, 'Rich text sanitizer dropped paragraph alignment.');
+  assert.match(formattedHtml, /color:#c2410c/i, 'Rich text sanitizer dropped inline text color.');
+  assert.match(formattedHtml, /href="https:\/\/example\.com"/i, 'Rich text sanitizer dropped a safe link.');
+  const unsafeHtml = markdownToSafeHtml('<p style="text-align: right; background-image: url(javascript:alert(1))"><span style="color: red; position: fixed">متن</span></p>');
+  assert.doesNotMatch(unsafeHtml, /background-image|javascript:|position:/i, 'Rich text sanitizer retained unsafe CSS.');
+  
   const health = await json<{ ok: boolean; database: string }>('/api/health');
   assert.equal(health.data.ok, true);
   assert.equal(health.data.database, 'connected');
@@ -96,6 +104,42 @@ const run = async () => {
   });
   const adminCookie = cookieFrom(adminLogin.response);
   assert.equal(adminLogin.data.admin.role, 'super_admin');
+
+  // End-to-end regression: Persian multipart names must survive upload and load from a URL.
+  const persianFilename = 'تصویر قطعه فارسی ۱۴۰۵.png';
+  const pngBytes = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=', 'base64');
+  const uploadForm = new FormData();
+  uploadForm.append('image', new Blob([Uint8Array.from(pngBytes)], { type: 'image/png' }), persianFilename);
+  uploadForm.append('category', 'integration');
+  let uploadedPath = '';
+  try {
+    const uploadResponse = await request('/api/media/image', {
+      method: 'POST',
+      headers: cookieHeaders(adminCookie),
+      body: uploadForm
+    }, 201);
+    const uploaded = await uploadResponse.json() as { url: string; filename: string; originalName: string; relativePath: string };
+    uploadedPath = uploaded.relativePath;
+    assert.equal(uploaded.filename, persianFilename, 'Uploaded filename was corrupted.');
+    assert.equal(uploaded.originalName, persianFilename, 'Returned original filename was corrupted.');
+    assert(uploaded.url.endsWith(encodeURIComponent(persianFilename)), 'Uploaded URL did not encode the Persian filename.');
+    const servedImage = await request(uploaded.url);
+    assert.equal(servedImage.headers.get('content-type')?.split(';')[0], 'image/png');
+    assert.equal((await servedImage.arrayBuffer()).byteLength, pngBytes.byteLength, 'Uploaded image did not load intact.');
+    const mediaSearch = await json<{ items: Array<{ filename: string; relativePath: string }> }>(
+      '/api/media/library?q=' + encodeURIComponent('تصویر قطعه'),
+      { headers: cookieHeaders(adminCookie) }
+    );
+    assert(mediaSearch.data.items.some(item => item.filename === persianFilename && item.relativePath === uploadedPath), 'Media library did not preserve the Persian filename.');
+  } finally {
+    if (uploadedPath) {
+      await json('/api/media/library', {
+        method: 'DELETE',
+        headers: cookieHeaders(adminCookie),
+        body: JSON.stringify({ relativePath: uploadedPath })
+      }).catch(() => undefined);
+    }
+  }
 
   const seoSummary = await json<{ summary: any; settings: any }>('/api/seo/summary', {
     headers: cookieHeaders(adminCookie)

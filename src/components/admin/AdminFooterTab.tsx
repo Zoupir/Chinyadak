@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { useStore } from '../../context/StoreContext';
 import { FooterColumn, FooterFeatureItem, FooterLink, FooterBadgeItem } from '../../types';
 import { ImageUploadInput } from '../common/ImageUploadInput';
+import { LinkDestinationPicker } from '../common/LinkDestinationPicker';
+import { RichTextEditor } from '../common/RichTextEditor';
 import { 
   ShieldCheck, 
   Plus, 
@@ -24,21 +26,49 @@ import {
   Package,
   Globe,
   CheckCircle,
-  ChevronDown
+  ChevronDown,
+  ArrowUp,
+  ArrowDown
 } from 'lucide-react';
 
 export const AdminFooterTab: React.FC = () => {
   const { settings, updateSettings, showToast, categories, pages } = useStore();
 
   // Active subtab
-  const [activeSubtab, setActiveSubtab] = useState<'features' | 'about' | 'columns' | 'badges' | 'html'>('columns');
+  const [activeSubtab, setActiveSubtab] = useState<'features' | 'about' | 'columns' | 'badges' | 'layout' | 'html'>('columns');
 
   // Form states
-  const [footerAboutTitle, setFooterAboutTitle] = useState(settings.footerAboutTitle || 'فروشگاه اینترنتی چین‌پارت');
+  const [footerAboutTitle, setFooterAboutTitle] = useState(settings.footerAboutTitle || settings.siteTitle || 'فروشگاه اینترنتی');
   const [footerAboutText, setFooterAboutText] = useState(settings.footerAboutText || '');
   const [footerCopyrightText, setFooterCopyrightText] = useState(settings.footerCopyrightText || '');
+  const [footerBottomLinks, setFooterBottomLinks] = useState<FooterLink[]>(settings.footerBottomLinks || [
+    { id: 'footer-bottom-terms', title: 'قوانین', url: 'page:terms' },
+    { id: 'footer-bottom-privacy', title: 'حریم خصوصی', url: 'page:privacy' },
+    { id: 'footer-bottom-payment', title: 'پرداخت امن', url: 'page:payment' }
+  ]);
+  const [footerBottomAlign, setFooterBottomAlign] = useState<'right'|'center'|'left'>(settings.footerBottomAlign || 'center');
   const [footerCustomHtml, setFooterCustomHtml] = useState(settings.footerCustomHtml || '');
   const [showHtmlPreview, setShowHtmlPreview] = useState(true);
+
+  // Footer layout / visual controls
+  const [footerGridColumnsDesktop, setFooterGridColumnsDesktop] = useState(settings.footerGridColumnsDesktop || 5);
+  const [footerGridColumnsTablet, setFooterGridColumnsTablet] = useState(settings.footerGridColumnsTablet || 2);
+  const [footerGridColumnsMobile, setFooterGridColumnsMobile] = useState(settings.footerGridColumnsMobile || 2);
+  const [footerGridRowsDesktop, setFooterGridRowsDesktop] = useState(settings.footerGridRowsDesktop || 1);
+  const [footerGridRowsTablet, setFooterGridRowsTablet] = useState(settings.footerGridRowsTablet || 0);
+  const [footerGridRowsMobile, setFooterGridRowsMobile] = useState(settings.footerGridRowsMobile || 0);
+  const [footerLogoUrl, setFooterLogoUrl] = useState(settings.footerLogoUrl || '');
+  const [footerLogoWidthPx, setFooterLogoWidthPx] = useState(settings.footerLogoWidthPx || 160);
+  const [footerHeadingFontSizePx, setFooterHeadingFontSizePx] = useState(settings.footerHeadingFontSizePx || 14);
+  const [footerTextFontSizePx, setFooterTextFontSizePx] = useState(settings.footerTextFontSizePx || 12);
+  const [footerPaddingTopPx, setFooterPaddingTopPx] = useState(settings.footerPaddingTopPx || 42);
+  const [footerPaddingBottomPx, setFooterPaddingBottomPx] = useState(settings.footerPaddingBottomPx || 34);
+  const [footerBgColor, setFooterBgColor] = useState(settings.footerBgColor || '#111111');
+  const [footerTextColor, setFooterTextColor] = useState(settings.footerTextColor || '#b9c0c7');
+  const [footerHeadingColor, setFooterHeadingColor] = useState(settings.footerHeadingColor || '#ffffff');
+  const [footerContactTitle, setFooterContactTitle] = useState(settings.footerContactTitle || 'ارتباط با ما');
+  const [footerContactSubtitle, setFooterContactSubtitle] = useState(settings.footerContactSubtitle || 'پشتیبانی و مشاوره تخصصی پیش از خرید');
+  const [footerNewsletterPlaceholder, setFooterNewsletterPlaceholder] = useState(settings.footerNewsletterPlaceholder || 'ایمیل خود را وارد کنید');
 
   // Features
   const [footerShowFeatures, setFooterShowFeatures] = useState(settings.footerShowFeatures !== false);
@@ -50,28 +80,43 @@ export const AdminFooterTab: React.FC = () => {
   ]);
 
   // Columns & Links
-  const [columns, setColumns] = useState<FooterColumn[]>(settings.footerColumns || [
+  const footerColumnDefaults: FooterColumn[] = [
     {
       id: 'fcol-1',
-      title: 'راهنمای خرید و قوانین',
+      title: 'حساب کاربری',
       links: [
-        { id: 'l1', title: 'درباره چین‌پارت پرو', url: 'page:about' },
-        { id: 'l2', title: 'ضمانت اصالت و شرایط بازگشت کالا', url: 'page:guarantee' },
-        { id: 'l3', title: 'پیگیری وضعیت سفارش و مرسوله', url: 'tracking' },
-        { id: 'l4', title: 'استعلام قطعات کم‌یاب و وارداتی', url: 'part-request' }
+        { id: 'l1', title: 'داشبورد حساب من', url: 'account' },
+        { id: 'l2', title: 'سفارش‌های من', url: 'account:orders' },
+        { id: 'l3', title: 'گاراژ خودروهای من', url: 'account:garage' },
+        { id: 'l4', title: 'پیگیری سفارش', url: 'tracking' }
       ]
     },
     {
       id: 'fcol-2',
-      title: 'خدمات مشتریان و همکاران',
+      title: 'کاتالوگ',
       links: [
-        { id: 'l5', title: 'آموزش فنی و عیب‌یابی خودرو', url: 'blog' },
-        { id: 'l6', title: 'مدیریت گاراژ خودروهای من', url: 'account:garage' },
-        { id: 'l7', title: 'ورود به پنل مدیریت انبار', url: 'admin' },
-        { id: 'l8', title: 'ثبت‌نام خریداران و مکانیک‌ها', url: 'account' }
+        { id: 'l5', title: 'فروشگاه قطعات', url: 'shop' },
+        { id: 'l6', title: 'محصولات پرفروش', url: 'shop:bestseller' },
+        { id: 'l7', title: 'سرویس دوره‌ای', url: 'shop:maintenance' }
+      ]
+    },
+    {
+      id: 'fcol-3',
+      title: 'راهنما',
+      links: [
+        { id: 'l8', title: 'درباره ما', url: 'page:about' },
+        { id: 'l9', title: 'مقالات و آموزش‌ها', url: 'blog' },
+        { id: 'l10', title: 'ضمانت و بازگشت کالا', url: 'page:guarantee' },
+        { id: 'l11', title: 'استعلام قطعه', url: 'part-request' }
       ]
     }
-  ]);
+  ];
+  const storedFooterColumns = settings.footerColumns || [];
+  const [columns, setColumns] = useState<FooterColumn[]>(
+    storedFooterColumns.length >= 3
+      ? storedFooterColumns
+      : [...(storedFooterColumns.length ? storedFooterColumns : footerColumnDefaults.slice(0, 2)), footerColumnDefaults[2]]
+  );
 
   // Badges
   const [footerShowBadges, setFooterShowBadges] = useState(settings.footerShowBadges !== false);
@@ -101,11 +146,13 @@ export const AdminFooterTab: React.FC = () => {
 
   // Modals
   const [editingColId, setEditingColId] = useState<string | null>(null);
+  const [editingColTitle, setEditingColTitle] = useState('');
   const [newColTitle, setNewColTitle] = useState('');
 
   // Link Modal
   const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
   const [targetColIdForLink, setTargetColIdForLink] = useState<string | null>(null);
+  const [editingLinkId, setEditingLinkId] = useState<string | null>(null);
   const [linkTitle, setLinkTitle] = useState('');
   const [linkType, setLinkType] = useState<'category' | 'page' | 'system' | 'custom'>('system');
   const [linkUrl, setLinkUrl] = useState('');
@@ -136,18 +183,54 @@ export const AdminFooterTab: React.FC = () => {
     { id: 'Package', label: 'جعبه / قطعات', icon: Package }
   ];
 
+  const addFooterBottomLink = () => {
+    setFooterBottomLinks(current => [...current, {
+      id: `footer-bottom-${Date.now()}`,
+      title: 'لینک جدید',
+      url: ''
+    }]);
+  };
+
+  const updateFooterBottomLink = (id:string, partial:Partial<FooterLink>) => {
+    setFooterBottomLinks(current => current.map(link => link.id === id ? { ...link, ...partial } : link));
+  };
+
+  const removeFooterBottomLink = (id:string) => {
+    setFooterBottomLinks(current => current.filter(link => link.id !== id));
+  };
+
   // Save all to store
   const handleSaveAll = () => {
     updateSettings({
       footerAboutTitle,
       footerAboutText,
       footerCopyrightText,
+      footerBottomLinks,
+      footerBottomAlign,
       footerCustomHtml,
       footerShowFeatures,
       footerFeatures: features,
       footerColumns: columns,
       footerShowBadges,
-      footerBadges: badges
+      footerBadges: badges,
+      footerGridColumnsDesktop,
+      footerGridColumnsTablet,
+      footerGridColumnsMobile,
+      footerGridRowsDesktop,
+      footerGridRowsTablet,
+      footerGridRowsMobile,
+      footerLogoUrl,
+      footerLogoWidthPx,
+      footerHeadingFontSizePx,
+      footerTextFontSizePx,
+      footerPaddingTopPx,
+      footerPaddingBottomPx,
+      footerBgColor,
+      footerTextColor,
+      footerHeadingColor,
+      footerContactTitle,
+      footerContactSubtitle,
+      footerNewsletterPlaceholder
     });
     showToast('تنظیمات فوتر، ستون‌ها و نمادهای اعتماد با موفقیت ذخیره گردید.');
   };
@@ -222,10 +305,62 @@ export const AdminFooterTab: React.FC = () => {
   // Link handlers
   const handleOpenAddLink = (colId: string) => {
     setTargetColIdForLink(colId);
+    setEditingLinkId(null);
     setLinkTitle('');
     setLinkType('system');
     setLinkUrl('shop');
     setIsLinkModalOpen(true);
+  };
+
+  const handleOpenEditLink = (colId: string, link: FooterLink) => {
+    setTargetColIdForLink(colId);
+    setEditingLinkId(link.id);
+    setLinkTitle(link.title);
+    setLinkUrl(link.url);
+    setLinkType(link.url.startsWith('page:') ? 'page' : link.url.startsWith('category:') ? 'category' : /^https?:/i.test(link.url) ? 'custom' : 'system');
+    setIsLinkModalOpen(true);
+  };
+
+  const moveColumn = (colId: string, direction: 'up' | 'down') => {
+    const index = columns.findIndex(col => col.id === colId);
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    if (index < 0 || targetIndex < 0 || targetIndex >= columns.length) return;
+    const next = [...columns];
+    [next[index], next[targetIndex]] = [next[targetIndex], next[index]];
+    setColumns(next);
+    updateSettings({ footerColumns: next });
+  };
+
+  const moveLink = (colId: string, linkId: string, direction: 'up' | 'down') => {
+    const next = columns.map(col => {
+      if (col.id !== colId) return col;
+      const links = [...col.links];
+      const index = links.findIndex(link => link.id === linkId);
+      const targetIndex = direction === 'up' ? index - 1 : index + 1;
+      if (index < 0 || targetIndex < 0 || targetIndex >= links.length) return col;
+      [links[index], links[targetIndex]] = [links[targetIndex], links[index]];
+      return { ...col, links };
+    });
+    setColumns(next);
+    updateSettings({ footerColumns: next });
+  };
+
+  const beginRenameColumn = (colId: string) => {
+    const current = columns.find(col => col.id === colId);
+    if (!current) return;
+    setEditingColId(colId);
+    setEditingColTitle(current.title);
+  };
+
+  const saveRenamedColumn = (colId: string) => {
+    const title = editingColTitle.trim();
+    if (!title) return;
+    const next = columns.map(col => col.id === colId ? { ...col, title } : col);
+    setColumns(next);
+    updateSettings({ footerColumns: next });
+    setEditingColId(null);
+    setEditingColTitle('');
+    showToast('عنوان ستون فوتر ویرایش شد.');
   };
 
   const handleSaveLink = (e: React.FormEvent) => {
@@ -234,26 +369,27 @@ export const AdminFooterTab: React.FC = () => {
       showToast('عنوان و لینک الزامی هستند.', 'error');
       return;
     }
-    const newLink: FooterLink = {
-      id: `flink-${Date.now()}`,
-      title: linkTitle,
-      url: linkUrl
-    };
-
     const next = columns.map(col => {
-      if (col.id === targetColIdForLink) {
+      if (col.id !== targetColIdForLink) return col;
+      if (editingLinkId) {
         return {
           ...col,
-          links: [...col.links, newLink]
+          links: col.links.map(link => link.id === editingLinkId ? { ...link, title: linkTitle, url: linkUrl } : link)
         };
       }
-      return col;
+      const newLink: FooterLink = {
+        id: `flink-${Date.now()}`,
+        title: linkTitle,
+        url: linkUrl
+      };
+      return { ...col, links: [...col.links, newLink] };
     });
 
     setColumns(next);
     setIsLinkModalOpen(false);
     updateSettings({ footerColumns: next });
-    showToast('لینک به ستون فوتر افزوده شد.');
+    showToast(editingLinkId ? 'لینک فوتر ویرایش شد.' : 'لینک به ستون فوتر افزوده شد.');
+    setEditingLinkId(null);
   };
 
   const handleDeleteLink = (colId: string, linkId: string) => {
@@ -403,6 +539,18 @@ export const AdminFooterTab: React.FC = () => {
         </button>
 
         <button
+          onClick={() => setActiveSubtab('layout')}
+          className={`px-4 py-2 rounded-xl font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+            activeSubtab === 'layout'
+              ? 'bg-neutral-900 text-white shadow-xs'
+              : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200'
+          }`}
+        >
+          <Sliders className="w-4 h-4 text-violet-500" />
+          <span>چیدمان و استایل فوتر</span>
+        </button>
+
+        <button
           onClick={() => setActiveSubtab('html')}
           className={`px-4 py-2 rounded-xl font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
             activeSubtab === 'html'
@@ -414,6 +562,45 @@ export const AdminFooterTab: React.FC = () => {
           <span>ویرایشگر کد اختصاصی HTML</span>
         </button>
       </div>
+
+      {/* =========================================================================
+          FOOTER LAYOUT / TYPOGRAPHY / COLORS
+      ========================================================================= */}
+      {activeSubtab === 'layout' && (
+        <div className="space-y-6">
+          <div className="rounded-2xl border border-violet-200 bg-violet-50/30 p-5 space-y-5">
+            <div>
+              <h4 className="font-black text-sm text-neutral-900">شبکه و ابعاد فوتر</h4>
+              <p className="text-[10px] text-neutral-500 mt-1">تعداد ستون‌ها و ردیف‌ها برای دسکتاپ، تبلت و موبایل مستقل است.</p>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-xs">
+              <label><span className="block font-bold mb-1">ستون دسکتاپ</span><input type="number" min="1" max="8" value={footerGridColumnsDesktop} onChange={e=>setFooterGridColumnsDesktop(Number(e.target.value))} className="w-full p-2.5 border rounded-xl"/></label>
+              <label><span className="block font-bold mb-1">ستون تبلت</span><input type="number" min="1" max="6" value={footerGridColumnsTablet} onChange={e=>setFooterGridColumnsTablet(Number(e.target.value))} className="w-full p-2.5 border rounded-xl"/></label>
+              <label><span className="block font-bold mb-1">ستون موبایل</span><input type="number" min="1" max="3" value={footerGridColumnsMobile} onChange={e=>setFooterGridColumnsMobile(Number(e.target.value))} className="w-full p-2.5 border rounded-xl"/></label>
+              <label><span className="block font-bold mb-1">ردیف دسکتاپ</span><input type="number" min="0" max="6" value={footerGridRowsDesktop} onChange={e=>setFooterGridRowsDesktop(Number(e.target.value))} className="w-full p-2.5 border rounded-xl"/></label>
+              <label><span className="block font-bold mb-1">ردیف تبلت</span><input type="number" min="0" max="8" value={footerGridRowsTablet} onChange={e=>setFooterGridRowsTablet(Number(e.target.value))} className="w-full p-2.5 border rounded-xl"/></label>
+              <label><span className="block font-bold mb-1">ردیف موبایل</span><input type="number" min="0" max="12" value={footerGridRowsMobile} onChange={e=>setFooterGridRowsMobile(Number(e.target.value))} className="w-full p-2.5 border rounded-xl"/></label>
+              <label><span className="block font-bold mb-1">Padding بالا</span><input type="number" min="0" max="200" value={footerPaddingTopPx} onChange={e=>setFooterPaddingTopPx(Number(e.target.value))} className="w-full p-2.5 border rounded-xl"/></label>
+              <label><span className="block font-bold mb-1">Padding پایین</span><input type="number" min="0" max="200" value={footerPaddingBottomPx} onChange={e=>setFooterPaddingBottomPx(Number(e.target.value))} className="w-full p-2.5 border rounded-xl"/></label>
+              <label><span className="block font-bold mb-1">عرض لوگو px</span><input type="number" min="40" max="500" value={footerLogoWidthPx} onChange={e=>setFooterLogoWidthPx(Number(e.target.value))} className="w-full p-2.5 border rounded-xl"/></label>
+              <label><span className="block font-bold mb-1">فونت تیتر px</span><input type="number" min="9" max="36" value={footerHeadingFontSizePx} onChange={e=>setFooterHeadingFontSizePx(Number(e.target.value))} className="w-full p-2.5 border rounded-xl"/></label>
+              <label><span className="block font-bold mb-1">فونت متن px</span><input type="number" min="8" max="30" value={footerTextFontSizePx} onChange={e=>setFooterTextFontSizePx(Number(e.target.value))} className="w-full p-2.5 border rounded-xl"/></label>
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-neutral-200 p-5 space-y-4">
+            <h4 className="font-black text-sm">رنگ‌ها و هویت بصری</h4>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+              <label><span className="block font-bold mb-1">پس‌زمینه فوتر</span><input type="color" value={footerBgColor} onChange={e=>setFooterBgColor(e.target.value)} className="w-full h-11 p-1 border rounded-xl"/></label>
+              <label><span className="block font-bold mb-1">رنگ متن</span><input type="color" value={footerTextColor} onChange={e=>setFooterTextColor(e.target.value)} className="w-full h-11 p-1 border rounded-xl"/></label>
+              <label><span className="block font-bold mb-1">رنگ تیترها</span><input type="color" value={footerHeadingColor} onChange={e=>setFooterHeadingColor(e.target.value)} className="w-full h-11 p-1 border rounded-xl"/></label>
+            </div>
+            <ImageUploadInput label="لوگوی اختصاصی فوتر" value={footerLogoUrl} onChange={setFooterLogoUrl} aspectRatio="banner" presetCategory="logos" />
+          </div>
+
+          <button onClick={handleSaveAll} className="px-6 py-2.5 rounded-xl bg-violet-600 text-white text-xs font-black">ذخیره چیدمان و استایل فوتر</button>
+        </div>
+      )}
 
       {/* =========================================================================
           SUBTAB 1: COLUMNS AND LINKS BUILDER
@@ -447,13 +634,29 @@ export const AdminFooterTab: React.FC = () => {
             {columns.map(col => (
               <div key={col.id} className="border border-neutral-200 rounded-2xl p-5 bg-white space-y-4 shadow-2xs">
                 <div className="flex items-center justify-between pb-3 border-b border-neutral-100">
-                  <div className="flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full bg-red-600"></span>
-                    <h5 className="font-bold text-sm text-neutral-900">{col.title}</h5>
-                    <span className="text-[11px] text-neutral-400">({col.links.length} لینک)</span>
+                  <div className="flex items-center gap-2 min-w-0 flex-1">
+                    <span className="w-2.5 h-2.5 rounded-full bg-red-600 shrink-0"></span>
+                    {editingColId === col.id ? (
+                      <div className="flex items-center gap-1.5 flex-1">
+                        <input
+                          value={editingColTitle}
+                          onChange={e => setEditingColTitle(e.target.value)}
+                          className="min-w-0 flex-1 p-1.5 border border-blue-300 rounded-lg text-xs font-bold bg-white"
+                          autoFocus
+                        />
+                        <button type="button" onClick={() => saveRenamedColumn(col.id)} className="p-1.5 bg-emerald-50 text-emerald-700 rounded-lg cursor-pointer" title="ذخیره عنوان"><Check className="w-3.5 h-3.5" /></button>
+                        <button type="button" onClick={() => { setEditingColId(null); setEditingColTitle(''); }} className="p-1.5 bg-neutral-100 text-neutral-600 rounded-lg cursor-pointer" title="لغو"><X className="w-3.5 h-3.5" /></button>
+                      </div>
+                    ) : (
+                      <h5 className="font-bold text-sm text-neutral-900 truncate">{col.title}</h5>
+                    )}
+                    <span className="text-[11px] text-neutral-400 shrink-0">({col.links.length} لینک)</span>
                   </div>
 
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1">
+                    <button type="button" onClick={() => moveColumn(col.id, 'up')} className="p-1.5 text-neutral-500 hover:bg-neutral-100 rounded-lg cursor-pointer" title="انتقال ستون به بالا"><ArrowUp className="w-3.5 h-3.5" /></button>
+                    <button type="button" onClick={() => moveColumn(col.id, 'down')} className="p-1.5 text-neutral-500 hover:bg-neutral-100 rounded-lg cursor-pointer" title="انتقال ستون به پایین"><ArrowDown className="w-3.5 h-3.5" /></button>
+                    <button type="button" onClick={() => beginRenameColumn(col.id)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg cursor-pointer" title="ویرایش عنوان ستون"><Edit3 className="w-3.5 h-3.5" /></button>
                     <button
                       onClick={() => handleOpenAddLink(col.id)}
                       className="px-2.5 py-1 bg-neutral-100 hover:bg-red-50 hover:text-red-600 rounded-lg text-xs font-bold flex items-center gap-1 transition-colors cursor-pointer"
@@ -478,19 +681,25 @@ export const AdminFooterTab: React.FC = () => {
                       لینکی در این ستون وجود ندارد. روی «افزودن لینک» کلیک کنید.
                     </div>
                   ) : (
-                    col.links.map(link => (
-                      <div key={link.id} className="flex items-center justify-between p-2.5 bg-neutral-50 rounded-xl hover:bg-neutral-100/80 transition-colors">
-                        <div>
+                    col.links.map((link, linkIndex) => (
+                      <div key={link.id} className="flex items-center justify-between gap-2 p-2.5 bg-neutral-50 rounded-xl hover:bg-neutral-100/80 transition-colors">
+                        <div className="min-w-0">
                           <span className="font-bold text-neutral-800 block">{link.title}</span>
-                          <span className="text-[10px] text-neutral-400 font-mono block mt-0.5">{link.url}</span>
+                          <span className="text-[10px] text-neutral-400 font-mono block mt-0.5 truncate">{link.url}</span>
                         </div>
-                        <button
-                          onClick={() => handleDeleteLink(col.id, link.id)}
-                          className="p-1 text-neutral-400 hover:text-red-600 rounded-md transition-colors cursor-pointer"
-                          title="حذف لینک"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
+                        <div className="flex items-center gap-1 shrink-0">
+                          <button type="button" disabled={linkIndex === 0} onClick={() => moveLink(col.id, link.id, 'up')} className="p-1 text-neutral-400 hover:text-neutral-900 disabled:opacity-25 rounded-md cursor-pointer"><ArrowUp className="w-3.5 h-3.5" /></button>
+                          <button type="button" disabled={linkIndex === col.links.length - 1} onClick={() => moveLink(col.id, link.id, 'down')} className="p-1 text-neutral-400 hover:text-neutral-900 disabled:opacity-25 rounded-md cursor-pointer"><ArrowDown className="w-3.5 h-3.5" /></button>
+                          <button type="button" onClick={() => handleOpenEditLink(col.id, link)} className="p-1 text-blue-600 hover:bg-blue-50 rounded-md cursor-pointer" title="ویرایش لینک"><Edit3 className="w-3.5 h-3.5" /></button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteLink(col.id, link.id)}
+                            className="p-1 text-neutral-400 hover:text-red-600 rounded-md transition-colors cursor-pointer"
+                            title="حذف لینک"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                       </div>
                     ))
                   )}
@@ -678,37 +887,71 @@ export const AdminFooterTab: React.FC = () => {
                 value={footerAboutTitle}
                 onChange={e => setFooterAboutTitle(e.target.value)}
                 className="w-full p-2.5 border border-neutral-300 rounded-xl"
-                placeholder="مثال: فروشگاه اینترنتی لوازم یدکی چین‌پارت"
+                placeholder="مثال: فروشگاه اینترنتی قطعات خودرو"
               />
             </div>
 
             <div>
               <label className="block text-neutral-700 font-bold mb-1">متن توضیحات معرفی و بیوگرافی فوتر:</label>
-              <textarea
-                rows={4}
-                value={footerAboutText}
-                onChange={e => setFooterAboutText(e.target.value)}
-                className="w-full p-3 border border-neutral-300 rounded-xl leading-relaxed"
-                placeholder="توضیحات سابقه، تامین مستقیم قطعات از چین و خطوط تولید..."
-              />
+              <RichTextEditor label="بیوگرافی فوتر" value={footerAboutText} onChange={setFooterAboutText} rows={5}
+                placeholder="توضیحات سابقه، تامین مستقیم قطعات از چین و خطوط تولید..." />
             </div>
 
             <div className="pt-2">
               <label className="block text-neutral-700 font-bold mb-1">متن کپی‌رایت انتهای فوتر:</label>
-              <input
-                type="text"
-                value={footerCopyrightText}
-                onChange={e => setFooterCopyrightText(e.target.value)}
-                className="w-full p-2.5 border border-neutral-300 rounded-xl"
-                placeholder="مثال: تمامی حقوق برای چین‌پارت محفوظ است..."
-              />
+              <RichTextEditor label="کپی‌رایت فوتر" value={footerCopyrightText} onChange={setFooterCopyrightText} rows={2}
+                placeholder="© ۲۰۲۶ تمامی حقوق محفوظ است. برای درج پیوند از دکمهٔ پیوند استفاده کنید." />
             </div>
 
+            <div className="rounded-2xl border border-neutral-200 p-4 space-y-3">
+              <div>
+                <strong className="block text-xs">لوگوی بخش درباره ما در فوتر</strong>
+                <p className="text-[10px] text-neutral-500 mt-1">این لوگو مستقل از لوگوی هدر است و فقط در فوتر استفاده می‌شود.</p>
+              </div>
+              <ImageUploadInput label="انتخاب لوگوی فوتر" value={footerLogoUrl} onChange={setFooterLogoUrl} aspectRatio="banner" presetCategory="logos" />
+              <label className="block"><span className="block text-[10px] font-bold mb-1">عرض لوگو (پیکسل)</span><input type="number" min="40" max="500" value={footerLogoWidthPx} onChange={e=>setFooterLogoWidthPx(Number(e.target.value))} className="w-full p-2.5 border rounded-xl"/></label>
+            </div>
+
+            <div className="rounded-2xl border border-neutral-200 p-4 space-y-3">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <strong className="block text-xs">لینک‌های ردیف پایانی فوتر</strong>
+                  <p className="text-[10px] text-neutral-500 mt-1">قوانین، حریم خصوصی، پرداخت امن یا هر لینک دیگری را اینجا مدیریت کنید.</p>
+                </div>
+                <button type="button" onClick={addFooterBottomLink} className="px-3 py-2 rounded-xl bg-blue-600 text-white text-[10px] font-black inline-flex items-center gap-1"><Plus className="w-3.5 h-3.5"/>افزودن لینک</button>
+              </div>
+              <label className="block">
+                <span className="block text-[10px] font-bold mb-1">تراز ردیف پایانی</span>
+                <select value={footerBottomAlign} onChange={e=>setFooterBottomAlign(e.target.value as 'right'|'center'|'left')} className="w-full p-2.5 border rounded-xl bg-white">
+                  <option value="right">راست</option>
+                  <option value="center">وسط</option>
+                  <option value="left">چپ</option>
+                </select>
+              </label>
+              <div className="space-y-3">
+                {footerBottomLinks.map((link,index)=>(
+                  <div key={link.id} className="p-3 rounded-xl border bg-neutral-50 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <strong className="text-[10px]">لینک {index+1}</strong>
+                      <button type="button" onClick={()=>removeFooterBottomLink(link.id)} className="w-7 h-7 grid place-items-center rounded-lg bg-red-50 text-red-600"><Trash2 className="w-3.5 h-3.5"/></button>
+                    </div>
+                    <input value={link.title} onChange={e=>updateFooterBottomLink(link.id,{title:e.target.value})} className="w-full p-2 border rounded-lg" placeholder="عنوان لینک"/>
+                    <LinkDestinationPicker label="مقصد لینک" value={link.url} onChange={value=>updateFooterBottomLink(link.id,{url:value})}/>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <label><span className="block text-[10px] font-bold mb-1">عنوان تماس</span><input value={footerContactTitle} onChange={e=>setFooterContactTitle(e.target.value)} className="w-full p-2.5 border rounded-xl"/></label>
+              <label><span className="block text-[10px] font-bold mb-1">زیرمتن تماس</span><input value={footerContactSubtitle} onChange={e=>setFooterContactSubtitle(e.target.value)} className="w-full p-2.5 border rounded-xl"/></label>
+              <label><span className="block text-[10px] font-bold mb-1">متن راهنمای خبرنامه</span><input value={footerNewsletterPlaceholder} onChange={e=>setFooterNewsletterPlaceholder(e.target.value)} className="w-full p-2.5 border rounded-xl"/></label>
+            </div>
             <button
               onClick={handleSaveAll}
               className="px-6 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold shadow-md cursor-pointer"
             >
-              ذخیره متن درباره ما و کپی‌رایت
+              ذخیره درباره ما و ردیف پایانی
             </button>
           </div>
         </div>
@@ -865,7 +1108,7 @@ export const AdminFooterTab: React.FC = () => {
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl border border-neutral-200 max-w-md w-full p-6 shadow-2xl space-y-4">
             <div className="flex items-center justify-between border-b border-neutral-100 pb-3">
-              <h4 className="font-black text-sm text-neutral-900">افزودن لینک به ستون فوتر</h4>
+              <h4 className="font-black text-sm text-neutral-900">{editingLinkId ? 'ویرایش لینک فوتر' : 'افزودن لینک به ستون فوتر'}</h4>
               <button onClick={() => setIsLinkModalOpen(false)} className="w-7 h-7 rounded-full bg-neutral-100 flex items-center justify-center">
                 <X className="w-4 h-4" />
               </button>
@@ -1011,7 +1254,7 @@ export const AdminFooterTab: React.FC = () => {
                   type="submit"
                   className="flex-1 py-2 bg-red-600 text-white rounded-xl font-bold shadow-md hover:bg-red-700 cursor-pointer"
                 >
-                  افزودن لینک
+                  {editingLinkId ? 'ذخیره تغییرات لینک' : 'افزودن لینک'}
                 </button>
               </div>
             </form>

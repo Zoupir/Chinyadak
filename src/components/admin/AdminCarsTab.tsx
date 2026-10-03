@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useStore } from '../../context/StoreContext';
 import { CarBrand, VehicleModel } from '../../types';
 import { ImageUploadInput } from '../common/ImageUploadInput';
+import { AdminEntitySeoPanel } from './AdminEntitySeoPanel';
 import { 
   Car, 
   Plus, 
@@ -48,7 +49,9 @@ export const AdminCarsTab: React.FC = () => {
     officialRepresentative: '',
     logo: 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?w=200&auto=format&fit=crop&q=80',
     heroImage: 'https://images.unsplash.com/photo-1617814076367-b759c7d7e738?w=1200&auto=format&fit=crop&q=80',
-    description: ''
+    description: '',
+    bottomDescription: '',
+    seo: undefined
   });
 
   const [isModelModalOpen, setIsModelModalOpen] = useState(false);
@@ -101,7 +104,9 @@ export const AdminCarsTab: React.FC = () => {
       officialRepresentative: 'کرمان موتور / مدیران خودرو',
       logo: 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?w=200&auto=format&fit=crop&q=80',
       heroImage: 'https://images.unsplash.com/photo-1617814076367-b759c7d7e738?w=1200&auto=format&fit=crop&q=80',
-      description: 'شرکت خودروسازی معتبر و فعال در بازار ایران'
+      description: 'شرکت خودروسازی معتبر و فعال در بازار ایران',
+      bottomDescription: '',
+      seo: undefined
     });
     setIsBrandModalOpen(true);
   };
@@ -133,6 +138,8 @@ export const AdminCarsTab: React.FC = () => {
         logo: brandForm.logo || 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?w=200&auto=format&fit=crop&q=80',
         heroImage: brandForm.heroImage || 'https://images.unsplash.com/photo-1617814076367-b759c7d7e738?w=1200&auto=format&fit=crop&q=80',
         description: brandForm.description || '',
+        bottomDescription: brandForm.bottomDescription || '',
+        seo: brandForm.seo,
         country: brandForm.country || 'چین',
         foundedYear: Number(brandForm.foundedYear) || 2000,
         officialRepresentative: brandForm.officialRepresentative || '',
@@ -389,6 +396,15 @@ export const AdminCarsTab: React.FC = () => {
                 <div className="p-4 bg-neutral-50 border-t border-neutral-100 flex items-center justify-between gap-2">
                   <span className="text-[10px] text-neutral-400 font-mono">اسلاگ: /{model.slug}</span>
                   <div className="flex items-center gap-1.5">
+                    <a
+                      href={`/car-model/${encodeURIComponent(model.slug || model.id)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="p-2 bg-white hover:bg-emerald-50 border border-neutral-200 text-emerald-700 rounded-xl transition-colors"
+                      title="نمایش مستقیم خودرو در صفحه جدید"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" />
+                    </a>
                     <button
                       onClick={() => handleEditModel(model)}
                       className="p-2 bg-white hover:bg-neutral-200 border border-neutral-200 text-neutral-700 rounded-xl text-xs font-bold transition-colors flex items-center gap-1"
@@ -452,6 +468,15 @@ export const AdminCarsTab: React.FC = () => {
                 <div className="pt-4 mt-4 border-t border-neutral-100 flex items-center justify-between">
                   <span className="text-[10px] text-neutral-400 font-mono">شناسه: {brand.id}</span>
                   <div className="flex items-center gap-1.5">
+                    <a
+                      href={`/brand/${encodeURIComponent(brand.slug || brand.id)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="p-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-xl transition-colors"
+                      title="نمایش مستقیم برند در صفحه جدید"
+                    >
+                      <ExternalLink className="w-4 h-4" />
+                    </a>
                     <button
                       onClick={() => handleEditBrand(brand)}
                       className="px-3 py-1.5 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 rounded-xl text-xs font-bold flex items-center gap-1 transition-colors"
@@ -476,8 +501,8 @@ export const AdminCarsTab: React.FC = () => {
 
       {/* ================= MODAL: ADD / EDIT BRAND ================= */}
       {isBrandModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white rounded-3xl border border-neutral-200 max-w-xl w-full p-6 shadow-2xl space-y-5">
+        <div className="fixed inset-0 z-[220] bg-black/60 backdrop-blur-xs flex items-start justify-center px-3 sm:px-4 pt-4 sm:pt-8 pb-8 overflow-y-auto">
+          <div className="bg-white rounded-3xl border border-neutral-200 max-w-4xl w-full p-6 shadow-2xl space-y-5 max-h-[calc(100vh-3rem)] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-neutral-100 pb-3">
               <h3 className="font-black text-base text-neutral-900 flex items-center gap-2">
                 <Building2 className="w-5 h-5 text-red-600" />
@@ -551,16 +576,46 @@ export const AdminCarsTab: React.FC = () => {
                 helperText="لوگوی بارگذاری‌شده در منوها، صفحه برند و هدر فروشگاه نمایش داده می‌شود."
               />
 
+              <ImageUploadInput
+                label="تصویر Hero صفحه برند:"
+                value={brandForm.heroImage || ''}
+                onChange={url => setBrandForm({ ...brandForm, heroImage: url })}
+                presetCategory="banners"
+                aspectRatio="banner"
+                placeholder="تصویر عریض برند..."
+                helperText="در بالای صفحه برند، پشت عنوان و معرفی برند نمایش داده می‌شود."
+              />
+
               <div>
-                <label className="block text-neutral-700 font-bold mb-1">توضیحات و معرفی برند:</label>
+                <label className="block text-neutral-700 font-bold mb-1">توضیح کوتاه بالای صفحه برند:</label>
                 <textarea
                   rows={3}
-                  value={brandForm.description}
+                  value={brandForm.description || ''}
                   onChange={e => setBrandForm({ ...brandForm, description: e.target.value })}
-                  placeholder="تاریخچه و اطلاعات مربوط به قطعات یدکی این برند در ایران..."
+                  placeholder="معرفی کوتاه برند و قطعات آن..."
                   className="w-full p-2.5 border border-neutral-300 rounded-xl"
                 />
               </div>
+
+              <div>
+                <label className="block text-neutral-700 font-bold mb-1">محتوای کامل پایین صفحه برند:</label>
+                <textarea
+                  rows={6}
+                  value={brandForm.bottomDescription || ''}
+                  onChange={e => setBrandForm({ ...brandForm, bottomDescription: e.target.value })}
+                  placeholder="راهنمای خرید، توضیحات تخصصی و محتوای سئویی که بعد از محصولات نمایش داده می‌شود..."
+                  className="w-full p-2.5 border border-neutral-300 rounded-xl"
+                />
+              </div>
+
+              <AdminEntitySeoPanel
+                entityType="brand"
+                entityId={editingBrand?.id}
+                entityTitle={brandForm.nameFa || 'برند خودرو'}
+                value={brandForm.seo}
+                images={[brandForm.logo || '', brandForm.heroImage || ''].filter(Boolean)}
+                onChange={seo => setBrandForm({ ...brandForm, seo })}
+              />
 
               <div className="flex gap-2 pt-2">
                 <button
@@ -584,8 +639,8 @@ export const AdminCarsTab: React.FC = () => {
 
       {/* ================= MODAL: ADD / EDIT MODEL ================= */}
       {isModelModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white rounded-3xl border border-neutral-200 max-w-2xl w-full p-6 shadow-2xl space-y-5 my-8">
+        <div className="fixed inset-0 z-[220] bg-black/60 backdrop-blur-xs flex items-start justify-center px-3 sm:px-4 pt-4 sm:pt-8 pb-8 overflow-y-auto">
+          <div className="bg-white rounded-3xl border border-neutral-200 max-w-2xl w-full p-6 shadow-2xl space-y-5 max-h-[calc(100vh-3rem)] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-neutral-100 pb-3">
               <h3 className="font-black text-base text-neutral-900 flex items-center gap-2">
                 <Car className="w-5 h-5 text-red-600" />

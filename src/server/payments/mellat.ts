@@ -1,4 +1,5 @@
 import soap from 'soap';
+import { getRuntimePaymentGateway, paymentRuntimeConfigured } from './runtime-config';
 import type {
   PaymentAdapter,
   PaymentStartInput,
@@ -7,15 +8,16 @@ import type {
   PaymentVerifyResult
 } from './types';
 
+const runtime = () => getRuntimePaymentGateway('mellat');
 const wsdlUrl = () =>
-  process.env.MELLAT_WSDL_URL || 'https://bpm.shaparak.ir/pgwchannel/services/pgw?wsdl';
+  runtime()?.endpoint || 'https://bpm.shaparak.ir/pgwchannel/services/pgw?wsdl';
 const paymentUrl = () =>
-  process.env.MELLAT_PAYMENT_URL || 'https://bpm.shaparak.ir/pgwchannel/startpay.mellat';
+  runtime()?.paymentUrl || 'https://bpm.shaparak.ir/pgwchannel/startpay.mellat';
 
 const config = () => ({
-  terminalId: String(process.env.MELLAT_TERMINAL_ID || '').trim(),
-  userName: String(process.env.MELLAT_USERNAME || '').trim(),
-  userPassword: String(process.env.MELLAT_PASSWORD || '').trim()
+  terminalId: String(runtime()?.terminalId || '').trim(),
+  userName: String(runtime()?.username || '').trim(),
+  userPassword: String(runtime()?.password || '').trim()
 });
 
 const extractReturn = (result: any): string => {
@@ -81,8 +83,7 @@ export const mellatAdapter: PaymentAdapter = {
   provider: 'mellat',
 
   isConfigured() {
-    const cfg = config();
-    return Boolean(cfg.terminalId && cfg.userName && cfg.userPassword);
+    return paymentRuntimeConfigured('mellat');
   },
 
   async start(input: PaymentStartInput): Promise<PaymentStartResult> {

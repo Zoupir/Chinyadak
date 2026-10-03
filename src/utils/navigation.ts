@@ -21,13 +21,22 @@ export const buildRoutePath = (view: string, param?: string): string => {
   if (view === 'invoice') return `/invoice/${encodeURIComponent(param || '')}`;
   if (view === 'compare') return '/compare';
   if (view === 'part-request') return param ? `/part-request/${encodeURIComponent(param)}` : '/part-request';
-  if (view === 'blog') return '/blog';
+  if (view === 'blog') return param ? `/blog/${encodeURIComponent(param)}` : '/blog';
   if (view === 'article') return `/article/${encodeURIComponent(param || '')}`;
   if (view === 'page') return `/page/${encodeURIComponent(param || 'about')}`;
   if (view === 'about') return '/about';
   if (view === 'guarantee') return '/guarantee';
   if (view === 'checkout') return '/checkout';
   return param ? `/${encodeURIComponent(view)}/${encodeURIComponent(param)}` : `/${encodeURIComponent(view)}`;
+};
+
+const decodePathPart = (value: string): string => {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    // Keep malformed percent sequences literal instead of breaking route rendering.
+    return value;
+  }
 };
 
 /**
@@ -37,7 +46,7 @@ export const parseRoutePath = (rawPath: string): RouteState => {
   const cleaned = rawPath.replace(/^\/+|\/+$/g, '').trim();
   if (!cleaned) return { view: 'home' };
 
-  const parts = cleaned.split('/').filter(Boolean).map(part => decodeURIComponent(part));
+  const parts = cleaned.split('/').filter(Boolean).map(decodePathPart);
   const rawView = parts[0] || 'home';
   const rawParam = parts.length > 1 ? parts.slice(1).join('/') : undefined;
 
@@ -60,7 +69,7 @@ export const parseLegacyHash = (rawHash: string): RouteState | null => {
     const [viewKey, paramVal] = cleaned.split('=');
     return {
       view: viewKey === 'brand' ? 'car-brand' : viewKey === 'model' ? 'car-model' : viewKey,
-      param: paramVal ? decodeURIComponent(paramVal) : undefined
+      param: paramVal ? decodePathPart(paramVal) : undefined
     };
   }
 
@@ -70,7 +79,7 @@ export const parseLegacyHash = (rawHash: string): RouteState | null => {
   if (view === 'model') view = 'car-model';
   return {
     view,
-    param: parts.length > 1 ? decodeURIComponent(parts.slice(1).join('/')) : undefined
+    param: parts.length > 1 ? decodePathPart(parts.slice(1).join('/')) : undefined
   };
 };
 

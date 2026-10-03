@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useStore } from '../../context/StoreContext';
-import { SitePage, PageSection } from '../../types';
+import { SitePage, PageSection, SeoEntityDraft } from '../../types';
+import { AdminEntitySeoPanel } from './AdminEntitySeoPanel';
 import { RichTextEditor } from '../common/RichTextEditor';
 import { ImageUploadInput } from '../common/ImageUploadInput';
 import { 
@@ -42,17 +43,21 @@ export const AdminPagesTab: React.FC<AdminPagesTabProps> = ({ onNavigate }) => {
   const [editingSection, setEditingSection] = useState<PageSection | null>(null);
   const [isSectionModalOpen, setIsSectionModalOpen] = useState<boolean>(false);
   const [isNewPageModalOpen, setIsNewPageModalOpen] = useState<boolean>(false);
+  const [pageSeoDrafts, setPageSeoDrafts] = useState<Record<string, SeoEntityDraft>>({});
+  const [editingPageMeta, setEditingPageMeta] = useState<SitePage | null>(null);
 
   // New Page Form
-  const [newPageForm, setNewPageForm] = useState<{ title: string; slug: string; description: string }>({
+  const [newPageForm, setNewPageForm] = useState<{ title: string; slug: string; description: string; seo?: SeoEntityDraft }>({
     title: '',
     slug: '',
-    description: ''
+    description: '',
+    seo: undefined
   });
 
   // Section Form
   const [sectionForm, setSectionForm] = useState<PageSection>({
     id: '',
+    sectionKey: '',
     title: '',
     subtitle: '',
     content: '',
@@ -61,7 +66,28 @@ export const AdminPagesTab: React.FC<AdminPagesTabProps> = ({ onNavigate }) => {
     buttonText: '',
     buttonLink: '',
     isVisible: true,
-    order: 1
+    order: 1,
+    layout: 'boxed',
+    desktopColumns: 3,
+    mobileColumns: 1,
+    fullWidth: false,
+    backgroundColor: '#ffffff',
+    textColor: '#111827',
+    borderRadiusPx: 12,
+    itemRadiusPx: 10,
+    paddingTopPx: 28,
+    paddingBottomPx: 28,
+    paddingInlinePx: 20,
+    gapPx: 16,
+    minHeightPx: 0,
+    contentAlign: 'right',
+    widthPercent: 100,
+    maxWidthPx: 1280,
+    maxItems: 0,
+    imageSizePx: 72,
+    backgroundImageOpacity: 100,
+    itemAspectRatio: 'auto',
+    items: []
   });
 
   const selectedPage = pages.find(p => p.id === selectedPageId) || pages[0];
@@ -77,6 +103,7 @@ export const AdminPagesTab: React.FC<AdminPagesTabProps> = ({ onNavigate }) => {
     const nextOrder = selectedPage.sections.length + 1;
     const newSec: PageSection = {
       id: `sec-${Date.now()}`,
+      sectionKey: `custom-${Date.now()}`,
       title: '',
       subtitle: '',
       content: '',
@@ -85,7 +112,28 @@ export const AdminPagesTab: React.FC<AdminPagesTabProps> = ({ onNavigate }) => {
       buttonText: '',
       buttonLink: 'shop',
       isVisible: true,
-      order: nextOrder
+      order: nextOrder,
+      layout: 'boxed',
+      desktopColumns: 3,
+      mobileColumns: 1,
+      fullWidth: false,
+      backgroundColor: '#ffffff',
+      textColor: '#111827',
+      borderRadiusPx: 12,
+      itemRadiusPx: 10,
+      paddingTopPx: 28,
+      paddingBottomPx: 28,
+      paddingInlinePx: 20,
+      gapPx: 16,
+      minHeightPx: 0,
+      contentAlign: 'right',
+      widthPercent: 100,
+      maxWidthPx: 1280,
+      maxItems: 0,
+      imageSizePx: 72,
+      backgroundImageOpacity: 100,
+      itemAspectRatio: 'auto',
+      items: []
     };
     setEditingSection(null);
     setSectionForm(newSec);
@@ -157,6 +205,7 @@ export const AdminPagesTab: React.FC<AdminPagesTabProps> = ({ onNavigate }) => {
       description: newPageForm.description,
       isSystem: false,
       updatedAt: new Date().toLocaleDateString('fa-IR'),
+      seo: newPageForm.seo,
       sections: [
         {
           id: `sec-${Date.now()}-1`,
@@ -172,7 +221,7 @@ export const AdminPagesTab: React.FC<AdminPagesTabProps> = ({ onNavigate }) => {
     updatePage(newPage);
     setSelectedPageId(newPage.id);
     setIsNewPageModalOpen(false);
-    setNewPageForm({ title: '', slug: '', description: '' });
+    setNewPageForm({ title: '', slug: '', description: '', seo: undefined });
   };
 
   return (
@@ -270,12 +319,24 @@ export const AdminPagesTab: React.FC<AdminPagesTabProps> = ({ onNavigate }) => {
             </div>
 
             <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setEditingPageMeta({ ...selectedPage })}
+                className="px-3 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+                title="ویرایش نام، توضیح و مشخصات برگه"
+              >
+                <Edit3 className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">تنظیمات برگه</span>
+              </button>
+
               {onNavigate && (
                 <button
                   type="button"
                   onClick={() => {
                     if (selectedPage.slug === 'home') {
                       onNavigate('home');
+                    } else if (selectedPage.slug === 'part-request') {
+                      onNavigate('part-request');
                     } else {
                       onNavigate('page', selectedPage.slug);
                     }
@@ -312,6 +373,29 @@ export const AdminPagesTab: React.FC<AdminPagesTabProps> = ({ onNavigate }) => {
               >
                 <Plus className="w-4 h-4" />
                 <span>افزودن سکشن</span>
+              </button>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <AdminEntitySeoPanel
+              entityType="page"
+              entityId={selectedPage.id}
+              entityTitle={selectedPage.title}
+              value={pageSeoDrafts[selectedPage.id] || selectedPage.seo}
+              images={selectedPage.sections.flatMap(section => [
+                section.imageUrl || '',
+                ...(section.items || []).map(item => item.imageUrl || '')
+              ]).filter(Boolean)}
+              onChange={(seo) => setPageSeoDrafts(prev => ({ ...prev, [selectedPage.id]: seo }))}
+            />
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={() => updatePage({ ...selectedPage, seo: pageSeoDrafts[selectedPage.id] || selectedPage.seo })}
+                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black cursor-pointer"
+              >
+                ذخیره سئوی برگه
               </button>
             </div>
           </div>
@@ -412,12 +496,42 @@ export const AdminPagesTab: React.FC<AdminPagesTabProps> = ({ onNavigate }) => {
         </div>
       )}
 
+      {editingPageMeta && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-xl w-full space-y-4 text-right shadow-2xl">
+            <div className="flex items-center justify-between border-b border-neutral-100 pb-3">
+              <h3 className="font-black text-base text-neutral-900">تنظیمات اصلی برگه</h3>
+              <button type="button" onClick={() => setEditingPageMeta(null)} className="text-neutral-400 hover:text-neutral-800 cursor-pointer">✕</button>
+            </div>
+            <div className="space-y-3 text-xs">
+              <label className="block">
+                <span className="block font-bold text-neutral-700 mb-1">عنوان برگه</span>
+                <input value={editingPageMeta.title} onChange={e => setEditingPageMeta({ ...editingPageMeta, title: e.target.value })} className="w-full p-2.5 border border-neutral-300 rounded-xl" />
+              </label>
+              <label className="block">
+                <span className="block font-bold text-neutral-700 mb-1">Slug / آدرس</span>
+                <input dir="ltr" value={editingPageMeta.slug} disabled={editingPageMeta.isSystem} onChange={e => setEditingPageMeta({ ...editingPageMeta, slug: e.target.value })} className="w-full p-2.5 border border-neutral-300 rounded-xl disabled:bg-neutral-100 font-mono text-left" />
+                {editingPageMeta.isSystem && <small className="text-[9px] text-neutral-400">آدرس برگه‌های سیستمی برای جلوگیری از خرابی مسیرها قفل است.</small>}
+              </label>
+              <label className="block">
+                <span className="block font-bold text-neutral-700 mb-1">توضیح برگه</span>
+                <textarea rows={3} value={editingPageMeta.description || ''} onChange={e => setEditingPageMeta({ ...editingPageMeta, description: e.target.value })} className="w-full p-2.5 border border-neutral-300 rounded-xl" />
+              </label>
+            </div>
+            <div className="flex gap-2 pt-2">
+              <button type="button" onClick={() => setEditingPageMeta(null)} className="flex-1 py-2.5 bg-neutral-100 rounded-xl font-bold text-xs cursor-pointer">انصراف</button>
+              <button type="button" onClick={() => { updatePage({ ...editingPageMeta, updatedAt: new Date().toLocaleDateString('fa-IR') }); setEditingPageMeta(null); }} className="flex-1 py-2.5 bg-blue-600 text-white rounded-xl font-bold text-xs cursor-pointer">ذخیره تنظیمات برگه</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* =========================================================================
           MODAL: EDIT OR ADD SECTION (WITH RICH EDITOR & IMAGE UPLOAD)
       ========================================================================= */}
       {isSectionModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
-          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto space-y-4 text-right shadow-2xl">
+          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-4xl w-full max-h-[90vh] overflow-y-auto space-y-4 text-right shadow-2xl">
             <div className="flex items-center justify-between pb-3 border-b border-neutral-100">
               <h3 className="font-bold text-base text-neutral-900 flex items-center gap-2">
                 <Edit3 className="w-4 h-4 text-red-600" />
@@ -503,6 +617,111 @@ export const AdminPagesTab: React.FC<AdminPagesTabProps> = ({ onNavigate }) => {
                 </div>
               )}
 
+              {/* Layout Builder */}
+              <div className="p-4 bg-neutral-50 rounded-2xl border border-neutral-200 space-y-4">
+                <div>
+                  <h4 className="font-black text-sm text-neutral-900">چیدمان و ابعاد سکشن</h4>
+                  <p className="text-[10px] text-neutral-500 mt-1">مشابه یک Section Builder، عرض، ستون‌ها، فاصله‌ها، رنگ و گردی این بخش را مستقل تنظیم کنید.</p>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  <label>
+                    <span className="block text-[10px] font-bold mb-1">نوع چیدمان</span>
+                    <select value={sectionForm.layout || 'boxed'} onChange={e => setSectionForm({ ...sectionForm, layout: e.target.value as PageSection['layout'] })} className="w-full p-2 border border-neutral-300 rounded-lg bg-white">
+                      <option value="boxed">کادر استاندارد</option>
+                      <option value="full">تمام‌عرض</option>
+                      <option value="grid">شبکه‌ای</option>
+                      <option value="split">دو بخشی</option>
+                      <option value="cards">کارت‌ها</option>
+                    </select>
+                  </label>
+                  <label>
+                    <span className="block text-[10px] font-bold mb-1">ستون دسکتاپ</span>
+                    <select value={sectionForm.desktopColumns || 3} onChange={e => setSectionForm({ ...sectionForm, desktopColumns: Number(e.target.value) as any })} className="w-full p-2 border border-neutral-300 rounded-lg bg-white">
+                      {[1,2,3,4,5,6,7,8,9,10,11,12].map(n => <option key={n} value={n}>{n} ستون</option>)}
+                    </select>
+                  </label>
+                  <label>
+                    <span className="block text-[10px] font-bold mb-1">ستون موبایل</span>
+                    <select value={sectionForm.mobileColumns || 1} onChange={e => setSectionForm({ ...sectionForm, mobileColumns: Number(e.target.value) as PageSection['mobileColumns'] })} className="w-full p-2 border border-neutral-300 rounded-lg bg-white">
+                      {[1,2,3,4,5,6].map(n => <option key={n} value={n}>{n} ستون</option>)}
+                    </select>
+                  </label>
+                  <label>
+                    <span className="block text-[10px] font-bold mb-1">تراز محتوا</span>
+                    <select value={sectionForm.contentAlign || 'right'} onChange={e => setSectionForm({ ...sectionForm, contentAlign: e.target.value as any })} className="w-full p-2 border border-neutral-300 rounded-lg bg-white">
+                      <option value="right">راست</option>
+                      <option value="center">وسط</option>
+                      <option value="left">چپ</option>
+                    </select>
+                  </label>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  {[
+                    ['borderRadiusPx', 'گردی سکشن', 0, 60],
+                    ['itemRadiusPx', 'گردی آیتم‌ها', 0, 60],
+                    ['gapPx', 'فاصله آیتم‌ها', 0, 60],
+                    ['minHeightPx', 'حداقل ارتفاع', 0, 900],
+                    ['paddingTopPx', 'فاصله بالا', 0, 160],
+                    ['paddingBottomPx', 'فاصله پایین', 0, 160],
+                    ['paddingInlinePx', 'فاصله طرفین', 0, 120]
+                  ].map(([key, label, min, max]) => (
+                    <label key={String(key)}>
+                      <span className="block text-[10px] font-bold mb-1">{String(label)} (px)</span>
+                      <input
+                        type="number"
+                        min={Number(min)}
+                        max={Number(max)}
+                        value={Number((sectionForm as any)[String(key)] || 0)}
+                        onChange={e => setSectionForm({ ...sectionForm, [String(key)]: Number(e.target.value) } as PageSection)}
+                        className="w-full p-2 border border-neutral-300 rounded-lg bg-white font-mono"
+                      />
+                    </label>
+                  ))}
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                  <label>
+                    <span className="block text-[10px] font-bold mb-1">عرض سکشن (%)</span>
+                    <input type="number" min={20} max={100} value={sectionForm.widthPercent ?? 100} onChange={e => setSectionForm({ ...sectionForm, widthPercent: Number(e.target.value) })} className="w-full p-2 border border-neutral-300 rounded-lg bg-white font-mono" />
+                  </label>
+                  <label>
+                    <span className="block text-[10px] font-bold mb-1">حداکثر عرض (px)</span>
+                    <input type="number" min={0} max={2400} value={sectionForm.maxWidthPx ?? 1280} onChange={e => setSectionForm({ ...sectionForm, maxWidthPx: Number(e.target.value) })} className="w-full p-2 border border-neutral-300 rounded-lg bg-white font-mono" />
+                  </label>
+                  <label>
+                    <span className="block text-[10px] font-bold mb-1">حداکثر آیتم نمایشی</span>
+                    <input type="number" min={0} max={50} value={sectionForm.maxItems ?? 0} onChange={e => setSectionForm({ ...sectionForm, maxItems: Number(e.target.value) })} className="w-full p-2 border border-neutral-300 rounded-lg bg-white font-mono" />
+                  </label>
+                  <label>
+                    <span className="block text-[10px] font-bold mb-1">اندازه عکس/لوگو (px)</span>
+                    <input type="number" min={24} max={320} value={sectionForm.imageSizePx ?? 72} onChange={e => setSectionForm({ ...sectionForm, imageSizePx: Number(e.target.value) })} className="w-full p-2 border border-neutral-300 rounded-lg bg-white font-mono" />
+                  </label>
+                  <label>
+                    <span className="block text-[10px] font-bold mb-1">شفافیت پس‌زمینه (%)</span>
+                    <input type="number" min={0} max={100} value={sectionForm.backgroundImageOpacity ?? 100} onChange={e => setSectionForm({ ...sectionForm, backgroundImageOpacity: Number(e.target.value) })} className="w-full p-2 border border-neutral-300 rounded-lg bg-white font-mono" />
+                  </label>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <label className="flex items-center justify-between gap-3 p-3 rounded-xl bg-white border border-neutral-200">
+                    <span className="font-bold text-[11px]">تمام‌عرض بدون محدودیت کانتینر</span>
+                    <input type="checkbox" checked={sectionForm.fullWidth === true} onChange={e => setSectionForm({ ...sectionForm, fullWidth: e.target.checked })} className="w-4 h-4" />
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <label>
+                      <span className="block text-[10px] font-bold mb-1">رنگ پس‌زمینه</span>
+                      <input type="color" value={sectionForm.backgroundColor || '#ffffff'} onChange={e => setSectionForm({ ...sectionForm, backgroundColor: e.target.value })} className="w-full h-10 p-1 border border-neutral-300 rounded-lg bg-white" />
+                    </label>
+                    <label>
+                      <span className="block text-[10px] font-bold mb-1">رنگ متن</span>
+                      <input type="color" value={sectionForm.textColor || '#111827'} onChange={e => setSectionForm({ ...sectionForm, textColor: e.target.value })} className="w-full h-10 p-1 border border-neutral-300 rounded-lg bg-white" />
+                    </label>
+                  </div>
+                </div>
+              </div>
+
               {/* Rich Content Editor */}
               <RichTextEditor
                 label="متن کامل و محتوای تشریحی سکشن (ویرایشگر پیشرفته):"
@@ -511,6 +730,75 @@ export const AdminPagesTab: React.FC<AdminPagesTabProps> = ({ onNavigate }) => {
                 rows={5}
                 placeholder="توضیحات تکمیلی، مشخصات، ویژگی‌ها و راهنماها..."
               />
+
+              {/* Repeatable items */}
+              <div className="p-4 bg-neutral-50 rounded-2xl border border-neutral-200 space-y-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <h4 className="font-black text-sm text-neutral-900">آیتم‌های داخل سکشن</h4>
+                    <p className="text-[10px] text-neutral-500 mt-1">برای نظرات مشتریان، بنرهای چندتایی، مزایا، کارت‌ها و هر محتوای تکرارشونده.</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const items = [...(sectionForm.items || [])];
+                      items.push({ id: `item-${Date.now()}`, title: '', subtitle: '', content: '', imageUrl: '', link: '', buttonText: '', isVisible: true, order: items.length + 1 });
+                      setSectionForm({ ...sectionForm, items });
+                    }}
+                    className="px-3 py-2 bg-neutral-900 text-white rounded-xl font-bold text-[11px] flex items-center gap-1"
+                  >
+                    <Plus className="w-3.5 h-3.5" /> افزودن آیتم
+                  </button>
+                </div>
+
+                {(sectionForm.items || []).length === 0 && (
+                  <div className="p-4 border border-dashed border-neutral-300 rounded-xl text-center text-[10px] text-neutral-500">هنوز آیتمی اضافه نشده است.</div>
+                )}
+
+                <div className="space-y-3">
+                  {(sectionForm.items || []).map((item, itemIndex) => (
+                    <div key={item.id} className="p-3 bg-white rounded-xl border border-neutral-200 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <strong className="text-[11px]">آیتم {itemIndex + 1}</strong>
+                        <div className="flex items-center gap-1">
+                          <button type="button" disabled={itemIndex === 0} onClick={() => {
+                            const items = [...(sectionForm.items || [])];
+                            [items[itemIndex - 1], items[itemIndex]] = [items[itemIndex], items[itemIndex - 1]];
+                            setSectionForm({ ...sectionForm, items: items.map((x,i) => ({ ...x, order: i + 1 })) });
+                          }} className="p-1.5 text-neutral-500 hover:bg-neutral-100 rounded-lg disabled:opacity-30 cursor-pointer" title="انتقال بالا"><ArrowUp className="w-3.5 h-3.5" /></button>
+                          <button type="button" disabled={itemIndex === (sectionForm.items || []).length - 1} onClick={() => {
+                            const items = [...(sectionForm.items || [])];
+                            [items[itemIndex + 1], items[itemIndex]] = [items[itemIndex], items[itemIndex + 1]];
+                            setSectionForm({ ...sectionForm, items: items.map((x,i) => ({ ...x, order: i + 1 })) });
+                          }} className="p-1.5 text-neutral-500 hover:bg-neutral-100 rounded-lg disabled:opacity-30 cursor-pointer" title="انتقال پایین"><ArrowDown className="w-3.5 h-3.5" /></button>
+                          <button
+                            type="button"
+                            onClick={() => setSectionForm({ ...sectionForm, items: (sectionForm.items || []).filter(x => x.id !== item.id) })}
+                            className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg cursor-pointer"
+                            title="حذف آیتم"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <input value={item.title || ''} onChange={e => setSectionForm({ ...sectionForm, items: (sectionForm.items || []).map(x => x.id === item.id ? { ...x, title: e.target.value } : x) })} placeholder="عنوان / نام مشتری" className="p-2 border border-neutral-300 rounded-lg" />
+                        <input value={item.subtitle || ''} onChange={e => setSectionForm({ ...sectionForm, items: (sectionForm.items || []).map(x => x.id === item.id ? { ...x, subtitle: e.target.value } : x) })} placeholder="زیرعنوان / نقش مشتری" className="p-2 border border-neutral-300 rounded-lg" />
+                        <input value={item.buttonText || ''} onChange={e => setSectionForm({ ...sectionForm, items: (sectionForm.items || []).map(x => x.id === item.id ? { ...x, buttonText: e.target.value } : x) })} placeholder="متن دکمه آیتم" className="p-2 border border-neutral-300 rounded-lg" />
+                        <input value={item.link || ''} onChange={e => setSectionForm({ ...sectionForm, items: (sectionForm.items || []).map(x => x.id === item.id ? { ...x, link: e.target.value } : x) })} placeholder="لینک مقصد (اختیاری)" className="p-2 border border-neutral-300 rounded-lg text-left" dir="ltr" />
+                      </div>
+                      <ImageUploadInput
+                        label="تصویر / بنر این آیتم"
+                        value={item.imageUrl || ''}
+                        onChange={(url) => setSectionForm({ ...sectionForm, items: (sectionForm.items || []).map(x => x.id === item.id ? { ...x, imageUrl: url } : x) })}
+                        aspectRatio="banner"
+                        presetCategory="banners"
+                      />
+                      <textarea value={item.content || ''} onChange={e => setSectionForm({ ...sectionForm, items: (sectionForm.items || []).map(x => x.id === item.id ? { ...x, content: e.target.value } : x) })} rows={2} placeholder="متن آیتم / متن نظر مشتری / توضیح بنر" className="w-full p-2 border border-neutral-300 rounded-lg" />
+                    </div>
+                  ))}
+                </div>
+              </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
                 <div>
@@ -573,7 +861,7 @@ export const AdminPagesTab: React.FC<AdminPagesTabProps> = ({ onNavigate }) => {
       ========================================================================= */}
       {isNewPageModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
-          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full space-y-4 text-right shadow-2xl">
+          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-3xl w-full max-h-[90vh] overflow-y-auto space-y-4 text-right shadow-2xl">
             <div className="flex items-center justify-between pb-3 border-b border-neutral-100">
               <h3 className="font-bold text-base text-neutral-900">ایجاد برگه اختصاصی جدید</h3>
               <button onClick={() => setIsNewPageModalOpen(false)} className="text-neutral-400 hover:text-neutral-700">✕</button>
@@ -614,6 +902,14 @@ export const AdminPagesTab: React.FC<AdminPagesTabProps> = ({ onNavigate }) => {
                   className="w-full p-2.5 border border-neutral-300 rounded-xl"
                 />
               </div>
+
+              <AdminEntitySeoPanel
+                entityType="page"
+                entityTitle={newPageForm.title}
+                value={newPageForm.seo}
+                images={[]}
+                onChange={(seo) => setNewPageForm({ ...newPageForm, seo })}
+              />
 
               <div className="flex gap-2 pt-3">
                 <button

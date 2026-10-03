@@ -594,7 +594,7 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderCompleted, on
                 type="text"
                 value={couponCode}
                 onChange={e => setCouponCode(e.target.value)}
-                placeholder="کد تخفیف (مثال: CHINPART)"
+                placeholder="کد تخفیف را وارد کنید"
                 className="flex-1 text-xs p-2.5 border border-neutral-300 rounded-xl focus:border-red-600 focus:outline-hidden font-mono uppercase"
               />
               <button
@@ -620,7 +620,7 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderCompleted, on
                       </div>
                       <div>
                         <div className="flex items-center gap-1.5">
-                          <h4 className="font-bold text-xs text-neutral-900">باشگاه وفاداری چین‌پارت</h4>
+                          <h4 className="font-bold text-xs text-neutral-900">باشگاه مشتریان یدک استور</h4>
                           <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${tierInfo.badgeClass}`}>
                             {tierInfo.title}
                           </span>

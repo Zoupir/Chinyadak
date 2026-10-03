@@ -23,7 +23,7 @@ import {
 } from 'lucide-react';
 
 export const AdminSlidersTab: React.FC = () => {
-  const { sliders, addSlider, updateSlider, deleteSlider, reorderSliders } = useStore();
+  const { sliders, addSlider, updateSlider, deleteSlider, reorderSliders, settings, updateSettings } = useStore();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingSlide, setEditingSlide] = useState<SliderItem | null>(null);
@@ -33,6 +33,7 @@ export const AdminSlidersTab: React.FC = () => {
   const [subtitle, setSubtitle] = useState('');
   const [tag, setTag] = useState('');
   const [imageUrl, setImageUrl] = useState('');
+  const [imageMode, setImageMode] = useState<NonNullable<SliderItem['imageMode']>>('cover');
   const [link, setLink] = useState('shop');
   const [buttonText, setButtonText] = useState('مشاهده و خرید قطعات');
   const [isActive, setIsActive] = useState(true);
@@ -56,6 +57,7 @@ export const AdminSlidersTab: React.FC = () => {
     setSubtitle('');
     setTag('پیشنهاد ویژه');
     setImageUrl('https://images.unsplash.com/photo-1617788138017-80ad40651399?w=1600&auto=format&fit=crop&q=80');
+    setImageMode('cover');
     setLink('shop');
     setButtonText('مشاهده قطعات');
     setIsActive(true);
@@ -81,6 +83,7 @@ export const AdminSlidersTab: React.FC = () => {
     setSubtitle(slide.subtitle);
     setTag(slide.tag || '');
     setImageUrl(slide.imageUrl);
+    setImageMode(slide.imageMode || 'cover');
     setLink(slide.link);
     setButtonText(slide.buttonText);
     setIsActive(slide.isActive);
@@ -109,6 +112,7 @@ export const AdminSlidersTab: React.FC = () => {
       subtitle,
       tag,
       imageUrl,
+      imageMode,
       link,
       buttonText,
       isActive,
@@ -180,6 +184,74 @@ export const AdminSlidersTab: React.FC = () => {
           <Plus className="w-4 h-4" />
           <span>ساخت اسلاید جدید</span>
         </button>
+      </div>
+
+      {/* Global carousel behavior */}
+      <div className="rounded-2xl border border-blue-200 bg-blue-50/30 p-4 sm:p-5 space-y-4">
+        <div>
+          <h3 className="font-black text-sm text-neutral-900 flex items-center gap-2">
+            <SlidersHorizontal className="w-4 h-4 text-blue-600" />
+            کنترل حرکت و ناوبری اسلایدر
+          </h3>
+          <p className="text-[10px] text-neutral-500 mt-1">این تنظیمات روی اسلایدر Hero صفحه اصلی اعمال می‌شود و مستقل از محتوای هر اسلاید است.</p>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+          <label className="space-y-1">
+            <span className="font-bold text-neutral-700">کنترل تعویض اسلاید</span>
+            <select
+              value={settings.heroSliderNavigation || 'dots'}
+              onChange={e => updateSettings({ heroSliderNavigation: e.target.value as 'dots' | 'arrows' | 'both' | 'none' })}
+              className="w-full p-2.5 border border-neutral-300 rounded-xl bg-white"
+            >
+              <option value="dots">نقطه‌ها</option>
+              <option value="arrows">فلش‌ها</option>
+              <option value="both">فلش + نقطه</option>
+              <option value="none">بدون کنترل</option>
+            </select>
+          </label>
+          <label className="space-y-1">
+            <span className="font-bold text-neutral-700">انیمیشن</span>
+            <select
+              value={settings.heroSliderAnimation || 'fade'}
+              onChange={e => updateSettings({ heroSliderAnimation: e.target.value as 'fade' | 'slide' | 'zoom' })}
+              className="w-full p-2.5 border border-neutral-300 rounded-xl bg-white"
+            >
+              <option value="fade">Fade نرم</option>
+              <option value="slide">Slide</option>
+              <option value="zoom">Zoom نرم</option>
+            </select>
+          </label>
+          <label className="space-y-1">
+            <span className="font-bold text-neutral-700">زمان تعویض (میلی‌ثانیه)</span>
+            <input
+              type="number"
+              min={1500}
+              max={30000}
+              step={500}
+              value={settings.heroSliderAutoplayMs || 6500}
+              onChange={e => updateSettings({ heroSliderAutoplayMs: Math.max(1500, Number(e.target.value) || 6500) })}
+              className="w-full p-2.5 border border-neutral-300 rounded-xl bg-white font-mono"
+            />
+          </label>
+          <div className="grid grid-cols-1 gap-2">
+            <label className="flex items-center justify-between gap-2 p-2.5 border border-neutral-200 rounded-xl bg-white">
+              <span className="font-bold text-neutral-700">توقف با Hover</span>
+              <input
+                type="checkbox"
+                checked={settings.heroSliderPauseOnHover !== false}
+                onChange={e => updateSettings({ heroSliderPauseOnHover: e.target.checked })}
+              />
+            </label>
+            <label className="flex items-center justify-between gap-2 p-2.5 border border-neutral-200 rounded-xl bg-white">
+              <span className="font-bold text-neutral-700">تکرار پیوسته</span>
+              <input
+                type="checkbox"
+                checked={settings.heroSliderLoop !== false}
+                onChange={e => updateSettings({ heroSliderLoop: e.target.checked })}
+              />
+            </label>
+          </div>
+        </div>
       </div>
 
       {/* Sliders List */}
@@ -403,6 +475,19 @@ export const AdminSlidersTab: React.FC = () => {
                 helperText="تصویر افقی با نسبت عریض جهت نمایش چشم‌نواز در اسلایدر هدر"
               />
 
+              <label className="block mt-3">
+                <span className="block text-xs font-bold mb-1.5">نحوه نمایش تصویر اسلاید</span>
+                <select value={imageMode} onChange={event => setImageMode(event.target.value as NonNullable<SliderItem['imageMode']>)} className="w-full p-2.5 border border-neutral-300 rounded-xl bg-white text-xs">
+                  <option value="cover">پوشش کامل کادر (با برش متناسب)</option>
+                  <option value="contain">نمایش کامل بدون برش</option>
+                  <option value="stretch">کشیده‌شدن اجباری تا کادر</option>
+                  <option value="original">اندازه اصلی تصویر</option>
+                  <option value="repeat">تکرار تصویر</option>
+                  <option value="repeat-x">تکرار افقی</option>
+                  <option value="repeat-y">تکرار عمودی</option>
+                </select>
+              </label>
+
               {/* Color & Gradient Settings */}
               <div className="p-4 bg-neutral-50 rounded-2xl border border-neutral-200 space-y-3">
                 <div className="flex items-center justify-between">
@@ -544,6 +629,7 @@ export const AdminSlidersTab: React.FC = () => {
                       src={imageUrl} 
                       alt="" 
                       className="absolute inset-0 w-full h-full object-cover" 
+                      style={{ objectFit: imageMode === 'contain' ? 'contain' : imageMode === 'stretch' ? 'fill' : imageMode === 'original' ? 'none' : 'cover' }}
                     />
                   )}
                   {gradientOverlay && (

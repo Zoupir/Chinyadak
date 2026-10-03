@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { useStore } from '../../context/StoreContext';
 import { FooterBadgeItem, FooterFeatureItem } from '../../types';
+import { RichTextContent } from '../common/RichTextContent';
 
 interface FooterProps {
   onNavigate: (view: string, param?: string) => void;
@@ -25,6 +26,8 @@ interface FooterProps {
 
 export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenAuthModal }) => {
   const { brands, categories, settings, adminAuth } = useStore();
+
+  const renderCopyright = (text: string) => <RichTextContent content={text} inline className="inline" />;
 
   const handleLinkClick = (url: string) => {
     if (!url) return;
@@ -82,30 +85,142 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenAuthModal }) =
     { id: 'f4', title: 'مشاوره تخصصی قبل از خرید', description: 'بررسی دقیق شماره شاسی VIN توسط مهندسین فنی', icon: 'Headphones' }
   ];
 
-  const columns = settings.footerColumns || [
+  const baseColumns = settings.footerColumns || [
     {
       id: 'fcol-1',
-      title: 'راهنمای خرید و قوانین',
+      title: 'حساب کاربری',
       links: [
-        { id: 'l1', title: 'درباره چین‌پارت پرو', url: 'page:about' },
-        { id: 'l2', title: 'ضمانت اصالت و شرایط بازگشت کالا', url: 'page:guarantee' },
-        { id: 'l3', title: 'پیگیری وضعیت سفارش و مرسوله', url: 'tracking' },
-        { id: 'l4', title: 'استعلام قطعات کم‌یاب و وارداتی', url: 'part-request' }
+        { id: 'l1', title: 'داشبورد حساب من', url: 'account' },
+        { id: 'l2', title: 'سفارش‌های من', url: 'account:orders' },
+        { id: 'l3', title: 'گاراژ خودروهای من', url: 'account:garage' },
+        { id: 'l4', title: 'پیگیری سفارش', url: 'tracking' }
       ]
     },
     {
       id: 'fcol-2',
-      title: 'خدمات مشتریان و همکاران',
+      title: 'کاتالوگ',
       links: [
-        { id: 'l5', title: 'آموزش فنی و عیب‌یابی خودرو', url: 'blog' },
-        { id: 'l6', title: 'مدیریت گاراژ خودروهای من', url: 'account:garage' },
-        { id: 'l7', title: 'ورود به پنل مدیریت انبار', url: 'admin' },
-        { id: 'l8', title: 'ثبت‌نام خریداران و مکانیک‌ها', url: 'account' }
+        { id: 'l5', title: 'فروشگاه قطعات', url: 'shop' },
+        { id: 'l6', title: 'خرید بر اساس خودرو', url: 'shop' },
+        { id: 'l7', title: 'محصولات پرفروش', url: 'shop:bestseller' },
+        { id: 'l8', title: 'سرویس دوره‌ای', url: 'shop:maintenance' }
+      ]
+    },
+    {
+      id: 'fcol-3',
+      title: 'راهنما',
+      links: [
+        { id: 'l9', title: 'درباره ما', url: 'page:about' },
+        { id: 'l10', title: 'مقالات و آموزش‌ها', url: 'blog' },
+        { id: 'l11', title: 'ضمانت و بازگشت کالا', url: 'page:guarantee' },
+        { id: 'l12', title: 'استعلام قطعه', url: 'part-request' }
       ]
     }
   ];
 
+  const columns = baseColumns.length >= 3
+    ? baseColumns
+    : [
+        ...baseColumns,
+        {
+          id: 'fcol-mobex-help',
+          title: 'راهنما',
+          links: [
+            { id: 'l-mobex-1', title: 'درباره ما', url: 'page:about' },
+            { id: 'l-mobex-2', title: 'مقالات و آموزش‌ها', url: 'blog' },
+            { id: 'l-mobex-3', title: 'ضمانت و بازگشت کالا', url: 'page:guarantee' },
+            { id: 'l-mobex-4', title: 'استعلام قطعه', url: 'part-request' }
+          ]
+        }
+      ];
+
   const badges: FooterBadgeItem[] = settings.footerBadges || [];
+  const bottomLinks = settings.footerBottomLinks || [
+    { id: 'footer-bottom-terms', title: 'قوانین', url: 'page:terms' },
+    { id: 'footer-bottom-privacy', title: 'حریم خصوصی', url: 'page:privacy' },
+    { id: 'footer-bottom-payment', title: 'پرداخت امن', url: 'page:payment' }
+  ];
+
+  if (settings.layoutPreset === 'marketplace-rtl' || settings.layoutPreset === 'atelier-rtl') {
+    const footerRows = (value?: number) => value && value > 0 ? `repeat(${value}, minmax(0, auto))` : 'none';
+    const footerStyle = {
+      ['--footer-cols-desktop' as any]: settings.footerGridColumnsDesktop || 5,
+      ['--footer-cols-tablet' as any]: settings.footerGridColumnsTablet || 2,
+      ['--footer-cols-mobile' as any]: settings.footerGridColumnsMobile || 2,
+      ['--footer-rows-desktop' as any]: footerRows(settings.footerGridRowsDesktop || 1),
+      ['--footer-rows-tablet' as any]: footerRows(settings.footerGridRowsTablet),
+      ['--footer-rows-mobile' as any]: footerRows(settings.footerGridRowsMobile),
+      ['--footer-logo-width' as any]: `${settings.footerLogoWidthPx || 160}px`,
+      ['--footer-heading-size' as any]: `${settings.footerHeadingFontSizePx || 14}px`,
+      ['--footer-text-size' as any]: `${settings.footerTextFontSizePx || 12}px`,
+      ['--footer-padding-top' as any]: `${settings.footerPaddingTopPx ?? 42}px`,
+      ['--footer-padding-bottom' as any]: `${settings.footerPaddingBottomPx ?? 34}px`,
+      ['--footer-bg' as any]: settings.footerBgColor || '#111111',
+      ['--footer-text' as any]: settings.footerTextColor || '#b9c0c7',
+      ['--footer-heading' as any]: settings.footerHeadingColor || '#ffffff'
+    } as React.CSSProperties;
+    const footerLogo = settings.footerLogoUrl || '';
+
+    return (
+      <footer className="marketplace-ref-footer" dir="rtl" style={footerStyle} data-bottom-align={settings.footerBottomAlign || 'center'}>
+        <div className="marketplace-ref-footer-main marketplace-ref-container">
+          <div className="marketplace-ref-footer-about">
+            <button type="button" className="marketplace-ref-footer-logo" onClick={() => onNavigate('home')}>
+              {footerLogo ? (
+                <img src={footerLogo} alt={settings.siteTitle} />
+              ) : (
+                <span>{settings.footerAboutTitle || settings.siteTitle || 'فروشگاه'}</span>
+              )}
+            </button>
+            <RichTextContent content={settings.footerAboutText || 'فروشگاه تخصصی قطعات یدکی خودرو با تمرکز بر اصالت، تطبیق دقیق قطعه و ارسال مطمئن.'} className="marketplace-ref-footer-about-copy" />
+            <div className="marketplace-ref-newsletter">
+              <input type="email" placeholder={settings.footerNewsletterPlaceholder || 'ایمیل خود را وارد کنید'} aria-label="ایمیل خبرنامه" />
+              <button type="button" aria-label="عضویت در خبرنامه">←</button>
+            </div>
+          </div>
+
+          {columns.map(column => (
+            <div key={column.id} className="marketplace-ref-footer-col">
+              <h4>{column.title}</h4>
+              {column.links.map(link => (
+                <button key={link.id} type="button" onClick={() => handleLinkClick(link.url)}>{link.title}</button>
+              ))}
+            </div>
+          ))}
+
+          <div className="marketplace-ref-footer-contact">
+            <h4>{settings.footerContactTitle || 'ارتباط با ما'}</h4>
+            {settings.address && <p><MapPin className="w-4 h-4" /><span>{settings.address}</span></p>}
+            {settings.contactPhone && <a href={`tel:${settings.contactPhone}`}><Phone className="w-4 h-4" /><span>{settings.contactPhone}</span></a>}
+            {settings.supportEmail && <a href={`mailto:${settings.supportEmail}`}><Mail className="w-4 h-4" /><span>{settings.supportEmail}</span></a>}
+            <small>{settings.footerContactSubtitle || 'پشتیبانی و مشاوره تخصصی پیش از خرید'}</small>
+          </div>
+        </div>
+
+        {settings.footerShowBadges !== false && (badges.length > 0 || settings.footerEnamadHtml) && (
+          <div className="marketplace-ref-container marketplace-ref-footer-trust flex flex-wrap items-center justify-center gap-4 py-5">
+            {badges.map(badge => badge.htmlCode
+              ? <div key={badge.id} dangerouslySetInnerHTML={{ __html: badge.htmlCode }} />
+              : <a key={badge.id} href={badge.linkUrl || '#'} target={badge.linkUrl && badge.linkUrl !== '#' ? '_blank' : undefined} rel="noopener noreferrer" title={badge.title}>
+                  {badge.imageUrl ? <img src={badge.imageUrl} alt={badge.title} className="max-h-20 max-w-32 object-contain" /> : <span>{badge.title}</span>}
+                </a>)}
+            {settings.footerEnamadHtml && <div className="footer-enamad" dangerouslySetInnerHTML={{ __html: settings.footerEnamadHtml }} />}
+          </div>
+        )}
+
+        <div className="marketplace-ref-footer-bottom">
+          <div className="marketplace-ref-container">
+            <span className="marketplace-ref-footer-copyright">{renderCopyright(settings.footerCopyrightText || `© ${new Date().getFullYear()} تمامی حقوق محفوظ است.`)}</span>
+            <div className="marketplace-ref-footer-bottom-links">
+              {bottomLinks.map(link => (
+                <button key={link.id} type="button" onClick={() => handleLinkClick(link.url)}>{link.title}</button>
+              ))}
+            </div>
+          </div>
+        </div>
+      </footer>
+    );
+  }
 
   return (
     <footer className="bg-neutral-900 text-neutral-300 mt-20 pt-16 pb-24 md:pb-12 border-t-4 border-red-600 relative">
@@ -169,7 +284,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenAuthModal }) =
                 </div>
               )}
               <span className="font-black text-lg text-white">
-                {settings.footerAboutTitle || settings.siteTitle || 'چین‌پارت پرو'}
+                {settings.footerAboutTitle || settings.siteTitle || 'فروشگاه'}
               </span>
             </div>
 
@@ -335,7 +450,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenAuthModal }) =
         ========================================================================= */}
         <div className="pt-8 flex flex-col md:flex-row items-center justify-between text-xs text-neutral-500 gap-4">
           <p>
-            {settings.footerCopyrightText || `© ${new Date().toLocaleDateString('fa-IR')} چین‌پارت پرو. تمامی حقوق محفوظ است.`}
+            {settings.footerCopyrightText || `© ${new Date().toLocaleDateString('fa-IR')} ${settings.siteTitle || 'فروشگاه'}. تمامی حقوق محفوظ است.`}
           </p>
           <div className="flex items-center gap-4 text-[11px]">
             <span className="flex items-center gap-1 text-emerald-500">

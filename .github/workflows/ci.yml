@@ -23,6 +23,9 @@ jobs:
       - name: Type check
         run: npm run lint
 
+      - name: Validate one-step updater
+        run: bash -n update.sh
+
       - name: Production build
         env:
           DB_HOST: localhost
@@ -99,6 +102,15 @@ jobs:
 
       - name: Seed database
         run: npm run db:seed
+
+      - name: Import Lucano L8 source references
+        run: ./node_modules/.bin/tsx scripts/seed-lucano-l8-reference.ts
+
+      - name: Verify Lucano L8 reference import is idempotent
+        shell: bash
+        run: |
+          ./node_modules/.bin/tsx scripts/seed-lucano-l8-reference.ts | tee /tmp/lucano-l8-reference-second-run.log
+          grep -q "622 records read, 0 new records added" /tmp/lucano-l8-reference-second-run.log
 
       - name: Production build
         run: npm run build

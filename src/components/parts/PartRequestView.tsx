@@ -19,7 +19,31 @@ interface PartRequestViewProps {
 }
 
 export const PartRequestView: React.FC<PartRequestViewProps> = ({ initialQuery = '', onNavigate }) => {
-  const { brands, models, submitPartRequest, selectedVehicle } = useStore();
+  const { brands, models, submitPartRequest, selectedVehicle, pages, settings } = useStore();
+
+  const requestPage = pages.find(page => page.slug === 'part-request');
+  const section = (key: string) => requestPage?.sections.find(item => item.sectionKey === key);
+  const sectionVisible = (key: string) => section(key)?.isVisible !== false;
+  const sectionStyle = (key: string): React.CSSProperties => {
+    const item = section(key);
+    if (!item) return {};
+    return {
+      backgroundColor: item.backgroundColor || undefined,
+      color: item.textColor || undefined,
+      borderRadius: item.borderRadiusPx != null ? `${item.borderRadiusPx}px` : undefined,
+      paddingTop: item.paddingTopPx != null ? `${item.paddingTopPx}px` : undefined,
+      paddingBottom: item.paddingBottomPx != null ? `${item.paddingBottomPx}px` : undefined,
+      paddingInline: item.paddingInlinePx != null ? `${item.paddingInlinePx}px` : undefined,
+      width: item.fullWidth ? '100%' : `${Math.max(20, Math.min(100, Number(item.widthPercent ?? 100)))}%`,
+      maxWidth: item.fullWidth || item.maxWidthPx === 0 ? 'none' : `${Number(item.maxWidthPx || 896)}px`,
+      marginInline: 'auto'
+    };
+  };
+  const contactSection = section('request-contact');
+  const contactHref = contactSection?.buttonLink?.startsWith('tel:')
+    ? contactSection.buttonLink
+    : `tel:${settings.contactPhone || ''}`;
+  const contactLabel = contactHref.replace(/^tel:/, '') || settings.contactPhone || 'شماره تماس تنظیم نشده';
 
   const [carBrand, setCarBrand] = useState(selectedVehicle?.brandName || 'کی‌ام‌سی (KMC)');
   const [carModel, setCarModel] = useState(selectedVehicle?.modelName || 'KMC J7');
@@ -53,18 +77,20 @@ export const PartRequestView: React.FC<PartRequestViewProps> = ({ initialQuery =
   return (
     <div className="max-w-4xl mx-auto px-4 py-10 space-y-8">
       {/* Header */}
-      <div className="text-center space-y-2">
+      {sectionVisible('request-hero') && (
+      <div className="text-center space-y-2" data-section-key="request-hero" style={sectionStyle('request-hero')}>
         <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-red-50 text-red-600 text-xs font-bold border border-red-200">
           <Sparkles className="w-3.5 h-3.5" />
-          <span>سفارش اختصاصی و استعلام فوری قطعات نایاب و کمیاب</span>
+          <span>{section('request-hero')?.badge || 'سفارش اختصاصی و استعلام فوری قطعات نایاب و کمیاب'}</span>
         </div>
         <h1 className="text-2xl sm:text-3xl font-black text-neutral-900">
-          استعلام و واردات قطعه کمیاب خودروهای چینی
+          {section('request-hero')?.title || 'استعلام و واردات قطعه کمیاب خودروهای چینی'}
         </h1>
         <p className="text-xs sm:text-sm text-neutral-500 max-w-xl mx-auto">
-          اگر قطعه مورد نظر شما در بازار یا سایت موجود نیست، با تکمیل فرم زیر کارشناسان تامین قطعات چین‌پارت مستقیماً از انبار مرکزی کارخانه یا گمرک استعلام قیمت و زمان تحویل را به شما اعلام می‌کنند.
+          {section('request-hero')?.subtitle || 'اگر قطعه مورد نظر شما در سایت موجود نیست، مشخصات خودرو و قطعه را ارسال کنید تا واحد تامین بررسی کند.'}
         </p>
       </div>
+      )}
 
       {submitted ? (
         <div className="bg-white rounded-3xl border border-neutral-200 p-8 text-center space-y-4 shadow-md">
@@ -93,7 +119,7 @@ export const PartRequestView: React.FC<PartRequestViewProps> = ({ initialQuery =
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           {/* Main Form */}
-          <div className="lg:col-span-8 bg-white rounded-3xl border border-neutral-200 p-6 sm:p-8 shadow-xs">
+          <div className="lg:col-span-8 bg-white rounded-3xl border border-neutral-200 p-6 sm:p-8 shadow-xs" data-section-key="request-form" style={sectionStyle('request-form')}>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
@@ -238,46 +264,44 @@ export const PartRequestView: React.FC<PartRequestViewProps> = ({ initialQuery =
 
           {/* Info Sidebox */}
           <div className="lg:col-span-4 space-y-4">
-            <div className="bg-neutral-900 text-white rounded-3xl p-6 space-y-4 shadow-md">
+            {sectionVisible('request-info') && (
+            <div className="bg-neutral-900 text-white rounded-3xl p-6 space-y-4 shadow-md" data-section-key="request-info" style={sectionStyle('request-info')}>
               <h3 className="font-bold text-sm flex items-center gap-2 text-red-400">
                 <Clock className="w-4 h-4" />
-                <span>زمان‌بندی پاسخگویی به استعلام:</span>
+                <span>{section('request-info')?.title || 'زمان‌بندی پاسخگویی به استعلام'}</span>
               </h3>
               <p className="text-xs text-neutral-300 leading-relaxed">
-                استعلام قطعات داخلی ظرف ۳۰ الی ۱۲۰ دقیقه و استعلام قطعات وارداتی مستقیماً از گوانگجو چین ظرف حداکثر ۲۴ ساعت به شما اعلام نرخ و زمان‌بندی می‌شود.
+                {section('request-info')?.subtitle || 'پس از بررسی موجودی و تامین‌کننده، قیمت و زمان تحویل اعلام می‌شود.'}
               </p>
 
               <div className="pt-3 border-t border-neutral-800 space-y-2 text-xs text-neutral-300">
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                  <span>تطبیق صد در صد با شماره شاسی</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                  <span>امکان پیش‌خرید با ضمانت بانکی</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                  <span>تحویل درب تعمیرگاه یا منزل</span>
-                </div>
+                {(section('request-info')?.items || []).filter(item => item.isVisible !== false).map(item => (
+                  <div key={item.id} className="flex items-start gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                    <span><strong className="block">{item.title}</strong>{item.content && <small className="block text-neutral-400 mt-0.5">{item.content}</small>}</span>
+                  </div>
+                ))}
               </div>
             </div>
+            )}
 
-            <div className="bg-white rounded-3xl border border-neutral-200 p-6 space-y-3">
+            {sectionVisible('request-contact') && (
+            <div className="bg-white rounded-3xl border border-neutral-200 p-6 space-y-3" data-section-key="request-contact" style={sectionStyle('request-contact')}>
               <h4 className="font-bold text-xs text-neutral-800 flex items-center gap-1.5">
                 <PhoneCall className="w-4 h-4 text-red-600" />
-                <span>نیاز به استعلام تلفنی فوری دارید؟</span>
+                <span>{contactSection?.title || 'نیاز به استعلام تلفنی فوری دارید؟'}</span>
               </h4>
               <p className="text-xs text-neutral-500 leading-relaxed">
-                می‌توانید مستقیماً با کارشناسان انبار مرکزی در بازار تماس حاصل فرمایید:
+                {contactSection?.subtitle || 'می‌توانید مستقیماً با واحد تامین تماس بگیرید.'}
               </p>
               <a
-                href="tel:02188992211"
-                className="block text-center py-2.5 bg-neutral-100 hover:bg-neutral-200 text-neutral-900 rounded-xl text-xs font-mono font-bold transition-colors"
+                href={contactHref}
+                className="block text-center py-2.5 bg-neutral-100 hover:bg-neutral-200 text-neutral-900 rounded-xl text-xs font-mono font-bold transition-colors cursor-pointer"
               >
-                ۰۲۱-۸۸۹۹۲۲۱۱ (داخلی ۱۰۴)
+                {contactSection?.buttonText || 'تماس با واحد تامین'} — {contactLabel}
               </a>
             </div>
+            )}
           </div>
 
         </div>

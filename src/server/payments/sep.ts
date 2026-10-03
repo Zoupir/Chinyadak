@@ -1,3 +1,4 @@
+import { getRuntimePaymentGateway, paymentRuntimeConfigured } from './runtime-config';
 import type {
   PaymentAdapter,
   PaymentStartInput,
@@ -6,12 +7,13 @@ import type {
   PaymentVerifyResult
 } from './types';
 
-const tokenUrl = () => process.env.SEP_TOKEN_URL || 'https://sep.shaparak.ir/onlinepg/onlinepg';
-const paymentUrl = () => process.env.SEP_PAYMENT_URL || 'https://sep.shaparak.ir/OnlinePG/SendToken';
-const verifyUrl = () => process.env.SEP_VERIFY_URL || 'https://sep.shaparak.ir/verifyTxnRandomSessionkey/ipg/VerifyTransaction';
-const reverseUrl = () => process.env.SEP_REVERSE_URL || 'https://sep.shaparak.ir/verifyTxnRandomSessionkey/ipg/ReverseTransaction';
+const config = () => getRuntimePaymentGateway('saman');
+const tokenUrl = () => config()?.endpoint || 'https://sep.shaparak.ir/onlinepg/onlinepg';
+const paymentUrl = () => config()?.paymentUrl || 'https://sep.shaparak.ir/OnlinePG/SendToken';
+const verifyUrl = () => config()?.additionalConfig?.verifyUrl || 'https://sep.shaparak.ir/verifyTxnRandomSessionkey/ipg/VerifyTransaction';
+const reverseUrl = () => config()?.additionalConfig?.reverseUrl || 'https://sep.shaparak.ir/verifyTxnRandomSessionkey/ipg/ReverseTransaction';
 
-const terminalId = (): string => String(process.env.SEP_TERMINAL_ID || '').trim();
+const terminalId = (): string => String(config()?.terminalId || '').trim();
 
 const jsonPost = async (url: string, payload: unknown): Promise<any> => {
   const controller = new AbortController();
@@ -46,7 +48,7 @@ export const sepAdapter: PaymentAdapter = {
   provider: 'saman',
 
   isConfigured() {
-    return Boolean(terminalId());
+    return paymentRuntimeConfigured('saman');
   },
 
   async start(input: PaymentStartInput): Promise<PaymentStartResult> {

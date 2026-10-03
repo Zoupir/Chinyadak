@@ -1,10 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { ArrowDown, ArrowUp, Eye, EyeOff, Plus, Save, Trash2 } from 'lucide-react';
+import { ArrowDown, ArrowUp, Eye, EyeOff, GripVertical, Plus, Save, Trash2 } from 'lucide-react';
 import { useStore } from '../../context/StoreContext';
 import type { BannerCreative, BannerPlacementConfig, BannerPlacementKey } from '../../types';
 import { BANNER_PLACEMENT_META, createBannerCreative, resolveBannerPlacements } from '../../utils/bannerPlacements';
 import { ImageUploadInput } from '../common/ImageUploadInput';
 import { LinkDestinationPicker } from '../common/LinkDestinationPicker';
+
+const BANNER_ITEM_DRAG_TYPE = 'application/x-chinyadak-banner-item';
 
 const ASPECT_RATIOS = [
   ['16 / 4', 'عریض ۴:۱'], ['16 / 5', 'عریض ۳.۲:۱'], ['16 / 7', 'افقی ۱۶:۷'],
@@ -126,11 +128,27 @@ export const AdminBannerPlacements: React.FC = () => {
           {!selected.items.length && <div className="p-10 border-2 border-dashed rounded-2xl text-center text-xs text-neutral-400">برای این جایگاه هنوز بنری تعریف نشده است.</div>}
           <div className="space-y-4">
             {[...selected.items].sort((a,b)=>a.order-b.order).map((item,index) => (
-              <article key={item.id} draggable onDragStart={event => event.dataTransfer.setData('text/plain', item.id)}
-                onDragOver={event => event.preventDefault()}
-                onDrop={event => { event.preventDefault(); reorderItems(event.dataTransfer.getData('text/plain'), item.id); }}
-                className="rounded-2xl border border-neutral-200 overflow-hidden cursor-grab active:cursor-grabbing">
+              <article key={item.id}
+                onDragOver={event => { if (event.dataTransfer.types.includes(BANNER_ITEM_DRAG_TYPE)) event.preventDefault(); }}
+                onDrop={event => {
+                  if (!event.dataTransfer.types.includes(BANNER_ITEM_DRAG_TYPE)) return;
+                  event.preventDefault();
+                  event.stopPropagation();
+                  reorderItems(event.dataTransfer.getData(BANNER_ITEM_DRAG_TYPE), item.id);
+                }}
+                className="rounded-2xl border border-neutral-200 overflow-hidden">
                 <div className="p-3 bg-neutral-50 border-b flex items-center gap-2">
+                  <span
+                    draggable
+                    onDragStart={event => {
+                      event.stopPropagation();
+                      event.dataTransfer.effectAllowed = 'move';
+                      event.dataTransfer.setData(BANNER_ITEM_DRAG_TYPE, item.id);
+                    }}
+                    title="برای جابه‌جایی بنر بکشید"
+                    aria-label="جابه‌جایی بنر"
+                    className="cursor-grab active:cursor-grabbing touch-none text-neutral-500"
+                  ><GripVertical className="w-4 h-4" /></span>
                   <strong className="text-[10px] flex-1">بنر {index + 1}</strong>
                   <button type="button" title="انتقال به بالا" onClick={() => moveItem(item.id,-1)} className="w-8 h-8 rounded-lg bg-white border grid place-items-center"><ArrowUp className="w-3.5 h-3.5"/></button>
                   <button type="button" title="انتقال به پایین" onClick={() => moveItem(item.id,1)} className="w-8 h-8 rounded-lg bg-white border grid place-items-center"><ArrowDown className="w-3.5 h-3.5"/></button>

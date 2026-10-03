@@ -2,6 +2,8 @@ import React from 'react';
 import { useStore } from '../../context/StoreContext';
 import { ProductCard } from '../product/ProductCard';
 import { Clock, User, ArrowRight, Share2, HelpCircle, BookOpen, Layers } from 'lucide-react';
+import { RichTextContent } from '../common/RichTextContent';
+import { BlogCatalogSidebar } from './BlogCatalogSidebar';
 
 interface ArticleDetailViewProps {
   articleId: string;
@@ -9,7 +11,7 @@ interface ArticleDetailViewProps {
 }
 
 export const ArticleDetailView: React.FC<ArticleDetailViewProps> = ({ articleId, onNavigate }) => {
-  const { products, articles } = useStore();
+  const { products, articles, articleCategories, categories } = useStore();
   const article = articles.find(a => a.id === articleId || a.slug === articleId);
 
   if (!article) {
@@ -68,11 +70,11 @@ export const ArticleDetailView: React.FC<ArticleDetailViewProps> = ({ articleId,
       {/* Article Content */}
       <div className="bg-white rounded-3xl border border-neutral-200 p-6 sm:p-10 shadow-xs space-y-6 text-sm text-neutral-700 leading-relaxed">
         <div className="p-4 bg-neutral-50 rounded-2xl border border-neutral-200 text-neutral-800 font-semibold text-xs leading-relaxed">
-          {article.summary}
+          <RichTextContent content={article.summary} />
         </div>
 
         <div className="space-y-4 whitespace-pre-line text-neutral-800 text-xs sm:text-sm">
-          {article.content}
+          <RichTextContent content={article.content} className="space-y-4" />
         </div>
       </div>
 
@@ -112,6 +114,8 @@ export const ArticleDetailView: React.FC<ArticleDetailViewProps> = ({ articleId,
           </div>
         </section>
       )}
+      </main>
+      <BlogCatalogSidebar articleCategories={articleCategories} categories={categories} onNavigate={onNavigate} />
     </div>
   );
 };

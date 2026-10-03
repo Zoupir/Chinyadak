@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useStore } from '../../context/StoreContext';
 import { BookOpen, Clock, User, ArrowLeft, Layers, Sparkles, Filter, Wrench, ShieldCheck } from 'lucide-react';
+import { BlogCatalogSidebar } from './BlogCatalogSidebar';
 
 interface BlogViewProps {
   onNavigate: (view: string, param?: string) => void;
@@ -8,7 +9,7 @@ interface BlogViewProps {
 }
 
 export const BlogView: React.FC<BlogViewProps> = ({ onNavigate, initialCategory }) => {
-  const { articles, articleCategories } = useStore();
+  const { articles, articleCategories, categories } = useStore();
 
   const resolvedCategory = useMemo(() => {
     if (!initialCategory) return 'all';
@@ -31,7 +32,7 @@ export const BlogView: React.FC<BlogViewProps> = ({ onNavigate, initialCategory 
   const activeCategory = articleCategories.find(c => c.id === selectedCategory || c.name === selectedCategory);
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-10 space-y-10 text-right">
+    <div className="max-w-7xl mx-auto px-4 py-10 grid grid-cols-1 lg:grid-cols-4 gap-6 text-right">\n      <main className="lg:col-span-3 space-y-10">
       {/* Blog Hero */}
       <div className="text-center space-y-3 max-w-2xl mx-auto">
         <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-red-50 text-red-600 text-xs font-bold border border-red-200">
@@ -172,6 +173,8 @@ export const BlogView: React.FC<BlogViewProps> = ({ onNavigate, initialCategory 
           </button>
         </div>
       )}
+      </main>
+      <BlogCatalogSidebar articleCategories={articleCategories} categories={categories} onNavigate={onNavigate} />
     </div>
   );
 };

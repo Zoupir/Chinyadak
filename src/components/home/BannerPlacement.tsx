@@ -58,9 +58,14 @@ export const BannerPlacement: React.FC<BannerPlacementProps> = ({ placement, lay
   if (!placement.isVisible || (!items.length && !showEmptyState)) return null;
   const columns = Math.max(1, Math.min(4, Number(placement.desktopColumns || 1)));
   const mobileColumns = Math.max(1, Math.min(2, Number(placement.mobileColumns || 1)));
+  const isFullWidth = placement.widthMode === 'full';
   const containerStyle: React.CSSProperties = {
-    width: placement.widthMode === 'full' ? '100%' : 'min(100%, 1280px)',
-    marginInline: 'auto',
+    width: isFullWidth ? '100vw' : 'min(100%, 1280px)',
+    maxWidth: isFullWidth ? '100vw' : undefined,
+    position: isFullWidth ? 'relative' : undefined,
+    left: isFullWidth ? '50%' : undefined,
+    transform: isFullWidth ? 'translateX(-50%)' : undefined,
+    marginInline: isFullWidth ? 0 : 'auto',
     order: layoutOrder,
     ['--banner-gap' as any]: `${Math.max(0, Math.min(32, Number(placement.gapPx || 0)))}px`,
     ['--banner-desktop-columns' as any]: String(columns),

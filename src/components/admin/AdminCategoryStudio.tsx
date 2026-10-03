@@ -255,7 +255,8 @@ export const AdminCategoryStudio:React.FC = ()=>{
             </section>
 
             <section className="space-y-4">
-              <ImageUploadInput label="تصویر Hero دسته‌بندی" value={(selectedNode as any).imageUrl||''} onChange={url=>patchSelected({imageUrl:url})} aspectRatio="banner" presetCategory="banners"/>
+              <ImageUploadInput label="تصویر عریض نوار دسته‌بندی (Hero)" value={(selectedNode as any).heroImageUrl||''} onChange={url=>patchSelected({heroImageUrl:url})} aspectRatio="banner" presetCategory="banners"/>
+              <ImageUploadInput label="آیکن کنار نام دسته‌بندی" value={(selectedNode as any).iconUrl||(selectedNode as any).imageUrl||''} onChange={url=>patchSelected({iconUrl:url})} aspectRatio="square" presetCategory="categories"/>
               <button onClick={()=>setIconPickerOpen(true)} className="w-full p-3 rounded-xl border flex items-center justify-between">
                 <span className="flex items-center gap-2"><IconRenderer icon={(selectedNode as any).icon} className="w-5 h-5"/><strong className="text-xs">آیکن دسته‌بندی</strong></span>
                 <span className="text-[9px] text-blue-600">{iconClassFor((selectedNode as any).icon)||'انتخاب'}</span>
@@ -273,7 +274,7 @@ export const AdminCategoryStudio:React.FC = ()=>{
               entityId={entityId}
               entityTitle={selectedNode.nameFa}
               value={seoValue}
-              images={[(selectedNode as any).imageUrl||'',(selectedNode as any).iconUrl||''].filter(Boolean)}
+              images={[(selectedNode as any).heroImageUrl||'',(selectedNode as any).iconUrl||''].filter(Boolean)}
               onChange={seo=>patchSelected({seo})}
             />
           </div>

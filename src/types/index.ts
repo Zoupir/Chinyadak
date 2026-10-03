@@ -63,6 +63,7 @@ export interface CategoryChild {
   icon?: string;
   iconUrl?: string;
   imageUrl?: string;
+  heroImageUrl?: string;
   description?: string;
   bottomDescription?: string;
   seo?: SeoEntityDraft;
@@ -77,6 +78,7 @@ export interface Category {
   icon: string;
   iconUrl?: string;
   imageUrl?: string;
+  heroImageUrl?: string;
   description: string;
   bottomDescription?: string;
   heroTitle?: string;
@@ -622,6 +624,8 @@ export interface SiteSettings {
   siteTitle: string;
   siteSlogan: string;
   contactPhone: string;
+  /** Show a contact CTA instead of purchase when a product has no valid price. */
+  contactWhenNoPrice?: boolean;
   supportPhone: string;
   supportEmail: string;
   address: string;

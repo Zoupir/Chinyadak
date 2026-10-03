@@ -454,6 +454,12 @@ export const AdminThemeTab: React.FC = () => {
                 helperText="ترجیحاً تصویر مربعی PNG یا SVG"
               />
 
+              <label className="flex items-start gap-2 p-3 rounded-xl bg-orange-50 border border-orange-100 text-xs">
+                <input type="checkbox" checked={form.contactWhenNoPrice !== false}
+                  onChange={e => setForm({ ...form, contactWhenNoPrice: e.target.checked })} className="mt-0.5 accent-orange-500" />
+                <span><strong className="block">برای قیمت خالی یا صفر، دکمه تماس نمایش بده</strong>
+                  <small className="text-neutral-500">از شمارهٔ تماس اصلی زیر استفاده می‌شود؛ همان متن برای کاربر و گوگل نمایش داده می‌شود.</small></span>
+              </label>
               <div>
                 <label className="block text-neutral-700 font-bold text-xs mb-1">شماره تماس اصلی</label>
                 <input type="text" value={form.contactPhone || ''} onChange={e => setForm({ ...form, contactPhone: e.target.value })} className="w-full p-3 border border-neutral-300 rounded-xl text-xs" dir="ltr" />

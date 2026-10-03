@@ -44,6 +44,17 @@ export const AdminBannerPlacements: React.FC = () => {
     if (!selected) return;
     patchPlacement({ items: selected.items.filter(item => item.id !== id).map((item, index) => ({ ...item, order: index + 1 })) });
   };
+  const reorderItems = (fromId: string, toId: string) => {
+    if (!selected || fromId === toId) return;
+    const items = [...selected.items].sort((a, b) => a.order - b.order);
+    const from = items.findIndex(item => item.id === fromId);
+    const to = items.findIndex(item => item.id === toId);
+    if (from < 0 || to < 0) return;
+    const [dragged] = items.splice(from, 1);
+    items.splice(to, 0, dragged);
+    patchPlacement({ items: items.map((item, index) => ({ ...item, order: index + 1 })) });
+  };
+
   const moveItem = (id: string, direction: -1 | 1) => {
     if (!selected) return;
     const items = [...selected.items].sort((a, b) => a.order - b.order);
@@ -104,7 +115,10 @@ export const AdminBannerPlacements: React.FC = () => {
           {!selected.items.length && <div className="p-10 border-2 border-dashed rounded-2xl text-center text-xs text-neutral-400">برای این جایگاه هنوز بنری تعریف نشده است.</div>}
           <div className="space-y-4">
             {[...selected.items].sort((a,b)=>a.order-b.order).map((item,index) => (
-              <article key={item.id} className="rounded-2xl border border-neutral-200 overflow-hidden">
+              <article key={item.id} draggable onDragStart={event => event.dataTransfer.setData('text/plain', item.id)}
+                onDragOver={event => event.preventDefault()}
+                onDrop={event => { event.preventDefault(); reorderItems(event.dataTransfer.getData('text/plain'), item.id); }}
+                className="rounded-2xl border border-neutral-200 overflow-hidden cursor-grab active:cursor-grabbing">
                 <div className="p-3 bg-neutral-50 border-b flex items-center gap-2">
                   <strong className="text-[10px] flex-1">بنر {index + 1}</strong>
                   <button type="button" title="انتقال به بالا" onClick={() => moveItem(item.id,-1)} className="w-8 h-8 rounded-lg bg-white border grid place-items-center"><ArrowUp className="w-3.5 h-3.5"/></button>
@@ -127,8 +141,13 @@ export const AdminBannerPlacements: React.FC = () => {
                       <label className="block"><span className="block text-[9px] font-bold mb-1">تناسب تصویر</span><select value={item.imageFit} onChange={e=>patchItem(item.id,{imageFit:e.target.value as BannerCreative['imageFit']})} className="w-full p-2 border rounded-lg bg-white text-[10px]"><option value="cover">پوشش کادر با برش متناسب</option><option value="contain">نمایش کامل بدون برش</option></select></label>
                       <label className="block"><span className="block text-[9px] font-bold mb-1">تیرگی لایهٔ متن</span><input type="range" min="0" max="80" value={item.overlayOpacity} onChange={e=>patchItem(item.id,{overlayOpacity:Number(e.target.value)})} className="w-full mt-2"/></label>
                     </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <label className="block"><span className="block text-[9px] font-bold mb-1">رنگ عنوان</span><input type="color" value={item.titleColor || '#ffffff'} onChange={e=>patchItem(item.id,{titleColor:e.target.value})} className="w-full h-9 p-1 border rounded-lg" /></label>
+                      <label className="block"><span className="block text-[9px] font-bold mb-1">رنگ زیرعنوان</span><input type="color" value={item.subtitleColor || '#ffffff'} onChange={e=>patchItem(item.id,{subtitleColor:e.target.value})} className="w-full h-9 p-1 border rounded-lg" /></label>
+                      <label className="block col-span-2"><span className="block text-[9px] font-bold mb-1">موقعیت متن</span><select value={item.textAlignment} onChange={e=>patchItem(item.id,{textAlignment:e.target.value as BannerCreative['textAlignment']})} className="w-full p-2 border rounded-lg bg-white text-[10px]"><option value="right">راست</option><option value="center">وسط</option><option value="left">چپ</option></select></label>
+                    </div>
                     <div className="rounded-xl overflow-hidden border bg-neutral-100" style={{aspectRatio:selected.desktopAspectRatio}}>
-                      {item.desktopImageUrl ? <div className="relative h-full w-full"><img src={item.desktopImageUrl} alt={item.alt} className="w-full h-full" style={{objectFit:item.imageFit}}/><div className="absolute inset-0 flex flex-col justify-end p-3" style={{background:`linear-gradient(0deg,rgba(0,0,0,${item.overlayOpacity/100}),transparent 78%)`,textAlign:item.textAlignment}}><strong className="text-white text-xs">{item.title || 'پیش‌نمایش بنر'}</strong>{item.subtitle&&<span className="text-white text-[9px] mt-1">{item.subtitle}</span>}</div></div> : <div className="h-full grid place-items-center text-[10px] text-neutral-400">انتخاب تصویر برای پیش‌نمایش</div>}
+                      {item.desktopImageUrl ? <div className="relative h-full w-full"><img src={item.desktopImageUrl} alt={item.alt} className="w-full h-full" style={{objectFit:item.imageFit}}/><div className="absolute inset-0 flex flex-col justify-end p-3" style={{background:`linear-gradient(0deg,rgba(0,0,0,${item.overlayOpacity/100}),transparent 78%)`,textAlign:item.textAlignment}}><strong className="text-xs" style={{color:item.titleColor || '#fff'}}>{item.title || 'پیش‌نمایش بنر'}</strong>{item.subtitle&&<span className="text-[9px] mt-1" style={{color:item.subtitleColor || '#fff'}}>{item.subtitle}</span>}</div></div> : <div className="h-full grid place-items-center text-[10px] text-neutral-400">انتخاب تصویر برای پیش‌نمایش</div>}
                     </div>
                   </div>
                 </div>

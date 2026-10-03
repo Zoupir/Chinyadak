@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { useStore } from '../../context/StoreContext';
 import { FooterBadgeItem, FooterFeatureItem } from '../../types';
+import { RichTextContent } from '../common/RichTextContent';
 
 interface FooterProps {
   onNavigate: (view: string, param?: string) => void;
@@ -25,6 +26,8 @@ interface FooterProps {
 
 export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenAuthModal }) => {
   const { brands, categories, settings, adminAuth } = useStore();
+
+  const renderCopyright = (text: string) => <RichTextContent content={text} inline className="inline" />;
 
   const handleLinkClick = (url: string) => {
     if (!url) return;
@@ -169,7 +172,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenAuthModal }) =
                 <span>{settings.footerAboutTitle || settings.siteTitle || 'فروشگاه'}</span>
               )}
             </button>
-            <p>{settings.footerAboutText || 'فروشگاه تخصصی قطعات یدکی خودرو با تمرکز بر اصالت، تطبیق دقیق قطعه و ارسال مطمئن.'}</p>
+            <RichTextContent content={settings.footerAboutText || 'فروشگاه تخصصی قطعات یدکی خودرو با تمرکز بر اصالت، تطبیق دقیق قطعه و ارسال مطمئن.'} className="marketplace-ref-footer-about-copy" />
             <div className="marketplace-ref-newsletter">
               <input type="email" placeholder={settings.footerNewsletterPlaceholder || 'ایمیل خود را وارد کنید'} aria-label="ایمیل خبرنامه" />
               <button type="button" aria-label="عضویت در خبرنامه">←</button>
@@ -194,9 +197,20 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenAuthModal }) =
           </div>
         </div>
 
+        {settings.footerShowBadges !== false && (badges.length > 0 || settings.footerEnamadHtml) && (
+          <div className="marketplace-ref-container marketplace-ref-footer-trust flex flex-wrap items-center justify-center gap-4 py-5">
+            {badges.map(badge => badge.htmlCode
+              ? <div key={badge.id} dangerouslySetInnerHTML={{ __html: badge.htmlCode }} />
+              : <a key={badge.id} href={badge.linkUrl || '#'} target={badge.linkUrl && badge.linkUrl !== '#' ? '_blank' : undefined} rel="noopener noreferrer" title={badge.title}>
+                  {badge.imageUrl ? <img src={badge.imageUrl} alt={badge.title} className="max-h-20 max-w-32 object-contain" /> : <span>{badge.title}</span>}
+                </a>)}
+            {settings.footerEnamadHtml && <div className="footer-enamad" dangerouslySetInnerHTML={{ __html: settings.footerEnamadHtml }} />}
+          </div>
+        )}
+
         <div className="marketplace-ref-footer-bottom">
           <div className="marketplace-ref-container">
-            <span className="marketplace-ref-footer-copyright">{settings.footerCopyrightText || `© ${new Date().getFullYear()} تمامی حقوق محفوظ است.`}</span>
+            <span className="marketplace-ref-footer-copyright">{renderCopyright(settings.footerCopyrightText || `© ${new Date().getFullYear()} تمامی حقوق محفوظ است.`)}</span>
             <div className="marketplace-ref-footer-bottom-links">
               {bottomLinks.map(link => (
                 <button key={link.id} type="button" onClick={() => handleLinkClick(link.url)}>{link.title}</button>

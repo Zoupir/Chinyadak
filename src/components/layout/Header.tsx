@@ -518,6 +518,18 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
 
             <div className="marketplace-ref-actions">
+              {adminAuth.isAuthenticated && currentView !== 'admin' && (
+                <button type="button" onClick={() => {
+                  const target = currentView === 'product' ? `product:${currentParam || ''}`
+                    : currentView === 'article' ? `article:${currentParam || ''}`
+                    : currentView === 'category' ? `category:${currentParam || ''}`
+                    : currentView === 'page' ? `page:${currentParam || ''}`
+                    : currentView === 'blog' ? 'articles' : currentView;
+                  onNavigate('admin', target);
+                }} title="ویرایش همین صفحه" className="inline-flex items-center gap-1.5 rounded-lg bg-orange-500 px-3 py-2 text-xs font-bold text-white hover:bg-orange-600">
+                  <Edit3 className="w-4 h-4" /><span>ویرایش همین صفحه</span>
+                </button>
+              )}
               <button type="button" onClick={onOpenVehicleModal} title="خودروی من">
                 <Car className="w-4 h-4" />
                 <span>{selectedVehicle?.modelName || 'خودروی من'}</span>
@@ -590,11 +602,7 @@ export const Header: React.FC<HeaderProps> = ({
                 })}
             </div>
 
-            <button type="button" className="marketplace-ref-garage" onClick={onOpenVehicleModal}>
-              <Car className="w-4 h-4" />
-              <span>گاراژ من</span>
-              <ChevronDown className="w-3.5 h-3.5" />
-            </button>
+
           </div>
         </nav>
 
@@ -706,9 +714,6 @@ export const Header: React.FC<HeaderProps> = ({
                 <p>{selectedVehicle ? 'فیلتر قطعات سازگار با خودروی شما فعال است.' : 'با انتخاب خودرو فقط قطعات سازگار نمایش داده می‌شوند.'}</p>
                 <button type="button" onClick={() => { onOpenVehicleModal(); setIsMarketplaceMobileOpen(false); }}>
                   {selectedVehicle ? 'تغییر خودرو' : 'انتخاب خودرو'}
-                </button>
-                <button type="button" className="secondary" onClick={() => { onNavigate('account', 'garage'); setIsMarketplaceMobileOpen(false); }}>
-                  گاراژ من
                 </button>
               </div>
             )}

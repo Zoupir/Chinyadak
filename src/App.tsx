@@ -268,7 +268,8 @@ const AppContent: React.FC = () => {
             </div>
           </div>
         )}
-        <AdminView 
+        <AdminView
+          initialTarget={route.param}
           onExitToStore={() => {
             handleNavigate('home');
           }} 

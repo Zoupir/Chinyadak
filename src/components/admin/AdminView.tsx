@@ -83,11 +83,12 @@ import { ProductClassificationFields } from './ProductClassificationFields';
 import { AdminDashboardPro } from './AdminDashboardPro';
 
 interface AdminViewProps {
+  initialTarget?: string;
   onExitToStore?: () => void;
   onNavigate?: (view: string, param?: string) => void;
 }
 
-export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate }) => {
+export const AdminView: React.FC<AdminViewProps> = ({ initialTarget, onExitToStore, onNavigate }) => {
   const { 
     products, 
     addProduct,
@@ -131,7 +132,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
   // Navigation tab inside Admin
   const [activeTab, setActiveTab] = useState<
     'overview' | 'cars' | 'products' | 'categories' | 'menus_attrs' | 'mega_menu' | 'media' | 'icons' | 'footer' | 'pages' | 'articles' | 'sliders' | 'banners' | 'home_layout' | 'orders' | 'customers' | 'admins' | 'gateways' | 'sandbox' | 'apis' | 'theme' | 'seo' | 'bulk' | 'analytics'
-  >('overview');
+  >(initialTarget?.startsWith('product:') ? 'products' : initialTarget?.startsWith('article:') ? 'articles' : initialTarget?.startsWith('category:') ? 'categories' : initialTarget?.startsWith('page:') ? 'pages' : initialTarget === 'blog' ? 'articles' : 'overview');
 
   // Sidebar Layout State
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -150,6 +151,15 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
 
   // Product Modals
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  useEffect(() => {
+    if (!initialTarget?.startsWith('product:')) return;
+    const targetId = initialTarget.slice('product:'.length);
+    const match = products.find(product => product.id === targetId || product.slug === targetId);
+    if (match) {
+      setActiveTab('products');
+      setEditingProduct(match);
+    }
+  }, [initialTarget, products]);
   const [isNewProductModalOpen, setIsNewProductModalOpen] = useState(false);
   const [newProductForm, setNewProductForm] = useState<Partial<Product>>({
     nameFa: '',
@@ -1603,7 +1613,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
                   <label className="block text-neutral-600 mb-1 font-semibold">کد بین‌المللی OEM:</label>
                   <input
@@ -1612,6 +1622,16 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
                     onChange={e => setEditingProduct({ ...editingProduct, oemNumber: e.target.value })}
                     className="w-full p-2.5 border border-neutral-300 rounded-xl font-mono uppercase"
                     required
+                  />
+                </div>
+                <div>
+                  <label className="block text-neutral-600 mb-1 font-semibold">Part No / شماره فنی:</label>
+                  <input
+                    type="text"
+                    value={editingProduct.partNumber || ''}
+                    onChange={e => setEditingProduct({ ...editingProduct, partNumber: e.target.value })}
+                    className="w-full p-2.5 border border-neutral-300 rounded-xl font-mono uppercase"
+                    placeholder="شماره فنی سازنده"
                   />
                 </div>
                 <div>
@@ -1646,6 +1666,24 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
                     className="w-full p-2.5 border border-neutral-300 rounded-xl font-mono"
                     required
                   />
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-neutral-200 p-4 space-y-2">
+                <h4 className="font-bold text-neutral-800">قطعات مکمل (Cross‑Sell)</h4>
+                <p className="text-[11px] text-neutral-500">این قطعات به‌عنوان پیشنهاد مکمل در صفحهٔ همین محصول نمایش داده می‌شوند.</p>
+                <div className="max-h-56 overflow-y-auto grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {products.filter(item => item.id !== editingProduct.id).map(item => (
+                    <label key={item.id} className="flex items-center gap-2 p-2 rounded-lg bg-neutral-50 text-xs">
+                      <input type="checkbox" checked={(editingProduct.complementPartIds || []).includes(item.id)}
+                        onChange={e => {
+                          const current = editingProduct.complementPartIds || [];
+                          const next = e.target.checked ? [...current, item.id] : current.filter(id => id !== item.id);
+                          setEditingProduct({ ...editingProduct, complementPartIds: next });
+                        }} />
+                      <span className="truncate">{item.nameFa}</span>
+                    </label>
+                  ))}
                 </div>
               </div>
 
@@ -1764,7 +1802,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
                 </datalist>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
                   <label className="block text-neutral-600 mb-1 font-semibold">کد بین‌المللی OEM *:</label>
                   <input
@@ -1776,7 +1814,11 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
                     required
                   />
                 </div>
-                <div>
+ <div>
+                  <label className="block text-neutral-600 mb-1 font-semibold">Part No / شماره فنی:</label>
+                  <input type="text" value={newProductForm.partNumber || ''} onChange={e => setNewProductForm({ ...newProductForm, partNumber: e.target.value })} className="w-full p-2.5 border border-neutral-300 rounded-xl font-mono uppercase" placeholder="شماره فنی سازنده" />
+                </div>
+                               <div>
                   <label className="block text-neutral-600 mb-1 font-semibold">کد SKU انبار:</label>
                   <input
                     type="text"

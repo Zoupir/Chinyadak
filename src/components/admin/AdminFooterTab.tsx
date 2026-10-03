@@ -3,6 +3,7 @@ import { useStore } from '../../context/StoreContext';
 import { FooterColumn, FooterFeatureItem, FooterLink, FooterBadgeItem } from '../../types';
 import { ImageUploadInput } from '../common/ImageUploadInput';
 import { LinkDestinationPicker } from '../common/LinkDestinationPicker';
+import { RichTextEditor } from '../common/RichTextEditor';
 import { 
   ShieldCheck, 
   Plus, 
@@ -892,24 +893,14 @@ export const AdminFooterTab: React.FC = () => {
 
             <div>
               <label className="block text-neutral-700 font-bold mb-1">متن توضیحات معرفی و بیوگرافی فوتر:</label>
-              <textarea
-                rows={4}
-                value={footerAboutText}
-                onChange={e => setFooterAboutText(e.target.value)}
-                className="w-full p-3 border border-neutral-300 rounded-xl leading-relaxed"
-                placeholder="توضیحات سابقه، تامین مستقیم قطعات از چین و خطوط تولید..."
-              />
+              <RichTextEditor label="بیوگرافی فوتر" value={footerAboutText} onChange={setFooterAboutText} rows={5}
+                placeholder="توضیحات سابقه، تامین مستقیم قطعات از چین و خطوط تولید..." />
             </div>
 
             <div className="pt-2">
               <label className="block text-neutral-700 font-bold mb-1">متن کپی‌رایت انتهای فوتر:</label>
-              <input
-                type="text"
-                value={footerCopyrightText}
-                onChange={e => setFooterCopyrightText(e.target.value)}
-                className="w-full p-2.5 border border-neutral-300 rounded-xl"
-                placeholder="مثال: تمامی حقوق برای نام فروشگاه محفوظ است..."
-              />
+              <RichTextEditor label="کپی‌رایت فوتر" value={footerCopyrightText} onChange={setFooterCopyrightText} rows={2}
+                placeholder="© ۲۰۲۶ تمامی حقوق محفوظ است. برای درج پیوند از دکمهٔ پیوند استفاده کنید." />
             </div>
 
             <div className="rounded-2xl border border-neutral-200 p-4 space-y-3">

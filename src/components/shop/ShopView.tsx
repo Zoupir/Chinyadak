@@ -40,6 +40,7 @@ export const ShopView: React.FC<ShopViewProps> = ({
   const [onlyFitActiveVehicle, setOnlyFitActiveVehicle] = useState<boolean>(Boolean(selectedVehicle));
   const [sortBy, setSortBy] = useState<'bestseller' | 'price_asc' | 'price_desc' | 'rating'>('bestseller');
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
+  const [openCategoryIds, setOpenCategoryIds] = useState<Set<string>>(new Set());
 
   const categoryIndex = useMemo(() => {
     const rows: Array<{ node: any; parent?: any; depth: number }> = [];
@@ -141,17 +142,18 @@ export const ShopView: React.FC<ShopViewProps> = ({
     <div className="shop-view max-w-7xl mx-auto px-4 py-8 space-y-8">
       {/* Category / Catalog Hero */}
       <section
-        className={`shop-category-hero relative overflow-hidden border border-neutral-200 shadow-xs ${activeCategoryObj?.imageUrl ? 'has-image' : ''}`}
-        style={activeCategoryObj?.imageUrl ? {
-          backgroundImage: `linear-gradient(90deg, rgba(10,18,28,.88), rgba(10,18,28,.50)), url(${activeCategoryObj.imageUrl})`,
+        className={`shop-category-hero relative overflow-hidden border border-neutral-200 shadow-xs ${activeCategoryObj?.heroImageUrl ? 'has-image' : ''}`}
+        style={activeCategoryObj?.heroImageUrl ? {
+          backgroundImage: `linear-gradient(90deg, rgba(10,18,28,.82), rgba(10,18,28,.46)), url(${activeCategoryObj.heroImageUrl})`,
           backgroundSize: 'cover',
           backgroundPosition: 'center'
         } : undefined}
       >
         <div className="shop-category-hero-content">
           <span className="shop-category-kicker">{activeCategoryObj ? 'دسته‌بندی قطعات' : 'فروشگاه تخصصی قطعات'}</span>
-          <h1>
-            {activeCategoryObj?.heroTitle || (activeCategoryObj ? `قطعات ${activeCategoryObj.nameFa}` : 'فهرست کامل قطعات یدکی خودروهای چینی')}
+          <h1 className="flex items-center gap-3">
+            {(activeCategoryObj?.iconUrl || activeCategoryObj?.imageUrl) && <img className="w-10 h-10 sm:w-14 sm:h-14 shrink-0 object-contain rounded-xl bg-white/90 p-1.5 shadow-sm" src={activeCategoryObj.iconUrl || activeCategoryObj.imageUrl} alt="" aria-hidden="true" />}
+            <span>{activeCategoryObj?.heroTitle || (activeCategoryObj ? `قطعات ${activeCategoryObj.nameFa}` : 'فهرست کامل قطعات یدکی خودروهای چینی')}</span>
           </h1>
           <p>
             {activeCategoryObj?.heroSubtitle || activeCategoryObj?.description || `نمایش ${filteredProducts.length.toLocaleString('fa-IR')} قطعه با امکان فیلتر بر اساس خودرو، برند و گرید کیفی.`}
@@ -247,23 +249,34 @@ export const ShopView: React.FC<ShopViewProps> = ({
                 <span>همه دسته‌ها</span>
                 <span className="text-[10px] opacity-75">{products.length}</span>
               </button>
-              {categoryIndex.map(({ node: c, depth }) => (
-                <button
-                  key={c.id}
-                  onClick={() => setSelectedCategory(c.slug)}
-                  className={`w-full text-right p-2 rounded-lg text-xs transition-colors flex items-center justify-between ${
-                    selectedCategory === c.slug
-                      ? 'bg-red-600 text-white font-bold'
-                      : 'text-neutral-600 hover:bg-neutral-100'
-                  }`}
-                  style={{ paddingRight: `${8 + depth * 12}px` }}
-                >
-                  <span>{depth > 0 ? '↳ ' : ''}{c.nameFa}</span>
-                  <span className="text-[10px] opacity-75">
-                    {products.filter(p => p.categorySlug === c.slug || p.subcategorySlug === c.slug).length}
-                  </span>
-                </button>
-              ))}
+              {categories.map(c => {
+                const children = c.subcategories || [];
+                const expanded = openCategoryIds.has(c.id);
+                return (
+                  <div key={c.id}>
+                    <div className="flex items-center gap-1">
+                      {children.length > 0 && <button type="button" aria-label={expanded ? 'بستن زیر دسته‌ها' : 'نمایش زیر دسته‌ها'}
+                        aria-expanded={expanded}
+                        onClick={() => setOpenCategoryIds(current => { const next = new Set(current); next.has(c.id) ? next.delete(c.id) : next.add(c.id); return next; })}
+                        className="p-1.5 rounded-md hover:bg-neutral-100 text-neutral-500">
+                        <ChevronDown className={`w-3.5 h-3.5 transition-transform ${expanded ? '' : '-rotate-90'}`} />
+                      </button>}
+                      <button onClick={() => setSelectedCategory(c.slug)}
+                        className={`flex-1 text-right p-2 rounded-lg text-xs transition-colors flex items-center justify-between ${selectedCategory === c.slug ? 'bg-red-600 text-white font-bold' : 'text-neutral-600 hover:bg-neutral-100'}`}>
+                        <span>{c.nameFa}</span>
+                        <span className="text-[10px] opacity-75">{products.filter(p => p.categorySlug === c.slug || p.subcategorySlug === c.slug).length}</span>
+                      </button>
+                    </div>
+                    {expanded && children.map(child => (
+                      <button key={child.id} onClick={() => setSelectedCategory(child.slug)}
+                        className={`w-full text-right p-2 pr-9 rounded-lg text-xs transition-colors flex items-center justify-between ${selectedCategory === child.slug ? 'bg-red-600 text-white font-bold' : 'text-neutral-600 hover:bg-neutral-100'}`}>
+                        <span>↳ {child.nameFa}</span>
+                        <span className="text-[10px] opacity-75">{products.filter(p => p.categorySlug === child.slug || p.subcategorySlug === child.slug).length}</span>
+                      </button>
+                    ))}
+                  </div>
+                );
+              })}
             </div>
           </div>
 
@@ -306,7 +319,7 @@ export const ShopView: React.FC<ShopViewProps> = ({
                 </button>
               )}
             </div>
-            <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto p-1">
+            <div className="flex flex-wrap gap-1.5 p-1">
               <button
                 onClick={() => setSelectedManufacturer('all')}
                 className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-colors cursor-pointer ${

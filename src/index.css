@@ -8054,3 +8054,529 @@ html[data-layout="marketplace-rtl"] .banner-placement-empty {
     border-radius: 10px;
   }
 }
+
+
+/* Chinyadak Atelier storefront template — 30.1.3 */
+html[data-layout="marketplace-rtl"] {
+  --atelier-ink: #142736;
+  --atelier-muted: #657581;
+  --atelier-line: #e2e8e5;
+  --atelier-paper: #f5f6f3;
+  --atelier-card: #ffffff;
+  --atelier-accent: var(--primary-color, #dc2626);
+}
+
+html[data-layout="marketplace-rtl"] body,
+html[data-layout="marketplace-rtl"] #root {
+  background: var(--atelier-paper);
+  color: var(--atelier-ink);
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-ref-header {
+  position: sticky;
+  top: 0;
+  z-index: 45;
+  background: #fff;
+  box-shadow: 0 8px 28px rgba(20, 39, 54, .055);
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-ref-topbar {
+  background: var(--atelier-ink);
+  color: rgba(255,255,255,.88);
+  border-bottom: 2px solid var(--atelier-accent);
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-ref-topbar button,
+html[data-layout="marketplace-rtl"] .marketplace-ref-topbar a {
+  color: inherit;
+  transition: color .18s ease;
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-ref-topbar button:hover,
+html[data-layout="marketplace-rtl"] .marketplace-ref-topbar a:hover {
+  color: #fff;
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-ref-container {
+  width: min(100% - 48px, 1400px);
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-ref-mainbar {
+  background: rgba(255,255,255,.97);
+  border-bottom: 1px solid var(--atelier-line);
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-ref-mainbar-inner {
+  min-height: 82px;
+  gap: 22px;
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-ref-logo img {
+  max-height: 54px;
+  width: auto;
+  object-fit: contain;
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-ref-search {
+  background: #f6f8f7;
+  border: 1px solid #e5ebe8;
+  border-radius: 16px;
+  box-shadow: inset 0 1px 2px rgba(20,39,54,.025);
+  transition: border-color .2s ease, box-shadow .2s ease, background .2s ease;
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-ref-search:focus-within {
+  background: #fff;
+  border-color: color-mix(in srgb, var(--atelier-accent) 42%, white);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--atelier-accent) 10%, transparent);
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-ref-actions button {
+  border-radius: 13px;
+  transition: color .18s ease, background .18s ease, transform .18s ease;
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-ref-actions button:hover {
+  background: #f1f4f2;
+  color: var(--atelier-ink);
+  transform: translateY(-1px);
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-ref-actions .marketplace-ref-cart {
+  background: var(--atelier-ink);
+  color: white;
+  padding-inline: 15px;
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-ref-actions .marketplace-ref-cart:hover {
+  background: #203b4c;
+  color: white;
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-ref-nav {
+  background: #fff;
+  border-bottom: 1px solid var(--atelier-line);
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-ref-nav-inner {
+  min-height: 54px;
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-ref-allcat {
+  align-self: stretch;
+  padding-inline: 18px;
+  border-radius: 0;
+  background: var(--atelier-accent);
+  color: #fff;
+  font-weight: 800;
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-ref-nav-item > button,
+html[data-layout="marketplace-rtl"] .marketplace-ref-nav-links > button {
+  min-height: 54px;
+  color: #43515d;
+  font-weight: 700;
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-ref-nav-item > button:hover,
+html[data-layout="marketplace-rtl"] .marketplace-ref-nav-links > button:hover {
+  color: var(--atelier-accent);
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-rtl-home {
+  gap: 0;
+  background: var(--atelier-paper);
+  color: var(--atelier-ink);
+  padding-bottom: 72px;
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-hero-shell {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-hero-banner {
+  width: 100%;
+  min-height: clamp(500px, 43vw, 610px);
+  border-radius: 0;
+  background-color: #173044;
+  background-position: center 48%;
+  box-shadow: none;
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-hero-overlay {
+  background: linear-gradient(90deg, rgba(8, 25, 38, .9) 0%, rgba(8, 25, 38, .68) 35%, rgba(8, 25, 38, .13) 76%, rgba(8,25,38,.04) 100%);
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-hero-content {
+  right: auto;
+  left: max(5vw, calc((100vw - 1400px) / 2));
+  top: 50%;
+  width: min(475px, 34%);
+  transform: translateY(-50%);
+  color: #fff;
+  text-shadow: none;
+  text-align: right;
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-kicker {
+  margin-bottom: 18px;
+  padding: 7px 12px;
+  border: 1px solid rgba(255,255,255,.23);
+  border-radius: 999px;
+  background: rgba(255,255,255,.12);
+  color: #fff;
+  font-size: 11px;
+  letter-spacing: .02em;
+  backdrop-filter: blur(8px);
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-hero-content h1 {
+  margin-bottom: 17px;
+  font-size: clamp(34px, 4.1vw, 60px);
+  line-height: 1.28;
+  letter-spacing: -.035em;
+  font-weight: 900;
+  text-wrap: balance;
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-hero-content p {
+  max-width: 440px;
+  color: rgba(255,255,255,.82);
+  font-size: 15px;
+  line-height: 2;
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-hero-content > button {
+  margin-top: 23px;
+  min-height: 50px;
+  padding: 0 22px;
+  border: 0;
+  border-radius: 13px;
+  background: var(--atelier-accent);
+  color: #fff;
+  font-size: 13px;
+  box-shadow: 0 12px 26px color-mix(in srgb, var(--atelier-accent) 28%, transparent);
+  transition: transform .2s ease, box-shadow .2s ease;
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-hero-content > button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 16px 34px color-mix(in srgb, var(--atelier-accent) 35%, transparent);
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-vehicle-finder {
+  top: 50%;
+  right: max(5vw, calc((100vw - 1400px) / 2));
+  width: min(370px, 30%);
+  padding: 22px;
+  border: 1px solid rgba(255,255,255,.7);
+  border-radius: 22px;
+  background: rgba(255,255,255,.97);
+  box-shadow: 0 24px 64px rgba(4,18,29,.28);
+  backdrop-filter: blur(16px);
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-vehicle-finder h3 {
+  color: var(--atelier-ink);
+  font-size: 17px;
+  letter-spacing: -.02em;
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-vehicle-finder > p {
+  margin: 6px 0 16px;
+  color: var(--atelier-muted);
+  font-size: 12px;
+  line-height: 1.8;
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-finder-grid {
+  gap: 8px;
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-finder-grid button {
+  min-height: 60px;
+  padding: 9px 11px;
+  border: 1px solid var(--atelier-line);
+  border-radius: 12px;
+  background: #f8faf9;
+  text-align: right;
+  transition: border-color .18s ease, background .18s ease;
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-finder-grid button:hover {
+  border-color: color-mix(in srgb, var(--atelier-accent) 48%, white);
+  background: #fff;
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-finder-grid button span {
+  color: #82909a;
+  font-size: 10px;
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-finder-grid button strong {
+  color: var(--atelier-ink);
+  font-size: 12px;
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-finder-or {
+  color: #9aa5ad;
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-finder-vin input {
+  min-height: 44px;
+  border: 1px solid var(--atelier-line);
+  border-radius: 11px;
+  background: #fff;
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-search-car {
+  min-height: 46px;
+  margin-top: 8px;
+  border-radius: 12px;
+  background: var(--atelier-accent);
+  font-weight: 850;
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-section {
+  margin-block: 34px;
+  color: var(--atelier-ink);
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-section-heading {
+  margin-bottom: 20px;
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-section-heading h2 {
+  color: var(--atelier-ink);
+  font-size: clamp(21px, 2.1vw, 29px);
+  line-height: 1.45;
+  letter-spacing: -.025em;
+  font-weight: 900;
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-section-heading p {
+  color: var(--atelier-muted);
+  font-size: 13px;
+  line-height: 1.9;
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-round-list button,
+html[data-layout="marketplace-rtl"] .marketplace-brand-row button,
+html[data-layout="marketplace-rtl"] .marketplace-logo-tiles button {
+  border: 1px solid var(--atelier-line);
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 5px 18px rgba(20,39,54,.035);
+  transition: transform .2s ease, border-color .2s ease, box-shadow .2s ease;
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-round-list button:hover,
+html[data-layout="marketplace-rtl"] .marketplace-brand-row button:hover,
+html[data-layout="marketplace-rtl"] .marketplace-logo-tiles button:hover {
+  transform: translateY(-3px);
+  border-color: color-mix(in srgb, var(--atelier-accent) 30%, white);
+  box-shadow: 0 14px 30px rgba(20,39,54,.09);
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-round-icon {
+  border-radius: 15px;
+  background: #f3f6f4;
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-product-grid .product-card {
+  overflow: hidden;
+  border: 1px solid #e8edeb;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 6px 22px rgba(20,39,54,.045);
+  transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-product-grid .product-card:hover {
+  transform: translateY(-4px);
+  border-color: #d2ddda;
+  box-shadow: 0 18px 38px rgba(20,39,54,.11);
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-product-grid .product-card-media {
+  background: #f7f8f6;
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-wide-banner {
+  overflow: hidden;
+  border-radius: 24px;
+  background-color: var(--atelier-ink);
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-feature-banners > button,
+html[data-layout="marketplace-rtl"] .marketplace-promo-card {
+  overflow: hidden;
+  border-radius: 20px;
+  box-shadow: 0 9px 26px rgba(20,39,54,.08);
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-testimonials {
+  border-radius: 28px;
+  background: var(--atelier-ink);
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-testimonials .marketplace-section-heading h2,
+html[data-layout="marketplace-rtl"] .marketplace-testimonials .marketplace-section-heading p {
+  color: #fff;
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-testimonial-grid article {
+  border: 1px solid rgba(255,255,255,.13);
+  border-radius: 17px;
+  background: rgba(255,255,255,.07);
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-service-strip {
+  border-top: 1px solid var(--atelier-line);
+  border-bottom: 1px solid var(--atelier-line);
+  background: #fff;
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-article-grid > button {
+  overflow: hidden;
+  border: 1px solid var(--atelier-line);
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 6px 20px rgba(20,39,54,.04);
+  transition: transform .2s ease, box-shadow .2s ease;
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-article-grid > button:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 15px 34px rgba(20,39,54,.1);
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-ref-footer {
+  background: #112533;
+  color: rgba(255,255,255,.86);
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-ref-footer h4,
+html[data-layout="marketplace-rtl"] .marketplace-ref-footer-logo {
+  color: #fff;
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-ref-footer-bottom {
+  border-top: 1px solid rgba(255,255,255,.12);
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-ref-footer-bottom > .marketplace-ref-container {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 62px;
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-ref-footer-copyright {
+  display: block;
+  width: 100%;
+  text-align: center;
+  line-height: 1.8;
+}
+
+html[data-layout="marketplace-rtl"] .marketplace-ref-footer-bottom-links {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+@media (max-width: 1000px) {
+  html[data-layout="marketplace-rtl"] .marketplace-hero-banner {
+    min-height: 510px;
+  }
+  html[data-layout="marketplace-rtl"] .marketplace-hero-content {
+    left: 4%;
+    width: min(390px, 36%);
+  }
+  html[data-layout="marketplace-rtl"] .marketplace-vehicle-finder {
+    right: 4%;
+    width: min(350px, 34%);
+  }
+}
+
+@media (max-width: 700px) {
+  html[data-layout="marketplace-rtl"] .marketplace-ref-container {
+    width: min(100% - 28px, 1400px);
+  }
+  html[data-layout="marketplace-rtl"] .marketplace-ref-header {
+    position: sticky;
+  }
+  html[data-layout="marketplace-rtl"] .marketplace-ref-mainbar-inner {
+    min-height: 66px;
+    gap: 9px;
+  }
+  html[data-layout="marketplace-rtl"] .marketplace-hero-banner {
+    min-height: 690px;
+  }
+  html[data-layout="marketplace-rtl"] .marketplace-hero-overlay {
+    background: linear-gradient(180deg, rgba(8,25,38,.2) 0%, rgba(8,25,38,.55) 22%, rgba(8,25,38,.97) 54%, rgba(8,25,38,.98) 100%);
+  }
+  html[data-layout="marketplace-rtl"] .marketplace-hero-content {
+    top: 28px;
+    right: 20px;
+    left: 20px;
+    width: auto;
+    transform: none;
+  }
+  html[data-layout="marketplace-rtl"] .marketplace-hero-content h1 {
+    max-width: 500px;
+    margin-bottom: 8px;
+    font-size: clamp(27px, 8vw, 38px);
+  }
+  html[data-layout="marketplace-rtl"] .marketplace-hero-content p {
+    max-width: 480px;
+    font-size: 12px;
+    line-height: 1.8;
+  }
+  html[data-layout="marketplace-rtl"] .marketplace-hero-content > button {
+    min-height: 42px;
+    margin-top: 10px;
+  }
+  html[data-layout="marketplace-rtl"] .marketplace-vehicle-finder {
+    top: auto;
+    right: 14px;
+    bottom: 14px;
+    left: 14px;
+    width: auto;
+    transform: none;
+    padding: 14px;
+    border-radius: 18px;
+  }
+  html[data-layout="marketplace-rtl"] .marketplace-finder-grid {
+    gap: 6px;
+  }
+  html[data-layout="marketplace-rtl"] .marketplace-finder-grid button {
+    min-height: 50px;
+    padding: 7px 9px;
+  }
+  html[data-layout="marketplace-rtl"] .marketplace-section {
+    margin-block: 24px;
+  }
+  html[data-layout="marketplace-rtl"] .marketplace-section-heading {
+    align-items: flex-start;
+    gap: 10px;
+  }
+  html[data-layout="marketplace-rtl"] .marketplace-section-heading h2 {
+    font-size: 20px;
+  }
+  html[data-layout="marketplace-rtl"] .marketplace-ref-footer-bottom > .marketplace-ref-container {
+    min-height: 0;
+    flex-direction: column;
+    gap: 10px;
+    padding-block: 16px;
+  }
+  html[data-layout="marketplace-rtl"] .marketplace-ref-footer-bottom-links {
+    position: static;
+    transform: none;
+  }
+}

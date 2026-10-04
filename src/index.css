@@ -8626,3 +8626,25 @@ html[data-layout="atelier-rtl"] .marketplace-ref-footer-bottom-links {
     transform: none;
   }
 }
+
+/* Admin-controlled header logo dimensions. */
+html[data-layout="marketplace-rtl"] .marketplace-ref-mainbar-inner .marketplace-ref-logo {
+  width: var(--site-logo-width, 160px) !important;
+  min-width: min(var(--site-logo-width, 160px), 110px) !important;
+}
+html[data-layout="marketplace-rtl"] .marketplace-ref-mainbar-inner .marketplace-ref-logo img {
+  max-width: var(--site-logo-width, 160px) !important;
+  max-height: 48px !important;
+  width: auto !important;
+  height: auto !important;
+}
+@media (max-width: 767px) {
+  html[data-layout="marketplace-rtl"] .marketplace-ref-mainbar-inner .marketplace-ref-logo {
+    width: var(--mobile-logo-width, 118px) !important;
+    min-width: min(var(--mobile-logo-width, 118px), 72px) !important;
+  }
+  html[data-layout="marketplace-rtl"] .marketplace-ref-mainbar-inner .marketplace-ref-logo img {
+    max-width: var(--mobile-logo-width, 118px) !important;
+    max-height: 38px !important;
+  }
+}

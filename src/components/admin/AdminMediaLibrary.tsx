@@ -93,10 +93,21 @@ export const AdminMediaLibrary: React.FC = () => {
     if (!list.length) return;
     setUploading(true);
     try {
-      for (const file of list) {
-        await uploadImage(file, category === 'all' ? 'general' : category);
+      const uploadCategory = category === 'all' ? 'general' : category;
+      const uploaded: Array<{ url: string }> = [];
+      for (const file of list) uploaded.push(await uploadImage(file, uploadCategory));
+      if (list.length === 1) {
+        const result = await listMediaLibrary({ category: uploadCategory, limit: 1500 });
+        const item = result.items?.find(media => media.url === uploaded[0].url);
+        setItems(result.items || []);
+        setCategories(result.categories || []);
+        setYears(result.years || []);
+        setMonths(result.months || []);
+        if (item) setSelected(item);
+        else await load();
+      } else {
+        await load();
       }
-      await load();
     } finally {
       setUploading(false);
       if (fileRef.current) fileRef.current.value = '';
@@ -140,7 +151,7 @@ export const AdminMediaLibrary: React.FC = () => {
       <div className="p-5 border-b border-neutral-100 flex flex-col xl:flex-row xl:items-center justify-between gap-4">
         <div>
           <h2 className="text-lg font-black flex items-center gap-2"><FileImage className="w-5 h-5 text-blue-600" /> مدیریت رسانه</h2>
-          <p className="text-xs text-neutral-500 mt-1">ساختار پوشه‌ای اصلی → سال → ماه، ویرایش SEO هر رسانه، آپلود گروهی و مدیریت کامل فایل‌ها.</p>
+          <p className="text-xs text-neutral-500 mt-1">ساختار پوشه‌ای اصلی → سال → ماه، ویرایش SEO هر رسانه، آپلود رسانه و مدیریت کامل فایل‌ها.</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <div className="relative min-w-[240px]">
@@ -254,7 +265,7 @@ export const AdminMediaLibrary: React.FC = () => {
             <div className="p-5 sm:p-6 space-y-4 overflow-y-auto max-h-[90vh]">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="font-black text-sm">جزئیات و SEO رسانه</h3>
+                  <h3 className="font-black text-sm">جزئیات و اطلاعات تصویر</h3>
                   <span className="text-[9px] text-neutral-400">{selected.category}/{selected.year}/{selected.month}</span>
                 </div>
                 <button onClick={() => setSelected(null)} className="w-8 h-8 grid place-items-center rounded-full bg-neutral-100"><X className="w-4 h-4" /></button>
@@ -276,7 +287,7 @@ export const AdminMediaLibrary: React.FC = () => {
               <div className="p-4 rounded-2xl border border-emerald-200 bg-emerald-50/40 space-y-3">
                 <div>
                   <strong className="text-xs text-emerald-950">SEO تصویر</strong>
-                  <p className="text-[9px] text-emerald-700 mt-1">این اطلاعات مثل Media Library وردپرس روی خود رسانه ذخیره می‌شود.</p>
+                  <p className="text-[9px] text-emerald-700 mt-1">این اطلاعات روی خود فایل ذخیره می‌شود و هنگام استفاده از همین رسانه در محصولات و مقاله‌ها هم در دسترس است.</p>
                 </div>
                 <label className="block"><span className="text-[9px] font-bold">متن جایگزین تصویر (ALT)</span><input value={seoForm.alt} onChange={e => setSeoForm({...seoForm,alt:e.target.value})} className="w-full mt-1 p-2.5 border rounded-xl text-xs bg-white" /></label>
                 <label className="block"><span className="text-[9px] font-bold">عنوان تصویر (Title)</span><input value={seoForm.title} onChange={e => setSeoForm({...seoForm,title:e.target.value})} className="w-full mt-1 p-2.5 border rounded-xl text-xs bg-white" /></label>

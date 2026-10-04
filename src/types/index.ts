@@ -652,6 +652,8 @@ export interface SiteSettings {
   mobileProductColumns?: 1 | 2;
   mobileFooterColumns?: 1 | 2;
   relatedProductsCount?: number;
+  /** Desktop/default site header logo width in pixels. */
+  logoWidthPx?: number;
   /** Mobile header logo placement and size. */
   mobileLogoAlign?: 'left' | 'center' | 'right';
   mobileLogoWidthPx?: number;

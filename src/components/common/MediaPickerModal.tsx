@@ -350,9 +350,10 @@ export const MediaPickerModal: React.FC<MediaPickerModalProps> = ({
                 )}
               </div>
               {selected && (
-                <div className="2xl:hidden p-3 border-t border-neutral-200 flex items-center gap-3 bg-white shrink-0">
-                  <img src={selected.url} alt="" className="w-12 h-12 rounded-lg object-contain p-1 border" />
-                  <span className="flex-1 min-w-0 text-[10px] font-bold truncate">{selected.filename}</span>
+                <div className="2xl:hidden p-3 border-t border-neutral-200 flex flex-wrap items-center gap-2 bg-white shrink-0">
+                  <img src={selected.url} alt={selected.seo?.alt || ''} className="w-12 h-12 rounded-lg object-contain p-1 border" />
+                  <span className="flex-1 min-w-[100px] text-[10px] font-bold truncate">{selected.seo?.title || selected.filename}</span>
+                  <button type="button" onClick={openSelectedSeoEditor} className="px-3 py-2 rounded-lg border border-neutral-300 text-neutral-700 text-[10px] font-bold shrink-0 inline-flex items-center gap-1"><Pencil className="w-3 h-3" />ویرایش اطلاعات</button>
                   <button type="button" onClick={() => { onSelect(selected.url, selected); onClose(); }} className="px-3 py-2 rounded-lg bg-blue-600 text-white text-[10px] font-black shrink-0">انتخاب</button>
                 </div>
               )}
@@ -365,10 +366,13 @@ export const MediaPickerModal: React.FC<MediaPickerModalProps> = ({
                     <img src={selected.url} alt={selected.seo?.alt || ''} className="max-w-full max-h-full object-contain" />
                   </div>
                   <div className="text-[10px] space-y-1">
-                    <strong className="block break-all">{selected.filename}</strong>
+                    <strong className="block break-all">{selected.seo?.title || selected.filename}</strong>
                     <span className="text-neutral-400 block">{selected.category}/{selected.year}/{selected.month}</span>
-                    <span className="text-neutral-400 block">{selected.seo?.alt ? `ALT: ${selected.seo.alt}` : 'ALT تنظیم نشده'}</span>
+                    <span className="text-neutral-500 block">ALT: {selected.seo?.alt || 'تنظیم نشده'}</span>
+                    {selected.seo?.caption && <span className="text-neutral-500 block line-clamp-2">توضیح کوتاه: {selected.seo.caption}</span>}
+                    {selected.seo?.description && <span className="text-neutral-500 block line-clamp-3">توضیح کامل: {selected.seo.description}</span>}
                   </div>
+                  <button type="button" onClick={openSelectedSeoEditor} className="w-full py-2.5 rounded-xl border border-neutral-300 text-neutral-800 text-xs font-bold inline-flex items-center justify-center gap-2"><Pencil className="w-3.5 h-3.5" />ویرایش اطلاعات رسانه</button>
                   <button type="button" onClick={() => { onSelect(selected.url, selected); onClose(); }} className="w-full py-2.5 rounded-xl bg-blue-600 text-white text-xs font-black">استفاده از این رسانه</button>
                 </div>
               ) : (
@@ -400,7 +404,7 @@ export const MediaPickerModal: React.FC<MediaPickerModalProps> = ({
               </div>
             ) : (
               <div className="w-full max-w-3xl">
-                <input ref={fileRef} type="file" accept="image/*" multiple className="hidden" onChange={e => e.target.files && void uploadFiles(e.target.files)} />
+                <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={e => e.target.files && void uploadFiles(e.target.files)} />
                 <button
                   type="button"
                   disabled={uploading}
@@ -428,6 +432,29 @@ export const MediaPickerModal: React.FC<MediaPickerModalProps> = ({
           </div>
         )}
       </div>
+
+        {editingSeo && selected && (
+          <div className="fixed inset-0 z-[100001] bg-black/65 backdrop-blur-sm p-3 flex items-center justify-center" onClick={() => setEditingSeo(false)}>
+            <section role="dialog" aria-modal="true" aria-label="ویرایش اطلاعات تصویر" className="w-full max-w-2xl max-h-[92dvh] overflow-y-auto rounded-2xl bg-white p-4 sm:p-6 shadow-2xl space-y-4" onClick={event => event.stopPropagation()}>
+              <div className="flex items-start gap-3">
+                <img src={selected.url} alt={selected.seo?.alt || ''} className="w-16 h-16 rounded-xl border bg-neutral-50 object-contain p-1" />
+                <div className="flex-1 min-w-0"><h3 className="font-black text-sm">اطلاعات رسانه</h3><p className="text-[10px] text-neutral-500 mt-1 truncate">{selected.filename}</p><p className="text-[9px] text-neutral-400 mt-1">این اطلاعات به همین فایل متصل است و در همهٔ فرم‌های سایت قابل استفاده خواهد بود.</p></div>
+                <button type="button" onClick={() => setEditingSeo(false)} className="w-8 h-8 rounded-full bg-neutral-100 grid place-items-center"><X className="w-4 h-4" /></button>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <label className="block text-[10px] font-bold">متن جایگزین تصویر (ALT)<input value={seoDraft.alt} onChange={e => setSeoDraft(current => ({ ...current, alt: e.target.value }))} className="w-full mt-1 p-2.5 border rounded-xl text-xs font-normal" /></label>
+                <label className="block text-[10px] font-bold">عنوان رسانه<input value={seoDraft.title} onChange={e => setSeoDraft(current => ({ ...current, title: e.target.value }))} className="w-full mt-1 p-2.5 border rounded-xl text-xs font-normal" /></label>
+                <label className="block text-[10px] font-bold">توضیح کوتاه<textarea rows={3} value={seoDraft.caption} onChange={e => setSeoDraft(current => ({ ...current, caption: e.target.value }))} className="w-full mt-1 p-2.5 border rounded-xl text-xs font-normal" /></label>
+                <label className="block text-[10px] font-bold">توضیح کامل<textarea rows={4} value={seoDraft.description} onChange={e => setSeoDraft(current => ({ ...current, description: e.target.value }))} className="w-full mt-1 p-2.5 border rounded-xl text-xs font-normal" /></label>
+              </div>
+              {metadataError && <div className="p-3 rounded-xl bg-red-50 text-red-700 text-xs font-bold">{metadataError}</div>}
+              <div className="flex gap-2">
+                <button type="button" onClick={() => void saveSelectedSeo()} disabled={savingSeo} className="flex-1 py-3 rounded-xl bg-emerald-600 disabled:bg-emerald-300 text-white text-xs font-black">{savingSeo ? 'در حال ذخیره...' : 'ذخیره اطلاعات رسانه'}</button>
+                <button type="button" onClick={() => setEditingSeo(false)} disabled={savingSeo} className="px-4 py-3 rounded-xl border text-neutral-700 text-xs font-bold">انصراف</button>
+              </div>
+            </section>
+          </div>
+        )}
     </div>,
     document.body
   );

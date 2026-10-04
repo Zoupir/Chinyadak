@@ -62,6 +62,7 @@ export const MediaPickerModal: React.FC<MediaPickerModalProps> = ({
   const [savingSeo, setSavingSeo] = useState(false);
   const [editingSeo, setEditingSeo] = useState(false);
   const [metadataError, setMetadataError] = useState('');
+  const autoSelectedUrlRef = useRef('');
 
   const load = async () => {
     setLoading(true);
@@ -99,6 +100,7 @@ export const MediaPickerModal: React.FC<MediaPickerModalProps> = ({
       setPendingSeoPath('');
       setEditingSeo(false);
       setMetadataError('');
+      autoSelectedUrlRef.current = '';
     }
   }, [isOpen]);
 
@@ -111,7 +113,7 @@ export const MediaPickerModal: React.FC<MediaPickerModalProps> = ({
   }, [isOpen, initialUrl]);
 
   useEffect(() => {
-    if (!isOpen || !initialUrl || !items.length) return;
+    if (!isOpen || !initialUrl || !items.length || autoSelectedUrlRef.current === initialUrl) return;
     const normalize = (value: string) => {
       try {
         const parsed = new URL(value, window.location.origin);
@@ -122,7 +124,10 @@ export const MediaPickerModal: React.FC<MediaPickerModalProps> = ({
     };
     const path = normalize(initialUrl);
     const match = items.find(item => normalize(item.url) === path);
-    if (match) setSelected(match);
+    if (match) {
+      setSelected(match);
+      autoSelectedUrlRef.current = initialUrl;
+    }
   }, [isOpen, initialUrl, items]);
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase();

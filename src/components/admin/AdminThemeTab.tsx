@@ -444,6 +444,12 @@ export const AdminThemeTab: React.FC = () => {
                 helperText="در هدر، فوتر و هویت ساختاریافته سایت استفاده می‌شود."
               />
 
+              <label className="block p-3 rounded-xl border border-neutral-200 bg-neutral-50">
+                <span className="block text-xs font-bold text-neutral-700 mb-2">عرض لوگوی اصلی سایت: {form.logoWidthPx || 160}px</span>
+                <input type="range" min={80} max={320} step={4} value={form.logoWidthPx || 160} onChange={e => setForm({ ...form, logoWidthPx: Number(e.target.value) })} className="w-full accent-orange-500" />
+                <span className="text-[10px] text-neutral-500">برای موبایل، اندازهٔ جداگانهٔ لوگو از تنظیمات نمایش موبایل کنترل می‌شود.</span>
+              </label>
+
               <ImageUploadInput
                 label="Favicon"
                 value={form.faviconUrl || ''}

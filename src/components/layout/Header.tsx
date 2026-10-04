@@ -545,11 +545,17 @@ export const Header: React.FC<HeaderProps> = ({
               </button>
               <button
                 type="button"
-                onClick={() => currentCustomer ? onNavigate('account') : adminAuth.isAuthenticated ? onNavigate('admin') : onOpenAuthModal?.('login')}
+                onClick={() => currentCustomer || adminAuth.isAuthenticated ? onNavigate('account') : onOpenAuthModal?.('login')}
                 title="حساب کاربری"
+                aria-label="حساب کاربری"
               >
                 <User className="w-4 h-4" />
               </button>
+              {adminAuth.isAuthenticated && (
+                <button type="button" onClick={() => onNavigate('admin')} title="ورود به مدیریت" aria-label="ورود به مدیریت" className="grid place-items-center">
+                  <Settings className="w-4 h-4" />
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -702,7 +708,7 @@ export const Header: React.FC<HeaderProps> = ({
                 <div className="marketplace-ref-mobile-quick">
                   <button type="button" onClick={() => { onNavigate('tracking'); setIsMarketplaceMobileOpen(false); }}>پیگیری سفارش</button>
                   <button type="button" onClick={() => { onNavigate('blog'); setIsMarketplaceMobileOpen(false); }}>مقالات</button>
-                  <button type="button" onClick={() => { currentCustomer ? onNavigate('account') : onOpenAuthModal?.('login'); setIsMarketplaceMobileOpen(false); }}>حساب من</button>
+                  <button type="button" onClick={() => { currentCustomer || adminAuth.isAuthenticated ? onNavigate('account') : onOpenAuthModal?.('login'); setIsMarketplaceMobileOpen(false); }}>حساب من</button>
                 </div>
               </>
             )}
@@ -901,12 +907,12 @@ export const Header: React.FC<HeaderProps> = ({
               </button>
             ) : adminAuth.isAuthenticated ? (
               <button
-                onClick={() => onNavigate('admin')}
-                className="h-8 px-2 rounded-lg bg-amber-500 text-white flex items-center gap-1 text-[11px] font-bold shadow-xs"
-                title="پنل مدیریت"
+                onClick={() => onNavigate('account')}
+                className="h-8 px-2 rounded-lg bg-neutral-100 hover:bg-neutral-200 border border-neutral-200 text-neutral-800 flex items-center gap-1 text-[11px] font-bold"
+                title="حساب کاربری"
               >
-                <ShieldCheck className="w-3.5 h-3.5" />
-                <span>مدیر</span>
+                <User className="w-3.5 h-3.5" />
+                <span>حساب من</span>
               </button>
             ) : (
               <button
@@ -915,6 +921,11 @@ export const Header: React.FC<HeaderProps> = ({
               >
                 <User className="w-3.5 h-3.5 text-neutral-600" />
                 <span>ورود</span>
+              </button>
+            )}
+            {adminAuth.isAuthenticated && (
+              <button type="button" onClick={() => onNavigate('admin')} className="h-8 w-8 rounded-lg border border-neutral-200 bg-white grid place-items-center text-neutral-700 hover:bg-neutral-100" title="ورود به مدیریت" aria-label="ورود به مدیریت">
+                <Settings className="w-4 h-4" />
               </button>
             )}
 
@@ -1106,35 +1117,14 @@ export const Header: React.FC<HeaderProps> = ({
               </div>
             </div>
           ) : adminAuth.isAuthenticated ? (
-            <div className="relative group">
-              <button
-                onClick={() => onNavigate('admin')}
-                className="h-11 px-3 rounded-xl border border-amber-300 bg-amber-50 hover:bg-amber-100 flex items-center gap-2 text-xs font-bold text-neutral-900 transition-colors shadow-xs cursor-pointer"
-                title="پنل مدیریت"
-              >
-                <ShieldCheck className="w-4 h-4 text-amber-600" />
-                <span className="hidden xl:inline">{adminAuth.currentUser?.fullName || 'مدیریت'}</span>
-                <ChevronDown className="w-3.5 h-3.5 text-neutral-500" />
-              </button>
-
-              <div className="absolute top-full left-0 w-44 bg-white rounded-xl shadow-xl border border-neutral-200 p-1.5 hidden group-hover:block z-50 text-xs before:absolute before:-top-3 before:left-0 before:right-0 before:h-3 before:content-['']">
-                <button
-                  onClick={() => onNavigate('admin')}
-                  className="w-full text-right p-2 hover:bg-neutral-50 rounded-lg flex items-center gap-2 text-neutral-700 cursor-pointer"
-                >
-                  <Settings className="w-3.5 h-3.5 text-neutral-600" />
-                  <span>پنل مدیریت</span>
-                </button>
-                <div className="border-t border-neutral-100 my-1"></div>
-                <button
-                  onClick={adminLogout}
-                  className="w-full text-right p-2 hover:bg-red-50 text-red-600 rounded-lg flex items-center gap-2 cursor-pointer font-bold"
-                >
-                  <LogOut className="w-3.5 h-3.5" />
-                  <span>خروج مدیر</span>
-                </button>
-              </div>
-            </div>
+            <button
+              onClick={() => onNavigate('account')}
+              className="h-11 px-3 rounded-xl border border-neutral-200 hover:border-neutral-300 bg-white flex items-center gap-2 text-xs font-bold text-neutral-800 transition-colors shadow-xs cursor-pointer"
+              title="حساب کاربری"
+            >
+              <User className="w-4 h-4 text-neutral-700" />
+              <span>حساب کاربری</span>
+            </button>
           ) : (
             <button
               onClick={() => onOpenAuthModal?.('login')}
@@ -1143,6 +1133,11 @@ export const Header: React.FC<HeaderProps> = ({
             >
               <User className="w-4 h-4 text-neutral-600" />
               <span className="hidden sm:inline">ورود / ثبت‌نام</span>
+            </button>
+          )}
+          {adminAuth.isAuthenticated && (
+            <button type="button" onClick={() => onNavigate('admin')} className="h-11 w-11 rounded-xl border border-neutral-200 bg-white grid place-items-center text-neutral-700 hover:bg-neutral-100 transition-colors" title="ورود به مدیریت" aria-label="ورود به مدیریت">
+              <Settings className="w-5 h-5" />
             </button>
           )}
 

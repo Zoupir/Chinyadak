@@ -7,6 +7,7 @@ import {
   FolderOpen,
   Loader2,
   Search,
+  Pencil,
   Upload,
   X
 } from 'lucide-react';
@@ -24,6 +25,7 @@ interface MediaPickerModalProps {
   onClose: () => void;
   onSelect: (url: string, item?: MediaLibraryItem) => void;
   category?: string;
+  initialUrl?: string;
   title?: string;
   allowUrl?: boolean;
 }
@@ -35,6 +37,7 @@ export const MediaPickerModal: React.FC<MediaPickerModalProps> = ({
   onClose,
   onSelect,
   category = 'general',
+  initialUrl = '',
   title = 'انتخاب رسانه',
   allowUrl = true
 }) => {
@@ -57,6 +60,8 @@ export const MediaPickerModal: React.FC<MediaPickerModalProps> = ({
   const [pendingSeoPath, setPendingSeoPath] = useState('');
   const [seoDraft, setSeoDraft] = useState<MediaSeoMeta>({ alt: '', title: '', caption: '', description: '' });
   const [savingSeo, setSavingSeo] = useState(false);
+  const [editingSeo, setEditingSeo] = useState(false);
+  const [metadataError, setMetadataError] = useState('');
 
   const load = async () => {
     setLoading(true);
@@ -92,9 +97,33 @@ export const MediaPickerModal: React.FC<MediaPickerModalProps> = ({
       setUploadError('');
       setDirectUrl('');
       setPendingSeoPath('');
+      setEditingSeo(false);
+      setMetadataError('');
     }
   }, [isOpen]);
 
+  useEffect(() => {
+    if (!isOpen || !initialUrl) return;
+    setTab('library');
+    setFilterCategory('all');
+    setFilterYear('all');
+    setFilterMonth('all');
+  }, [isOpen, initialUrl]);
+
+  useEffect(() => {
+    if (!isOpen || !initialUrl || !items.length) return;
+    const normalize = (value: string) => {
+      try {
+        const parsed = new URL(value, window.location.origin);
+        return parsed.origin === window.location.origin ? parsed.pathname : value;
+      } catch {
+        return value;
+      }
+    };
+    const path = normalize(initialUrl);
+    const match = items.find(item => normalize(item.url) === path);
+    if (match) setSelected(match);
+  }, [isOpen, initialUrl, items]);
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return items;
@@ -173,6 +202,29 @@ export const MediaPickerModal: React.FC<MediaPickerModalProps> = ({
     onClose();
   };
 
+  const openSelectedSeoEditor = () => {
+    if (!selected) return;
+    setSeoDraft({ alt: selected.seo?.alt || '', title: selected.seo?.title || '', caption: selected.seo?.caption || '', description: selected.seo?.description || '' });
+    setMetadataError('');
+    setEditingSeo(true);
+  };
+
+  const saveSelectedSeo = async () => {
+    if (!selected) return;
+    setSavingSeo(true);
+    setMetadataError('');
+    try {
+      const seo = await updateMediaSeo(selected.relativePath, seoDraft);
+      const updated = { ...selected, seo };
+      setSelected(updated);
+      setItems(current => current.map(item => item.relativePath === updated.relativePath ? updated : item));
+      setEditingSeo(false);
+    } catch (error) {
+      setMetadataError(error instanceof MediaUploadError ? 'ذخیره اطلاعات رسانه ناموفق بود: ' + error.code : 'ذخیره اطلاعات رسانه ناموفق بود.');
+    } finally {
+      setSavingSeo(false);
+    }
+  };
   if (!isOpen) return null;
 
   return createPortal(

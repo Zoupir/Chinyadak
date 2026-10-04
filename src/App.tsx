@@ -384,9 +384,9 @@ const AppContent: React.FC = () => {
           />
         )}
 
-        {route.view === 'account' && (
+        {(route.view === 'account' || route.view === 'wishlist') && (
           <AccountView
-            initialTab={route.param}
+            initialTab={route.view === 'wishlist' ? 'wishlist' : route.param}
             onNavigate={handleNavigate}
             onOpenVehicleModal={() => setIsVehicleModalOpen(true)}
             onOpenAuthModal={handleOpenAuthModal}

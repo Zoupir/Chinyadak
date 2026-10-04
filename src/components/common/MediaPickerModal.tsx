@@ -162,7 +162,7 @@ export const MediaPickerModal: React.FC<MediaPickerModalProps> = ({
       onSelect(updated.url, updated);
       onClose();
     } catch (error) {
-      setUploadError(error instanceof MediaUploadError ? `ذخیره اطلاعات سئو ناموفق بود: ${error.code}` : 'ذخیره اطلاعات سئو ناموفق بود.');
+      setUploadError(error instanceof MediaUploadError ? `ذخیره اطلاعات رسانه ناموفق بود: ${error.code}` : 'ذخیره اطلاعات سئو ناموفق بود.');
     } finally {
       setSavingSeo(false);
     }
@@ -332,7 +332,7 @@ export const MediaPickerModal: React.FC<MediaPickerModalProps> = ({
               <div className="w-full max-w-4xl space-y-4">
                 <div className="flex items-center gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-3">
                   <div className="w-20 h-20 shrink-0 rounded-xl border bg-white p-1 grid place-items-center"><img src={selected.url} alt={seoDraft.alt} className="max-w-full max-h-full object-contain" /></div>
-                  <div className="min-w-0"><strong className="block text-xs">تصویر بارگذاری شد — اطلاعات سئو را همین‌جا وارد کنید</strong><span className="block mt-1 text-[10px] text-neutral-500 truncate">{selected.filename}</span><p className="mt-1 text-[9px] text-neutral-500">این اطلاعات برای همین فایل در کتابخانه رسانه ذخیره می‌شود.</p></div>
+                  <div className="min-w-0"><strong className="block text-xs">تصویر بارگذاری شد — اطلاعات رسانه را همین‌جا وارد کنید</strong><span className="block mt-1 text-[10px] text-neutral-500 truncate">{selected.filename}</span><p className="mt-1 text-[9px] text-neutral-500">این اطلاعات برای همین فایل در کتابخانه رسانه ذخیره می‌شود.</p></div>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <label className="block text-[10px] font-bold">متن جایگزین تصویر (ALT)<input value={seoDraft.alt} onChange={e => setSeoDraft(current => ({ ...current, alt: e.target.value }))} className="w-full mt-1 p-2.5 border rounded-xl text-xs font-normal" /></label>

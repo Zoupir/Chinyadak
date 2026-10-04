@@ -484,7 +484,7 @@ export const Header: React.FC<HeaderProps> = ({
           <div
             className="marketplace-ref-container marketplace-ref-mainbar-inner"
             data-mobile-logo-align={settings.mobileLogoAlign || 'right'}
-            style={{ ['--mobile-logo-width' as any]: `${Math.max(60, Math.min(220, Number(settings.mobileLogoWidthPx || 118)))}px` }}
+            style={{ ['--mobile-logo-width' as any]: `${Math.max(60, Math.min(220, Number(settings.mobileLogoWidthPx || 118)))}px`, ['--site-logo-width' as any]: `${Math.max(80, Math.min(320, Number(settings.logoWidthPx || 160)))}px` }}
           >
             <button
               type="button"
@@ -534,7 +534,7 @@ export const Header: React.FC<HeaderProps> = ({
                 <Car className="w-4 h-4" />
                 <span>{selectedVehicle?.modelName || 'خودروی من'}</span>
               </button>
-              <button type="button" onClick={() => onNavigate('wishlist')} title="علاقه‌مندی‌ها">
+              <button type="button" onClick={() => onNavigate('account', 'wishlist')} title="علاقه‌مندی‌ها">
                 <Heart className="w-4 h-4" />
                 <span>{wishlist.length}</span>
               </button>
@@ -869,7 +869,7 @@ export const Header: React.FC<HeaderProps> = ({
             className="flex items-center gap-2 shrink-0 text-right group cursor-pointer"
           >
             {settings.logoUrl ? (
-              <img src={settings.logoUrl} alt={settings.siteTitle} className="h-8 w-auto object-contain max-w-[120px]" />
+              <img src={settings.logoUrl} alt={settings.siteTitle} className="h-8 w-auto object-contain max-w-[120px]" style={{ maxWidth: Math.max(60, Math.min(220, Number(settings.mobileLogoWidthPx || 118))) }} />
             ) : (
               <div className="flex items-center gap-1.5">
                 <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-red-600 to-red-800 flex items-center justify-center text-white shadow-xs">
@@ -977,7 +977,7 @@ export const Header: React.FC<HeaderProps> = ({
           className="flex items-center gap-2.5 shrink-0 text-right group cursor-pointer"
         >
           {settings.logoUrl ? (
-            <img src={settings.logoUrl} alt={settings.siteTitle} className="h-10 w-auto object-contain max-w-[160px]" />
+            <img src={settings.logoUrl} alt={settings.siteTitle} className="h-10 w-auto object-contain max-w-[160px]" style={{ maxWidth: Math.max(80, Math.min(320, Number(settings.logoWidthPx || 160))) }} />
           ) : (
             <>
               <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-red-600 to-red-800 flex items-center justify-center text-white shadow-md shadow-red-600/30 group-hover:scale-105 transition-transform">

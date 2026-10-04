@@ -38,9 +38,9 @@ export const ImageUploadInput: React.FC<ImageUploadInputProps> = ({
       <div className="rounded-2xl border border-neutral-200 bg-neutral-50 overflow-hidden">
         {value ? (
           <div className="p-2 flex items-center gap-3">
-            <div className={`w-28 shrink-0 overflow-hidden rounded-xl bg-white border border-neutral-200 ${aspectClass}`}>
+            <button type="button" onClick={() => setIsMediaOpen(true)} title="ویرایش اطلاعات این تصویر در کتابخانه رسانه" aria-label="باز کردن اطلاعات تصویر در کتابخانه رسانه" className={`w-28 shrink-0 overflow-hidden rounded-xl bg-white border border-neutral-200 ${aspectClass} cursor-pointer hover:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500`}>
               <img src={value} alt="" className="w-full h-full object-contain" />
-            </div>
+            </button>
             <div className="min-w-0 flex-1">
               <strong className="text-[10px] text-neutral-800 block">رسانه انتخاب‌شده</strong>
               <span className="mt-1 block text-[8px] text-neutral-400 font-mono truncate" dir="ltr">{value}</span>
@@ -85,6 +85,7 @@ export const ImageUploadInput: React.FC<ImageUploadInputProps> = ({
         onClose={() => setIsMediaOpen(false)}
         onSelect={(url) => onChange(url)}
         category={presetCategory}
+        initialUrl={value}
         title={label || 'انتخاب رسانه'}
       />
     </div>

@@ -23,6 +23,8 @@ export const MultiImageUploadInput: React.FC<MultiImageUploadInputProps> = ({
   maxImages = 8
 }) => {
   const [isMediaOpen,setIsMediaOpen]=useState(false);
+  const [activeImageUrl,setActiveImageUrl]=useState('');
+  const openMediaPicker=(url='')=>{setActiveImageUrl(url);setIsMediaOpen(true);};
 
   const addImage=(url:string)=>{
     const clean=url.trim();
@@ -51,7 +53,7 @@ export const MultiImageUploadInput: React.FC<MultiImageUploadInputProps> = ({
         </div>
         <button
           type="button"
-          onClick={()=>setIsMediaOpen(true)}
+          onClick={()=>openMediaPicker()}
           className="px-3 py-2 rounded-xl bg-neutral-900 text-white text-[10px] font-black inline-flex items-center justify-center gap-1.5"
         >
           <FolderOpen className="w-4 h-4"/>
@@ -64,7 +66,7 @@ export const MultiImageUploadInput: React.FC<MultiImageUploadInputProps> = ({
           {images.map((url,index)=>(
             <article key={`${url}-${index}`} className={`relative rounded-2xl border p-1 bg-neutral-50 overflow-hidden ${index===0?'border-blue-500 ring-2 ring-blue-100':'border-neutral-200'}`}>
               <div className="aspect-square rounded-xl overflow-hidden bg-white grid place-items-center relative">
-                <img src={url} alt="" className="w-full h-full object-contain"/>
+                <button type="button" onClick={()=>openMediaPicker(url)} aria-label="ویرایش اطلاعات این تصویر در کتابخانه رسانه" title="ویرایش اطلاعات تصویر" className="absolute inset-0 w-full h-full cursor-pointer"><img src={url} alt="" className="w-full h-full object-contain"/></button>
                 {index===0?(
                   <span className="absolute top-1.5 right-1.5 px-1.5 py-1 rounded-lg bg-blue-600 text-white text-[8px] font-black inline-flex items-center gap-1">
                     <Star className="w-3 h-3 fill-current"/> شاخص
@@ -82,13 +84,13 @@ export const MultiImageUploadInput: React.FC<MultiImageUploadInputProps> = ({
             </article>
           ))}
           {images.length<maxImages&&(
-            <button type="button" onClick={()=>setIsMediaOpen(true)} className="aspect-square rounded-2xl border-2 border-dashed border-neutral-300 hover:border-blue-500 bg-neutral-50 grid place-items-center text-neutral-400">
+            <button type="button" onClick={()=>openMediaPicker()} className="aspect-square rounded-2xl border-2 border-dashed border-neutral-300 hover:border-blue-500 bg-neutral-50 grid place-items-center text-neutral-400">
               <div className="text-center"><ImageIcon className="w-6 h-6 mx-auto mb-2"/><span className="text-[9px] font-bold">افزودن رسانه</span></div>
             </button>
           )}
         </div>
       ):(
-        <button type="button" onClick={()=>setIsMediaOpen(true)} className="w-full min-h-40 rounded-2xl border-2 border-dashed border-neutral-300 hover:border-blue-500 bg-neutral-50 grid place-items-center text-neutral-500">
+        <button type="button" onClick={()=>openMediaPicker()} className="w-full min-h-40 rounded-2xl border-2 border-dashed border-neutral-300 hover:border-blue-500 bg-neutral-50 grid place-items-center text-neutral-500">
           <div className="text-center"><ImageIcon className="w-8 h-8 mx-auto mb-2 text-blue-600"/><strong className="text-xs">کتابخانه رسانه را باز کن</strong><span className="block text-[9px] text-neutral-400 mt-1">از تصاویر قبلی استفاده کن یا تصویر جدید آپلود کن.</span></div>
         </button>
       )}
@@ -98,6 +100,7 @@ export const MultiImageUploadInput: React.FC<MultiImageUploadInputProps> = ({
         onClose={()=>setIsMediaOpen(false)}
         onSelect={(url)=>addImage(url)}
         category="parts"
+        initialUrl={activeImageUrl}
         title="انتخاب تصویر برای گالری محصول"
       />
     </div>

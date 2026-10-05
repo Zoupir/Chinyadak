@@ -10,7 +10,11 @@ import {
   pool,
   withTransaction,
   type ResultSetHeader,
-  type RowDataPacket
+  type RowDataPacket,
+  addLoyaltyTransaction,
+  awardPaidOrderLoyalty,
+  getLoyaltySettings,
+  refundOrderLoyalty
 } from '../db';
 
 interface ProductPriceRow extends RowDataPacket {
@@ -265,16 +269,19 @@ ordersRouter.post('/', async (req: AuthenticatedRequest, res) => {
     });
   }
 
-  // Coupons and loyalty redemption will be validated server-side in their own modules.
-  // Until then, client-provided discounts are intentionally ignored.
-  const discountAmount = 0;
-  const total = Math.max(0, subtotal - discountAmount + shipping.cost);
+  const requestedLoyaltyPoints = Math.max(0, Math.floor(Number(req.body?.loyaltyPointsToRedeem || 0)));
+  const optionalSession = getOptionalSession(req);
+  const customerId = optionalSession?.role === 'customer' ? optionalSession.sub : null;
+  if (requestedLoyaltyPoints > 0 && !customerId) {
+    res.status(401).json({ error: 'CUSTOMER_LOGIN_REQUIRED_FOR_LOYALTY' });
+    return;
+  }
+
+  let discountAmount = 0;
+  let loyaltyPointsRedeemed = 0;
   const orderId = randomUUID();
   const orderNumber = createOrderNumber();
-
-  const optionalSession = getOptionalSession(req);
-  const customerId =
-    optionalSession?.role === 'customer' ? optionalSession.sub : null;
+  const totalBeforeLoyalty = Math.max(0, subtotal + shipping.cost);
 
   const customerSnapshot = {
     firstName,
@@ -287,49 +294,72 @@ ordersRouter.post('/', async (req: AuthenticatedRequest, res) => {
     notes: notes || undefined
   };
 
-  await withTransaction(async connection => {
-    await connection.execute(
-      `INSERT INTO orders
-       (id, order_number, customer_id, status, customer_snapshot, shipping_snapshot,
-        payment_method, subtotal, discount_amount, shipping_fee, total, payment_status)
-       VALUES (?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?, 'unpaid')`,
-      [
-        orderId,
-        orderNumber,
-        customerId,
-        JSON.stringify(customerSnapshot),
-        JSON.stringify(shipping),
-        paymentMethod,
-        subtotal,
-        discountAmount,
-        shipping.cost,
-        total
-      ]
-    );
+  try {
+    await withTransaction(async connection => {
+      if (requestedLoyaltyPoints > 0 && customerId) {
+        const loyalty = await getLoyaltySettings(connection);
+        if (!loyalty.enabled) throw new Error('LOYALTY_DISABLED');
+        if (requestedLoyaltyPoints < loyalty.minimumRedeemPoints) throw new Error('LOYALTY_MINIMUM_NOT_MET');
+        const [customerRows] = await connection.query<Array<RowDataPacket & { loyalty_points: number }>>(
+          'SELECT loyalty_points FROM customers WHERE id = ? FOR UPDATE', [customerId]
+        );
+        if (!customerRows[0] || Number(customerRows[0].loyalty_points || 0) < requestedLoyaltyPoints) {
+          throw new Error('LOYALTY_POINTS_INSUFFICIENT');
+        }
+        const percentCap = Math.floor(subtotal * loyalty.maxRedeemPercent / 100);
+        const allowedPoints = Math.min(
+          requestedLoyaltyPoints,
+          Math.floor(percentCap / loyalty.tomanPerPoint)
+        );
+        if (allowedPoints < loyalty.minimumRedeemPoints) throw new Error('LOYALTY_REDEMPTION_UNAVAILABLE');
+        loyaltyPointsRedeemed = allowedPoints;
+        discountAmount = allowedPoints * loyalty.tomanPerPoint;
+      }
 
-    for (const item of normalizedItems) {
+      const total = Math.max(0, subtotal - discountAmount + shipping.cost);
       await connection.execute(
-        `INSERT INTO order_items
-         (order_id, product_id, sku, product_name, oem_number, unit_price, quantity, line_total, metadata_json)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO orders
+         (id, order_number, customer_id, status, customer_snapshot, shipping_snapshot,
+          payment_method, subtotal, discount_amount, shipping_fee, total, payment_status)
+         VALUES (?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?, 'unpaid')`,
         [
-          orderId,
-          item.productId,
-          item.sku,
-          item.productName,
-          item.oemNumber || null,
-          item.price,
-          item.quantity,
-          item.price * item.quantity,
-          JSON.stringify({
-            image: item.image,
-            grade: item.grade,
-            vehicleInfo: item.vehicleInfo
-          })
+          orderId, orderNumber, customerId, JSON.stringify(customerSnapshot), JSON.stringify(shipping),
+          paymentMethod, subtotal, discountAmount, shipping.cost, total
         ]
       );
-    }
-  });
+
+      if (loyaltyPointsRedeemed > 0 && customerId) {
+        const transaction = await addLoyaltyTransaction(connection, customerId, -loyaltyPointsRedeemed, 'redeemed', {
+          description: `تبدیل امتیاز به تخفیف سفارش ${orderNumber}`,
+          orderId,
+          orderNumber,
+          discountToman: discountAmount,
+          reason: 'checkout_redemption'
+        });
+        if (!transaction) throw new Error('LOYALTY_POINTS_INSUFFICIENT');
+      }
+
+      for (const item of normalizedItems) {
+        await connection.execute(
+          `INSERT INTO order_items
+           (order_id, product_id, sku, product_name, oem_number, unit_price, quantity, line_total, metadata_json)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            orderId, item.productId, item.sku, item.productName, item.oemNumber || null,
+            item.price, item.quantity, item.price * item.quantity,
+            JSON.stringify({ image: item.image, grade: item.grade, vehicleInfo: item.vehicleInfo })
+          ]
+        );
+      }
+    });
+  } catch (error: any) {
+    const code = String(error?.message || 'ORDER_CREATE_FAILED').split(':')[0];
+    const status = code === 'LOYALTY_POINTS_INSUFFICIENT' ? 409 :
+      code === 'CUSTOMER_LOGIN_REQUIRED_FOR_LOYALTY' ? 401 :
+      code === 'LOYALTY_DISABLED' || code === 'LOYALTY_MINIMUM_NOT_MET' || code === 'LOYALTY_REDEMPTION_UNAVAILABLE' ? 400 : 500;
+    res.status(status).json({ error: code });
+    return;
+  }
 
   const created = await fetchOrdersByWhere('WHERE id = ?', [orderId]);
   res.status(201).json({ order: created[0] });
@@ -387,13 +417,36 @@ ordersRouter.patch('/:id/status', requireAdminPermission('canManageOrders'), asy
   }
 
   const trackingCode = req.body?.trackingCode ? String(req.body.trackingCode).trim() : null;
-  const [result] = await pool.execute<ResultSetHeader>(
-    `UPDATE orders
-     SET status = ?, tracking_code = COALESCE(?, tracking_code), updated_at = NOW()
-     WHERE id = ? OR order_number = ?`,
-    [status, trackingCode, req.params.id, req.params.id]
-  );
-  if (!result.affectedRows) {
+  const outcome = await withTransaction(async connection => {
+    const [lockedRows] = await connection.query<Array<RowDataPacket & { id: string; payment_status: string }>>(
+      'SELECT id, payment_status FROM orders WHERE id = ? OR order_number = ? FOR UPDATE',
+      [req.params.id, req.params.id]
+    );
+    const order = lockedRows[0];
+    if (!order) return false;
+    if (status === 'paid') {
+      await connection.execute(
+        `UPDATE orders SET status = 'paid', payment_status = 'paid', paid_at = COALESCE(paid_at, NOW()),
+         tracking_code = COALESCE(?, tracking_code), updated_at = NOW() WHERE id = ?`,
+        [trackingCode, order.id]
+      );
+      await awardPaidOrderLoyalty(connection, order.id);
+    } else {
+      if (status === 'cancelled' || status === 'payment_failed') {
+        await refundOrderLoyalty(connection, order.id, ['paid', 'paid_stock_review'].includes(order.payment_status));
+      }
+      await connection.execute(
+        `UPDATE orders SET status = ?, payment_status = CASE
+           WHEN ? = 'payment_failed' AND payment_status NOT IN ('paid','paid_stock_review') THEN 'failed'
+           WHEN ? = 'cancelled' AND payment_status NOT IN ('paid','paid_stock_review') THEN 'cancelled'
+           ELSE payment_status END,
+         tracking_code = COALESCE(?, tracking_code), updated_at = NOW() WHERE id = ?`,
+        [status, status, status, trackingCode, order.id]
+      );
+    }
+    return true;
+  });
+  if (!outcome) {
     res.status(404).json({ error: 'ORDER_NOT_FOUND' });
     return;
   }
@@ -402,11 +455,17 @@ ordersRouter.patch('/:id/status', requireAdminPermission('canManageOrders'), asy
 });
 
 ordersRouter.delete('/:id', requireAdminPermission('canManageOrders'), async (req, res) => {
-  const [result] = await pool.execute<ResultSetHeader>(
-    'DELETE FROM orders WHERE id = ? OR order_number = ?',
-    [req.params.id, req.params.id]
-  );
-  if (!result.affectedRows) {
+  const deleted = await withTransaction(async connection => {
+    const [rows] = await connection.query<Array<RowDataPacket & { id: string; payment_status: string }>>(
+      'SELECT id, payment_status FROM orders WHERE id = ? OR order_number = ? FOR UPDATE',
+      [req.params.id, req.params.id]
+    );
+    if (!rows[0]) return false;
+    await refundOrderLoyalty(connection, rows[0].id, ['paid', 'paid_stock_review'].includes(rows[0].payment_status));
+    await connection.execute('DELETE FROM orders WHERE id = ?', [rows[0].id]);
+    return true;
+  });
+  if (!deleted) {
     res.status(404).json({ error: 'ORDER_NOT_FOUND' });
     return;
   }

@@ -121,8 +121,8 @@ paymentsRouter.post('/start', paymentLimiter, async (req, res) => {
       if (order.payment_status === 'paid' || order.payment_status === 'paid_stock_review') {
         throw new Error('ORDER_ALREADY_PAID');
       }
-      if (order.status === 'cancelled' || order.payment_status === 'cancelled') {
-        throw new Error('ORDER_CANCELLED');
+      if (['cancelled', 'payment_failed'].includes(order.status) || ['cancelled', 'failed'].includes(order.payment_status)) {
+        throw new Error('ORDER_PAYMENT_CLOSED');
       }
 
       const provider =
@@ -183,13 +183,18 @@ paymentsRouter.post('/start', paymentLimiter, async (req, res) => {
         );
         if (orders[0] && !['paid', 'paid_stock_review', 'initiated'].includes(orders[0].payment_status)) {
           await refundOrderLoyalty(connection, orderId, false);
+          await connection.execute(
+            `UPDATE orders SET status = 'payment_failed', payment_status = 'failed', updated_at = NOW()
+             WHERE id = ? AND payment_status NOT IN ('paid','paid_stock_review','initiated')`,
+            [orderId]
+          );
         }
       }).catch(refundError => console.error('Loyalty redemption rollback before payment failed:', refundError));
     }
     const status =
       code === 'ORDER_NOT_FOUND' ? 404 :
       code === 'ORDER_ALREADY_PAID' ? 409 :
-      code === 'ORDER_CANCELLED' ? 409 :
+      code === 'ORDER_PAYMENT_CLOSED' ? 409 :
       code === 'PAYMENT_ALREADY_IN_PROGRESS' ? 409 :
       code === 'INSUFFICIENT_STOCK' ? 409 :
       code === 'PAYMENT_PROVIDER_NOT_CONFIGURED' ? 503 :
@@ -247,8 +252,18 @@ paymentsRouter.post('/start', paymentLimiter, async (req, res) => {
       [String((error as Error)?.message || error), prepared.transactionId]
     ).catch(() => undefined);
     await releaseOrderReservation(prepared.orderId).catch(() => undefined);
-    await withTransaction(connection => refundOrderLoyalty(connection, prepared.orderId, false))
-      .catch(error => console.error('Loyalty redemption rollback after gateway start failure failed:', error));
+    await withTransaction(async connection => {
+      const [orders] = await connection.query<Array<RowDataPacket & { payment_status: string }>>(
+        'SELECT payment_status FROM orders WHERE id = ? FOR UPDATE', [prepared.orderId]
+      );
+      if (!orders[0] || ['paid', 'paid_stock_review'].includes(orders[0].payment_status)) return;
+      await refundOrderLoyalty(connection, prepared.orderId, false);
+      await connection.execute(
+        `UPDATE orders SET status = 'payment_failed', payment_status = 'failed', updated_at = NOW()
+         WHERE id = ? AND payment_status NOT IN ('paid','paid_stock_review')`,
+        [prepared.orderId]
+      );
+    }).catch(error => console.error('Loyalty redemption rollback after gateway start failure failed:', error));
 
     res.status(502).json({
       error: 'PAYMENT_GATEWAY_START_FAILED',

@@ -103,6 +103,7 @@ const shippingById = (id: string) => {
 const paymentTitle = (id: string) => {
   if (id === 'mellat') return 'به‌پرداخت بانک ملت';
   if (id === 'saman') return 'درگاه پرداخت الکترونیک سامان';
+  if (id === 'cod') return 'پرداخت در محل';
   return 'پرداخت آنلاین';
 };
 
@@ -188,8 +189,28 @@ ordersRouter.post('/', async (req: AuthenticatedRequest, res) => {
   const address = String(customerInput.address || '').trim();
   const notes = String(customerInput.notes || '').trim();
   const requestedItems = Array.isArray(req.body?.items) ? req.body.items : [];
-  const shipping = shippingById(String(req.body?.shippingMethodId || 'post'));
+  const requestedShippingId = String(req.body?.shippingMethodId || 'post');
   const paymentMethod = String(req.body?.paymentMethodId || 'saman');
+  const [checkoutSettingRows] = await pool.query<Array<RowDataPacket & { setting_key: string; setting_value: any }>>(
+    "SELECT setting_key, setting_value FROM app_settings WHERE setting_key IN ('site_settings','payment_gateways')"
+  );
+  const checkoutSettings = new Map(checkoutSettingRows.map(row => [row.setting_key, parseJson<any>(row.setting_value, {})]));
+  const siteSettings = checkoutSettings.get('site_settings') || {};
+  const configuredShipping = Array.isArray(siteSettings.shippingMethods) && siteSettings.shippingMethods.length
+    ? siteSettings.shippingMethods
+    : [
+        { id: 'post', title: 'پست پیشتاز بیمه‌شده', cost: Number(siteSettings.postShippingFee || 85000), estimatedDelivery: '۲۴ الی ۴۸ ساعت', enabled: true },
+        { id: 'tipax', title: 'تیپاکس اکسپرس', cost: Number(siteSettings.tipaxShippingFee || 110000), estimatedDelivery: '۲۴ الی ۴۸ ساعت', enabled: true },
+        { id: 'express', title: 'پیک موتوری', cost: Number(siteSettings.expressShippingFee || 120000), estimatedDelivery: '۲ ساعت کاری', enabled: true }
+      ];
+  const shipping = configuredShipping.find((method: any) => String(method.id) === requestedShippingId && method.enabled !== false);
+  const publicGateways = checkoutSettings.get('payment_gateways');
+  const codEnabled = Array.isArray(publicGateways) && publicGateways.some((gateway: any) => gateway.provider === 'cod' && gateway.isActive === true);
+
+  if (!shipping || !['saman', 'mellat', 'cod'].includes(paymentMethod) || (paymentMethod === 'cod' && !codEnabled)) {
+    res.status(400).json({ error: paymentMethod === 'cod' && !codEnabled ? 'PAYMENT_METHOD_UNAVAILABLE' : 'SHIPPING_OR_PAYMENT_UNAVAILABLE' });
+    return;
+  }
 
   if (!firstName || !lastName || !/^09\d{9}$/.test(phone) || !address) {
     res.status(400).json({ error: 'ORDER_CUSTOMER_INVALID' });

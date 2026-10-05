@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useStore } from '../../context/StoreContext';
 import { ProductCard } from '../product/ProductCard';
 import { Product, QualityGrade } from '../../types';
@@ -29,10 +29,15 @@ export const ShopView: React.FC<ShopViewProps> = ({
   onNavigate,
   onOpenVehicleModal
 }) => {
-  const { products, categories, brands, models, selectedVehicle, clearSelectedVehicle } = useStore();
+  const { products, categories, brands, models, selectedVehicle, clearSelectedVehicle, loadCatalogPage, catalogHasMore, catalogLoading } = useStore();
 
   // Filters state
   const [selectedCategory, setSelectedCategory] = useState<string>(initialCategory || 'all');
+
+  useEffect(() => {
+    if (selectedCategory === 'all') return;
+    void loadCatalogPage({ categorySlug: selectedCategory, append: false });
+  }, [selectedCategory]);
   const [selectedBrand, setSelectedBrand] = useState<string>('all');
   const [selectedManufacturer, setSelectedManufacturer] = useState<string>('all');
   const [selectedGrade, setSelectedGrade] = useState<QualityGrade | 'all'>('all');
@@ -535,6 +540,19 @@ export const ShopView: React.FC<ShopViewProps> = ({
                   ثبت استعلام قطعه نایاب
                 </button>
               </div>
+            </div>
+          )}
+
+          {catalogHasMore && (
+            <div className="flex justify-center pt-6">
+              <button
+                type="button"
+                disabled={catalogLoading}
+                onClick={() => void loadCatalogPage({ categorySlug: selectedCategory === 'all' ? undefined : selectedCategory, append: true })}
+                className="rounded-xl border border-neutral-300 bg-white px-6 py-3 text-sm font-bold text-neutral-800 hover:bg-neutral-50 disabled:opacity-50"
+              >
+                {catalogLoading ? 'در حال دریافت...' : 'نمایش محصولات بیشتر'}
+              </button>
             </div>
           )}
         </main>

@@ -102,14 +102,16 @@ const normalizeCategory = (input: any) => ({
 export const catalogRouter = Router();
 
 catalogRouter.get('/products', async (req, res) => {
-  const q = String(req.query.q || '').trim();
-  const category = String(req.query.category || '').trim();
+  const q = String(req.query.q || '').trim().slice(0, 120);
+  const category = String(req.query.category || '').trim().slice(0, 190);
+  const limit = Math.max(1, Math.min(100, Math.floor(Number(req.query.limit) || 48)));
+  const offset = Math.max(0, Math.min(10000000, Math.floor(Number(req.query.offset) || 0)));
   const params: any[] = [];
   const clauses = ["status = 'active'"];
 
   if (category) {
-    clauses.push('category_slug = ?');
-    params.push(category);
+    clauses.push("(category_slug = ? OR JSON_UNQUOTE(JSON_EXTRACT(data_json, '$.subcategorySlug')) = ?)");
+    params.push(category, category);
   }
   if (q) {
     clauses.push('(name_fa LIKE ? OR name_en LIKE ? OR oem_number LIKE ? OR part_number LIKE ? OR sku LIKE ?)');
@@ -117,12 +119,25 @@ catalogRouter.get('/products', async (req, res) => {
     params.push(like, like, like, like, like);
   }
 
-  const [rows] = await pool.query<ProductRow[]>(
-    `SELECT id, stock, reserved_stock, data_json FROM products WHERE ${clauses.join(' AND ')} ORDER BY updated_at DESC`,
+  const whereSql = clauses.join(' AND ');
+  const [[countRow]] = await pool.query<Array<RowDataPacket & { total: number }>>(
+    `SELECT COUNT(*) AS total FROM products WHERE ${whereSql}`,
     params
   );
+  const [rows] = await pool.query<ProductRow[]>(
+    `SELECT id, stock, reserved_stock, data_json FROM products WHERE ${whereSql}
+     ORDER BY updated_at DESC LIMIT ? OFFSET ?`,
+    [...params, limit, offset]
+  );
+  const products = rows.map(productDto);
+  const total = Number(countRow?.total || 0);
   res.json({
-    products: rows.map(productDto)
+    products,
+    total,
+    offset,
+    limit,
+    nextOffset: offset + products.length,
+    hasMore: offset + products.length < total
   });
 });
 
@@ -312,7 +327,7 @@ catalogRouter.delete('/products/:id', requireAdminPermission('canManageProducts'
 
 catalogRouter.get('/categories', async (_req, res) => {
   const [rows] = await pool.query<CategoryRow[]>(
-    'SELECT id, data_json FROM categories WHERE is_active = 1 ORDER BY sort_order ASC, name_fa ASC'
+    'SELECT id, data_json FROM categories WHERE is_active = 1 AND parent_id IS NULL ORDER BY sort_order ASC, name_fa ASC'
   );
   res.json({
     categories: rows.map(row => {

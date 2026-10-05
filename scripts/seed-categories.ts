@@ -8,7 +8,7 @@ interface ExistingCategory extends RowDataPacket {
   data_json: unknown;
 }
 
-const TAXONOMY_VERSION = '2026-10-05-v1';
+const TAXONOMY_VERSION = '2026-10-05-v2';
 
 const parseJson = (value: unknown): Record<string, any> => {
   if (value && typeof value === 'object') return value as Record<string, any>;
@@ -22,9 +22,10 @@ const main = async () => {
     const [markerRows] = await connection.query<RowDataPacket[]>(
       "SELECT setting_value FROM app_settings WHERE setting_key = 'part_category_taxonomy_version' LIMIT 1"
     );
-    if (String(markerRows[0]?.setting_value || '') === TAXONOMY_VERSION) {
+    const marker = String(markerRows[0]?.setting_value || '').replace(/^\"|\"$/g, '');
+    if (marker === TAXONOMY_VERSION) {
       await connection.commit();
-      console.log('The 12-part category taxonomy is already installed.');
+      console.log('The 12-part category taxonomy is already installed: 12 root categories.');
       return;
     }
 
@@ -99,7 +100,7 @@ const main = async () => {
     );
 
     await connection.commit();
-    console.log('Installed the 12-part category taxonomy and reparented legacy timing and turbo products; the filter slug remains compatible.');
+    console.log('Installed the 12-part category taxonomy (engine, transmission, suspension, brakes, electrical, cooling, fuel, body, lighting, filters, fluids, interior); legacy timing and turbo products were reparented.');
   } catch (error) {
     await connection.rollback();
     throw error;

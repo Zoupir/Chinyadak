@@ -1,6 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { useStore } from '../../context/StoreContext';
-import { SiteSettings } from '../../types';
+import { SiteSettings, ShippingMethodSetting } from '../../types';
 import { ImageUploadInput } from '../common/ImageUploadInput';
 import { 
   Palette, 
@@ -24,7 +24,9 @@ import {
   LayoutTemplate,
   Download,
   Upload,
-  RotateCcw
+  RotateCcw,
+  Plus,
+  Trash2
 } from 'lucide-react';
 
 export const AdminThemeTab: React.FC = () => {
@@ -33,6 +35,33 @@ export const AdminThemeTab: React.FC = () => {
   const [form, setForm] = useState<SiteSettings>({ ...settings });
   const [activeSubTab, setActiveSubTab] = useState<'identity' | 'theme' | 'colors' | 'typography' | 'seo' | 'loyalty'>('identity');
   const restoreInputRef = useRef<HTMLInputElement>(null);
+  const getShippingMethods = (source: SiteSettings): ShippingMethodSetting[] => source.shippingMethods || [
+    { id: 'post', title: 'پست پیشتاز بیمه‌شده', cost: source.postShippingFee || 85000, estimatedDelivery: '۲ تا ۳ روز کاری', enabled: true },
+    { id: 'tipax', title: 'تیپاکس اکسپرس', cost: source.tipaxShippingFee || 110000, estimatedDelivery: '۲۴ تا ۴۸ ساعت', enabled: true },
+    { id: 'express', title: 'پیک فوری تهران', cost: source.expressShippingFee || 120000, estimatedDelivery: 'حدود ۲ ساعت کاری', enabled: true }
+  ];
+  const shippingMethods = getShippingMethods(form);
+  const patchShippingMethod = (id: string, changes: Partial<ShippingMethodSetting>) => {
+    setForm(current => ({
+      ...current,
+      shippingMethods: getShippingMethods(current).map(method => method.id === id ? { ...method, ...changes } : method)
+    }));
+  };
+  const addShippingMethod = () => {
+    const id = `shipping-${Date.now().toString(36)}`;
+    setForm(current => ({
+      ...current,
+      shippingMethods: [...getShippingMethods(current), {
+        id, title: 'روش ارسال جدید', cost: 0, estimatedDelivery: 'طبق هماهنگی', enabled: true
+      }]
+    }));
+  };
+  const removeShippingMethod = (id: string) => {
+    setForm(current => ({
+      ...current,
+      shippingMethods: getShippingMethods(current).filter(method => method.id !== id)
+    }));
+  };
 
   const LAYOUT_PRESETS = [
     {
@@ -470,6 +499,82 @@ export const AdminThemeTab: React.FC = () => {
                 <label className="block text-neutral-700 font-bold text-xs mb-1">شماره تماس اصلی</label>
                 <input type="text" value={form.contactPhone || ''} onChange={e => setForm({ ...form, contactPhone: e.target.value })} className="w-full p-3 border border-neutral-300 rounded-xl text-xs" dir="ltr" />
               </div>
+              <section className="rounded-2xl border border-orange-200 bg-orange-50/40 p-4 space-y-4">
+                <div>
+                  <h4 className="font-black text-sm text-neutral-900">دکمه تماس صفحهٔ محصول</h4>
+                  <p className="text-[10px] leading-5 text-neutral-600">کنار دکمهٔ اشتراک‌گذاری نمایش داده می‌شود و شماره را مستقیم شماره‌گیری می‌کند.</p>
+                </div>
+                <label className="flex items-center gap-2 text-xs font-bold text-neutral-800">
+                  <input type="checkbox" checked={form.productContactEnabled !== false}
+                    onChange={e => setForm({ ...form, productContactEnabled: e.target.checked })} className="accent-orange-500" />
+                  نمایش دکمهٔ تماس در صفحهٔ محصول
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <label className="block">
+                    <span className="block text-neutral-700 font-bold text-xs mb-1">شمارهٔ دکمهٔ تماس</span>
+                    <input type="tel" inputMode="tel" dir="ltr" value={form.productContactPhone || ''}
+                      onChange={e => setForm({ ...form, productContactPhone: e.target.value })}
+                      placeholder={form.contactPhone || 'شماره تماس فروشگاه'}
+                      className="w-full p-3 border border-neutral-300 rounded-xl text-xs" />
+                    <small className="text-[9px] text-neutral-500">اگر خالی باشد، شمارهٔ تماس اصلی استفاده می‌شود.</small>
+                  </label>
+                  <label className="block">
+                    <span className="block text-neutral-700 font-bold text-xs mb-1">رنگ دکمه</span>
+                    <div className="flex items-center gap-2">
+                      <input type="color" value={form.productContactButtonColor || form.primaryColor || '#f97316'}
+                        onChange={e => setForm({ ...form, productContactButtonColor: e.target.value })}
+                        className="w-12 h-10 border border-neutral-300 rounded-lg p-1 bg-white" />
+                      <input type="text" dir="ltr" value={form.productContactButtonColor || form.primaryColor || '#f97316'}
+                        onChange={e => setForm({ ...form, productContactButtonColor: e.target.value })}
+                        className="flex-1 p-2.5 border border-neutral-300 rounded-xl text-xs font-mono" />
+                    </div>
+                  </label>
+                </div>
+              </section>
+
+              <section className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4 space-y-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <h4 className="font-black text-sm text-neutral-900">روش‌های ارسال</h4>
+                    <p className="text-[10px] text-neutral-500 mt-1">روش، هزینه، زمان تحویل و فعال‌بودن آن را برای صفحهٔ تسویه تنظیم کنید.</p>
+                  </div>
+                  <button type="button" onClick={addShippingMethod} className="shrink-0 px-3 py-2 rounded-xl bg-neutral-900 text-white text-[10px] font-bold inline-flex items-center gap-1">
+                    <Plus className="w-3.5 h-3.5" /> افزودن
+                  </button>
+                </div>
+                <div className="space-y-3">
+                  {shippingMethods.map(method => (
+                    <div key={method.id} className="rounded-xl border border-neutral-200 bg-white p-3 grid grid-cols-1 lg:grid-cols-12 gap-2 items-end">
+                      <label className="lg:col-span-4">
+                        <span className="block text-[9px] font-bold text-neutral-600 mb-1">عنوان روش</span>
+                        <input value={method.title} onChange={e => patchShippingMethod(method.id, { title: e.target.value })}
+                          className="w-full p-2 border rounded-lg text-xs" />
+                      </label>
+                      <label className="lg:col-span-2">
+                        <span className="block text-[9px] font-bold text-neutral-600 mb-1">هزینه (تومان)</span>
+                        <input type="number" min="0" step="1000" value={method.cost}
+                          onChange={e => patchShippingMethod(method.id, { cost: Math.max(0, Number(e.target.value) || 0) })}
+                          className="w-full p-2 border rounded-lg text-xs" dir="ltr" />
+                      </label>
+                      <label className="lg:col-span-3">
+                        <span className="block text-[9px] font-bold text-neutral-600 mb-1">زمان تحویل</span>
+                        <input value={method.estimatedDelivery} onChange={e => patchShippingMethod(method.id, { estimatedDelivery: e.target.value })}
+                          className="w-full p-2 border rounded-lg text-xs" />
+                      </label>
+                      <label className="lg:col-span-2 flex items-center gap-2 text-[10px] font-bold py-2">
+                        <input type="checkbox" checked={method.enabled} onChange={e => patchShippingMethod(method.id, { enabled: e.target.checked })} className="accent-orange-500" />
+                        فعال برای خرید
+                      </label>
+                      <button type="button" onClick={() => removeShippingMethod(method.id)} aria-label="حذف روش ارسال"
+                        className="lg:col-span-1 h-9 grid place-items-center rounded-lg text-red-600 hover:bg-red-50">
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))}
+                  {!shippingMethods.length && <p className="text-xs text-neutral-500">روشی ثبت نشده؛ برای خرید دست‌کم یک روش ارسال اضافه کنید.</p>}
+                </div>
+              </section>
+
               <div>
                 <label className="block text-neutral-700 font-bold text-xs mb-1">شماره پشتیبانی</label>
                 <input type="text" value={form.supportPhone || ''} onChange={e => setForm({ ...form, supportPhone: e.target.value })} className="w-full p-3 border border-neutral-300 rounded-xl text-xs" dir="ltr" />

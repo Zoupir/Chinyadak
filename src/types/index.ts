@@ -622,12 +622,25 @@ export interface BannerPlacementConfig {
   items: BannerCreative[];
 }
 
+export interface ShippingMethodSetting {
+  id: string;
+  title: string;
+  cost: number;
+  estimatedDelivery: string;
+  enabled: boolean;
+  description?: string;
+}
+
 export interface SiteSettings {
   /** Saved visual order for homepage sections and independent banner placements. */
   homeLayoutOrder?: string[];
   siteTitle: string;
   siteSlogan: string;
   contactPhone: string;
+  productContactPhone?: string;
+  productContactEnabled?: boolean;
+  productContactButtonColor?: string;
+  shippingMethods?: ShippingMethodSetting[];
   /** Show a contact CTA instead of purchase when a product has no valid price. */
   contactWhenNoPrice?: boolean;
   supportPhone: string;

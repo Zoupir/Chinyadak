@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Product } from '../../types';
 import { useStore } from '../../context/StoreContext';
 import { checkProductFitment, formatToman, getGradeInfo } from '../../utils/formatters';
@@ -29,6 +29,8 @@ import {
 } from 'lucide-react';
 import { ShareButton } from '../common/ShareButton';
 import { RichTextContent } from '../common/RichTextContent';
+import { toPersianDigits, toTelHref } from '../../utils/phone';
+import { apiRequest } from '../../api/client';
 
 interface ProductDetailViewProps {
   productId: string;
@@ -56,7 +58,20 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
     settings
   } = useStore();
 
-  const product = products.find(p => p.id === productId || p.slug === productId);
+  const cachedProduct = products.find(p => p.id === productId || p.slug === productId);
+  const [fetchedProduct, setFetchedProduct] = useState<Product | null>(null);
+  const [isProductLoading, setIsProductLoading] = useState(!cachedProduct);
+  const product = cachedProduct || fetchedProduct;
+  useEffect(() => {
+    if (cachedProduct) { setFetchedProduct(null); setIsProductLoading(false); return; }
+    setIsProductLoading(true);
+    let cancelled = false;
+    apiRequest<{ product: Product }>(`/api/catalog/products/${encodeURIComponent(productId)}`)
+      .then(result => { if (!cancelled) setFetchedProduct(result.product); })
+      .catch(error => { if (!cancelled) console.error('Product detail load failed:', error); })
+      .finally(() => { if (!cancelled) setIsProductLoading(false); });
+    return () => { cancelled = true; };
+  }, [productId, Boolean(cachedProduct)]);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [activeTab, setActiveTab] = useState<'specs' | 'fitment' | 'symptoms' | 'install' | 'fake'>('specs');
@@ -69,8 +84,8 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
         <div className="w-16 h-16 rounded-full bg-neutral-100 flex items-center justify-center mx-auto mb-4 text-neutral-400">
           <AlertCircle className="w-8 h-8" />
         </div>
-        <h2 className="text-xl font-bold text-neutral-900 mb-2">قطعه موردنظر یافت نشد!</h2>
-        <p className="text-xs text-neutral-500 mb-6">احتمال دارد این کالا حذف شده باشد یا آدرس اشتباه وارد شده باشد.</p>
+        <h2 className="text-xl font-bold text-neutral-900 mb-2">{isProductLoading ? 'در حال بارگذاری اطلاعات قطعه...' : 'قطعه موردنظر یافت نشد!'}</h2>
+        <p className="text-xs text-neutral-500 mb-6">{isProductLoading ? 'اطلاعات این کالا دریافت می‌شود.' : 'احتمال دارد این کالا حذف شده باشد یا آدرس اشتباه وارد شده باشد.'}</p>
         <button
           onClick={() => onNavigate('shop')}
           className="px-6 py-2.5 bg-red-600 text-white rounded-xl text-xs font-bold"
@@ -127,13 +142,26 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
           <span className="text-neutral-900 font-bold truncate max-w-xs">{product.nameFa}</span>
         </nav>
 
-        <ShareButton
-          view="product"
-          param={product.id}
-          variant="button"
-          label="اشتراک‌گذاری قطعه"
-          className="shrink-0 text-xs"
-        />
+        <div className="flex items-center gap-2 shrink-0">
+          <ShareButton
+            view="product"
+            param={product.id}
+            variant="button"
+            label="اشتراک‌گذاری قطعه"
+            className="text-xs"
+          />
+          {settings.productContactEnabled !== false && (settings.productContactPhone || settings.contactPhone) && (
+            <a
+              href={toTelHref(settings.productContactPhone || settings.contactPhone || '')}
+              className="inline-flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-bold text-white shadow-sm"
+              style={{ backgroundColor: settings.productContactButtonColor || settings.primaryColor || '#ea580c' }}
+              aria-label={'تماس با فروشنده ' + toPersianDigits(settings.productContactPhone || settings.contactPhone || '')}
+            >
+              <Phone className="h-4 w-4" />
+              <span>تماس</span>
+            </a>
+          )}
+        </div>
       </div>
 
       {/* Main Top Grid: Gallery & Product Info */}

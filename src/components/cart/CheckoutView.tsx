@@ -38,7 +38,8 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderCompleted, on
     calculatePointsEarned,
     calculatePointsValue,
     getTierInfo,
-    settings 
+    settings,
+    paymentGateways
   } = useStore();
 
   const customerPoints = getCustomerPoints(currentCustomer?.id);
@@ -58,16 +59,27 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderCompleted, on
   const [notes, setNotes] = useState('');
 
   // Shipping Method
-  const [selectedShipping, setSelectedShipping] = useState<'express' | 'tipax' | 'post'>('post');
+  const [selectedShipping, setSelectedShipping] = useState<string>('post');
+  const shippingMethods = (settings.shippingMethods?.length ? settings.shippingMethods : [
+    { id: 'post', title: 'پست پیشتاز بیمه‌شده (سراسر ایران)', description: 'تحویل ۲ الی ۳ روز کاری', cost: Number(settings.postShippingFee || 85000), estimatedDelivery: '۲۴ الی ۴۸ ساعت', enabled: true },
+    { id: 'tipax', title: 'تیپاکس اکسپرس', description: 'تحویل با تیپاکس', cost: Number(settings.tipaxShippingFee || 110000), estimatedDelivery: '۲۴ الی ۴۸ ساعت', enabled: true },
+    { id: 'express', title: 'پیک فوری', description: 'ارسال فوری در شهرهای تحت پوشش', cost: Number(settings.expressShippingFee || 120000), estimatedDelivery: '۲ ساعت کاری', enabled: true }
+  ]).filter(method => method.enabled);
+  const selectedShippingMethod = shippingMethods.find(method => method.id === selectedShipping) || shippingMethods[0];
+
+  useEffect(() => {
+    if (shippingMethods.length && !shippingMethods.some(method => method.id === selectedShipping)) {
+      setSelectedShipping(shippingMethods[0].id);
+    }
+  }, [settings.shippingMethods, selectedShipping]);
   
   // Payment Gateway
-  const [selectedGateway, setSelectedGateway] = useState<'saman' | 'mellat'>('saman');
-  const [gatewayAvailability, setGatewayAvailability] = useState<Record<'saman' | 'mellat', boolean>>({
-    saman: false,
-    mellat: false
+  const [selectedGateway, setSelectedGateway] = useState<'saman' | 'mellat' | 'cod'>('saman');
+  const [gatewayAvailability, setGatewayAvailability] = useState<Record<'saman' | 'mellat' | 'cod', boolean>>({
+    saman: false, mellat: false, cod: false
   });
   const [gatewayStatusLoaded, setGatewayStatusLoaded] = useState(false);
-  const hasAvailableGateway = gatewayAvailability.saman || gatewayAvailability.mellat;
+  const hasAvailableGateway = gatewayAvailability.saman || gatewayAvailability.mellat || gatewayAvailability.cod;
 
   // Coupon state
   const [couponCode, setCouponCode] = useState('');
@@ -84,11 +96,15 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderCompleted, on
 
   // Gateway availability is read from server-side configuration; credentials never reach the browser.
   useEffect(() => {
+    setGatewayAvailability(current => ({
+      ...current,
+      cod: paymentGateways.some(gateway => gateway.provider === 'cod' && gateway.isActive)
+    }));
     let cancelled = false;
     apiRequest<{ providers: Array<{ id: 'saman' | 'mellat'; configured: boolean }> }>('/api/payments/providers')
       .then(result => {
         if (cancelled) return;
-        const next = { saman: false, mellat: false };
+        const next = { saman: false, mellat: false, cod: paymentGateways.some(gateway => gateway.provider === 'cod' && gateway.isActive) };
         result.providers.forEach(provider => {
           if (provider.id === 'saman' || provider.id === 'mellat') {
             next[provider.id] = Boolean(provider.configured);
@@ -98,6 +114,7 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderCompleted, on
         if (!next[selectedGateway]) {
           if (next.saman) setSelectedGateway('saman');
           else if (next.mellat) setSelectedGateway('mellat');
+          else if (next.cod) setSelectedGateway('cod');
         }
       })
       .catch(error => {
@@ -110,7 +127,7 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderCompleted, on
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [paymentGateways]);
 
   // Loyalty previews are convenience only; the server revalidates the balance, limits and settings.
   const loyaltyEnabled = settings.loyaltySettings?.enabled === true;
@@ -126,7 +143,7 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderCompleted, on
     : 0;
   const loyaltyDiscount = calculatePointsValue(effectiveRedeemedPoints);
 
-  const shippingCost = selectedShipping === 'express' ? 120000 : selectedShipping === 'tipax' ? 110000 : 85000;
+  const shippingCost = Number(selectedShippingMethod?.cost || 0);
   const finalTotal = Math.max(0, cartTotal - appliedDiscount - loyaltyDiscount + shippingCost);
   const pointsEarnedFromThisOrder = loyaltyEnabled && currentCustomer
     ? calculatePointsEarned(Math.max(0, cartTotal - appliedDiscount - loyaltyDiscount), currentCustomer.id)
@@ -176,7 +193,7 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderCompleted, on
       return;
     }
 
-    if (!gatewayStatusLoaded || !gatewayAvailability[selectedGateway]) {
+    if (!gatewayStatusLoaded || !gatewayAvailability[selectedGateway] || !selectedShippingMethod) {
       showToast('درگاه انتخاب‌شده روی سرور فعال و پیکربندی نشده است.', 'error');
       return;
     }
@@ -219,20 +236,14 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderCompleted, on
           notes
         },
         shippingMethod: {
-          id: selectedShipping,
-          title: selectedShipping === 'express'
-            ? 'پیک موتوری ۲ ساعته'
-            : selectedShipping === 'tipax'
-              ? 'تیپاکس اکسپرس'
-              : 'پست پیشتاز بیمه‌شده',
+          id: selectedShippingMethod.id,
+          title: selectedShippingMethod.title,
           cost: shippingCost,
-          estimatedDelivery: selectedShipping === 'express' ? '۲ ساعت کاری' : '۲۴ الی ۴۸ ساعت'
+          estimatedDelivery: selectedShippingMethod.estimatedDelivery || ''
         },
         paymentMethod: {
           id: selectedGateway,
-          title: selectedGateway === 'saman'
-            ? 'درگاه پرداخت الکترونیک سامان'
-            : 'به‌پرداخت بانک ملت'
+          title: selectedGateway === 'saman' ? 'درگاه پرداخت الکترونیک سامان' : selectedGateway === 'mellat' ? 'به‌پرداخت بانک ملت' : 'پرداخت در محل'
         },
         subtotal: cartTotal,
         discountAmount: appliedDiscount,
@@ -242,6 +253,14 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderCompleted, on
         });
         orderId = newOrder.id;
         setPendingOrderId(newOrder.id);
+      }
+
+      if (selectedGateway === 'cod') {
+        setPendingOrderId(null);
+        clearCart();
+        showToast('سفارش شما ثبت شد؛ پرداخت هنگام تحویل انجام می‌شود.', 'success');
+        onOrderCompleted(orderId);
+        return;
       }
 
       const payment = await apiRequest<{
@@ -460,26 +479,7 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderCompleted, on
             </h3>
 
             <div className="space-y-3">
-              {[
-                {
-                  id: 'post',
-                  title: 'پست پیشتاز بیمه‌شده (سراسر ایران)',
-                  desc: 'تحویل ۲ الی ۳ روز کاری با بیمه کامل شکستگی قطعات',
-                  cost: 85000
-                },
-                {
-                  id: 'tipax',
-                  title: 'تیپاکس اکسپرس هوایی',
-                  desc: 'تحویل ۲۴ ساعته درب منزل در کلیه شهرستان‌ها',
-                  cost: 110000
-                },
-                {
-                  id: 'express',
-                  title: 'پیک فوری ویژه شهر تهران (۲ ساعته)',
-                  desc: 'ارسال فوری از انبار چراغ برق با پیک اختصاصی',
-                  cost: 120000
-                }
-              ].map(opt => (
+              {shippingMethods.map(opt => (
                 <label
                   key={opt.id}
                   className={`p-4 rounded-2xl border flex items-center justify-between cursor-pointer transition-all ${
@@ -498,7 +498,7 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderCompleted, on
                     />
                     <div>
                       <h4 className="font-bold text-xs sm:text-sm text-neutral-900">{opt.title}</h4>
-                      <p className="text-[11px] text-neutral-500">{opt.desc}</p>
+                      <p className="text-[11px] text-neutral-500">{opt.description || opt.estimatedDelivery}</p>
                     </div>
                   </div>
                   <span className="text-xs font-bold text-neutral-900 font-mono">
@@ -506,6 +506,9 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderCompleted, on
                   </span>
                 </label>
               ))}
+              {shippingMethods.length === 0 && (
+                <p className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">در حال حاضر روش ارسال فعالی تعریف نشده است. برای تکمیل سفارش، مدیر باید دست‌کم یک روش ارسال را فعال کند.</p>
+              )}
             </div>
           </div>
 
@@ -557,6 +560,10 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderCompleted, on
                   <h4 className="font-bold text-xs text-neutral-900">به‌پرداخت ملت (BPM)</h4>
                   <p className="text-[10px] text-neutral-500">{gatewayAvailability.mellat ? 'تسویه و تایید آنی با شاپرک' : 'هنوز روی سرور پیکربندی نشده'}</p>
                 </div>
+              </label>
+              <label className={`p-4 rounded-2xl border flex items-center gap-3 cursor-pointer transition-all ${selectedGateway === 'cod' ? 'border-red-600 bg-red-50/40 ring-2 ring-red-600/20' : 'border-neutral-200 hover:border-neutral-300'} ${gatewayAvailability.cod ? '' : 'opacity-50'}`}>
+                <input type="radio" name="gateway" checked={selectedGateway === 'cod'} disabled={!gatewayAvailability.cod} onChange={() => setSelectedGateway('cod')} className="text-red-600 focus:ring-red-500 w-4 h-4" />
+                <div><h4 className="font-bold text-xs text-neutral-900">پرداخت در محل</h4><p className="text-[10px] text-neutral-500">{gatewayAvailability.cod ? 'پرداخت هنگام تحویل سفارش' : 'در تنظیمات درگاه‌ها فعال نشده'}</p></div>
               </label>
             </div>
           </div>
@@ -790,11 +797,11 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderCompleted, on
               )}
               <button
                 onClick={() => handleProcessPayment(false)}
-                disabled={isProcessing || !gatewayStatusLoaded || !gatewayAvailability[selectedGateway]}
+                disabled={isProcessing || !gatewayStatusLoaded || !gatewayAvailability[selectedGateway] || !selectedShippingMethod}
                 className="w-full h-12 bg-red-600 hover:bg-red-700 text-white font-bold text-sm rounded-xl shadow-lg shadow-red-600/30 flex items-center justify-center gap-2 transition-all active:scale-98 disabled:opacity-50"
               >
                 {isProcessing ? (
-                  <span>در حال انتقال به درگاه بانکی...</span>
+                  <span>{selectedGateway === 'cod' ? 'در حال ثبت سفارش...' : 'در حال انتقال به درگاه بانکی...'}</span>
                 ) : (
                   <>
                     <CreditCard className="w-4 h-4" />

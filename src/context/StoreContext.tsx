@@ -40,6 +40,8 @@ import {
 } from '../data/mockData';
 import { apiRequest, ApiError } from '../api/client';
 
+interface CatalogPageOptions { categorySlug?: string; query?: string; offset?: number; append?: boolean; }
+
 interface SearchQueryLog {
   query: string;
   count: number;
@@ -429,6 +431,9 @@ const syncCategorySeoTree = async (category: Category): Promise<void> => {
 interface StoreContextType {
   // Catalog
   products: Product[];
+  catalogHasMore: boolean;
+  catalogLoading: boolean;
+  loadCatalogPage: (options?: CatalogPageOptions) => Promise<void>;
   brands: CarBrand[];
   models: VehicleModel[];
   categories: Category[];
@@ -621,9 +626,38 @@ const StoreContext = createContext<StoreContextType | undefined>(undefined);
 export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   // Products
   const [products, setProducts] = useState<Product[]>([]);
+  const [catalogHasMore, setCatalogHasMore] = useState(false);
+  const [catalogLoading, setCatalogLoading] = useState(false);
+  const [catalogOffset, setCatalogOffset] = useState(0);
+  const [catalogQueryKey, setCatalogQueryKey] = useState('all');
 
   const [brands, setBrands] = useState<CarBrand[]>([]);
   const [models, setModels] = useState<VehicleModel[]>([]);
+
+  const loadCatalogPage = async (options: CatalogPageOptions = {}) => {
+    const categorySlug = options.categorySlug || '';
+    const query = options.query || '';
+    const key = categorySlug || query || 'all';
+    const append = options.append === true;
+    const offset = options.offset ?? (append && key === catalogQueryKey ? catalogOffset : 0);
+    setCatalogLoading(true);
+    try {
+      const params = new URLSearchParams({ limit: '48', offset: String(offset) });
+      if (categorySlug) params.set('category', categorySlug);
+      if (query) params.set('q', query);
+      const page = await apiRequest<{ products: Product[]; hasMore?: boolean; nextOffset?: number }>(`/api/catalog/products?${params.toString()}`);
+      setProducts(current => append && key === catalogQueryKey
+        ? Array.from(new Map<string, Product>([...current, ...page.products].map(product => [product.id, product] as const)).values())
+        : page.products);
+      setCatalogOffset(page.nextOffset ?? offset + page.products.length);
+      setCatalogHasMore(Boolean(page.hasMore));
+      setCatalogQueryKey(key);
+    } catch (error) {
+      console.error('Catalog page load failed:', error);
+    } finally {
+      setCatalogLoading(false);
+    }
+  };
 
   const [categories, setCategories] = useState<Category[]>([]);
 
@@ -785,7 +819,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     let cancelled = false;
 
     Promise.all([
-      apiRequest<{ products: Product[] }>('/api/catalog/products'),
+      apiRequest<{ products: Product[]; hasMore?: boolean; nextOffset?: number }>('/api/catalog/products?limit=48&offset=0'),
       apiRequest<{ categories: Category[] }>('/api/catalog/categories'),
       apiRequest<{ brands: CarBrand[]; models: VehicleModel[] }>('/api/vehicles'),
       apiRequest<{
@@ -800,6 +834,9 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       .then(([productData, categoryData, vehicleData, cmsData]) => {
         if (cancelled) return;
         setProducts(productData.products);
+        setCatalogOffset(productData.nextOffset ?? productData.products.length);
+        setCatalogHasMore(Boolean(productData.hasMore));
+        setCatalogQueryKey('all');
         setCategories(categoryData.categories);
         setBrands(vehicleData.brands);
         setModels(vehicleData.models);
@@ -2398,6 +2435,9 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   return (
     <StoreContext.Provider value={{
       products,
+      catalogHasMore,
+      catalogLoading,
+      loadCatalogPage,
       brands,
       models,
       categories,

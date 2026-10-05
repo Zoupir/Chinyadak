@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { StoreProvider, useStore } from './context/StoreContext';
+import { toPersianDigits } from './utils/phone';
 import { Header } from './components/layout/Header';
 import { Footer } from './components/layout/Footer';
 import { MobileBottomNav } from './components/layout/MobileBottomNav';
@@ -92,6 +93,39 @@ const AppContent: React.FC = () => {
     observer.observe(document.body, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: visibleAttributes });
     return () => observer.disconnect();
   }, [isStoreReady, settings.siteTitle]);
+
+  // Render Persian digits in every user-facing telephone link while preserving
+  // its machine-readable tel: target for tap-to-call.
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    const formatTelephone = (node: Node) => {
+      if (node instanceof Element && node.matches('a[href^="tel:"]')) {
+        const walk = (child: Node) => {
+          if (child.nodeType === Node.TEXT_NODE && child.textContent) {
+            const formatted = toPersianDigits(child.textContent);
+            if (formatted !== child.textContent) child.textContent = formatted;
+          } else if (!(child instanceof Element && child.matches('svg, [aria-hidden="true"]'))) {
+            Array.from(child.childNodes).forEach(walk);
+          }
+        };
+        Array.from(node.childNodes).forEach(walk);
+        return;
+      }
+      if (node instanceof Element && node.closest('a[href^="tel:"]')) return;
+      Array.from(node.childNodes || []).forEach(formatTelephone);
+    };
+    formatTelephone(document.body);
+    const observer = new MutationObserver(records => {
+      records.forEach(record => {
+        if (record.type === 'characterData') {
+          const parent = record.target.parentElement?.closest('a[href^="tel:"]');
+          if (parent) formatTelephone(parent);
+        } else Array.from(record.addedNodes).forEach(formatTelephone);
+      });
+    });
+    observer.observe(document.body, { subtree: true, childList: true, characterData: true });
+    return () => observer.disconnect();
+  }, []);
 
   // Apply admin-controlled identity/theme variables to the whole storefront.
   useEffect(() => {

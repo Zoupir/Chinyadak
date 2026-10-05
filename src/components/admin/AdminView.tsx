@@ -90,7 +90,10 @@ interface AdminViewProps {
 
 export const AdminView: React.FC<AdminViewProps> = ({ initialTarget, onExitToStore, onNavigate }) => {
   const { 
-    products, 
+    products,
+    catalogHasMore,
+    catalogLoading,
+    loadCatalogPage,
     addProduct,
     updateProduct, 
     deleteProduct,
@@ -133,6 +136,10 @@ export const AdminView: React.FC<AdminViewProps> = ({ initialTarget, onExitToSto
   const [activeTab, setActiveTab] = useState<
     'overview' | 'cars' | 'products' | 'categories' | 'menus_attrs' | 'mega_menu' | 'media' | 'icons' | 'footer' | 'pages' | 'articles' | 'sliders' | 'banners' | 'home_layout' | 'orders' | 'customers' | 'admins' | 'gateways' | 'sandbox' | 'apis' | 'theme' | 'seo' | 'bulk' | 'analytics'
   >(initialTarget?.startsWith('product:') ? 'products' : initialTarget?.startsWith('article:') ? 'articles' : initialTarget?.startsWith('category:') ? 'categories' : initialTarget?.startsWith('page:') ? 'pages' : initialTarget === 'blog' ? 'articles' : 'overview');
+
+  useEffect(() => {
+    if (activeTab === 'products') void loadCatalogPage({ offset: 0, append: false });
+  }, [activeTab]);
 
   // Sidebar Layout State
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -1077,6 +1084,15 @@ export const AdminView: React.FC<AdminViewProps> = ({ initialTarget, onExitToSto
                   </tbody>
                 </table>
               </div>
+              {catalogHasMore && (
+                <div className="flex justify-center border-t border-neutral-100 p-4">
+                  <button type="button" disabled={catalogLoading}
+                    onClick={() => void loadCatalogPage({ append: true })}
+                    className="rounded-xl border border-neutral-300 bg-white px-5 py-2.5 text-xs font-bold disabled:opacity-50">
+                    {catalogLoading ? 'در حال دریافت...' : 'بارگذاری محصولات بیشتر'}
+                  </button>
+                </div>
+              )}
             </div>
           )}
 

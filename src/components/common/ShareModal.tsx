@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { 
   X, 
   Copy, 
@@ -35,6 +35,13 @@ export const ShareModal: React.FC<ShareModalProps> = ({
   const { products, categories, models, brands, articles, showToast } = useStore();
   const [copied, setCopied] = useState(false);
   const [showQr, setShowQr] = useState(false);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKeyDown = (event: KeyboardEvent) => { if (event.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 
@@ -129,9 +136,9 @@ export const ShareModal: React.FC<ShareModalProps> = ({
   const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=240x240&margin=10&data=${encodeURIComponent(fullUrl)}`;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
+    <div onMouseDown={event => { if (event.target === event.currentTarget) onClose(); }} className="fixed inset-0 z-[300] flex items-start sm:items-center justify-center overflow-y-auto p-2 sm:p-4 pt-[max(0.5rem,env(safe-area-inset-top))] bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
       <div 
-        className="bg-white rounded-3xl max-w-lg w-full overflow-hidden shadow-2xl border border-neutral-100 flex flex-col animate-in zoom-in-95 duration-200"
+        className="my-auto bg-white rounded-2xl sm:rounded-3xl max-w-lg w-full max-h-[calc(100dvh-1rem)] sm:max-h-[min(80vh,760px)] overflow-hidden shadow-2xl border border-neutral-100 flex flex-col animate-in zoom-in-95 duration-200"
         dir="rtl"
       >
         {/* Header */}
@@ -154,7 +161,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({
         </div>
 
         {/* Body */}
-        <div className="p-6 space-y-6 max-h-[80vh] overflow-y-auto">
+        <div className="p-4 sm:p-6 space-y-4 sm:space-y-6 min-h-0 overflow-y-auto overscroll-contain">
           {/* Target Section Information Card */}
           <div className="p-4 rounded-2xl bg-neutral-50 border border-neutral-200/80 space-y-1.5">
             <div className="flex items-center justify-between">

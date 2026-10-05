@@ -13,6 +13,8 @@ import {
   X
 } from 'lucide-react';
 import { formatToman } from '../../utils/formatters';
+import { apiRequest } from '../../api/client';
+import { Product } from '../../types';
 
 interface SearchAutocompleteProps {
   onSelectProduct: (productId: string) => void;
@@ -85,9 +87,22 @@ export const SearchAutocomplete: React.FC<SearchAutocompleteProps> = ({
   onRequestPart
 }) => {
   const { products, models, categories, brands, articles, logSearch } = useStore();
+  const [remoteProducts, setRemoteProducts] = useState<Product[]>([]);
   const [query, setQuery] = useState('');
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const term = query.trim();
+    if (term.length < 2) { setRemoteProducts([]); return; }
+    let cancelled = false;
+    const timer = window.setTimeout(() => {
+      apiRequest<{ products: Product[] }>(`/api/catalog/products?q=${encodeURIComponent(term)}&limit=30&offset=0`)
+        .then(result => { if (!cancelled) setRemoteProducts(result.products); })
+        .catch(error => { if (!cancelled) console.warn('Remote catalog search failed:', error); });
+    }, 220);
+    return () => { cancelled = true; window.clearTimeout(timer); };
+  }, [query]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -103,7 +118,8 @@ export const SearchAutocomplete: React.FC<SearchAutocompleteProps> = ({
 
     const categoryRows = flattenCategories(categories);
 
-    const productResults: RankedResult[] = products.map(product => {
+    const searchableProducts = Array.from(new Map([...remoteProducts, ...products].map(product => [product.id, product])).values());
+    const productResults: RankedResult[] = searchableProducts.map(product => {
       let score = 0;
       score += scoreText(q, product.oemNumber, 160, 110, 75);
       score += scoreText(q, product.partNumber, 150, 100, 70);
@@ -171,7 +187,7 @@ export const SearchAutocomplete: React.FC<SearchAutocompleteProps> = ({
       .filter(result => result.score > 0)
       .sort((a, b) => b.score - a.score)
       .slice(0, 14);
-  }, [query, products, models, categories, brands, articles]);
+  }, [query, products, remoteProducts, models, categories, brands, articles]);
 
   const byType = <T extends RankedResult['type']>(type: T, count: number) =>
     ranked.filter(result => result.type === type).slice(0, count) as Extract<RankedResult, {type:T}>[];

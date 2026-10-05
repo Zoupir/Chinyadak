@@ -359,7 +359,7 @@ const run = async () => {
     const repeat = await json<{ transactions: any[] }>('/api/auth/customer/loyalty', { headers: cookieHeaders(guestCookie) });
     assert.equal(repeat.data.transactions.filter(tx => tx.orderId === guestOrder.data.order.id).length, purchase.length, 'Delivered COD duplicated rewards.');
   } finally {
-    await json('/api/cms/settings', { method: 'PATCH', headers: cookieHeaders(adminCookie), body: JSON.stringify({ shippingMethods: cmsBefore.data.settings.shippingMethods || [] }) });
+    await json('/api/cms/settings', { method: 'PATCH', headers: cookieHeaders(adminCookie), body: JSON.stringify({ shippingMethods: cmsBefore.data.settings.shippingMethods || [{ id: 'post', title: 'پست', cost: Number(cmsBefore.data.settings.postShippingFee || 85000), enabled: true, estimatedDelivery: '۲۴ الی ۴۸ ساعت' }, { id: 'tipax', title: 'تیپاکس', cost: Number(cmsBefore.data.settings.tipaxShippingFee || 110000), enabled: true, estimatedDelivery: '۲۴ الی ۴۸ ساعت' }, { id: 'express', title: 'پیک', cost: Number(cmsBefore.data.settings.expressShippingFee || 120000), enabled: true, estimatedDelivery: '۲ ساعت' }] }) });
     await json('/api/cms/payment-gateways', { method: 'PUT', headers: cookieHeaders(adminCookie), body: JSON.stringify({ gateways: cmsBefore.data.paymentGateways }) });
   }
 

@@ -42,7 +42,7 @@ const main = async () => {
         id: previous?.id || category.id,
         icon: oldData.icon || category.icon,
         imageUrl: oldData.imageUrl || category.imageUrl,
-        heroImage: oldData.heroImage || category.heroImage,
+        heroImageUrl: oldData.heroImageUrl || category.heroImageUrl,
         parentId: null
       };
 

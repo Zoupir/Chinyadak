@@ -64,7 +64,7 @@ export const getLoyaltySettings = async (connection: PoolConnection): Promise<Lo
   const site = parseStoredJson<Record<string, any>>(rows[0]?.setting_value, {});
   const raw = site.loyaltySettings || {};
   return {
-    enabled: raw.enabled === true,
+    enabled: raw.enabled !== false,
     pointsPerToman: Math.max(0, Number(raw.pointsPerToman ?? 0.0001) || 0),
     tomanPerPoint: Math.max(1, Math.floor(Number(raw.tomanPerPoint ?? 1000) || 1000)),
     minimumRedeemPoints: Math.max(1, Math.floor(Number(raw.minimumRedeemPoints ?? 50) || 50)),

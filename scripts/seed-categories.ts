@@ -95,7 +95,7 @@ const main = async () => {
       `INSERT INTO app_settings (setting_key, setting_value)
        VALUES ('part_category_taxonomy_version', ?)
        ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value), updated_at = NOW()`,
-      [TAXONOMY_VERSION]
+      [JSON.stringify(TAXONOMY_VERSION)]
     );
 
     await connection.commit();

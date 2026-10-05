@@ -38,6 +38,9 @@ export const LoyaltyDashboardTab: React.FC<LoyaltyDashboardTabProps> = ({
     calculatePointsValue,
     settings 
   } = useStore();
+  const signupBonusPoints = settings.loyaltySettings?.signupBonusPoints ?? 0;
+  const firstOrderBonusPoints = settings.loyaltySettings?.firstOrderBonusPoints ?? 0;
+  const tomanPerPoint = settings.loyaltySettings?.tomanPerPoint ?? 1000;
 
   const customerId = currentCustomer?.id;
   const points = getCustomerPoints(customerId);
@@ -196,7 +199,7 @@ export const LoyaltyDashboardTab: React.FC<LoyaltyDashboardTabProps> = ({
               className="px-6 py-3 bg-neutral-800/90 hover:bg-neutral-700 text-neutral-200 border border-neutral-700 rounded-2xl font-bold text-xs flex items-center justify-center gap-2 transition-colors cursor-pointer"
             >
               <Car className="w-4 h-4 text-amber-400" />
-              <span>ثبت خودرو در گاراژ (+۲۰ امتیاز)</span>
+              <span>ثبت خودرو در گاراژ</span>
             </button>
           </div>
         </div>
@@ -252,7 +255,7 @@ export const LoyaltyDashboardTab: React.FC<LoyaltyDashboardTabProps> = ({
             <h3 className="text-base sm:text-lg font-black text-neutral-900">چگونه امتیاز وفاداری بیشتری کسب کنم؟</h3>
           </div>
           <p className="text-xs text-neutral-500 mt-1">
-            با هر تعامل در فروشگاه چین‌پارت امتیاز کسب کنید و هزینه خریدهای بعدی خود را کاهش دهید.
+            با عضویت و پرداخت موفق سفارش‌ها امتیاز بگیرید و آن را هنگام خرید بعدی به تخفیف تبدیل کنید.
           </p>
         </div>
 
@@ -263,10 +266,10 @@ export const LoyaltyDashboardTab: React.FC<LoyaltyDashboardTabProps> = ({
             </div>
             <h4 className="font-bold text-xs text-neutral-900">خرید قطعات یدکی</h4>
             <p className="text-[11px] text-neutral-600 leading-relaxed">
-              به ازای هر ۱۰,۰۰۰ تومان خرید، ۱ امتیاز دریافت کنید (با ضریب سطوح طلایی تا ۲ برابر).
+              پس از پرداخت موفق سفارش، بر اساس مبلغ خرید و سطح عضویت امتیاز می‌گیرید.
             </p>
             <span className="inline-block text-[10px] font-bold text-red-600 bg-red-50 px-2 py-0.5 rounded-md">
-              ۱٪ تا ۲٪ بازگشت وجه
+              امتیاز خرید پس از پرداخت ثبت می‌شود
             </span>
           </div>
 
@@ -276,10 +279,10 @@ export const LoyaltyDashboardTab: React.FC<LoyaltyDashboardTabProps> = ({
             </div>
             <h4 className="font-bold text-xs text-neutral-900">عضویت در سایت</h4>
             <p className="text-[11px] text-neutral-600 leading-relaxed">
-              بلافاصله پس از ثبت شماره تماس و تکمیل پروفایل، ۵۰ امتیاز هدیه خوش‌آمدگویی بگیرید.
+              پس از ایجاد حساب کاربری، امتیاز خوش‌آمدگویی در کیف امتیاز شما ثبت می‌شود.
             </p>
             <span className="inline-block text-[10px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md">
-              +۵۰ امتیاز هدیه
+              +{signupBonusPoints.toLocaleString('fa-IR')} امتیاز هدیه
             </span>
           </div>
 
@@ -289,10 +292,10 @@ export const LoyaltyDashboardTab: React.FC<LoyaltyDashboardTabProps> = ({
             </div>
             <h4 className="font-bold text-xs text-neutral-900">ثبت خودرو در گاراژ</h4>
             <p className="text-[11px] text-neutral-600 leading-relaxed">
-              با معرفی مدل خودروی چینی خود در بخش گاراژ، ۲۰ امتیاز بونوس فنی دریافت نمایید.
+              خودروی خود را برای پیشنهاد قطعات سازگار در بخش گاراژ ثبت کنید.
             </p>
             <span className="inline-block text-[10px] font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md">
-              +۲۰ امتیاز بونوس
+              پیشنهاد قطعات سازگار
             </span>
           </div>
 
@@ -302,10 +305,10 @@ export const LoyaltyDashboardTab: React.FC<LoyaltyDashboardTabProps> = ({
             </div>
             <h4 className="font-bold text-xs text-neutral-900">اولین خرید در سایت</h4>
             <p className="text-[11px] text-neutral-600 leading-relaxed">
-              ثبت اولین سفارش موفق علاوه بر امتیاز عادی، ۱۰۰ امتیاز پاداش ویژه خریدار جدید دارد.
+              پس از پرداخت موفق اولین سفارش، پاداش خرید نخست به کیف امتیاز شما افزوده می‌شود.
             </p>
             <span className="inline-block text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md">
-              +۱۰۰ امتیاز ویژه
+              +{firstOrderBonusPoints.toLocaleString('fa-IR')} امتیاز ویژه
             </span>
           </div>
         </div>
@@ -318,7 +321,7 @@ export const LoyaltyDashboardTab: React.FC<LoyaltyDashboardTabProps> = ({
           <div>
             <h3 className="text-base font-black text-neutral-900">محاسبه‌گر تبدیل امتیاز به تخفیف فاکتور</h3>
             <p className="text-xs text-neutral-500">
-              هر ۱ امتیاز وفاداری در تسویه حساب معادل ۱,۰۰۰ تومان کسر هزینه مستقیم از سفارش است.
+              هر امتیاز در تسویه‌حساب معادل {tomanPerPoint.toLocaleString('fa-IR')} تومان تخفیف است.
             </p>
           </div>
         </div>
@@ -370,7 +373,7 @@ export const LoyaltyDashboardTab: React.FC<LoyaltyDashboardTabProps> = ({
               {formatToman(calculatePointsValue(calcInput))}
             </div>
             <p className="text-[11px] text-neutral-400">
-              قابلیت کسر خودکار در صفحه مرحله نهایی سفارش (Checkout)
+              فقط پس از تأیید سفارش و با توجه به سقف مجاز تسویه اعمال می‌شود.
             </p>
           </div>
         </div>

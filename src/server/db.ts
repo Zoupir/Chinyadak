@@ -90,7 +90,7 @@ export const addLoyaltyTransaction = async (
   if (!rows[0]) return null;
   const previous = Number(rows[0].loyalty_points || 0);
   const points = pointsDelta < 0 ? Math.max(-previous, Math.trunc(pointsDelta)) : Math.trunc(pointsDelta);
-  if (!points) return null;
+  if (Math.trunc(pointsDelta) === 0) return null;
   const balanceAfter = Math.max(0, previous + points);
   const id = `loy-${randomUUID()}`;
   const data = { ...details, id, customerId, type, points, balanceAfter, date: new Date().toISOString() };

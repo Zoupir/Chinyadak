@@ -239,9 +239,19 @@ authRouter.post('/customer/vehicle-registration', authenticate, async (req: Auth
     res.status(403).json({ error: 'CUSTOMER_REQUIRED' });
     return;
   }
+  const brandId = String(req.body?.brandId || '').trim();
+  const modelId = String(req.body?.modelId || '').trim();
   const vehicleName = String(req.body?.vehicleName || '').trim().slice(0, 255);
-  if (!vehicleName) {
-    res.status(400).json({ error: 'VEHICLE_NAME_REQUIRED' });
+  if (!brandId || !modelId || !vehicleName) {
+    res.status(400).json({ error: 'VEHICLE_DATA_INVALID' });
+    return;
+  }
+  const [validModels] = await pool.query<RowDataPacket[]>(
+    'SELECT id FROM vehicle_models WHERE id = ? AND brand_id = ? AND is_active = 1 LIMIT 1',
+    [modelId, brandId]
+  );
+  if (!validModels.length) {
+    res.status(400).json({ error: 'VEHICLE_MODEL_INVALID' });
     return;
   }
 

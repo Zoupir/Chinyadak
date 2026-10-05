@@ -62,7 +62,7 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderCompleted, on
 
   // Shipping Method
   const [selectedShipping, setSelectedShipping] = useState<string>('post');
-  const shippingMethods = (settings.shippingMethods?.length ? settings.shippingMethods : [
+  const shippingMethods = (Array.isArray(settings.shippingMethods) ? settings.shippingMethods : [
     { id: 'post', title: 'پست پیشتاز بیمه‌شده (سراسر ایران)', description: 'تحویل ۲ الی ۳ روز کاری', cost: Number(settings.postShippingFee || 85000), estimatedDelivery: '۲۴ الی ۴۸ ساعت', enabled: true },
     { id: 'tipax', title: 'تیپاکس اکسپرس', description: 'تحویل با تیپاکس', cost: Number(settings.tipaxShippingFee || 110000), estimatedDelivery: '۲۴ الی ۴۸ ساعت', enabled: true },
     { id: 'express', title: 'پیک فوری', description: 'ارسال فوری در شهرهای تحت پوشش', cost: Number(settings.expressShippingFee || 120000), estimatedDelivery: '۲ ساعت کاری', enabled: true }

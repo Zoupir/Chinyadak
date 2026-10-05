@@ -130,7 +130,7 @@ export const awardPaidOrderLoyalty = async (connection: PoolConnection, orderId:
   const basePoints = Math.floor(netSubtotal * settings.pointsPerToman);
   const earned = Math.max(1, Math.round(basePoints * multiplier));
   const [priorOrders] = await connection.query<Array<RowDataPacket & { id: string }>>(
-    "SELECT id FROM orders WHERE customer_id = ? AND id <> ? AND payment_status IN ('paid','paid_stock_review') LIMIT 1 FOR UPDATE",
+    "SELECT id FROM orders WHERE customer_id = ? AND id <> ? AND payment_status IN ('paid','paid_stock_review') LIMIT 1",
     [order.customer_id, orderId]
   );
   if (earned > 0) await addLoyaltyTransaction(connection, order.customer_id, earned, 'earned', {

@@ -154,6 +154,15 @@ const run = async () => {
   assert.equal(seoWorkspace.data.entity?.id, product.id);
   assert.equal(typeof seoWorkspace.data.analysis?.score, 'number');
 
+  const auditResult = await json<{ result: any }>('/api/seo/audit/run', { method: 'POST', headers: cookieHeaders(adminCookie), body: '{}' });
+  assert(auditResult.data.result.scanned > 0, 'Audit did not scan catalog entities.');
+  assert(auditResult.data.result.checksRun >= auditResult.data.result.scanned, 'Audit did not report its checks.');
+  assert(auditResult.data.result.liveChecked > 0, 'Audit did not inspect actual page HTML.');
+  assert.equal(auditResult.data.result.liveReports.length, auditResult.data.result.liveChecked);
+  assert(auditResult.data.result.liveReports.some((item: any) => item.status === 200), 'No live HTML was successfully inspected.');
+  const auditIssues = await json<{ issues: any[] }>('/api/seo/issues?status=open&limit=250', { headers: cookieHeaders(adminCookie) });
+  assert(auditIssues.data.issues.some(item => item.url && item.details && item.action), 'Audit findings have no actionable URL evidence.');
+
   const admins = await json<{ admins: any[] }>('/api/admin-data/admins', {
     headers: cookieHeaders(adminCookie)
   });

@@ -198,7 +198,7 @@ ordersRouter.post('/', async (req: AuthenticatedRequest, res) => {
   );
   const checkoutSettings = new Map(checkoutSettingRows.map(row => [row.setting_key, parseJson<any>(row.setting_value, {})]));
   const siteSettings = checkoutSettings.get('site_settings') || {};
-  const configuredShipping = Array.isArray(siteSettings.shippingMethods) && siteSettings.shippingMethods.length
+  const configuredShipping = Array.isArray(siteSettings.shippingMethods)
     ? siteSettings.shippingMethods
     : [
         { id: 'post', title: 'پست پیشتاز بیمه‌شده', cost: Number(siteSettings.postShippingFee || 85000), estimatedDelivery: '۲۴ الی ۴۸ ساعت', enabled: true },

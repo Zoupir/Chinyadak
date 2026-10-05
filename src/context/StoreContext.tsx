@@ -2199,11 +2199,27 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           vehicleInfo: item.vehicleInfo
         })),
         shippingMethodId: orderData.shippingMethod.id,
-        paymentMethodId: orderData.paymentMethod.id
+        paymentMethodId: orderData.paymentMethod.id,
+        loyaltyPointsToRedeem: orderData.loyaltyPointsToRedeem || 0
       })
     });
 
     setOrders(prev => [response.order, ...prev.filter(item => item.id !== response.order.id)]);
+    if (currentCustomer && Number(orderData.loyaltyPointsToRedeem || 0) > 0) {
+      const pointsUsed = Math.floor(
+        response.order.discountAmount / Math.max(1, settings.loyaltySettings?.tomanPerPoint ?? 1000)
+      );
+      setCurrentCustomer(prev => prev ? {
+        ...prev,
+        loyaltyPoints: Math.max(0, Number(prev.loyaltyPoints || 0) - pointsUsed)
+      } : null);
+      setCustomers(prev => prev.map(customer => customer.id === currentCustomer.id
+        ? { ...customer, loyaltyPoints: Math.max(0, Number(customer.loyaltyPoints || 0) - pointsUsed) }
+        : customer));
+      void apiRequest<{ transactions: LoyaltyTransaction[] }>('/api/auth/customer/loyalty')
+        .then(result => setLoyaltyTransactions(result.transactions))
+        .catch(error => console.error('Loyalty history refresh failed:', error));
+    }
     showToast(`سفارش ${response.order.orderNumber} در سرور ثبت شد.`);
     return response.order;
   };

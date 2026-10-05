@@ -40,6 +40,7 @@ export const LoyaltyDashboardTab: React.FC<LoyaltyDashboardTabProps> = ({
   } = useStore();
   const signupBonusPoints = settings.loyaltySettings?.signupBonusPoints ?? 0;
   const firstOrderBonusPoints = settings.loyaltySettings?.firstOrderBonusPoints ?? 0;
+  const loyaltyEnabled = settings.loyaltySettings?.enabled === true;
   const tomanPerPoint = settings.loyaltySettings?.tomanPerPoint ?? 1000;
 
   const customerId = currentCustomer?.id;
@@ -255,7 +256,7 @@ export const LoyaltyDashboardTab: React.FC<LoyaltyDashboardTabProps> = ({
             <h3 className="text-base sm:text-lg font-black text-neutral-900">چگونه امتیاز وفاداری بیشتری کسب کنم؟</h3>
           </div>
           <p className="text-xs text-neutral-500 mt-1">
-            با عضویت و پرداخت موفق سفارش‌ها امتیاز بگیرید و آن را هنگام خرید بعدی به تخفیف تبدیل کنید.
+            {loyaltyEnabled ? 'با عضویت و پرداخت موفق سفارش‌ها امتیاز بگیرید و آن را هنگام خرید بعدی به تخفیف تبدیل کنید.' : 'باشگاه مشتریان فعلاً در تنظیمات سایت غیرفعال است.'}
           </p>
         </div>
 

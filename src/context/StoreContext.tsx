@@ -1916,6 +1916,8 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       }>('/api/auth/customer/vehicle-registration', {
         method: 'POST',
         body: JSON.stringify({
+          brandId: newCar.brandId,
+          modelId: newCar.modelId,
           vehicleName: [newCar.brandName, newCar.modelName, newCar.year].filter(Boolean).join(' ')
         })
       }).then(result => {

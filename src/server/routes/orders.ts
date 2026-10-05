@@ -9,7 +9,6 @@ import {
 import {
   pool,
   withTransaction,
-  type ResultSetHeader,
   type RowDataPacket,
   addLoyaltyTransaction,
   awardPaidOrderLoyalty,

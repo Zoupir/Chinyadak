@@ -234,6 +234,68 @@ authRouter.get('/customer/loyalty', authenticate, async (req: AuthenticatedReque
   res.json({ transactions });
 });
 
+authRouter.post('/customer/vehicle-registration', authenticate, async (req: AuthenticatedRequest, res) => {
+  if (req.auth?.role !== 'customer') {
+    res.status(403).json({ error: 'CUSTOMER_REQUIRED' });
+    return;
+  }
+  const vehicleName = String(req.body?.vehicleName || '').trim().slice(0, 255);
+  if (!vehicleName) {
+    res.status(400).json({ error: 'VEHICLE_NAME_REQUIRED' });
+    return;
+  }
+
+  const result = await withTransaction(async connection => {
+    const [customers] = await connection.query<Array<RowDataPacket & { id: string; loyalty_points: number; vehicle: string | null }>>(
+      'SELECT id, loyalty_points, vehicle FROM customers WHERE id = ? FOR UPDATE',
+      [req.auth!.sub]
+    );
+    const customer = customers[0];
+    if (!customer) return null;
+    if (!customer.vehicle) {
+      await connection.execute('UPDATE customers SET vehicle = ?, updated_at = NOW() WHERE id = ?', [vehicleName, customer.id]);
+    }
+
+    const [existing] = await connection.query<RowDataPacket[]>(
+      "SELECT id FROM loyalty_transactions WHERE customer_id = ? AND transaction_type = 'bonus' AND JSON_UNQUOTE(JSON_EXTRACT(data_json, '$.reason')) = 'first_vehicle_bonus' LIMIT 1 FOR UPDATE",
+      [customer.id]
+    );
+    const loyalty = await getLoyaltySettings(connection);
+    let transaction = null;
+    if (!existing.length && loyalty.enabled) {
+      transaction = await addLoyaltyTransaction(connection, customer.id, 20, 'bonus', {
+        description: 'پاداش ثبت نخستین خودرو در گاراژ',
+        reason: 'first_vehicle_bonus',
+        vehicleName
+      });
+    }
+
+    const [updated] = await connection.query<Array<RowDataPacket & { loyalty_points: number }>>(
+      'SELECT loyalty_points FROM customers WHERE id = ? LIMIT 1',
+      [customer.id]
+    );
+    return {
+      rewarded: Boolean(transaction),
+      loyaltyPoints: Number(updated[0]?.loyalty_points || 0),
+      transaction: transaction ? {
+        ...transaction,
+        customerId: customer.id,
+        type: 'bonus',
+        description: 'پاداش ثبت نخستین خودرو در گاراژ',
+        orderNumber: undefined,
+        date: new Date().toISOString(),
+        reason: 'first_vehicle_bonus'
+      } : null
+    };
+  });
+
+  if (!result) {
+    res.status(404).json({ error: 'CUSTOMER_NOT_FOUND' });
+    return;
+  }
+  res.json(result);
+});
+
 authRouter.post('/admin/login', loginLimiter, async (req, res) => {
   const username = String(req.body?.username ?? '').trim().toLowerCase();
   const password = String(req.body?.password ?? '');

@@ -10,7 +10,7 @@ import {
   type AuthenticatedRequest,
   verifyPassword
 } from '../auth';
-import { pool, type ResultSetHeader, type RowDataPacket } from '../db';
+import { addLoyaltyTransaction, getLoyaltySettings, pool, withTransaction, type ResultSetHeader, type RowDataPacket } from '../db';
 
 interface CustomerRow extends RowDataPacket {
   id: string;
@@ -141,12 +141,21 @@ authRouter.post('/customer/register', loginLimiter, async (req, res) => {
 
   const id = randomUUID();
   const passwordHash = await hashPassword(password);
-  await pool.execute<ResultSetHeader>(
-    `INSERT INTO customers
-      (id, first_name, last_name, phone, password_hash, password_initialized, customer_type, vehicle)
-     VALUES (?, ?, ?, ?, ?, 1, ?, ?)`,
-    [id, firstName, lastName, phone, passwordHash, type, vehicle || null]
-  );
+  await withTransaction(async connection => {
+    await connection.execute(
+      `INSERT INTO customers
+        (id, first_name, last_name, phone, password_hash, password_initialized, customer_type, vehicle)
+       VALUES (?, ?, ?, ?, ?, 1, ?, ?)`,
+      [id, firstName, lastName, phone, passwordHash, type, vehicle || null]
+    );
+    const loyalty = await getLoyaltySettings(connection);
+    if (loyalty.enabled && loyalty.signupBonusPoints > 0) {
+      await addLoyaltyTransaction(connection, id, loyalty.signupBonusPoints, 'bonus', {
+        description: 'هدیه خوش‌آمدگویی عضویت در باشگاه مشتریان',
+        reason: 'signup_bonus'
+      });
+    }
+  });
 
   const [rows] = await pool.query<CustomerRow[]>(
     'SELECT * FROM customers WHERE id = ? LIMIT 1',

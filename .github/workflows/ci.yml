@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main, production-hardening]
+    branches: [main, production-hardening, marketplace-rtl-phase1]
   pull_request:
 
 jobs:
@@ -102,6 +102,12 @@ jobs:
 
       - name: Seed database
         run: npm run db:seed
+
+      - name: Migrate the 12-part category taxonomy
+        run: ./node_modules/.bin/tsx scripts/seed-categories.ts
+
+      - name: Verify category migration is idempotent
+        run: ./node_modules/.bin/tsx scripts/seed-categories.ts
 
       - name: Import Lucano L8 source references
         run: ./node_modules/.bin/tsx scripts/seed-lucano-l8-reference.ts

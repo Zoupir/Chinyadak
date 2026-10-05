@@ -156,7 +156,7 @@ export const AccountView: React.FC<AccountViewProps> = ({
             param={activeTab}
             variant="button"
             label="اشتراک‌گذاری لینک این بخش"
-            className="bg-neutral-800 text-white border-neutral-700 hover:bg-neutral-700"
+            className="bg-white text-neutral-900 border-neutral-200 hover:bg-neutral-50"
           />
 
           <button

@@ -147,6 +147,7 @@ export const getRuntimePaymentGateway = (provider: string): RuntimePaymentGatewa
 export const paymentRuntimeConfigured = (provider: string): boolean => {
   const cfg = getRuntimePaymentGateway(provider);
   if (!cfg || cfg.isActive === false) return false;
+  if (cfg.isSandbox && (!cfg.endpoint || !cfg.paymentUrl)) return false;
   if (provider === 'saman') return Boolean(cfg.terminalId);
   if (provider === 'mellat') return Boolean(cfg.terminalId && cfg.username && cfg.password);
   return false;

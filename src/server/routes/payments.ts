@@ -217,7 +217,7 @@ paymentsRouter.post('/start', paymentLimiter, async (req, res) => {
       amountRial: prepared.amountRial,
       mobile: prepared.mobile,
       callbackUrl: callbackUrl(prepared.provider),
-      description: `ChinPart order ${prepared.orderNumber}`
+      description: `Store order ${prepared.orderNumber}`
     });
 
     await pool.execute(

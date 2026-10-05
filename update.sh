@@ -7,12 +7,13 @@ BRANCH="marketplace-rtl-phase1"
 NODE_BIN="/opt/alt/alt-nodejs22/root/usr/bin"
 
 export PATH="$NODE_BIN:$PATH"
+export GOMAXPROCS=1
 export RAYON_NUM_THREADS=1
 export UV_THREADPOOL_SIZE=1
 
 cd "$APP_DIR"
 
-echo "== Chinyadak one-step update =="
+echo "== Site one-step update =="
 
 SELECTOR=""
 if command -v cloudlinux-selector >/dev/null 2>&1; then
@@ -23,14 +24,14 @@ fi
 
 APP_STOPPED=0
 if [[ -n "$SELECTOR" ]]; then
-  echo "[0/8] Stop Node application"
+  echo "[0/9] Stop Node application"
   if "$SELECTOR" stop --json --interpreter nodejs --app-root "$APP_ROOT" >/dev/null 2>&1; then
     APP_STOPPED=1
   else
     echo "Node selector stop was skipped; continuing with low-resource update."
   fi
 else
-  echo "[0/6] CloudLinux selector unavailable - using Passenger restart fallback"
+  echo "[0/9] CloudLinux selector unavailable - using Passenger restart fallback"
 fi
 
 restore_app_on_error() {
@@ -46,7 +47,7 @@ if ! git diff --quiet || ! git diff --cached --quiet; then
   exit 1
 fi
 
-echo "[1/8] Pull latest code"
+echo "[1/9] Pull latest code"
 git pull --ff-only origin "$BRANCH"
 
 mkdir -p tmp
@@ -59,24 +60,26 @@ if [[ -f tmp/.package-signature ]]; then
 fi
 
 if [[ ! -d node_modules || "$PKG_SIG" != "$LAST_SIG" ]]; then
-  echo "[2/8] Install dependencies"
+  echo "[2/9] Install dependencies"
   npm install --no-audit --no-fund --package-lock=false
   printf '%s\n' "$PKG_SIG" > tmp/.package-signature
 else
-  echo "[2/8] Dependencies unchanged - skipped"
+  echo "[2/9] Dependencies unchanged - skipped"
 fi
 
-echo "[3/8] Apply safe database migrations"
+echo "[3/9] Apply safe database migrations"
 npm run db:init
-echo "[4/8] Add real default vehicle and manufacturer data"
+echo "[4/9] Upgrade the 12-part category taxonomy"
+./node_modules/.bin/tsx scripts/seed-categories.ts
+echo "[5/9] Add real default vehicle and manufacturer data"
 ./node_modules/.bin/tsx scripts/seed-real-defaults.ts
-echo "[5/8] Import Lucano L8 OEM reference data (not sellable stock)"
+echo "[6/9] Import Lucano L8 OEM reference data (not sellable stock)"
 ./node_modules/.bin/tsx scripts/seed-lucano-l8-reference.ts
 
-echo "[6/8] Production build (low resource mode)"
+echo "[7/9] Production build (low resource mode)"
 RAYON_NUM_THREADS=1 UV_THREADPOOL_SIZE=1 npm run build
 
-echo "[7/8] Restart application"
+echo "[8/9] Restart application"
 if [[ -n "$SELECTOR" ]]; then
   if [[ "$APP_STOPPED" == "1" ]]; then
     if "$SELECTOR" start --json --interpreter nodejs --app-root "$APP_ROOT" >/dev/null 2>&1; then
@@ -105,6 +108,6 @@ mkdir -p tmp
 
 trap - ERR
 
-echo "[8/8] Done"
+echo "[9/9] Done"
 echo "UPDATE_OK"
 echo "Commit: $(git rev-parse --short HEAD)"

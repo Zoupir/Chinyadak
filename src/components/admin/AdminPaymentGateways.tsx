@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { useStore } from '../../context/StoreContext';
 import type { PaymentGatewayConfig } from '../../types';
+import { apiRequest, ApiError } from '../../api/client';
 
 const MASK = '••••••••';
 
@@ -30,6 +31,8 @@ export const AdminPaymentGateways: React.FC = () => {
   const active = paymentGateways.find(item => item.id === editingId);
   const [form, setForm] = useState<PaymentGatewayConfig | null>(active ? { ...active } : null);
   const [showSecrets, setShowSecrets] = useState(false);
+  const [testingProvider, setTestingProvider] = useState<string | null>(null);
+  const [testResults, setTestResults] = useState<Record<string, { ok: boolean; message: string }>>({});
 
   useEffect(() => {
     const gateway = paymentGateways.find(item => item.id === editingId);
@@ -41,6 +44,31 @@ export const AdminPaymentGateways: React.FC = () => {
     () => paymentGateways.filter(item => item.isActive && ['saman', 'mellat'].includes(item.provider)).length,
     [paymentGateways]
   );
+
+  const testConnection = async (provider: string) => {
+    setTestingProvider(provider);
+    setTestResults(current => { const next = { ...current }; delete next[provider]; return next; });
+    try {
+      const result = await apiRequest<{ ok: boolean; message: string }>('/api/integrations/payment-gateways/test', {
+        method: 'POST',
+        body: JSON.stringify({ provider })
+      });
+      setTestResults(current => ({ ...current, [provider]: { ok: true, message: result.message } }));
+    } catch (error) {
+      const message = error instanceof ApiError
+        ? error.code === 'PAYMENT_PROVIDER_NOT_CONFIGURED'
+          ? 'اطلاعات لازم ذخیره نشده است؛ شناسه‌ها و رمزهای درگاه را بررسی کنید.'
+          : error.code === 'PAYMENT_SANDBOX_ENDPOINT_REQUIRED'
+            ? 'برای حالت Sandbox، نشانی آزمایشی API و پرداخت را وارد و ذخیره کنید؛ نشانی پیش‌فرض واقعی استفاده نمی‌شود.'
+            : error.code === 'PAYMENT_PROVIDER_UNSUPPORTED'
+              ? 'این درگاه هنوز به موتور پرداخت متصل نیست.'
+            : 'درگاه درخواست اتصال را نپذیرفت؛ شناسه‌ها و نشانی سرویس را بررسی کنید.'
+        : 'ارتباط با سرور انجام نشد؛ دوباره تلاش کنید.';
+      setTestResults(current => ({ ...current, [provider]: { ok: false, message } }));
+    } finally {
+      setTestingProvider(null);
+    }
+  };
 
   const patch = (partial: Partial<PaymentGatewayConfig>) =>
     setForm(current => current ? { ...current, ...partial } : current);
@@ -87,7 +115,7 @@ export const AdminPaymentGateways: React.FC = () => {
               درگاه‌های بانکی
             </h2>
             <p className="text-xs text-neutral-500 mt-1">
-              اطلاعات حساس با AES-256-GCM رمزنگاری می‌شود و هیچ Merchant/Password واقعی در API عمومی فروشگاه برگردانده نمی‌شود.
+              اطلاعات حساس رمزنگاری می‌شود. اتصال SEP و ملت را پس از ذخیره آزمایش کنید؛ آزمون فقط درخواست اولیه می‌فرستد و مشتری را به بانک منتقل یا سفارشی ثبت نمی‌کند.
             </p>
           </div>
           <div className="flex items-center gap-2 text-[10px]">
@@ -137,7 +165,26 @@ export const AdminPaymentGateways: React.FC = () => {
 
               {!supported && gateway.provider !== 'cod' && (
                 <div className="p-2.5 rounded-xl bg-amber-50 text-amber-800 text-[9px] font-bold">
-                  تنظیمات ذخیره می‌شود، اما Adapter عملیاتی این Provider هنوز به موتور پرداخت متصل نیست.
+                  این درگاه هنوز به فرایند خرید متصل نیست؛ برای سفارش مشتری فقط SEP و ملت قابل استفاده‌اند.
+                </div>
+              )}
+
+              {supported && (
+                <div className="space-y-2">
+                  <button
+                    type="button"
+                    onClick={() => testConnection(gateway.provider)}
+                    disabled={testingProvider === gateway.provider}
+                    className="w-full py-2.5 rounded-xl bg-white border border-neutral-300 text-neutral-900 text-xs font-black inline-flex items-center justify-center gap-2 disabled:opacity-50"
+                  >
+                    <TestTube2 className="w-4 h-4" />
+                    {testingProvider === gateway.provider ? 'در حال آزمایش اتصال…' : 'آزمایش اتصال درگاه'}
+                  </button>
+                  {testResults[gateway.provider] && (
+                    <p role="status" className={`p-2.5 rounded-xl text-[10px] leading-5 font-bold ${testResults[gateway.provider].ok ? 'bg-emerald-50 text-emerald-800' : 'bg-rose-50 text-rose-800'}`}>
+                      {testResults[gateway.provider].message}
+                    </p>
+                  )}
                 </div>
               )}
 

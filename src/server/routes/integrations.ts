@@ -1,8 +1,11 @@
 import { Router } from 'express';
 import { requireAdminPermission } from '../auth';
 import { encryptSecret, maskSecret, decryptSecret } from '../crypto';
-import { replacePaymentRuntimeConfig, type RuntimePaymentGateway } from '../payments/runtime-config';
+import { replacePaymentRuntimeConfig, ensurePaymentRuntimeConfig, getRuntimePaymentGateway, type RuntimePaymentGateway } from '../payments/runtime-config';
 import { pool, type RowDataPacket } from '../db';
+import { config } from '../config';
+import { sepAdapter } from '../payments/sep';
+import { mellatAdapter } from '../payments/mellat';
 
 interface SettingRow extends RowDataPacket {
   setting_value: any;
@@ -359,5 +362,54 @@ integrationsRouter.put(
 
     replacePaymentRuntimeConfig(stored.map(paymentToRuntime));
     res.json({ gateways: stored.map(paymentToClient) });
+  }
+);
+
+ 
+integrationsRouter.post(
+  '/payment-gateways/test',
+  requireAdminPermission('canManageSettings'),
+  async (req, res) => {
+    const provider = String(req.body?.provider || '').trim().toLowerCase();
+    if (provider !== 'saman' && provider !== 'mellat') {
+      res.status(400).json({ error: 'PAYMENT_PROVIDER_UNSUPPORTED' });
+      return;
+    }
+
+    await ensurePaymentRuntimeConfig();
+    const gateway = getRuntimePaymentGateway(provider);
+    if (gateway?.isSandbox && (!gateway.endpoint || !gateway.paymentUrl)) {
+      res.status(400).json({ error: 'PAYMENT_SANDBOX_ENDPOINT_REQUIRED' });
+      return;
+    }
+    const configured = provider === 'saman'
+      ? Boolean(gateway?.terminalId)
+      : Boolean(gateway?.terminalId && gateway?.username && gateway?.password);
+    if (!configured) {
+      res.status(400).json({ error: 'PAYMENT_PROVIDER_NOT_CONFIGURED' });
+      return;
+    }
+
+    try {
+      const adapter = provider === 'saman' ? sepAdapter : mellatAdapter;
+      const testId = Math.floor(Date.now() / 1000);
+      await adapter.start({
+        gatewayOrderId: testId,
+        orderNumber: 'CONNECTION-TEST-' + Date.now(),
+        amountToman: 10000,
+        amountRial: 100000,
+        mobile: '',
+        callbackUrl: gateway?.callbackUrl || config.appUrl.replace(/\/$/, '') + '/api/payments/callback/' + provider,
+        description: 'Connection test. No customer order.'
+      });
+
+      res.json({
+        ok: true,
+        message: 'درگاه درخواست آزمایشی را پذیرفت. نشست پرداخت ساخته شد، اما مشتری به بانک منتقل نشد و سفارشی ثبت نشد.'
+      });
+    } catch (error) {
+      console.error('Payment gateway connection test failed:', provider, String((error as Error)?.message || 'unknown error'));
+      res.status(502).json({ error: 'PAYMENT_GATEWAY_TEST_FAILED' });
+    }
   }
 );

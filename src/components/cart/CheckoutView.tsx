@@ -67,6 +67,7 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderCompleted, on
     mellat: false
   });
   const [gatewayStatusLoaded, setGatewayStatusLoaded] = useState(false);
+  const hasAvailableGateway = gatewayAvailability.saman || gatewayAvailability.mellat;
 
   // Coupon state
   const [couponCode, setCouponCode] = useState('');
@@ -781,9 +782,15 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderCompleted, on
 
             {/* Submit & Payment Actions */}
             <div className="space-y-2 pt-2">
+              {!gatewayStatusLoaded && <p className="text-[10px] text-neutral-500">در حال بررسی وضعیت درگاه‌ها…</p>}
+              {gatewayStatusLoaded && !hasAvailableGateway && (
+                <p className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-[10px] text-amber-800 leading-5">
+                  درگاه فعالی برای پرداخت آنلاین در دسترس نیست. مدیر سایت باید SEP یا ملت را در پنل مدیریت پیکربندی و فعال کند.
+                </p>
+              )}
               <button
                 onClick={() => handleProcessPayment(false)}
-                disabled={isProcessing}
+                disabled={isProcessing || !gatewayStatusLoaded || !gatewayAvailability[selectedGateway]}
                 className="w-full h-12 bg-red-600 hover:bg-red-700 text-white font-bold text-sm rounded-xl shadow-lg shadow-red-600/30 flex items-center justify-center gap-2 transition-all active:scale-98 disabled:opacity-50"
               >
                 {isProcessing ? (

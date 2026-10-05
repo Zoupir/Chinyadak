@@ -24,6 +24,7 @@ import { CustomerAuthModal } from './components/auth/CustomerAuthModal';
 import { AiSearchAdvisorModal } from './components/search/AiSearchAdvisorModal';
 import { CheckCircle2, AlertCircle, Info, X } from 'lucide-react';
 import { buildRoutePath, parseRoutePath, parseLegacyHash } from './utils/navigation';
+import { getSiteDisplayName, replaceLegacySiteName } from './utils/siteBrand';
 
 interface RouteState {
   view: string;
@@ -46,6 +47,51 @@ const AppContent: React.FC = () => {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authModalMode, setAuthModalMode] = useState<'login' | 'register'>('login');
   const [isAiSearchOpen, setIsAiSearchOpen] = useState(false);
+
+    // Keep old saved copy and hard-coded legacy labels aligned with the
+  // current admin-controlled site name, including content loaded after mount.
+  useEffect(() => {
+    if (!isStoreReady || typeof document === 'undefined') return;
+    const siteName = getSiteDisplayName(settings.siteTitle);
+    const normalizeText = (value: string) => replaceLegacySiteName(value, siteName);
+    const visibleAttributes = ['alt', 'title', 'aria-label', 'placeholder'];
+
+    const visit = (node: Node) => {
+      if (node.nodeType === Node.TEXT_NODE) {
+        const parent = node.parentElement;
+        if (parent?.closest('script,style,textarea')) return;
+        const current = node.nodeValue || '';
+        const next = normalizeText(current);
+        if (next !== current) node.nodeValue = next;
+        return;
+      }
+      if (node.nodeType !== Node.ELEMENT_NODE) return;
+      const element = node as HTMLElement;
+      if (element.matches('script,style,textarea')) return;
+      const attributes = [...visibleAttributes];
+      if (element.tagName === 'META') attributes.push('content');
+      for (const name of attributes) {
+        const current = element.getAttribute(name);
+        if (current == null) continue;
+        const next = normalizeText(current);
+        if (next !== current) element.setAttribute(name, next);
+      }
+      for (const child of Array.from(node.childNodes)) visit(child);
+    };
+
+    visit(document.head);
+    visit(document.body);
+    const observer = new MutationObserver(records => {
+      for (const record of records) {
+        if (record.type === 'characterData') visit(record.target);
+        for (const added of Array.from(record.addedNodes)) visit(added);
+        if (record.type === 'attributes') visit(record.target);
+      }
+    });
+    observer.observe(document.head, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: [...visibleAttributes, 'content'] });
+    observer.observe(document.body, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: visibleAttributes });
+    return () => observer.disconnect();
+  }, [isStoreReady, settings.siteTitle]);
 
   // Apply admin-controlled identity/theme variables to the whole storefront.
   useEffect(() => {
@@ -132,16 +178,16 @@ const AppContent: React.FC = () => {
         const meta = payload?.meta;
         if (!meta) return;
 
-        document.title = String(meta.title || '');
-        setMeta('meta[name="description"]', 'name', 'description', String(meta.description || ''));
+        document.title = replaceLegacySiteName(meta.title || '', getSiteDisplayName(settings.siteTitle));
+        setMeta('meta[name="description"]', 'name', 'description', replaceLegacySiteName(meta.description || '', getSiteDisplayName(settings.siteTitle)));
         setMeta('meta[name="robots"]', 'name', 'robots', String(meta.robots || ''));
-        setMeta('meta[property="og:title"]', 'property', 'og:title', String(meta.ogTitle || meta.title || ''));
-        setMeta('meta[property="og:description"]', 'property', 'og:description', String(meta.ogDescription || meta.description || ''));
+        setMeta('meta[property="og:title"]', 'property', 'og:title', replaceLegacySiteName(meta.ogTitle || meta.title || '', getSiteDisplayName(settings.siteTitle)));
+        setMeta('meta[property="og:description"]', 'property', 'og:description', replaceLegacySiteName(meta.ogDescription || meta.description || '', getSiteDisplayName(settings.siteTitle)));
         setMeta('meta[property="og:type"]', 'property', 'og:type', String(meta.ogType || 'website'));
         setMeta('meta[property="og:url"]', 'property', 'og:url', String(meta.canonical || ''));
         setMeta('meta[name="twitter:card"]', 'name', 'twitter:card', 'summary_large_image');
-        setMeta('meta[name="twitter:title"]', 'name', 'twitter:title', String(meta.twitterTitle || meta.title || ''));
-        setMeta('meta[name="twitter:description"]', 'name', 'twitter:description', String(meta.twitterDescription || meta.description || ''));
+        setMeta('meta[name="twitter:title"]', 'name', 'twitter:title', replaceLegacySiteName(meta.twitterTitle || meta.title || '', getSiteDisplayName(settings.siteTitle)));
+        setMeta('meta[name="twitter:description"]', 'name', 'twitter:description', replaceLegacySiteName(meta.twitterDescription || meta.description || '', getSiteDisplayName(settings.siteTitle)));
 
         if (meta.image) setMeta('meta[property="og:image"]', 'property', 'og:image', String(meta.image));
         if (meta.twitterImage) setMeta('meta[name="twitter:image"]', 'name', 'twitter:image', String(meta.twitterImage));
@@ -170,7 +216,7 @@ const AppContent: React.FC = () => {
           const script = document.createElement('script');
           script.type = 'application/ld+json';
           script.dataset.takrankRuntimeSchema = '1';
-          script.textContent = JSON.stringify(schema);
+          script.textContent = replaceLegacySiteName(JSON.stringify(schema), getSiteDisplayName(settings.siteTitle));
           document.head.appendChild(script);
         }
       } catch (error) {

@@ -1,4 +1,5 @@
 import { config } from './config';
+import { getSiteDisplayName, replaceLegacySiteName } from '../utils/siteBrand';
 import { pool, type RowDataPacket } from './db';
 import {
   absoluteSiteUrl,
@@ -379,6 +380,20 @@ export const renderSeoHtml = async (template: string, pathname: string): Promise
   const settings = await getSeoSettings();
   if (!settings.modules.meta) return template;
   const meta = await getSeoMeta(pathname);
+  const siteName = getSiteDisplayName(settings.global.siteTitle);
+  const clean = (value: unknown) => replaceLegacySiteName(value, siteName);
+  const cleanDeep = (value: any): any => {
+    if (typeof value === 'string') return clean(value);
+    if (Array.isArray(value)) return value.map(cleanDeep);
+    if (value && typeof value === 'object') {
+      return Object.fromEntries(Object.entries(value).map(([key, entry]) => [key, cleanDeep(entry)]));
+    }
+    return value;
+  };
+  for (const key of ['title', 'description', 'keywords', 'ogTitle', 'ogDescription', 'twitterTitle', 'twitterDescription'] as const) {
+    meta[key] = clean(meta[key]);
+  }
+  meta.schemas = cleanDeep(meta.schemas);
   let html = template;
 
   html = html.replace(/<title>[\s\S]*?<\/title>/i, '<title>' + escapeHtml(meta.title) + '</title>');

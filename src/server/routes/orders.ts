@@ -281,7 +281,6 @@ ordersRouter.post('/', async (req: AuthenticatedRequest, res) => {
   let loyaltyPointsRedeemed = 0;
   const orderId = randomUUID();
   const orderNumber = createOrderNumber();
-  const totalBeforeLoyalty = Math.max(0, subtotal + shipping.cost);
 
   const customerSnapshot = {
     firstName,
@@ -433,7 +432,10 @@ ordersRouter.patch('/:id/status', requireAdminPermission('canManageOrders'), asy
       await awardPaidOrderLoyalty(connection, order.id);
     } else {
       if (status === 'cancelled' || status === 'payment_failed') {
-        await refundOrderLoyalty(connection, order.id, ['paid', 'paid_stock_review'].includes(order.payment_status));
+        const paid = ['paid', 'paid_stock_review'].includes(order.payment_status);
+        if (paid || order.payment_status !== 'initiated') {
+          await refundOrderLoyalty(connection, order.id, paid);
+        }
       }
       await connection.execute(
         `UPDATE orders SET status = ?, payment_status = CASE
@@ -460,13 +462,18 @@ ordersRouter.delete('/:id', requireAdminPermission('canManageOrders'), async (re
       'SELECT id, payment_status FROM orders WHERE id = ? OR order_number = ? FOR UPDATE',
       [req.params.id, req.params.id]
     );
-    if (!rows[0]) return false;
+    if (!rows[0]) return 'missing';
+    if (rows[0].payment_status === 'initiated') return 'payment_in_progress';
     await refundOrderLoyalty(connection, rows[0].id, ['paid', 'paid_stock_review'].includes(rows[0].payment_status));
     await connection.execute('DELETE FROM orders WHERE id = ?', [rows[0].id]);
-    return true;
+    return 'deleted';
   });
-  if (!deleted) {
+  if (deleted === 'missing') {
     res.status(404).json({ error: 'ORDER_NOT_FOUND' });
+    return;
+  }
+  if (deleted === 'payment_in_progress') {
+    res.status(409).json({ error: 'PAYMENT_IN_PROGRESS' });
     return;
   }
   res.json({ ok: true });

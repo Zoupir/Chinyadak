@@ -111,23 +111,29 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderCompleted, on
     };
   }, []);
 
-  // Loyalty calculations
-  const remainingSubtotal = Math.max(0, cartTotal);
-  const maxDiscountAllowed = 0;
-  const maxPointsAllowed = 0;
-
-  const effectiveRedeemedPoints = 0;
-  const loyaltyDiscount = 0;
+  // Loyalty previews are convenience only; the server revalidates the balance, limits and settings.
+  const loyaltyEnabled = settings.loyaltySettings?.enabled === true;
+  const remainingSubtotal = Math.max(0, cartTotal - appliedDiscount);
+  const maxDiscountAllowed = loyaltyEnabled
+    ? Math.min(remainingSubtotal * maxRedeemPercent / 100, calculatePointsValue(customerPoints))
+    : 0;
+  const maxPointsAllowed = pointValue > 0
+    ? Math.min(customerPoints, Math.floor(maxDiscountAllowed / pointValue))
+    : 0;
+  const effectiveRedeemedPoints = useLoyaltyPoints
+    ? Math.min(maxPointsAllowed, redeemedPoints || maxPointsAllowed)
+    : 0;
+  const loyaltyDiscount = calculatePointsValue(effectiveRedeemedPoints);
 
   const shippingCost = selectedShipping === 'express' ? 120000 : selectedShipping === 'tipax' ? 110000 : 85000;
   const finalTotal = Math.max(0, cartTotal - appliedDiscount - loyaltyDiscount + shippingCost);
+  const pointsEarnedFromThisOrder = loyaltyEnabled && currentCustomer
+    ? calculatePointsEarned(Math.max(0, cartTotal - appliedDiscount - loyaltyDiscount), currentCustomer.id)
+    : 0;
 
-  const pointsEarnedFromThisOrder = 0;
-
-  const handleToggleLoyalty = (_checked: boolean) => {
-    setUseLoyaltyPoints(false);
-    setRedeemedPoints(0);
-    showToast('استفاده از امتیاز بعد از انتقال کامل باشگاه وفاداری به سرور فعال می‌شود.', 'info');
+  const handleToggleLoyalty = (checked: boolean) => {
+    setUseLoyaltyPoints(checked && loyaltyEnabled && maxPointsAllowed >= minRedeemPoints);
+    setRedeemedPoints(checked ? maxPointsAllowed : 0);
   };
 
   const handleApplyCoupon = (e: React.FormEvent) => {
@@ -645,11 +651,15 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderCompleted, on
                     )}
                   </div>
 
-                  {customerPoints < minRedeemPoints ? (
+                  {!loyaltyEnabled ? (
+                    <div className="mt-3 text-[11px] text-neutral-500">باشگاه مشتریان در تنظیمات سایت غیرفعال است.</div>
+                  ) : customerPoints < minRedeemPoints ? (
                     <div className="mt-2 text-[11px] text-neutral-500 bg-white/80 p-2 rounded-xl border border-neutral-200 flex items-center gap-1.5">
                       <Info className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
                       <span>حداقل موجودی مجاز برای تسویه ۵۰ امتیاز است (موجودی فعلی شما: {customerPoints} امتیاز).</span>
                     </div>
+                  ) : maxPointsAllowed < minRedeemPoints ? (
+                    <div className="mt-3 text-[11px] text-neutral-500">مبلغ این سفارش برای استفاده از حداقل امتیاز قابل تبدیل کافی نیست.</div>
                   ) : useLoyaltyPoints ? (
                     <div className="mt-3 pt-3 border-t border-amber-200/60 space-y-2.5">
                       <div className="flex items-center justify-between text-xs">

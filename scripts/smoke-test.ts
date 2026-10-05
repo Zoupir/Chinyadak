@@ -332,6 +332,9 @@ const run = async () => {
 
   // When the seeded product is large enough for the configured minimum, redeem and cancel it.
   if (Number(orderCreated.data.order.subtotal) >= 100000) {
+    const beforeRedeem = await json<{ customer: any }>('/api/auth/me', {
+      headers: cookieHeaders(customerCookie)
+    });
     const redeemOrder = await json<{ order: any }>('/api/orders', {
       method: 'POST',
       headers: cookieHeaders(customerCookie),
@@ -348,9 +351,6 @@ const run = async () => {
     }, 201);
     assert.equal(Number(redeemOrder.data.order.discountAmount), 50000,
       'Checkout did not apply the configured points discount.');
-    const beforeCancel = await json<{ customer: any }>('/api/auth/me', {
-      headers: cookieHeaders(customerCookie)
-    });
     await json(`/api/orders/${encodeURIComponent(redeemOrder.data.order.id)}/status`, {
       method: 'PATCH',
       headers: cookieHeaders(adminCookie),
@@ -359,9 +359,12 @@ const run = async () => {
     const afterCancel = await json<{ transactions: any[] }>('/api/auth/customer/loyalty', {
       headers: cookieHeaders(customerCookie)
     });
-    assert(afterCancel.data.transactions.some(tx => tx.type === 'refund' && tx.reason === 'redemption_return'),
+    assert(afterCancel.data.transactions.some(tx => tx.type === 'refund' && tx.reason === 'redemption_return' && tx.points === 50),
       'Cancelling an unpaid order did not restore redeemed points.');
-    assert.equal(afterCancel.data.transactions[0].balanceAfter, beforeCancel.data.customer.loyaltyPoints,
+    const afterCancelMe = await json<{ customer: any }>('/api/auth/me', {
+      headers: cookieHeaders(customerCookie)
+    });
+    assert.equal(afterCancelMe.data.customer.loyaltyPoints, beforeRedeem.data.customer.loyaltyPoints,
       'Loyalty balance did not return to its pre-redemption value after cancellation.');
   }
 

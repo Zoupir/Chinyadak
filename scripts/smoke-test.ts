@@ -279,7 +279,7 @@ const run = async () => {
   const vehicleBonus = await json<{ rewarded: boolean; loyaltyPoints: number; transaction: any }>('/api/auth/customer/vehicle-registration', {
     method: 'POST',
     headers: cookieHeaders(customerCookie),
-    body: JSON.stringify({ vehicleName: 'KMC J7 1403' })
+    body: JSON.stringify({ brandId: vehicles.data.models[0].brandId, modelId: vehicles.data.models[0].id, vehicleName: 'KMC J7 1403' })
   });
   assert.equal(vehicleBonus.data.rewarded, true, 'The first garage vehicle did not receive its one-time bonus.');
   assert.equal(vehicleBonus.data.loyaltyPoints, 70);

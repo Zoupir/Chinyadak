@@ -3,6 +3,8 @@ import { Router } from 'express';
 import {
   authenticate,
   getOptionalSession,
+  hashPassword,
+  issueSession,
   requireAdminPermission,
   type AuthenticatedRequest
 } from '../auth';
@@ -203,7 +205,8 @@ ordersRouter.post('/', async (req: AuthenticatedRequest, res) => {
         { id: 'tipax', title: 'تیپاکس اکسپرس', cost: Number(siteSettings.tipaxShippingFee || 110000), estimatedDelivery: '۲۴ الی ۴۸ ساعت', enabled: true },
         { id: 'express', title: 'پیک موتوری', cost: Number(siteSettings.expressShippingFee || 120000), estimatedDelivery: '۲ ساعت کاری', enabled: true }
       ];
-  const shipping = configuredShipping.find((method: any) => String(method.id) === requestedShippingId && method.enabled !== false);
+  const configuredMethod = configuredShipping.find((method: any) => String(method.id) === requestedShippingId && method.enabled !== false);
+  const shipping = configuredMethod ? { ...configuredMethod, paymentMode: ['free','collect'].includes(configuredMethod.paymentMode) ? configuredMethod.paymentMode : 'prepaid', cost: ['free','collect'].includes(configuredMethod.paymentMode) ? 0 : Math.max(0, Number(configuredMethod.cost) || 0) } : null;
   const publicGateways = checkoutSettings.get('payment_gateways');
   const codEnabled = Array.isArray(publicGateways) && publicGateways.some((gateway: any) => gateway.provider === 'cod' && gateway.isActive === true);
 
@@ -291,7 +294,14 @@ ordersRouter.post('/', async (req: AuthenticatedRequest, res) => {
 
   const requestedLoyaltyPoints = Math.max(0, Math.floor(Number(req.body?.loyaltyPointsToRedeem || 0)));
   const optionalSession = getOptionalSession(req);
-  const customerId = optionalSession?.role === 'customer' ? optionalSession.sub : null;
+  let customerId = optionalSession?.role === 'customer' ? optionalSession.sub : null;
+  const checkoutPassword = String(req.body?.registration?.password || '');
+  if (!customerId && (checkoutPassword.length < 8 || checkoutPassword.length > 128)) {
+    res.status(400).json({ error: 'CHECKOUT_PASSWORD_REQUIRED' });
+    return;
+  }
+  const checkoutPasswordHash = customerId ? null : await hashPassword(checkoutPassword);
+  let accountCreated = false;
   if (requestedLoyaltyPoints > 0 && !customerId) {
     res.status(401).json({ error: 'CUSTOMER_LOGIN_REQUIRED_FOR_LOYALTY' });
     return;
@@ -315,6 +325,21 @@ ordersRouter.post('/', async (req: AuthenticatedRequest, res) => {
 
   try {
     await withTransaction(async connection => {
+      if (!customerId) {
+        const [existing] = await connection.query<RowDataPacket[]>('SELECT id FROM customers WHERE phone = ? LIMIT 1 FOR UPDATE', [phone]);
+        if (existing.length) throw new Error('CHECKOUT_LOGIN_REQUIRED');
+        customerId = randomUUID();
+        await connection.execute(
+          `INSERT INTO customers (id, first_name, last_name, phone, password_hash, password_initialized, customer_type, address)
+           VALUES (?, ?, ?, ?, ?, 1, 'retail', ?)`,
+          [customerId, firstName, lastName, phone, checkoutPasswordHash, address]
+        );
+        const loyalty = await getLoyaltySettings(connection);
+        if (loyalty.enabled && loyalty.signupBonusPoints > 0) await addLoyaltyTransaction(connection, customerId, loyalty.signupBonusPoints, 'bonus', {
+          description: 'هدیه عضویت هنگام ثبت سفارش', reason: 'signup_bonus'
+        });
+        accountCreated = true;
+      }
       if (requestedLoyaltyPoints > 0 && customerId) {
         const loyalty = await getLoyaltySettings(connection);
         if (!loyalty.enabled) throw new Error('LOYALTY_DISABLED');
@@ -373,15 +398,16 @@ ordersRouter.post('/', async (req: AuthenticatedRequest, res) => {
     });
   } catch (error: any) {
     const code = String(error?.message || 'ORDER_CREATE_FAILED').split(':')[0];
-    const status = code === 'LOYALTY_POINTS_INSUFFICIENT' ? 409 :
+    const status = code === 'CHECKOUT_LOGIN_REQUIRED' || error?.code === 'ER_DUP_ENTRY' ? 409 : code === 'LOYALTY_POINTS_INSUFFICIENT' ? 409 :
       code === 'CUSTOMER_LOGIN_REQUIRED_FOR_LOYALTY' ? 401 :
       code === 'LOYALTY_DISABLED' || code === 'LOYALTY_MINIMUM_NOT_MET' || code === 'LOYALTY_REDEMPTION_UNAVAILABLE' ? 400 : 500;
-    res.status(status).json({ error: code });
+    res.status(status).json({ error: error?.code === 'ER_DUP_ENTRY' ? 'CHECKOUT_LOGIN_REQUIRED' : code });
     return;
   }
 
+  if (accountCreated && customerId) issueSession(res, { sub: customerId, role: 'customer', phone });
   const created = await fetchOrdersByWhere('WHERE id = ?', [orderId]);
-  res.status(201).json({ order: created[0] });
+  res.status(201).json({ order: created[0], accountCreated });
 });
 
 ordersRouter.post('/track', async (req, res) => {
@@ -437,17 +463,17 @@ ordersRouter.patch('/:id/status', requireAdminPermission('canManageOrders'), asy
 
   const trackingCode = req.body?.trackingCode ? String(req.body.trackingCode).trim() : null;
   const outcome = await withTransaction(async connection => {
-    const [lockedRows] = await connection.query<Array<RowDataPacket & { id: string; payment_status: string }>>(
-      'SELECT id, payment_status FROM orders WHERE id = ? OR order_number = ? FOR UPDATE',
+    const [lockedRows] = await connection.query<Array<RowDataPacket & { id: string; payment_status: string; payment_method: string }>>(
+      'SELECT id, payment_status, payment_method FROM orders WHERE id = ? OR order_number = ? FOR UPDATE',
       [req.params.id, req.params.id]
     );
     const order = lockedRows[0];
     if (!order) return false;
-    if (status === 'paid') {
+    if (status === 'paid' || (status === 'delivered' && order.payment_method === 'cod')) {
       await connection.execute(
-        `UPDATE orders SET status = 'paid', payment_status = 'paid', paid_at = COALESCE(paid_at, NOW()),
+        `UPDATE orders SET status = ?, payment_status = 'paid', paid_at = COALESCE(paid_at, NOW()),
          tracking_code = COALESCE(?, tracking_code), updated_at = NOW() WHERE id = ?`,
-        [trackingCode, order.id]
+        [status, trackingCode, order.id]
       );
       await awardPaidOrderLoyalty(connection, order.id);
     } else {
@@ -478,8 +504,8 @@ ordersRouter.patch('/:id/status', requireAdminPermission('canManageOrders'), asy
 
 ordersRouter.delete('/:id', requireAdminPermission('canManageOrders'), async (req, res) => {
   const deleted = await withTransaction(async connection => {
-    const [rows] = await connection.query<Array<RowDataPacket & { id: string; payment_status: string }>>(
-      'SELECT id, payment_status FROM orders WHERE id = ? OR order_number = ? FOR UPDATE',
+    const [rows] = await connection.query<Array<RowDataPacket & { id: string; payment_status: string; payment_method: string }>>(
+      'SELECT id, payment_status, payment_method FROM orders WHERE id = ? OR order_number = ? FOR UPDATE',
       [req.params.id, req.params.id]
     );
     if (!rows[0]) return 'missing';

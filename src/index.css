@@ -8648,3 +8648,15 @@ html[data-layout="atelier-rtl"] .marketplace-ref-footer-bottom-links {
     max-height: 38px !important;
   }
 }
+
+/* Compact category browser: show a single branch instead of the entire tree. */
+.category-browser { grid-column: 1 / -1; display: grid; grid-template-columns: minmax(190px, 28%) 1fr; gap: 16px; max-height: min(440px, 65dvh); overflow: hidden; }
+.category-browser-tabs, .category-browser-content { overflow-y: auto; overscroll-behavior: contain; padding: 8px; }
+.category-browser-tabs { background: #f8fafc; border-radius: 12px; }
+.category-browser-tabs button { display: block; width: 100%; text-align: right; padding: 11px 12px; border-radius: 9px; font-size: 13px; color: #334155; }
+.category-browser-tabs button.is-active { background: #fff1f2; color: #be123c; font-weight: 700; }
+.category-browser-tabs button:focus-visible { outline: 2px solid #be123c; }
+.category-browser-content { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px 18px; align-content: start; }
+.category-browser-all { grid-column: 1 / -1; padding: 8px; text-align: right; color: #be123c; font-weight: 700; }
+.marketplace-ref-category-mega, .marketplace-ref-generic-mega, .header-categories-mega { max-height: 70dvh; overflow-y: auto; overscroll-behavior: contain; }
+@media (max-width: 640px) { .category-browser { grid-template-columns: minmax(120px,40%) 1fr; gap: 6px; } .category-browser-content { grid-template-columns: 1fr; } }

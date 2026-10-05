@@ -24,9 +24,10 @@ import {
 interface CheckoutViewProps {
   onOrderCompleted: (orderId: string) => void;
   onNavigate: (view: string) => void;
+  onLogin: () => void;
 }
 
-export const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderCompleted, onNavigate }) => {
+export const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderCompleted, onNavigate, onLogin }) => {
   const { 
     cart, 
     cartTotal, 
@@ -57,6 +58,7 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderCompleted, on
   const [postalCode, setPostalCode] = useState('');
   const [address, setAddress] = useState(currentCustomer?.address || '');
   const [notes, setNotes] = useState('');
+  const [checkoutPassword, setCheckoutPassword] = useState('');
 
   // Shipping Method
   const [selectedShipping, setSelectedShipping] = useState<string>('post');
@@ -143,7 +145,7 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderCompleted, on
     : 0;
   const loyaltyDiscount = calculatePointsValue(effectiveRedeemedPoints);
 
-  const shippingCost = Number(selectedShippingMethod?.cost || 0);
+  const shippingCost = (['free', 'collect'].includes(selectedShippingMethod?.paymentMode || '') ? 0 : Number(selectedShippingMethod?.cost || 0));
   const finalTotal = Math.max(0, cartTotal - appliedDiscount - loyaltyDiscount + shippingCost);
   const pointsEarnedFromThisOrder = loyaltyEnabled && currentCustomer
     ? calculatePointsEarned(Math.max(0, cartTotal - appliedDiscount - loyaltyDiscount), currentCustomer.id)
@@ -204,6 +206,7 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderCompleted, on
       return;
     }
 
+    if (!currentCustomer && checkoutPassword.length < 8) { showToast('برای ایجاد حساب، رمز عبور حداقل ۸ کاراکتری وارد کنید.', 'error'); return; }
     setIsProcessing(true);
     setPaymentFailed(false);
 
@@ -222,6 +225,7 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderCompleted, on
       let orderId = pendingOrderId;
       if (!orderId) {
         const newOrder = await createOrder({
+        registration: currentCustomer ? undefined : { password: checkoutPassword },
         status: 'pending',
         statusTitle: 'در انتظار پرداخت',
         items: orderItems,
@@ -239,6 +243,7 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderCompleted, on
           id: selectedShippingMethod.id,
           title: selectedShippingMethod.title,
           cost: shippingCost,
+          paymentMode: selectedShippingMethod.paymentMode,
           estimatedDelivery: selectedShippingMethod.estimatedDelivery || ''
         },
         paymentMethod: {
@@ -284,7 +289,9 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderCompleted, on
 
       let message = 'شروع پرداخت بانکی انجام نشد. دوباره تلاش کنید.';
       if (error instanceof ApiError) {
-        if (error.code === 'INSUFFICIENT_STOCK') {
+        if (error.code === 'CHECKOUT_LOGIN_REQUIRED') {
+          message = 'این شماره حساب دارد؛ برای ثبت سفارش وارد حساب خود شوید.';
+        } else if (error.code === 'INSUFFICIENT_STOCK') {
           message = 'موجودی یکی از کالاها برای این سفارش کافی نیست.';
         } else if (error.code === 'PAYMENT_ALREADY_IN_PROGRESS') {
           message = 'یک پرداخت فعال برای این سفارش وجود دارد.';
@@ -479,6 +486,11 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderCompleted, on
             </h3>
 
             <div className="space-y-3">
+              {!currentCustomer && <div className="p-4 rounded-xl border border-blue-200 bg-blue-50 space-y-2">
+                <p className="text-xs text-blue-900">با ثبت سفارش، حساب شما با همین شماره ساخته می‌شود. اگر قبلاً عضو شده‌اید، ابتدا وارد شوید.</p>
+                <input type="password" autoComplete="new-password" minLength={8} maxLength={128} value={checkoutPassword} onChange={e => setCheckoutPassword(e.target.value)} placeholder="رمز عبور حساب (حداقل ۸ کاراکتر)" className="w-full p-3 bg-white border rounded-xl text-sm" />
+                <button type="button" onClick={onLogin} className="text-sm text-blue-800 underline">ورود به حساب موجود</button>
+              </div>}
               {shippingMethods.map(opt => (
                 <label
                   key={opt.id}
@@ -502,7 +514,7 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderCompleted, on
                     </div>
                   </div>
                   <span className="text-xs font-bold text-neutral-900 font-mono">
-                    {formatToman(opt.cost)}
+                    {opt.paymentMode === 'collect' ? 'پس‌کرایه؛ پرداخت به شرکت حمل' : opt.paymentMode === 'free' || opt.cost === 0 ? 'رایگان' : formatToman(opt.cost)}
                   </span>
                 </label>
               ))}
@@ -767,7 +779,7 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderCompleted, on
 
               <div className="flex justify-between">
                 <span>هزینه بسته‌بندی و ارسال:</span>
-                <span className="font-bold text-neutral-900">{formatToman(shippingCost)}</span>
+                <span className="font-bold text-neutral-900">{selectedShippingMethod?.paymentMode === 'collect' ? 'پس‌کرایه (جدا از مبلغ سفارش)' : shippingCost === 0 ? 'رایگان' : formatToman(shippingCost)}</span>
               </div>
 
               <div className="pt-3 border-t border-neutral-200 flex justify-between text-base font-black text-neutral-900">

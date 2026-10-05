@@ -1678,17 +1678,53 @@ export const upsertSeoIssue = async (issue: {
   );
 };
 
-export const runFullSeoAudit = async (actorId?: string) => {
+export const runFullSeoAudit = async (actorId?: string, liveLimit = 0) => {
   const startedAt = new Date();
   const settings = await getSeoSettings();
   const entities = await loadAllEntities(12000);
   let issueCount = 0;
+  let checksRun = 0;
+  let liveChecked = 0;
+  const liveReports: any[] = [];
   const focusOwners = new Map<string, SeoEntity[]>();
 
   for (const entity of entities) {
     const stored = await getSeoMetaRecord(entity.type, entity.id);
     const meta = stored || deriveSeoMeta(entity);
     const analysis = await analyzeSeoEntity(entity, meta);
+    checksRun += analysis.checks.length;
+    for (const check of analysis.checks.filter(check => check.status !== 'good')) {
+      await upsertSeoIssue({ issueKey: `check:${entity.type}:${entity.id}:${check.key}`, entityType: entity.type, entityId: entity.id, url: entity.url,
+        category: 'content', severity: check.status === 'bad' ? 'medium' : 'low', confidence: 'high', title: check.label + ': ' + entity.title,
+        details: check.detail, evidence: check, action: 'در ویرایشگر همین محتوا، بخش «' + check.label + '» را اصلاح و دوباره تحلیل کنید.' });
+      issueCount++;
+    }
+    for (const check of analysis.checks.filter(check => check.status === 'good')) {
+      await pool.execute("UPDATE seo_issues SET status = 'resolved', resolved_at = NOW() WHERE issue_key = ? AND status = 'open'", [`check:${entity.type}:${entity.id}:${check.key}`]);
+    }
+    if (liveChecked < Math.max(0, Math.min(20, liveLimit))) {
+      liveChecked++;
+      try {
+        const { inspectUrl } = await import('./integrations');
+        const report = await inspectUrl(entity.url);
+        liveReports.push(report);
+        const defects = [
+          [report.status !== 200, 'http_status', 'پاسخ HTTP نامناسب', 'وضعیت: ' + report.status],
+          [!report.title, 'html_title', 'عنوان در HTML اولیه موجود نیست', 'عنوان اختصاصی صفحه را در خروجی سرور قرار دهید.'],
+          [!report.canonical, 'html_canonical', 'canonical در HTML اولیه موجود نیست', 'canonical معتبر همین صفحه را تنظیم کنید.'],
+          [report.h1.length !== 1, 'html_h1', 'تعداد H1 در HTML اولیه نامناسب است', 'تعداد H1: ' + report.h1.length],
+          [report.visibleTextWords < 30, 'html_content', 'محتوای اولیه صفحه بسیار کم است', 'تعداد کلمات HTML: ' + report.visibleTextWords + '؛ خروجی SSR یا پیش‌رندر را بررسی کنید.']
+        ] as const;
+        for (const [failed, key, title, detail] of defects) {
+          const issueKey = `live:${entity.type}:${entity.id}:${key}`;
+          if (failed) { await upsertSeoIssue({ issueKey, entityType: entity.type, entityId: entity.id, url: entity.url, category: 'technical', severity: 'high', confidence: 'high', title, details: detail, evidence: report, action: detail }); issueCount++; }
+          else await pool.execute("UPDATE seo_issues SET status = 'resolved', resolved_at = NOW() WHERE issue_key = ? AND status = 'open'", [issueKey]);
+        }
+      } catch (error) {
+        liveReports.push({ requestedUrl: entity.url, error: String((error as Error).message) });
+        await upsertSeoIssue({ issueKey: `live:${entity.type}:${entity.id}:fetch`, entityType: entity.type, entityId: entity.id, url: entity.url, category: 'technical', severity: 'medium', confidence: 'review', title: 'بررسی HTML انجام نشد', details: String((error as Error).message), action: 'دسترسی سرور به آدرس صفحه را بررسی و دوباره ممیزی کنید.' }); issueCount++;
+      }
+    }
 
     if (stored) {
       await pool.execute(
@@ -1848,11 +1884,7 @@ export const runFullSeoAudit = async (actorId?: string) => {
     issueCount += 1;
   }
 
-  const startedSql = startedAt.toISOString().slice(0, 19).replace('T', ' ');
-  await pool.execute(
-    "UPDATE seo_issues SET status = 'resolved', resolved_at = NOW() WHERE status = 'open' AND last_seen < ?",
-    [startedSql]
-  );
+  // Unchecked issues stay open; resolving a finding requires positive verification.
 
   const graphState = await getSeoGraphState();
   if (!graphState.ready || graphState.stale) {
@@ -1861,6 +1893,12 @@ export const runFullSeoAudit = async (actorId?: string) => {
 
   const summary = {
     scanned: entities.length,
+    checksRun,
+    scope: 'active_content_database_and_sampled_initial_html',
+    limitPerType: 12000,
+    liveChecked,
+    liveReports,
+    durationMs: Date.now() - startedAt.getTime(),
     issuesDetected: issueCount,
     finishedAt: new Date().toISOString()
   };

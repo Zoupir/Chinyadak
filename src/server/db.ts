@@ -114,6 +114,7 @@ export const awardPaidOrderLoyalty = async (connection: PoolConnection, orderId:
   if (!order?.customer_id || !['paid', 'paid_stock_review'].includes(order.payment_status)) return;
   const settings = await getLoyaltySettings(connection);
   if (!settings.enabled) return;
+  await connection.query('SELECT id FROM customers WHERE id = ? FOR UPDATE', [order.customer_id]);
   const [existing] = await connection.query<RowDataPacket[]>(
     "SELECT id FROM loyalty_transactions WHERE customer_id = ? AND JSON_UNQUOTE(JSON_EXTRACT(data_json, '$.orderId')) = ? AND transaction_type IN ('earned','bonus') LIMIT 1",
     [order.customer_id, orderId]

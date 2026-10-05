@@ -381,14 +381,21 @@ const recordAiHistory = async (
 };
 
 export const runSeoAi = async (options: {
+  draft?: { title: string; description?: string; content?: string; data?: Record<string, any> };
   entityType: SeoEntityType;
   entityId: string;
   operation: 'optimize' | 'generate' | 'repair';
   instructions?: string;
   actorId?: string;
 }) => {
-  const entity = await loadEntity(options.entityType, options.entityId);
+  if (options.draft && !['product','article'].includes(options.entityType)) throw new Error('AI_DRAFT_TYPE_INVALID');
+  const entity: SeoEntity | null = options.draft ? {
+    type: options.entityType, id: options.entityId || 'draft', slug: '', title: String(options.draft.title || '').slice(0, 300),
+    url: '', description: String(options.draft.description || '').slice(0, 5000), content: String(options.draft.content || '').slice(0, 100000),
+    taxonomy: [], data: options.draft.data || {}, updatedAt: new Date()
+  } : await loadEntity(options.entityType, options.entityId);
   if (!entity) throw new Error('SEO_ENTITY_NOT_FOUND');
+  if (!entity.title.trim()) throw new Error('AI_TITLE_REQUIRED');
   const { settings, apiKey } = await getAiProviderConfig();
   const { prompt, allowedUrls } = await buildAiContext(entity, options.operation, options.instructions || '');
   const provider = settings.ai.provider;
@@ -945,6 +952,7 @@ export const inspectUrl = async (url: string) => {
     h1: Array.from(html.matchAll(/<h1\b[^>]*>([\s\S]*?)<\/h1>/gi)).map(row => normalizeSeoText(row[1])).slice(0, 10),
     schemas,
     images,
+    visibleTextWords: normalizeSeoText(html.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '').replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, '').replace(/<[^>]*>/g, ' ')).split(/\s+/).filter(Boolean).length,
     htmlBytes: Buffer.byteLength(html, 'utf8'),
     checkedAt: new Date().toISOString()
   };

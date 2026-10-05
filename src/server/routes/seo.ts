@@ -224,7 +224,7 @@ seoRouter.post('/entities/:type/:id/toc', manageSeo, async (req: AuthenticatedRe
 });
 
 seoRouter.post('/audit/run', manageSeo, async (req: AuthenticatedRequest, res) => {
-  const result = await runFullSeoAudit(actorId(req));
+  const result = await runFullSeoAudit(actorId(req), 10);
   res.json({ result });
 });
 
@@ -372,6 +372,7 @@ seoRouter.post('/ai/run', manageSeo, aiLimiter, async (req: AuthenticatedRequest
       operation: ['optimize','generate','repair'].includes(String(req.body?.operation))
         ? req.body.operation
         : 'optimize',
+      draft: req.body?.draft && typeof req.body.draft === 'object' ? req.body.draft : undefined,
       instructions: String(req.body?.instructions || '').slice(0, 5000),
       actorId: actorId(req)
     });

@@ -1751,6 +1751,8 @@ export const AdminView: React.FC<AdminViewProps> = ({ initialTarget, onExitToSto
                 entityType="product"
                 entityId={editingProduct.id}
                 entityTitle={editingProduct.nameFa}
+                contentDraft={{ description: editingProduct.shortDescription, content: editingProduct.description, data: editingProduct }}
+                onAiContent={(pkg, seo) => setEditingProduct({ ...editingProduct, shortDescription: pkg.shortDescription, description: pkg.contentHtml, seo })}
                 value={editingProduct.seo}
                 images={editingProduct.images || []}
                 onChange={(seo) => setEditingProduct({ ...editingProduct, seo })}

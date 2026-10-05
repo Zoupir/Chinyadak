@@ -69,6 +69,7 @@ export const Header: React.FC<HeaderProps> = ({
   } = useStore();
 
   const [isMegaMenuOpen, setIsMegaMenuOpen] = useState(false);
+  const [activeCategoryMenu, setActiveCategoryMenu] = useState('');
   const [isBrandsMenuOpen, setIsBrandsMenuOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isMarketplaceMobileOpen, setIsMarketplaceMobileOpen] = useState(false);
@@ -388,79 +389,19 @@ export const Header: React.FC<HeaderProps> = ({
 
   if (settings.layoutPreset === 'marketplace-rtl' || settings.layoutPreset === 'atelier-rtl') {
     const renderCategoryRows = () => {
-      if (categoriesTreeControlled) {
-        return editableCategoryChildren.map(item => {
-          const nested = menuChildren(item.id);
-          if (!nested.length) {
-            return (
-              <button
-                key={item.id}
-                type="button"
-                className="marketplace-ref-category-link"
-                onClick={() => {
-                  handleMenuClick(item);
-                  setIsMegaMenuOpen(false);
-                  setIsMarketplaceMobileOpen(false);
-                }}
-              >
-                <span>{item.title}</span>
-                {item.badge && <small>{item.badge}</small>}
-              </button>
-            );
-          }
-          return (
-            <div key={item.id} className="marketplace-ref-category-column">
-              <button
-                type="button"
-                className="marketplace-ref-category-title"
-                onClick={() => {
-                  handleMenuClick(item);
-                  setIsMegaMenuOpen(false);
-                  setIsMarketplaceMobileOpen(false);
-                }}
-              >
-                <span className="inline-flex items-center gap-1.5">
-                  <IconRenderer icon={item.icon || item.cssClass} className="w-3.5 h-3.5" />
-                  {item.title}
-                </span>
-              </button>
-              <div className="marketplace-ref-category-tree">
-                {renderCategoryMenuDescendants(item.id)}
-              </div>
-            </div>
-          );
-        });
-      }
-
-      return categories.slice(0, 12).map(category => (
-        <div key={category.id} className="marketplace-ref-category-column">
-          <button
-            type="button"
-            className="marketplace-ref-category-title"
-            onClick={() => {
-              onNavigate('category', category.slug);
-              setIsMegaMenuOpen(false);
-              setIsMarketplaceMobileOpen(false);
-            }}
-          >
-            {category.nameFa}
-          </button>
-          {(category.subcategories || []).map(sub => (
-            <button
-              key={sub.id}
-              type="button"
-              className="marketplace-ref-category-sub"
-              onClick={() => {
-                onNavigate('category', sub.slug);
-                setIsMegaMenuOpen(false);
-                setIsMarketplaceMobileOpen(false);
-              }}
-            >
-              {sub.nameFa}
-            </button>
-          ))}
+      const roots = categoriesTreeControlled
+        ? editableCategoryChildren.map(item => ({ id: item.id, title: item.title, item }))
+        : categories.slice(0, 12).map(category => ({ id: category.id, title: category.nameFa, category }));
+      const active = roots.find(item => item.id === activeCategoryMenu) || roots[0];
+      return <div className="category-browser">
+        <div className="category-browser-tabs" role="tablist" aria-label="دسته‌های قطعات">
+          {roots.map(item => <button key={item.id} type="button" role="tab" aria-selected={active?.id === item.id} onMouseEnter={() => setActiveCategoryMenu(item.id)} onFocus={() => setActiveCategoryMenu(item.id)} onClick={() => setActiveCategoryMenu(item.id)} className={active?.id === item.id ? 'is-active' : ''}>{item.title}</button>)}
         </div>
-      ));
+        <div className="category-browser-content" role="tabpanel">
+          {active && <button type="button" className="category-browser-all" onClick={() => { if ('item' in active) handleMenuClick(active.item); else onNavigate('category', active.category.slug); setIsMegaMenuOpen(false); }}>همهٔ {active.title} ←</button>}
+          {active && ('item' in active ? renderCategoryMenuDescendants(active.id) : (active.category.subcategories || []).map(sub => <button key={sub.id} type="button" className="marketplace-ref-category-sub" onClick={() => { onNavigate('category', sub.slug); setIsMegaMenuOpen(false); }}>{sub.nameFa}</button>))}
+        </div>
+      </div>;
     };
 
     return (

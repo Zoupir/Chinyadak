@@ -240,6 +240,7 @@ export interface Order {
     notes?: string;
   };
   shippingMethod: {
+    paymentMode?: 'prepaid' | 'free' | 'collect';
     id: string;
     title: string;
     cost: number;
@@ -623,6 +624,7 @@ export interface BannerPlacementConfig {
 }
 
 export interface ShippingMethodSetting {
+  paymentMode?: 'prepaid' | 'free' | 'collect';
   id: string;
   title: string;
   cost: number;

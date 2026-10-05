@@ -286,7 +286,7 @@ const run = async () => {
   const duplicateVehicleBonus = await json<{ rewarded: boolean; loyaltyPoints: number }>('/api/auth/customer/vehicle-registration', {
     method: 'POST',
     headers: cookieHeaders(customerCookie),
-    body: JSON.stringify({ vehicleName: 'KMC J7 1403' })
+    body: JSON.stringify({ brandId: vehicles.data.models[0].brandId, modelId: vehicles.data.models[0].id, vehicleName: 'KMC J7 1403' })
   });
   assert.equal(duplicateVehicleBonus.data.rewarded, false, 'A repeated vehicle reward request was not idempotent.');
   assert.equal(duplicateVehicleBonus.data.loyaltyPoints, 70);
@@ -316,6 +316,43 @@ const run = async () => {
       paymentMethodId: 'saman'
     })
   }, 201);
+
+  const cmsBefore = await json<{ settings: any; paymentGateways: any[] }>('/api/cms/bundle');
+  await json('/api/cms/payment-gateways', { method: 'PUT', headers: cookieHeaders(adminCookie), body: JSON.stringify({ gateways: [...cmsBefore.data.paymentGateways.filter(g => g.provider !== 'cod'), { id: 'cod-test', provider: 'cod', title: 'پرداخت در محل', isActive: true }] }) });
+  await json('/api/cms/settings', { method: 'PATCH', headers: cookieHeaders(adminCookie), body: JSON.stringify({ shippingMethods: [
+    { id: 'test-free', title: 'رایگان', paymentMode: 'free', cost: 999999, enabled: true, estimatedDelivery: 'تست' },
+    { id: 'test-collect', title: 'پس‌کرایه', paymentMode: 'collect', cost: 999999, enabled: true, estimatedDelivery: 'تست' },
+    { id: 'test-prepaid', title: 'پیش‌پرداخت', paymentMode: 'prepaid', cost: 12345, enabled: true, estimatedDelivery: 'تست' }
+  ] }) });
+  try {
+    const guestPhone = '09' + String(Date.now()).slice(-9);
+    const guestBody = { customer: { firstName: 'مهمان', lastName: 'تست', phone: guestPhone, address: 'نشانی تست' }, items: [{ productId: product.id, quantity: 1 }], shippingMethodId: 'test-collect', paymentMethodId: 'cod', registration: { password: 'Checkout-Test-123' } };
+    const guestOrder = await json<{ order: any; accountCreated: boolean }>('/api/orders', { method: 'POST', body: JSON.stringify(guestBody) }, 201);
+    assert.equal(guestOrder.data.accountCreated, true);
+    assert.equal(Number(guestOrder.data.order.shippingFee), 0, 'Collect shipping must not be charged at checkout.');
+    assert.equal(guestOrder.data.order.shippingMethod.paymentMode, 'collect');
+    const guestCookie = String(guestOrder.response.headers.get('set-cookie') || '').split(';')[0];
+    assert(guestCookie, 'Checkout did not issue an account session.');
+    const guestAccount = await json<{ customer: any }>('/api/auth/me', { headers: cookieHeaders(guestCookie) });
+    assert.equal(guestAccount.data.customer.phone, guestPhone);
+    await json('/api/orders', { method: 'POST', body: JSON.stringify(guestBody) }, 409);
+    for (const [method, expectedFee] of [['test-free', 0], ['test-prepaid', 12345]] as const) {
+      const additional = await json<{ order: any }>('/api/orders', { method: 'POST', headers: cookieHeaders(guestCookie), body: JSON.stringify({ ...guestBody, registration: undefined, shippingMethodId: method }) }, 201);
+      assert.equal(Number(additional.data.order.shippingFee), expectedFee);
+    }
+    const statusUrl = '/api/orders/' + guestOrder.data.order.id + '/status';
+    await json(statusUrl, { method: 'PATCH', headers: cookieHeaders(adminCookie), body: JSON.stringify({ status: 'delivered' }) });
+    const earned = await json<{ transactions: any[] }>('/api/auth/customer/loyalty', { headers: cookieHeaders(guestCookie) });
+    const purchase = earned.data.transactions.filter(tx => tx.orderId === guestOrder.data.order.id);
+    assert(purchase.some(tx => tx.type === 'earned' && tx.points > 0), 'Delivered COD did not award purchase points.');
+    assert(purchase.some(tx => tx.reason === 'first_paid_order'), 'First COD purchase bonus missing.');
+    await json(statusUrl, { method: 'PATCH', headers: cookieHeaders(adminCookie), body: JSON.stringify({ status: 'delivered' }) });
+    const repeat = await json<{ transactions: any[] }>('/api/auth/customer/loyalty', { headers: cookieHeaders(guestCookie) });
+    assert.equal(repeat.data.transactions.filter(tx => tx.orderId === guestOrder.data.order.id).length, purchase.length, 'Delivered COD duplicated rewards.');
+  } finally {
+    await json('/api/cms/settings', { method: 'PATCH', headers: cookieHeaders(adminCookie), body: JSON.stringify({ shippingMethods: cmsBefore.data.settings.shippingMethods || [] }) });
+    await json('/api/cms/payment-gateways', { method: 'PUT', headers: cookieHeaders(adminCookie), body: JSON.stringify({ gateways: cmsBefore.data.paymentGateways }) });
+  }
 
   assert(orderCreated.data.order.orderNumber, 'Order number was not created.');
   assert(Number(orderCreated.data.order.total) > 0, 'Server-calculated order total is invalid.');

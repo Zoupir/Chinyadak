@@ -445,6 +445,7 @@ const AppContent: React.FC = () => {
 
         {route.view === 'checkout' && (
           <CheckoutView
+            onLogin={() => handleOpenAuthModal('login')}
             onOrderCompleted={(orderNumber) => handleNavigate('tracking', orderNumber)}
             onNavigate={handleNavigate}
           />

@@ -499,7 +499,7 @@ interface StoreContextType {
   
   // Orders & Checkout
   orders: Order[];
-  createOrder: (orderData: Omit<Order, 'id' | 'orderNumber' | 'date'> & { loyaltyPointsToRedeem?: number }) => Promise<Order>;
+  createOrder: (orderData: Omit<Order, 'id' | 'orderNumber' | 'date'> & { loyaltyPointsToRedeem?: number; registration?: { password: string } }) => Promise<Order>;
   updateOrderStatus: (orderId: string, status: OrderStatus, trackingCode?: string) => void;
   deleteOrder: (orderId: string) => void;
   getOrderById: (orderId: string) => Order | undefined;
@@ -590,6 +590,7 @@ interface StoreContextType {
 
   // Loyalty Points & Rewards Club
   loyaltyTransactions: LoyaltyTransaction[];
+  refreshCustomerAccount: () => Promise<void>;
   getCustomerPoints: (customerId?: string) => number;
   getCustomerTransactions: (customerId?: string) => LoyaltyTransaction[];
   addLoyaltyPoints: (
@@ -2142,6 +2143,15 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     };
   };
 
+  const refreshCustomerAccount = async () => {
+    const session = await apiRequest<{ customer?: CustomerUser }>('/api/auth/me');
+    if (session.customer) {
+      setCurrentCustomer(session.customer);
+      setCustomers(prev => [...prev.filter(item => item.id !== session.customer!.id), session.customer!]);
+      await loadCustomerPrivateData();
+    }
+  };
+
   const getCustomerPoints = (customerId?: string): number => {
     const targetId = customerId || currentCustomer?.id;
     if (!targetId) return 0;
@@ -2252,12 +2262,13 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   // Orders
   // Orders
   const createOrder = async (
-    orderData: Omit<Order, 'id' | 'orderNumber' | 'date'> & { loyaltyPointsToRedeem?: number }
+    orderData: Omit<Order, 'id' | 'orderNumber' | 'date'> & { loyaltyPointsToRedeem?: number; registration?: { password: string } }
   ): Promise<Order> => {
     const response = await apiRequest<{ order: Order }>('/api/orders', {
       method: 'POST',
       body: JSON.stringify({
         customer: orderData.customer,
+        registration: orderData.registration,
         items: orderData.items.map(item => ({
           productId: item.productId,
           quantity: item.quantity,
@@ -2269,6 +2280,10 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       })
     });
 
+    if (!currentCustomer) {
+      const session = await apiRequest<{ customer?: CustomerUser }>('/api/auth/me').catch(() => ({} as { customer?: CustomerUser }));
+      if (session.customer) { setCurrentCustomer(session.customer); setCustomers(prev => [...prev.filter(item => item.id !== session.customer!.id), session.customer!]); void loadCustomerPrivateData(false); }
+    }
     setOrders(prev => [response.order, ...prev.filter(item => item.id !== response.order.id)]);
     if (currentCustomer && Number(orderData.loyaltyPointsToRedeem || 0) > 0) {
       const pointsUsed = Math.floor(
@@ -2540,6 +2555,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       adminLogout,
       loyaltyTransactions,
       getCustomerPoints,
+      refreshCustomerAccount,
       getCustomerTransactions,
       addLoyaltyPoints,
       redeemLoyaltyPoints,

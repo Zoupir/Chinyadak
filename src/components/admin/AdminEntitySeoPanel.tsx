@@ -11,6 +11,8 @@ interface AdminEntitySeoPanelProps {
   value?: SeoEntityDraft;
   images?: string[];
   onChange: (value: SeoEntityDraft) => void;
+  contentDraft?: { description?: string; content?: string; data?: Record<string, any> };
+  onAiContent?: (pkg: any, seo: SeoEntityDraft) => void;
 }
 
 const defaultSeo = (type: EntityType, title: string): SeoEntityDraft => ({
@@ -54,13 +56,17 @@ export const AdminEntitySeoPanel: React.FC<AdminEntitySeoPanelProps> = ({
   entityTitle,
   value,
   images = [],
-  onChange
+  onChange,
+  contentDraft,
+  onAiContent
 }) => {
   const [expanded, setExpanded] = useState(true);
   const [busy, setBusy] = useState('');
   const [score, setScore] = useState<number | null>(null);
   const [analysis, setAnalysis] = useState<any>(null);
   const [notice, setNotice] = useState('');
+  const [aiInstructions, setAiInstructions] = useState('');
+  const [aiPreview, setAiPreview] = useState<any>(null);
   const seo = useMemo(() => ({ ...defaultSeo(entityType, entityTitle), ...(value || {}), images: value?.images || {} }), [entityType, entityTitle, value]);
 
   const patch = (next: Partial<SeoEntityDraft>) => onChange({ ...seo, ...next });
@@ -97,6 +103,22 @@ export const AdminEntitySeoPanel: React.FC<AdminEntitySeoPanelProps> = ({
     // Existing entity metadata is loaded once whenever the entity changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [entityType, entityId]);
+
+  const generateAi = async (operation: 'generate' | 'optimize') => {
+    setBusy('ai'); setNotice(''); setAiPreview(null);
+    try {
+      const result = await api('/api/seo/ai/run', { method: 'POST', body: JSON.stringify({ entityType, entityId: entityId || '', operation, instructions: aiInstructions, draft: { title: entityTitle, ...contentDraft } }) });
+      setAiPreview(result.package);
+      setNotice('خروجی تولید شد؛ پس از ویرایش و اعمال در فرم، دکمه ذخیره محتوا را بزنید.');
+    } catch (error) { setNotice('تولید محتوا انجام نشد: ' + String((error as Error).message)); }
+    finally { setBusy(''); }
+  };
+  const applyAiToForm = () => {
+    if (!aiPreview || !onAiContent) return;
+    const nextSeo = { ...seo, seoTitle: aiPreview.seoTitle, metaDescription: aiPreview.metaDescription, focusKeyword: aiPreview.primaryKeyword, secondaryKeywords: aiPreview.secondaryKeywords || [], schemaType: aiPreview.schemaType || seo.schemaType };
+    onAiContent(aiPreview, nextSeo);
+    setAiPreview(null); setNotice('محتوا و سئو در فرم قرار گرفت؛ برای ثبت نهایی، محتوا را ذخیره کنید.');
+  };
 
   const saveMetaNow = async () => {
     if (!entityId) {
@@ -181,6 +203,19 @@ export const AdminEntitySeoPanel: React.FC<AdminEntitySeoPanelProps> = ({
 
       {expanded && (
         <div className="p-4 sm:p-5 space-y-5 border-t border-emerald-100">
+          {onAiContent && <div className="p-4 bg-white border rounded-xl space-y-3">
+            <strong className="text-sm">تولید و ویرایش محتوا با هوش مصنوعی</strong>
+            <textarea value={aiInstructions} onChange={e => setAiInstructions(e.target.value)} placeholder="دستور، کلمه کلیدی و اطلاعات معتبر محصول یا مقاله" className="w-full p-3 border rounded-xl text-xs" />
+            <div className="flex gap-2"><button type="button" disabled={!!busy} onClick={() => void generateAi('generate')} className="px-3 py-2 bg-neutral-900 text-white rounded-lg text-xs">تولید محتوا و سئو</button><button type="button" disabled={!!busy} onClick={() => void generateAi('optimize')} className="px-3 py-2 bg-blue-700 text-white rounded-lg text-xs">ویرایش و بهینه‌سازی</button></div>
+            {busy === 'ai' && <p className="text-xs">در حال دریافت پاسخ سرویس هوش مصنوعی…</p>}
+            {aiPreview && <div className="space-y-2">
+              <input aria-label="عنوان سئوی پیشنهادی" value={aiPreview.seoTitle || ''} onChange={e => setAiPreview({ ...aiPreview, seoTitle: e.target.value })} className="w-full p-2 border rounded-lg" />
+              <textarea aria-label="توضیحات متای پیشنهادی" value={aiPreview.metaDescription || ''} onChange={e => setAiPreview({ ...aiPreview, metaDescription: e.target.value })} className="w-full p-2 border rounded-lg" />
+              <textarea aria-label="خلاصه پیشنهادی" value={aiPreview.shortDescription || ''} onChange={e => setAiPreview({ ...aiPreview, shortDescription: e.target.value })} className="w-full p-2 border rounded-lg" />
+              <textarea aria-label="محتوای HTML پیشنهادی" rows={10} value={aiPreview.contentHtml || ''} onChange={e => setAiPreview({ ...aiPreview, contentHtml: e.target.value })} className="w-full p-2 border rounded-lg font-mono text-xs" />
+              <button type="button" onClick={applyAiToForm} className="px-3 py-2 bg-emerald-700 text-white rounded-lg text-xs">اعمال در فرم برای ذخیره</button>
+            </div>}
+          </div>}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <label className="sm:col-span-2">
               <span className="block text-[11px] font-bold text-neutral-700 mb-1">عنوان سئو</span>

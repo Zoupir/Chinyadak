@@ -270,7 +270,8 @@ export const AdminSeoTab: React.FC = () => {
   };
 
   const doAudit = async () => {
-    await run('audit', () => api('/api/seo/audit/run', { method: 'POST', body: '{}' }), 'Audit کامل شد.');
+    const audit = await run('audit', () => api<any>('/api/seo/audit/run', { method: 'POST', body: '{}' }));
+    if (audit?.result) flash(`ممیزی ${audit.result.scanned} محتوا، ${audit.result.checksRun} بررسی و HTML اولیهٔ ${audit.result.liveChecked} صفحه انجام شد؛ ${audit.result.issuesDetected} یافته. سقف بررسی: ۱۲٬۰۰۰ رکورد از هر نوع؛ بررسی HTML نمونه‌ای است.`);
     const [issueData, actionData] = await Promise.all([
       api<any>('/api/seo/issues?status=open&limit=250'),
       api<any>('/api/seo/actions')

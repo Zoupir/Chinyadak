@@ -551,8 +551,12 @@ export const AdminThemeTab: React.FC = () => {
                           className="w-full p-2 border rounded-lg text-xs" />
                       </label>
                       <label className="lg:col-span-2">
+                        <span className="block text-[9px] font-bold text-neutral-600 mb-1">نحوه پرداخت ارسال</span>
+                        <select value={method.paymentMode || 'prepaid'} onChange={e => patchShippingMethod(method.id, { paymentMode: e.target.value as 'prepaid' | 'free' | 'collect' })} className="w-full p-2 border rounded-lg text-xs mb-2">
+                          <option value="prepaid">دریافت هزینه در خرید</option><option value="free">رایگان</option><option value="collect">پس‌کرایه</option>
+                        </select>
                         <span className="block text-[9px] font-bold text-neutral-600 mb-1">هزینه (تومان)</span>
-                        <input type="number" min="0" step="1000" value={method.cost}
+                        <input type="number" disabled={method.paymentMode === 'free' || method.paymentMode === 'collect'} min="0" step="1000" value={method.cost}
                           onChange={e => patchShippingMethod(method.id, { cost: Math.max(0, Number(e.target.value) || 0) })}
                           className="w-full p-2 border rounded-lg text-xs" dir="ltr" />
                       </label>

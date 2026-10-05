@@ -159,9 +159,15 @@ const main = async () => {
   }
 
   const { bootstrapAdminIfNeeded } = await import('../src/server/bootstrap');
-  const { pool } = await import('../src/server/db');
+  const { pool, withTransaction, awardPaidOrderLoyalty } = await import('../src/server/db');
   try {
     await bootstrapAdminIfNeeded();
+    const [codOrders] = await pool.query<any[]>("SELECT id FROM orders WHERE payment_method = 'cod' AND status = 'delivered' AND customer_id IS NOT NULL");
+    for (const order of codOrders) await withTransaction(async tx => {
+      await tx.execute("UPDATE orders SET payment_status = 'paid', paid_at = COALESCE(paid_at, NOW()) WHERE id = ? AND status = 'delivered' AND payment_method = 'cod'", [order.id]);
+      await awardPaidOrderLoyalty(tx, order.id);
+    });
+    console.log(`Reconciled ${codOrders.length} delivered COD orders (loyalty is idempotent).`);
     console.log('Database schema and initial administrator are ready.');
   } finally {
     await pool.end();

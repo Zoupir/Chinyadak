@@ -670,6 +670,8 @@ export const AdminArticlesTab: React.FC<AdminArticlesTabProps> = ({ initialArtic
                 entityType="article"
                 entityId={editingArticle?.id}
                 entityTitle={articleForm.title || ''}
+                contentDraft={{ description: articleForm.summary, content: articleForm.content, data: articleForm }}
+                onAiContent={(pkg, seo) => setArticleForm({ ...articleForm, summary: pkg.shortDescription, content: pkg.contentHtml, faq: pkg.faq, seo })}
                 value={articleForm.seo}
                 images={articleForm.imageUrl ? [articleForm.imageUrl] : []}
                 onChange={(seo) => setArticleForm({ ...articleForm, seo })}

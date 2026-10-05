@@ -42,6 +42,7 @@ export const AccountView: React.FC<AccountViewProps> = ({
   onOpenAuthModal
 }) => {
   const { 
+    refreshCustomerAccount,
     garage, 
     selectedVehicle, 
     setSelectedVehicle, 
@@ -73,6 +74,13 @@ export const AccountView: React.FC<AccountViewProps> = ({
       setActiveTab(initialTab as any);
     }
   }, [initialTab]);
+
+  useEffect(() => {
+    const refresh = () => { if (document.visibilityState === 'visible') void refreshCustomerAccount().catch(() => {}); };
+    refresh();
+    window.addEventListener('focus', refresh);
+    return () => window.removeEventListener('focus', refresh);
+  }, [currentCustomer?.id, activeTab]);
 
   const handleTabChange = (tabId: string) => {
     setActiveTab(tabId as any);

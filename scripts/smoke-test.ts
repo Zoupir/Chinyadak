@@ -270,6 +270,12 @@ const run = async () => {
     })
   }, 201);
   const customerCookie = cookieFrom(customerRegister.response);
+  assert.equal(customerRegister.data.customer.loyaltyPoints, 50, 'Signup bonus was not persisted to the customer balance.');
+  const signupLoyalty = await json<{ transactions: any[] }>('/api/auth/customer/loyalty', {
+    headers: cookieHeaders(customerCookie)
+  });
+  assert(signupLoyalty.data.transactions.some(tx => tx.type === 'bonus' && tx.reason === 'signup_bonus' && tx.points === 50),
+    'Signup bonus transaction is missing from the customer ledger.');
 
   const mine = await json<{ requests: any[] }>('/api/engagement/part-requests/mine', {
     headers: cookieHeaders(customerCookie)
@@ -308,6 +314,56 @@ const run = async () => {
     })
   });
   assert.equal(tracking.data.order.orderNumber, orderCreated.data.order.orderNumber);
+
+  // Loyalty earns only after an order is marked paid, and is stored in the same customer ledger.
+  await json(`/api/orders/${encodeURIComponent(orderCreated.data.order.id)}/status`, {
+    method: 'PATCH',
+    headers: cookieHeaders(adminCookie),
+    body: JSON.stringify({ status: 'paid' })
+  });
+  const paidLoyalty = await json<{ transactions: any[] }>('/api/auth/customer/loyalty', {
+    headers: cookieHeaders(customerCookie)
+  });
+  const paidOrderTransactions = paidLoyalty.data.transactions.filter(tx => tx.orderNumber === orderCreated.data.order.orderNumber);
+  assert(paidOrderTransactions.some(tx => tx.type === 'earned' && tx.points > 0),
+    'A paid order did not award purchase points.');
+  assert(paidOrderTransactions.some(tx => tx.type === 'bonus' && tx.reason === 'first_paid_order'),
+    'The first paid-order bonus was not recorded.');
+
+  // When the seeded product is large enough for the configured minimum, redeem and cancel it.
+  if (Number(orderCreated.data.order.subtotal) >= 100000) {
+    const redeemOrder = await json<{ order: any }>('/api/orders', {
+      method: 'POST',
+      headers: cookieHeaders(customerCookie),
+      body: JSON.stringify({
+        customer: {
+          firstName: 'کاربر', lastName: 'تست', phone: customerPhone, province: 'تهران',
+          city: 'تهران', postalCode: '1234567890', address: 'نشانی تست CI', notes: ''
+        },
+        items: [{ productId: product.id, quantity: 1 }],
+        shippingMethodId: 'post',
+        paymentMethodId: 'saman',
+        loyaltyPointsToRedeem: 50
+      })
+    }, 201);
+    assert.equal(Number(redeemOrder.data.order.discountAmount), 50000,
+      'Checkout did not apply the configured points discount.');
+    const beforeCancel = await json<{ customer: any }>('/api/auth/me', {
+      headers: cookieHeaders(customerCookie)
+    });
+    await json(`/api/orders/${encodeURIComponent(redeemOrder.data.order.id)}/status`, {
+      method: 'PATCH',
+      headers: cookieHeaders(adminCookie),
+      body: JSON.stringify({ status: 'cancelled' })
+    });
+    const afterCancel = await json<{ transactions: any[] }>('/api/auth/customer/loyalty', {
+      headers: cookieHeaders(customerCookie)
+    });
+    assert(afterCancel.data.transactions.some(tx => tx.type === 'refund' && tx.reason === 'redemption_return'),
+      'Cancelling an unpaid order did not restore redeemed points.');
+    assert.equal(afterCancel.data.transactions[0].balanceAfter, beforeCancel.data.customer.loyaltyPoints,
+      'Loyalty balance did not return to its pre-redemption value after cancellation.');
+  }
 
   // Admin reporting must contain data captured above.
   const engagementAdmin = await json<{ partRequests: any[]; stockAlerts: any[]; searchLogs: any[] }>(

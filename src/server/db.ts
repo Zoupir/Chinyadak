@@ -128,14 +128,14 @@ export const awardPaidOrderLoyalty = async (connection: PoolConnection, orderId:
   const netSubtotal = Math.max(0, Number(order.subtotal) - Number(order.discount_amount));
   const basePoints = Math.floor(netSubtotal * settings.pointsPerToman);
   const earned = Math.max(1, Math.round(basePoints * multiplier));
-  const [priorOrders] = await connection.query<Array<RowDataPacket & { total: number }>>(
-    "SELECT COUNT(*) AS total FROM orders WHERE customer_id = ? AND id <> ? AND payment_status IN ('paid','paid_stock_review') FOR UPDATE",
+  const [priorOrders] = await connection.query<Array<RowDataPacket & { id: string }>>(
+    "SELECT id FROM orders WHERE customer_id = ? AND id <> ? AND payment_status IN ('paid','paid_stock_review') LIMIT 1 FOR UPDATE",
     [order.customer_id, orderId]
   );
   if (earned > 0) await addLoyaltyTransaction(connection, order.customer_id, earned, 'earned', {
     description: `امتیاز خرید سفارش ${order.order_number}`, orderId, orderNumber: order.order_number, reason: 'paid_order'
   });
-  const firstOrderBonus = Number(priorOrders[0]?.total || 0) === 0 ? settings.firstOrderBonusPoints : 0;
+  const firstOrderBonus = priorOrders.length === 0 ? settings.firstOrderBonusPoints : 0;
   if (firstOrderBonus > 0) await addLoyaltyTransaction(connection, order.customer_id, firstOrderBonus, 'bonus', {
     description: `پاداش اولین خرید - سفارش ${order.order_number}`, orderId, orderNumber: order.order_number, reason: 'first_paid_order'
   });

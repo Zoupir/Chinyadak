@@ -276,6 +276,20 @@ const run = async () => {
   });
   assert(signupLoyalty.data.transactions.some(tx => tx.type === 'bonus' && tx.reason === 'signup_bonus' && tx.points === 50),
     'Signup bonus transaction is missing from the customer ledger.');
+  const vehicleBonus = await json<{ rewarded: boolean; loyaltyPoints: number; transaction: any }>('/api/auth/customer/vehicle-registration', {
+    method: 'POST',
+    headers: cookieHeaders(customerCookie),
+    body: JSON.stringify({ vehicleName: 'KMC J7 1403' })
+  });
+  assert.equal(vehicleBonus.data.rewarded, true, 'The first garage vehicle did not receive its one-time bonus.');
+  assert.equal(vehicleBonus.data.loyaltyPoints, 70);
+  const duplicateVehicleBonus = await json<{ rewarded: boolean; loyaltyPoints: number }>('/api/auth/customer/vehicle-registration', {
+    method: 'POST',
+    headers: cookieHeaders(customerCookie),
+    body: JSON.stringify({ vehicleName: 'KMC J7 1403' })
+  });
+  assert.equal(duplicateVehicleBonus.data.rewarded, false, 'A repeated vehicle reward request was not idempotent.');
+  assert.equal(duplicateVehicleBonus.data.loyaltyPoints, 70);
 
   const mine = await json<{ requests: any[] }>('/api/engagement/part-requests/mine', {
     headers: cookieHeaders(customerCookie)

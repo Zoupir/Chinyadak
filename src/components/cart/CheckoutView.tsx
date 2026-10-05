@@ -656,7 +656,7 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderCompleted, on
                   ) : customerPoints < minRedeemPoints ? (
                     <div className="mt-2 text-[11px] text-neutral-500 bg-white/80 p-2 rounded-xl border border-neutral-200 flex items-center gap-1.5">
                       <Info className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
-                      <span>حداقل موجودی مجاز برای تسویه ۵۰ امتیاز است (موجودی فعلی شما: {customerPoints} امتیاز).</span>
+                      <span>حداقل موجودی مجاز برای تسویه {minRedeemPoints.toLocaleString('fa-IR')} امتیاز است (موجودی فعلی شما: {customerPoints.toLocaleString('fa-IR')} امتیاز).</span>
                     </div>
                   ) : maxPointsAllowed < minRedeemPoints ? (
                     <div className="mt-3 text-[11px] text-neutral-500">مبلغ این سفارش برای استفاده از حداقل امتیاز قابل تبدیل کافی نیست.</div>

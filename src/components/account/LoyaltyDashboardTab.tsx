@@ -197,7 +197,7 @@ export const LoyaltyDashboardTab: React.FC<LoyaltyDashboardTabProps> = ({
               className="px-6 py-3 bg-neutral-800/90 hover:bg-neutral-700 text-neutral-200 border border-neutral-700 rounded-2xl font-bold text-xs flex items-center justify-center gap-2 transition-colors cursor-pointer"
             >
               <Car className="w-4 h-4 text-amber-400" />
-              <span>ثبت خودرو در گاراژ (+۲۰ برای ثبت اول)</span>
+              <span>{loyaltyEnabled ? 'ثبت خودرو در گاراژ (+۲۰ برای ثبت اول)' : 'ثبت خودرو در گاراژ'}</span>
             </button>
           </div>
         </div>

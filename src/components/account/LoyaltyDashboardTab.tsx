@@ -49,7 +49,7 @@ export const LoyaltyDashboardTab: React.FC<LoyaltyDashboardTabProps> = ({
   const cashValue = calculatePointsValue(points);
   const transactions = getCustomerTransactions(customerId);
 
-  const [filterType, setFilterType] = useState<'all' | 'earned' | 'redeemed' | 'bonus'>('all');
+  const [filterType, setFilterType] = useState<'all' | 'earned' | 'redeemed' | 'bonus' | 'refund'>('all');
   const [calcInput, setCalcInput] = useState<number>(points > 0 ? points : 100);
 
   const filteredTransactions = transactions.filter(t => {
@@ -58,11 +58,11 @@ export const LoyaltyDashboardTab: React.FC<LoyaltyDashboardTabProps> = ({
   });
 
   const totalEarned = transactions
-    .filter(t => t.points > 0)
+    .filter(t => (t.type === 'earned' || t.type === 'bonus') && t.points > 0)
     .reduce((sum, t) => sum + t.points, 0);
 
   const totalRedeemed = transactions
-    .filter(t => t.points < 0)
+    .filter(t => t.type === 'redeemed' && t.points < 0)
     .reduce((sum, t) => sum + Math.abs(t.points), 0);
 
   const allTiers: {
@@ -452,7 +452,8 @@ export const LoyaltyDashboardTab: React.FC<LoyaltyDashboardTabProps> = ({
               { id: 'all', label: 'همه تراکنش‌ها' },
               { id: 'earned', label: 'کسب شده' },
               { id: 'redeemed', label: 'خرج شده' },
-              { id: 'bonus', label: 'هدیه و پاداش' }
+              { id: 'bonus', label: 'هدیه و پاداش' },
+              { id: 'refund', label: 'اصلاح و بازگشت' }
             ].map(f => (
               <button
                 key={f.id}
@@ -500,6 +501,8 @@ export const LoyaltyDashboardTab: React.FC<LoyaltyDashboardTabProps> = ({
                             ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                             : tx.type === 'redeemed'
                             ? 'bg-rose-50 text-rose-700 border border-rose-200'
+                            : tx.type === 'refund'
+                            ? 'bg-slate-50 text-slate-700 border border-slate-200'
                             : 'bg-amber-50 text-amber-800 border border-amber-200'
                         }`}>
                           {tx.type === 'earned' ? (
@@ -511,6 +514,11 @@ export const LoyaltyDashboardTab: React.FC<LoyaltyDashboardTabProps> = ({
                             <>
                               <ArrowUpRight className="w-3 h-3 text-rose-600" />
                               <span>تخفیف در سفارش</span>
+                            </>
+                          ) : tx.type === 'refund' ? (
+                            <>
+                              <ShieldCheck className="w-3 h-3 text-slate-600" />
+                              <span>اصلاح یا بازگشت امتیاز</span>
                             </>
                           ) : (
                             <>

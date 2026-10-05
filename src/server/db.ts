@@ -126,7 +126,8 @@ export const awardPaidOrderLoyalty = async (connection: PoolConnection, orderId:
   const points = Number(customerRows[0].loyalty_points || 0);
   const multiplier = points >= 3000 ? 2 : points >= 1000 ? 1.5 : points >= 500 ? 1.25 : 1;
   const netSubtotal = Math.max(0, Number(order.subtotal) - Number(order.discount_amount));
-  const earned = Math.max(0, Math.floor(netSubtotal * settings.pointsPerToman * multiplier));
+  const basePoints = Math.floor(netSubtotal * settings.pointsPerToman);
+  const earned = Math.max(1, Math.round(basePoints * multiplier));
   const [priorOrders] = await connection.query<Array<RowDataPacket & { total: number }>>(
     "SELECT COUNT(*) AS total FROM orders WHERE customer_id = ? AND id <> ? AND payment_status IN ('paid','paid_stock_review')",
     [order.customer_id, orderId]

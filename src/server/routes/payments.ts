@@ -176,6 +176,16 @@ paymentsRouter.post('/start', paymentLimiter, async (req, res) => {
     });
   } catch (error: any) {
     const code = String(error?.message || 'PAYMENT_PREPARE_FAILED').split(':')[0];
+    if (['PAYMENT_PROVIDER_NOT_CONFIGURED', 'PAYMENT_PROVIDER_UNSUPPORTED', 'PAYMENT_AMOUNT_INVALID', 'INSUFFICIENT_STOCK'].includes(code)) {
+      await withTransaction(async connection => {
+        const [orders] = await connection.query<Array<RowDataPacket & { payment_status: string }>>(
+          'SELECT payment_status FROM orders WHERE id = ? FOR UPDATE', [orderId]
+        );
+        if (orders[0] && !['paid', 'paid_stock_review', 'initiated'].includes(orders[0].payment_status)) {
+          await refundOrderLoyalty(connection, orderId, false);
+        }
+      }).catch(refundError => console.error('Loyalty redemption rollback before payment failed:', refundError));
+    }
     const status =
       code === 'ORDER_NOT_FOUND' ? 404 :
       code === 'ORDER_ALREADY_PAID' ? 409 :

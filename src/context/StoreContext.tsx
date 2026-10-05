@@ -1908,6 +1908,32 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setGarage(updated);
     setSelectedVehicleState(newCar);
     showToast(`${newCar.modelName} به گاراژ شما اضافه و به عنوان خودروی پیش‌فرض انتخاب شد.`);
+    if (currentCustomer) {
+      void apiRequest<{
+        rewarded: boolean;
+        loyaltyPoints: number;
+        transaction: LoyaltyTransaction | null;
+      }>('/api/auth/customer/vehicle-registration', {
+        method: 'POST',
+        body: JSON.stringify({
+          vehicleName: [newCar.brandName, newCar.modelName, newCar.year].filter(Boolean).join(' ')
+        })
+      }).then(result => {
+        if (result.transaction) {
+          setLoyaltyTransactions(prev => [result.transaction!, ...prev]);
+          setCurrentCustomer(prev => prev ? { ...prev, loyaltyPoints: result.loyaltyPoints } : null);
+          setCustomers(prev => prev.map(customer => customer.id === currentCustomer.id
+            ? { ...customer, loyaltyPoints: result.loyaltyPoints }
+            : customer));
+        }
+        if (result.rewarded) {
+          showToast('۲۰ امتیاز پاداش ثبت نخستین خودرو به حساب باشگاه شما افزوده شد.', 'success');
+        }
+      }).catch(error => {
+        console.error('Vehicle loyalty reward could not be saved:', error);
+        showToast('خودرو در گاراژ ثبت شد، اما پاداش باشگاه ذخیره نشد. اتصال را بررسی و دوباره تلاش کنید.', 'error');
+      });
+    }
   };
 
   const removeFromGarage = (id: string) => {

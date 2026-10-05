@@ -197,7 +197,7 @@ export const LoyaltyDashboardTab: React.FC<LoyaltyDashboardTabProps> = ({
               className="px-6 py-3 bg-neutral-800/90 hover:bg-neutral-700 text-neutral-200 border border-neutral-700 rounded-2xl font-bold text-xs flex items-center justify-center gap-2 transition-colors cursor-pointer"
             >
               <Car className="w-4 h-4 text-amber-400" />
-              <span>ثبت خودرو در گاراژ</span>
+              <span>ثبت خودرو در گاراژ (+۲۰ برای ثبت اول)</span>
             </button>
           </div>
         </div>
@@ -290,7 +290,7 @@ export const LoyaltyDashboardTab: React.FC<LoyaltyDashboardTabProps> = ({
             </div>
             <h4 className="font-bold text-xs text-neutral-900">ثبت خودرو در گاراژ</h4>
             <p className="text-[11px] text-neutral-600 leading-relaxed">
-              خودروی خود را برای پیشنهاد قطعات سازگار در بخش گاراژ ثبت کنید.
+              {loyaltyEnabled ? 'با ثبت نخستین خودرو در گاراژ، یک‌بار ۲۰ امتیاز به حساب شما افزوده می‌شود.' : 'خودرو را برای پیشنهاد قطعات سازگار در بخش گاراژ ثبت کنید.'}
             </p>
             <span className="inline-block text-[10px] font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md">
               پیشنهاد قطعات سازگار

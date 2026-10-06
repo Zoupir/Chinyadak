@@ -39,7 +39,31 @@ const { chromium } = require('playwright');
         assert.equal(metrics.logoSearchOverlap, false, `center logo overlaps search at ${width}px`);
       }
     }
-    console.log('Responsive mega-menu, centered mobile logo and compact media cards passed at seven widths.');
+
+    // Reproduce the short desktop viewport where the final root categories used
+    // to be clipped behind the "view all" footer action.
+    await page.setViewportSize({ width: 1280, height: 600 });
+    await page.setContent(`<html dir="rtl" data-layout="marketplace-rtl"><head><style>${css}</style></head><body><div class="marketplace-ref-category-mega"><div class="marketplace-ref-container marketplace-ref-category-grid"><div class="category-browser"><div class="category-browser-tabs">${Array.from({ length: 12 }, (_, i) => `<button>دسته اصلی ${i + 1}</button>`).join('')}</div><div class="category-browser-content">${Array.from({ length: 20 }, (_, i) => `<button>زیر دسته ${i + 1}</button>`).join('')}</div></div><button class="marketplace-ref-category-all">مشاهده همه قطعات</button></div></div></body></html>`);
+    const desktopMega = await page.evaluate(() => {
+      const mega = document.querySelector('.marketplace-ref-category-mega');
+      const browser = document.querySelector('.category-browser');
+      const roots = [...document.querySelectorAll('.category-browser-tabs > button')];
+      const action = document.querySelector('.marketplace-ref-category-all');
+      const lastRootRect = roots.at(-1).getBoundingClientRect();
+      const megaRect = mega.getBoundingClientRect();
+      const browserRect = browser.getBoundingClientRect();
+      const actionRect = action.getBoundingClientRect();
+      return {
+        lastRootInsideMega: lastRootRect.bottom <= megaRect.bottom + 0.5,
+        lastRootInsideBrowser: lastRootRect.bottom <= browserRect.bottom + 0.5,
+        actionAfterRoots: actionRect.top >= lastRootRect.bottom - 0.5,
+      };
+    });
+    assert.equal(desktopMega.lastRootInsideMega, true, 'last desktop root category is clipped by mega-menu viewport');
+    assert.equal(desktopMega.lastRootInsideBrowser, true, 'last desktop root category is clipped by category browser');
+    assert.equal(desktopMega.actionAfterRoots, true, 'view-all action overlaps desktop root categories');
+
+    console.log('Responsive mega-menu, centered mobile logo, desktop root visibility and compact media cards passed.');
   } finally {
     await browser.close();
   }

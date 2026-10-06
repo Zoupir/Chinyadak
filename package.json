@@ -1,7 +1,7 @@
 {
   "name": "chinpart",
   "private": true,
-  "version": "30.3.2",
+  "version": "30.3.3",
   "type": "module",
   "scripts": {
     "dev": "tsx server.ts",

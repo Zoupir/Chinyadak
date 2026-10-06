@@ -24,6 +24,7 @@ import { uploadDirectory } from './src/server/media';
 import { checkDatabase } from './src/server/db';
 import { config } from './src/server/config';
 import { renderStorefrontDocument } from './src/server/storefront-html';
+import { isPrivateStorefrontPath, normalizePublicStorefrontDocument } from './src/server/storefront-normal';
 import {
   buildHtmlSitemap,
   buildSitemapChunkXml,
@@ -232,10 +233,22 @@ async function startServer() {
           }
           res.status(404);
         }
+
+        const privateRoute = isPrivateStorefrontPath(req.path);
         const seoHtml = await renderSeoHtml(indexTemplate, req.path);
-        const html = await renderStorefrontDocument(seoHtml, req.path);
-        res.setHeader('X-Yadak-Render-Mode', 'website');
-        res.setHeader('Cache-Control', 'public, max-age=0, must-revalidate');
+        const storefrontHtml = await renderStorefrontDocument(seoHtml, req.path);
+        const html = normalizePublicStorefrontDocument(storefrontHtml, req.path);
+
+        if (privateRoute) {
+          res.setHeader('X-Yadak-Render-Mode', 'application');
+          res.setHeader('X-Yadak-Content-Rendering', 'client-private');
+          res.setHeader('Cache-Control', 'private, no-store');
+        } else {
+          res.setHeader('X-Yadak-Render-Mode', 'website');
+          res.setHeader('X-Yadak-Content-Rendering', 'server');
+          res.setHeader('X-Yadak-Navigation-Mode', 'document');
+          res.setHeader('Cache-Control', 'public, max-age=0, must-revalidate');
+        }
         res.type('html').send(html);
       } catch (error) {
         next(error);

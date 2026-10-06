@@ -1,6 +1,3 @@
-import { StrictMode } from 'react';
-import { createRoot } from 'react-dom/client';
-import App from './App.tsx';
 import './index.css';
 import './home-layout-overrides.css';
 import './responsive-header-fixes.css';
@@ -11,12 +8,6 @@ declare global {
     __YADAK_WEBSITE_MODE__?: boolean;
   }
 }
-
-const app = (
-  <StrictMode>
-    <App />
-  </StrictMode>
-);
 
 const clearLegacyAppCaches = () => {
   if (!window.__YADAK_WEBSITE_MODE__) return;
@@ -40,44 +31,55 @@ const clearLegacyAppCaches = () => {
   }
 };
 
+const enhanceServerStorefront = (root: HTMLElement) => {
+  document.documentElement.dataset.contentRendering = 'server';
+  root.dataset.jsRole = 'progressive-enhancement-only';
+
+  root.querySelectorAll<HTMLElement>('[data-yadak-slider]').forEach(slider => {
+    const slides = Array.from(slider.querySelectorAll<HTMLElement>('[data-slide]'));
+    const dots = Array.from(slider.querySelectorAll<HTMLButtonElement>('[data-slider-dot]'));
+    if (slides.length <= 1) return;
+
+    let current = Math.max(0, slides.findIndex(slide => !slide.hidden));
+    if (current < 0) current = 0;
+
+    const show = (index: number) => {
+      current = (index + slides.length) % slides.length;
+      slides.forEach((slide, slideIndex) => { slide.hidden = slideIndex !== current; });
+      dots.forEach((dot, dotIndex) => {
+        if (dotIndex === current) dot.setAttribute('aria-current', 'true');
+        else dot.removeAttribute('aria-current');
+      });
+    };
+
+    slider.querySelector<HTMLButtonElement>('[data-slider-prev]')?.addEventListener('click', () => show(current - 1));
+    slider.querySelector<HTMLButtonElement>('[data-slider-next]')?.addEventListener('click', () => show(current + 1));
+    dots.forEach(dot => dot.addEventListener('click', () => show(Number(dot.dataset.sliderDot || 0))));
+    show(current);
+  });
+};
+
 clearLegacyAppCaches();
 
-const serverRoot = document.getElementById('root');
-if (!serverRoot) throw new Error('ROOT_NOT_FOUND');
+const root = document.getElementById('root');
+if (!root) throw new Error('ROOT_NOT_FOUND');
 
-if (serverRoot.dataset.serverRendered === '1') {
-  // Keep the server-rendered storefront visible while React initializes.
-  // The React tree is mounted off-screen and swaps in only after persisted
-  // store data has been restored. This prevents the SPA loading skeleton from
-  // replacing real HTML and preserves a classic website first paint.
-  const clientRoot = document.createElement('div');
-  clientRoot.id = 'yadak-client-root';
-  clientRoot.hidden = true;
-  serverRoot.after(clientRoot);
-
-  createRoot(clientRoot).render(app);
-
-  let swapped = false;
-  const revealClient = () => {
-    if (swapped) return;
-    if (clientRoot.childElementCount === 0) return;
-    if (clientRoot.querySelector('[aria-label="در حال بارگذاری فروشگاه"]')) return;
-
-    swapped = true;
-    const previousTop = window.scrollY;
-    clientRoot.hidden = false;
-    serverRoot.replaceWith(clientRoot);
-    clientRoot.id = 'root';
-    window.scrollTo({ top: previousTop, behavior: 'auto' });
-    observer.disconnect();
-  };
-
-  const observer = new MutationObserver(revealClient);
-  observer.observe(clientRoot, { subtree: true, childList: true });
-  queueMicrotask(revealClient);
-  window.setTimeout(revealClient, 100);
-  window.setTimeout(revealClient, 1000);
-  window.setTimeout(revealClient, 3000);
+if (root.dataset.serverAuthoritative === '1' || root.dataset.serverRendered === '1') {
+  // Public storefront: the server HTML is the final page. JavaScript must never
+  // replace it or fetch page content. JS is limited to optional interaction.
+  enhanceServerStorefront(root);
 } else {
-  createRoot(serverRoot).render(app);
+  // Private/application routes keep the React application. Loading React lazily
+  // prevents the public website from downloading/rendering the SPA bundle.
+  void Promise.all([
+    import('react'),
+    import('react-dom/client'),
+    import('./App.tsx')
+  ]).then(([ReactModule, ReactDomModule, AppModule]) => {
+    const { StrictMode, createElement } = ReactModule;
+    const { createRoot } = ReactDomModule;
+    createRoot(root).render(
+      createElement(StrictMode, null, createElement(AppModule.default))
+    );
+  });
 }

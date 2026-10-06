@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="fa" dir="rtl">
+<html lang="fa" dir="rtl" data-navigation-mode="document">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -26,10 +26,32 @@
       }
     }
     </script>
+    <script>
+      (() => {
+        const nativePushState = window.history.pushState.bind(window.history);
+        window.__YADAK_WEBSITE_MODE__ = true;
+        window.history.pushState = function(state, title, url) {
+          if (url == null) return nativePushState(state, title, url);
+          try {
+            const target = new URL(String(url), window.location.href);
+            const currentPath = window.location.pathname;
+            const currentIsAdmin = currentPath === '/admin' || currentPath.startsWith('/admin/');
+            const targetIsAdmin = target.pathname === '/admin' || target.pathname.startsWith('/admin/');
+            const sameDocument = target.pathname === window.location.pathname && target.search === window.location.search && target.hash === window.location.hash;
+            if (target.origin === window.location.origin && !sameDocument && !(currentIsAdmin && targetIsAdmin)) {
+              window.location.assign(target.href);
+              return;
+            }
+          } catch (_) {
+            // Fall back to the native History API if the target is not a valid URL.
+          }
+          return nativePushState(state, title, url);
+        };
+      })();
+    </script>
   </head>
   <body class="bg-neutral-50 text-neutral-900 font-sans antialiased selection:bg-red-600 selection:text-white">
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
-

@@ -32,7 +32,6 @@ if ! command -v curl >/dev/null 2>&1; then
   exit 1
 fi
 
-# Never overwrite tracked local edits.
 if ! git diff --quiet || ! git diff --cached --quiet; then
   echo "ERROR: tracked local changes exist. Update cancelled."
   exit 1
@@ -42,7 +41,6 @@ echo "[1/9] Pull latest code"
 git pull --ff-only origin "$BRANCH"
 HEAD_SHA="$(git rev-parse HEAD)"
 
-# Install dependencies only when package metadata changed or node_modules is absent.
 PKG_SIG="$(cksum package.json)"
 LAST_SIG=""
 if [[ -f tmp/.package-signature ]]; then
@@ -165,7 +163,6 @@ if [[ -n "$SELECTOR" ]]; then
   fi
 fi
 
-# Passenger fallback and cache-busting restart trigger.
 : > tmp/restart.txt
 
 DEPLOY_SWAPPED=0
@@ -173,7 +170,8 @@ APP_STOPPED=0
 trap - ERR INT TERM
 rm -rf "$BACKUP_DIR" "$STAGE" "$BUNDLE"
 
+VERSION=$(node -p "require('./package.json').version")
 echo "[9/9] Done"
 echo "UPDATE_OK"
-echo "Version: $(node -p \"require('./package.json').version\")"
+echo "Version: $VERSION"
 echo "Commit: $(git rev-parse --short HEAD)"

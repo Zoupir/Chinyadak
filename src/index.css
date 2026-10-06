@@ -8660,3 +8660,29 @@ html[data-layout="atelier-rtl"] .marketplace-ref-footer-bottom-links {
 .category-browser-all { grid-column: 1 / -1; padding: 8px; text-align: right; color: #be123c; font-weight: 700; }
 .marketplace-ref-category-mega, .marketplace-ref-generic-mega, .header-categories-mega { max-height: 70dvh; overflow-y: auto; overscroll-behavior: contain; }
 @media (max-width: 640px) { .category-browser { grid-template-columns: minmax(120px,40%) 1fr; gap: 6px; } .category-browser-content { grid-template-columns: 1fr; } }
+
+@media (max-width: 1023px) {
+  .category-browser { width: 100%; min-width: 0; grid-template-columns: minmax(0,40%) minmax(0,1fr); gap: 6px; }
+  .category-browser-tabs, .category-browser-content { min-width: 0; max-width: 100%; }
+  .category-browser-content { grid-template-columns: minmax(0,1fr) !important; }
+  .category-browser button { white-space: normal; overflow-wrap: anywhere; }
+  .marketplace-ref-category-grid { grid-template-columns: minmax(0,1fr) !important; }
+  .marketplace-ref-generic-mega-grid { grid-template-columns: minmax(0,1fr) !important; }
+  .legacy-mobile-header { position: relative; min-height: 50px; }
+  .legacy-mobile-header[data-logo-align="left"] > button:first-child { order: 2; }
+  .legacy-mobile-header[data-logo-align="center"] > button:first-child { position: absolute; left: 50%; transform: translateX(-50%); max-width: 40%; }
+  .legacy-mobile-header[data-logo-align="center"] > div { margin-inline-start: auto; }
+}
+@media (max-width: 767px) {
+  .marketplace-ref-mainbar-inner[data-mobile-logo-align="left"] { grid-template-columns: auto minmax(0,1fr) 40px !important; }
+  .marketplace-ref-mainbar-inner[data-mobile-logo-align="left"] .marketplace-ref-hamburger { grid-column: 3; grid-row: 1; }
+  .marketplace-ref-mainbar-inner[data-mobile-logo-align="left"] .marketplace-ref-logo { grid-column: 2; grid-row: 1; }
+  .marketplace-ref-mainbar-inner[data-mobile-logo-align="left"] .marketplace-ref-actions { grid-column: 1; grid-row: 1; }
+}
+
+.media-compact-grid { --media-cols: 2; display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, calc((100% - (var(--media-cols) - 1) * 12px) / var(--media-cols) * .6)); }
+@media(min-width:640px){.media-compact-grid{--media-cols:3;}}
+@media(min-width:768px){.media-compact-grid{--media-cols:4;}}
+@media(min-width:1280px){.media-compact-grid{--media-cols:5;}}
+
+@media(max-width:767px){.marketplace-ref-mainbar-inner[data-mobile-logo-align="center"]{position:relative;}.marketplace-ref-mainbar-inner[data-mobile-logo-align="center"] .marketplace-ref-logo{position:absolute;left:50%;transform:translateX(-50%);max-width:calc(100% - 160px)!important;}}

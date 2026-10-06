@@ -45,6 +45,9 @@ export const AdminMediaLibrary: React.FC = () => {
   const [busy, setBusy] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [view, setView] = useState<'grid'|'list'>('grid');
+  const [checkedPaths, setCheckedPaths] = useState<string[]>([]);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+  const [bulkNotice, setBulkNotice] = useState('');
   const [selected, setSelected] = useState<MediaLibraryItem | null>(null);
   const [copied, setCopied] = useState('');
   const [seoForm, setSeoForm] = useState({ alt:'', title:'', caption:'', description:'' });
@@ -87,6 +90,20 @@ export const AdminMediaLibrary: React.FC = () => {
       item.seo?.title?.toLowerCase().includes(q)
     );
   }, [items, query]);
+
+  const removeSelected = async () => {
+    if (!checkedPaths.length || !window.confirm(`حذف دائمی ${checkedPaths.length} فایل انتخاب‌شده؟`)) return;
+    setBulkDeleting(true);
+    const failed: string[] = [];
+    let removed = 0;
+    for (const file of checkedPaths) {
+      try { await deleteMediaItem(file); removed++; } catch { failed.push(file); }
+    }
+    setItems(current => current.filter(item => !checkedPaths.includes(item.relativePath) || failed.includes(item.relativePath)));
+    setCheckedPaths(failed); setBulkDeleting(false);
+    setBulkNotice(`${removed} فایل حذف شد؛ ${failed.length} فایل ناموفق باقی ماند.`);
+  };
+  const toggleMedia = (file: string) => setCheckedPaths(current => current.includes(file) ? current.filter(x => x !== file) : [...current, file]);
 
   const uploadFiles = async (files: FileList | File[]) => {
     const list = Array.from(files);
@@ -210,6 +227,11 @@ export const AdminMediaLibrary: React.FC = () => {
         </aside>
 
         <main className="p-5">
+          <div className="flex flex-wrap gap-3 items-center mb-4 text-xs">
+            <label><input type="checkbox" checked={filtered.length > 0 && filtered.every(item => checkedPaths.includes(item.relativePath))} onChange={e => setCheckedPaths(e.target.checked ? filtered.map(item => item.relativePath) : [])}/> انتخاب همهٔ فایل‌های نمایش‌داده‌شده</label>
+            <button type="button" disabled={!checkedPaths.length || bulkDeleting} onClick={() => void removeSelected()} className="px-3 py-2 rounded-lg bg-red-50 text-red-800 disabled:opacity-40">حذف {checkedPaths.length} فایل انتخاب‌شده</button>
+            {bulkNotice && <span>{bulkNotice}</span>}
+          </div>
           <div className="flex items-center justify-between gap-3 mb-4">
             <div>
               <strong className="text-xs">مسیر جاری: </strong>
@@ -221,22 +243,22 @@ export const AdminMediaLibrary: React.FC = () => {
           {busy && !items.length ? (
             <div className="py-20 text-center text-neutral-400"><Loader2 className="w-8 h-8 animate-spin mx-auto mb-3" /> در حال دریافت رسانه‌ها...</div>
           ) : view === 'grid' ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-3">
+            <div className="media-compact-grid">
               {filtered.map(item => (
-                <button key={item.relativePath} type="button" onClick={() => setSelected(item)} className="group rounded-2xl border border-neutral-200 overflow-hidden bg-neutral-50 text-right hover:border-blue-400 transition-colors">
+                <div key={item.relativePath} className="relative"><input aria-label={`انتخاب ${item.filename}`} type="checkbox" checked={checkedPaths.includes(item.relativePath)} onChange={() => toggleMedia(item.relativePath)} className="absolute top-2 right-2 z-10 w-4 h-4 accent-blue-600"/><button type="button" onClick={() => setSelected(item)} className="w-full group rounded-2xl border border-neutral-200 overflow-hidden bg-neutral-50 text-right hover:border-blue-400 transition-colors">
                   <div className="aspect-square bg-white overflow-hidden"><img src={item.url} alt={item.seo?.alt || item.filename} className="w-full h-full object-cover group-hover:scale-[1.02] transition-transform" /></div>
                   <div className="p-2.5">
                     <strong className="block text-[9px] truncate">{item.seo?.title || item.filename}</strong>
                     <span className="text-[8px] text-neutral-400">{item.category}/{item.year}/{item.month} • {formatBytes(item.size)}</span>
                   </div>
-                </button>
+                </button></div>
               ))}
             </div>
           ) : (
             <div className="border rounded-2xl overflow-hidden">
               {filtered.map(item => (
                 <div key={item.relativePath} className="p-3 border-b last:border-0 flex items-center gap-3 hover:bg-neutral-50">
-                  <img src={item.url} alt={item.seo?.alt || ''} className="w-12 h-12 object-cover rounded-lg border" />
+                  <input aria-label={`انتخاب ${item.filename}`} type="checkbox" checked={checkedPaths.includes(item.relativePath)} onChange={() => toggleMedia(item.relativePath)}/><img src={item.url} alt={item.seo?.alt || ''} className="w-12 h-12 object-cover rounded-lg border" />
                   <div className="min-w-0 flex-1">
                     <strong className="block text-xs truncate">{item.seo?.title || item.filename}</strong>
                     <span className="text-[9px] text-neutral-400 font-mono" dir="ltr">{item.relativePath}</span>

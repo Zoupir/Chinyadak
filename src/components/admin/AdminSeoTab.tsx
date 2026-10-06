@@ -164,7 +164,7 @@ export const AdminSeoTab: React.FC = () => {
 
   const flash = (text: string, type: 'ok' | 'error' = 'ok') => {
     setNotice({ text, type });
-    window.setTimeout(() => setNotice(null), 4500);
+    // Results remain visible until replaced or dismissed by the administrator.
   };
 
   const run = async <T,>(key: string, fn: () => Promise<T>, success?: string): Promise<T | undefined> => {
@@ -186,6 +186,9 @@ export const AdminSeoTab: React.FC = () => {
     try {
       const data = await api<any>('/api/seo/summary');
       setSummary(data.summary);
+      const progress = await api<any>('/api/seo/graph/progress').catch(() => null);
+      if (progress?.progress?.status === 'running') flash('بازسازی گراف در حال اجراست.');
+      if (progress?.progress?.status === 'failed' || progress?.progress?.status === 'interrupted') flash(progress.progress.error || 'بازسازی گراف متوقف شده است.', 'error');
       setActionCenter(data.actionCenter);
       setSettings(data.settings);
       setIntegrations(data.integrations);
@@ -271,7 +274,7 @@ export const AdminSeoTab: React.FC = () => {
 
   const doAudit = async () => {
     const audit = await run('audit', () => api<any>('/api/seo/audit/run', { method: 'POST', body: '{}' }));
-    if (audit?.result) flash(`ممیزی ${audit.result.scanned} محتوا، ${audit.result.checksRun} بررسی و HTML اولیهٔ ${audit.result.liveChecked} صفحه انجام شد؛ ${audit.result.issuesDetected} یافته. سقف بررسی: ۱۲٬۰۰۰ رکورد از هر نوع؛ بررسی HTML نمونه‌ای است.`);
+    if (audit?.result) flash(`ممیزی ${audit.result.scanned} محتوا، ${audit.result.checksRun} بررسی و HTML اولیهٔ ${audit.result.liveChecked} صفحه انجام شد؛ ${audit.result.issuesDetected} یافته در این اجرا؛ یافته‌های باز: ${audit.result.openErrors || 0} خطای مهم، ${audit.result.openWarnings || 0} هشدار و ${audit.result.openSuggestions || 0} پیشنهاد. سقف بررسی: ۱۲٬۰۰۰ رکورد از هر نوع؛ بررسی HTML نمونه‌ای است.`);
     const [issueData, actionData] = await Promise.all([
       api<any>('/api/seo/issues?status=open&limit=250'),
       api<any>('/api/seo/actions')
@@ -291,9 +294,18 @@ export const AdminSeoTab: React.FC = () => {
   };
 
   const buildGraph = async () => {
-    const data = await run('graph', () => api<any>('/api/seo/graph/rebuild', { method: 'POST', body: '{}' }), 'گراف معنایی بازسازی شد.');
-    if (data) setSummary((prev: any) => ({ ...prev, graph: data.graph, graphگرهs: data.graph.nodes }));
-    if (selectedEntity) await openEntity(selectedEntity);
+    const accepted = await run('graph-start', () => api<any>('/api/seo/graph/rebuild', { method: 'POST', body: '{}' }));
+    if (!accepted) return;
+    setBusy('graph'); flash('بازسازی گراف شروع شد؛ وضعیت تا پایان نمایش داده می‌شود.');
+    try {
+      for (let attempt = 0; attempt < 90; attempt++) {
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        const { progress } = await api<any>('/api/seo/graph/progress');
+        if (progress.status === 'completed') { flash(`گراف بازسازی شد: ${progress.graph.nodes} گره و ${progress.graph.edges} رابطه.`); await loadOverview(); return; }
+        if (['failed','interrupted'].includes(progress.status)) throw new Error(progress.error || 'GRAPH_BUILD_FAILED');
+      }
+      flash('بازسازی هنوز ادامه دارد. وضعیت ذخیره شده؛ بخش عیب‌یابی را بررسی کنید.');
+    } catch (error) { flash(errorFa(error), 'error'); } finally { setBusy(''); }
   };
 
   const runAi = async (operation: 'optimize' | 'generate' | 'repair') => {
@@ -426,7 +438,7 @@ export const AdminSeoTab: React.FC = () => {
       {notice && (
         <div className={`p-3.5 rounded-2xl border text-xs font-bold flex items-center gap-2 ${notice.type === 'ok' ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-red-50 border-red-200 text-red-700'}`}>
           {notice.type === 'ok' ? <CheckCircle2 className="w-4 h-4" /> : <XCircle className="w-4 h-4" />}
-          {notice.text}
+          {notice.text}<button type="button" onClick={() => setNotice(null)} className="mr-auto shrink-0" aria-label="بستن پیام">×</button>
         </div>
       )}
 
@@ -669,8 +681,9 @@ export const AdminSeoTab: React.FC = () => {
               {summary?.lastAudit ? (
                 <div className="space-y-2 text-xs">
                   <div className="flex justify-between"><span>URL بررسی‌شده</span><b>{fmt(summary.lastAudit.scanned)}</b></div>
-                  <div className="flex justify-between"><span>Issue شناسایی‌شده</span><b>{fmt(summary.lastAudit.issuesDetected)}</b></div>
-                  <div className="text-[10px] text-neutral-400 ltr text-left">{summary.lastAudit.finishedAt}</div>
+                  <div className="flex justify-between"><span>یافته‌ها و پیشنهادها (نه تعداد صفحات)</span><b>{fmt(summary.lastAudit.issuesDetected)}</b></div>
+                  {summary.lastAudit.byType && <div className="text-xs leading-7">محصول: {fmt(summary.lastAudit.byType.product || 0)} · مقاله: {fmt(summary.lastAudit.byType.article || 0)} · دسته: {fmt(summary.lastAudit.byType.category || 0)} · برند: {fmt(summary.lastAudit.byType.brand || 0)} · مدل: {fmt(summary.lastAudit.byType.model || 0)} · برگه: {fmt(summary.lastAudit.byType.page || 0)}</div>}
+                  <div className="text-xs">خطای مهم: {fmt(summary.lastAudit.openErrors || 0)} · هشدار: {fmt(summary.lastAudit.openWarnings || 0)} · پیشنهاد: {fmt(summary.lastAudit.openSuggestions || 0)} · آدرس دارای یافته: {fmt(summary.lastAudit.affectedUrls || 0)}</div><div className="text-[10px] text-neutral-400 ltr text-left">{summary.lastAudit.finishedAt}</div>
                 </div>
               ) : <div className="text-xs text-neutral-500">هنوز پایش کامل اجرا نشده است.</div>}
             </Card>

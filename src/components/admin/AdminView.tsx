@@ -1,3 +1,4 @@
+import { AdminBulkActions } from './AdminBulkActions';
 import React, { useEffect, useState } from 'react';
 import packageJson from '../../../package.json';
 import { useStore } from '../../context/StoreContext';
@@ -964,6 +965,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ initialTarget, onExitToSto
             </div>
           </div>
 
+          {!['overview','analytics','sandbox'].includes(activeTab) && <AdminBulkActions section={activeTab} />}
           {/* TAB 1: PROFESSIONAL OVERVIEW */}
           {activeTab === 'overview' && (
             <AdminDashboardPro onNavigateTab={(tab) => setActiveTab(tab)} />

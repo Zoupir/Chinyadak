@@ -261,11 +261,27 @@ seoRouter.get('/graph', manageSeo, async (_req, res) => {
   res.json({ graph: await getSeoGraphState() });
 });
 
+let graphBuildRunning = false;
 seoRouter.post('/graph/rebuild', manageSeo, async (req: AuthenticatedRequest, res) => {
-  const before = await getSeoGraphState();
-  const graph = await rebuildSeoKnowledgeGraph();
-  await writeSeoHistory(actorId(req), 'graph_rebuild', undefined, undefined, before, graph);
-  res.json({ graph });
+  if (graphBuildRunning) { res.status(202).json({ accepted: true, running: true }); return; }
+  graphBuildRunning = true;
+  const actor = actorId(req);
+  await writeAppSetting('takrank_seo_graph_progress', { status: 'running', startedAt: new Date().toISOString() });
+  res.status(202).json({ accepted: true });
+  setImmediate(async () => {
+    try {
+      const graph = await rebuildSeoKnowledgeGraph();
+      await writeAppSetting('takrank_seo_graph_progress', { status: 'completed', graph, finishedAt: new Date().toISOString() });
+      await writeSeoHistory(actor, 'graph_rebuild', undefined, undefined, null, graph);
+    } catch (error) {
+      await writeAppSetting('takrank_seo_graph_progress', { status: 'failed', error: String((error as Error).message), finishedAt: new Date().toISOString() }).catch(() => {});
+    } finally { graphBuildRunning = false; }
+  });
+});
+seoRouter.get('/graph/progress', manageSeo, async (_req, res) => {
+  const progress = await readAppSetting<any>('takrank_seo_graph_progress', { status: 'idle' });
+  if (progress.status === 'running' && !graphBuildRunning) { progress.status = 'interrupted'; progress.error = 'برنامه هنگام بازسازی متوقف شده؛ دوباره اجرا کنید.'; }
+  res.json({ progress });
 });
 
 seoRouter.get('/links/:type/:id', manageSeo, async (req: AuthenticatedRequest, res) => {

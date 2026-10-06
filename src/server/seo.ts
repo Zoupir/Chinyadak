@@ -466,7 +466,7 @@ const sitemapDefinitions: Record<SitemapType, {
   products: { entityType: 'product', table: 'products', where: "p.status = 'active'", prefix: '/product/' },
   articles: { entityType: 'article', table: 'articles', where: 'p.is_active = 1', prefix: '/article/' },
   categories: { entityType: 'category', table: 'categories', where: 'p.is_active = 1', prefix: '/category/' },
-  pages: { entityType: 'page', table: 'site_pages', where: '1=1', prefix: '/page/' },
+  pages: { entityType: 'page', table: 'site_pages', where: "COALESCE(JSON_UNQUOTE(JSON_EXTRACT(data_json, '$.__trashed')), 'false') <> 'true' AND COALESCE(JSON_UNQUOTE(JSON_EXTRACT(data_json, '$.isVisible')), 'true') <> 'false'", prefix: '/page/' },
   brands: { entityType: 'brand', table: 'vehicle_brands', where: 'p.is_active = 1', prefix: '/brand/' },
   models: { entityType: 'model', table: 'vehicle_models', where: 'p.is_active = 1', prefix: '/car-model/' }
 };

@@ -18,6 +18,7 @@ import { mediaRouter } from './src/server/routes/media';
 import { integrationsRouter } from './src/server/routes/integrations';
 import { vehiclesRouter } from './src/server/routes/vehicles';
 import { engagementRouter } from './src/server/routes/engagement';
+import { bulkRouter } from './src/server/routes/bulk';
 import { seoRouter } from './src/server/routes/seo';
 import { uploadDirectory } from './src/server/media';
 import { checkDatabase } from './src/server/db';
@@ -132,6 +133,7 @@ app.use('/api/integrations', integrationsRouter);
 app.use('/api/vehicles', vehiclesRouter);
 app.use('/api/engagement', engagementRouter);
 app.use('/api/seo', seoRouter);
+app.use('/api/bulk', bulkRouter);
 
 const aiLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,

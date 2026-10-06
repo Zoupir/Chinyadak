@@ -57,10 +57,10 @@ cmsRouter.get('/bundle', async (_req, res) => {
   );
 
   res.json({
-    articles: articleRows.map(row => ({ ...parseJson<any>(row.data_json, {}), id: row.id })),
-    articleCategories: articleCategoryRows.map(row => ({ ...parseJson<any>(row.data_json, {}), id: row.id })),
+    articles: articleRows.filter(row => !parseJson<any>(row.data_json, {}).__trashed).map(row => ({ ...parseJson<any>(row.data_json, {}), id: row.id })),
+    articleCategories: articleCategoryRows.filter(row => !parseJson<any>(row.data_json, {}).__trashed && parseJson<any>(row.data_json, {}).isActive !== false).map(row => ({ ...parseJson<any>(row.data_json, {}), id: row.id })),
     sliders: sliderRows.map(row => ({ ...parseJson<any>(row.data_json, {}), id: row.id })),
-    pages: pageRows.map(row => ({ ...parseJson<any>(row.data_json, {}), id: row.id })),
+    pages: pageRows.filter(row => !parseJson<any>(row.data_json, {}).__trashed && parseJson<any>(row.data_json, {}).isVisible !== false).map(row => ({ ...parseJson<any>(row.data_json, {}), id: row.id })),
     settings: settings.get('site_settings') || null,
     paymentGateways: settings.get('payment_gateways') || []
   });

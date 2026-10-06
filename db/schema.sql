@@ -595,3 +595,11 @@ CREATE TABLE IF NOT EXISTS vehicle_part_references (
   INDEX idx_vehicle_part_refs_oem (primary_oem),
   INDEX idx_vehicle_part_refs_component (component_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS admin_trash (
+ entity_kind VARCHAR(50) NOT NULL,
+ entity_id VARCHAR(64) NOT NULL,
+ row_json JSON NOT NULL,
+ trashed_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ PRIMARY KEY (entity_kind, entity_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

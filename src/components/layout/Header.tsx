@@ -343,12 +343,20 @@ export const Header: React.FC<HeaderProps> = ({
       );
     });
 
+  const megaBackground = (root?: MenuItem): React.CSSProperties => ({
+    backgroundColor: root?.megaMenu?.backgroundColor || '#ffffff',
+    backgroundImage: root?.megaMenu?.backgroundImageUrl ? `url(${JSON.stringify(root.megaMenu.backgroundImageUrl)})` : undefined,
+    backgroundSize: root?.megaMenu?.backgroundMode === 'pattern' ? 'auto' : 'cover',
+    backgroundRepeat: root?.megaMenu?.backgroundMode === 'pattern' ? 'repeat' : 'no-repeat',
+    backgroundPosition: 'center'
+  });
+
   const renderGenericMegaMenu = (root: MenuItem) => {
     const children = menuChildren(root.id);
     if (!children.length) return null;
     const columns = Math.max(2, Math.min(6, Number(root.megaMenu?.columns || 4)));
     return (
-      <div className={`marketplace-ref-generic-mega ${root.megaMenu?.width === 'full' ? 'is-full' : 'is-boxed'}`}>
+      <div style={megaBackground(root)} className={`marketplace-ref-generic-mega ${root.megaMenu?.width === 'full' ? 'is-full' : 'is-boxed'}`}>
         <div className="marketplace-ref-generic-mega-inner" style={{ ['--mega-cols' as any]: String(columns) }}>
           <div className="marketplace-ref-generic-mega-grid">
             {children.map(child => {
@@ -554,7 +562,7 @@ export const Header: React.FC<HeaderProps> = ({
         </nav>
 
         {isMegaMenuOpen && (
-          <div className={`marketplace-ref-category-mega ${categoriesRoot?.megaMenu?.width === 'boxed' ? 'is-boxed' : 'is-full'}`}>
+          <div style={megaBackground(categoriesRoot)} className={`marketplace-ref-category-mega ${categoriesRoot?.megaMenu?.width === 'boxed' ? 'is-boxed' : 'is-full'}`}>
             <div
               className="marketplace-ref-container marketplace-ref-category-grid"
               style={{ ['--category-mega-cols' as any]: String(Math.max(2, Math.min(6, Number(categoriesRoot?.megaMenu?.columns || 4)))) }}
@@ -809,7 +817,7 @@ export const Header: React.FC<HeaderProps> = ({
       ========================================================================= */}
       <div className="md:hidden">
         {/* Row 1: Brand Logo + Controls */}
-        <div className="px-3 py-2 flex items-center justify-between gap-2 border-b border-neutral-100">
+        <div data-logo-align={settings.mobileLogoAlign || 'right'} className="legacy-mobile-header lg:hidden flex items-center justify-between pb-3 mb-3 border-b border-neutral-100">
           {/* Brand Logo */}
           <button 
             onClick={() => onNavigate('home')}

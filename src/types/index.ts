@@ -418,6 +418,9 @@ export type MenuSourceType =
   | 'custom';
 
 export interface MenuMegaConfig {
+  backgroundColor?: string;
+  backgroundImageUrl?: string;
+  backgroundMode?: 'cover' | 'pattern';
   enabled: boolean;
   columns?: number;
   width?: 'boxed' | 'full';

@@ -163,10 +163,42 @@ const run = async () => {
   const auditIssues = await json<{ issues: any[] }>('/api/seo/issues?status=open&limit=250', { headers: cookieHeaders(adminCookie) });
   assert(auditIssues.data.issues.some(item => item.url && item.details && item.action), 'Audit findings have no actionable URL evidence.');
 
+  assert(auditResult.data.result.byType.product > 0, 'Audit did not separate products from other entities.');
+  assert.equal(typeof auditResult.data.result.openSuggestions, 'number');
+  const precise = auditIssues.data.issues.find(item => String(item.issueKey).startsWith('check:') && item.evidence?.status !== 'good');
+  if (precise) {
+    const verified = await json<{ resolved: boolean }>('/api/seo/issues/' + precise.id + '/verify', { method: 'POST', headers: cookieHeaders(adminCookie), body: '{}' });
+    assert.equal(verified.data.resolved, false, 'An unfixed SEO check was incorrectly resolved.');
+  }
+  await json('/api/bulk/products', {}, 401);
+  const selection = catalog.data.products.slice(0, 2).map(item => item.id);
+  const bulkRequest = (action: string) => json<{ changed: number }>('/api/bulk/products', { method: 'POST', headers: cookieHeaders(adminCookie), body: JSON.stringify({ ids: selection, action }) });
+  await bulkRequest('deactivate');
+  const hidden = await json<{ products: any[] }>('/api/catalog/products');
+  assert(!hidden.data.products.some(item => selection.includes(item.id)), 'Bulk deactivated products are still public.');
+  await bulkRequest('activate');
+  await bulkRequest('trash');
+  const trashItems = await json<{ items: any[] }>('/api/bulk/products?trash=1', { headers: cookieHeaders(adminCookie) });
+  assert(selection.every(id => trashItems.data.items.some(item => item.id === id)), 'Bulk trash did not retain restorable products.');
+  await bulkRequest('restore');
+  const restored = await json<{ products: any[] }>('/api/catalog/products');
+  assert(selection.every(id => restored.data.products.some(item => item.id === id)), 'Bulk restore did not restore products.');
+  const acceptedGraph = await json<{ accepted: boolean }>('/api/seo/graph/rebuild', { method: 'POST', headers: cookieHeaders(adminCookie), body: '{}' }, 202);
+  assert.equal(acceptedGraph.data.accepted, true);
+  let graphComplete = false;
+  for (let attempt = 0; attempt < 80; attempt++) {
+    const { data } = await json<{ progress: any }>('/api/seo/graph/progress', { headers: cookieHeaders(adminCookie) });
+    if (data.progress.status === 'completed') { assert(data.progress.graph.nodes > 0); graphComplete = true; break; }
+    assert(!['failed','interrupted'].includes(data.progress.status), JSON.stringify(data.progress));
+    await new Promise(resolve => setTimeout(resolve, 250));
+  }
+  assert(graphComplete, 'Background graph did not finish.');
+
   const admins = await json<{ admins: any[] }>('/api/admin-data/admins', {
     headers: cookieHeaders(adminCookie)
   });
   assert(admins.data.admins.length >= 1, 'Admin list is unavailable.');
+  await json('/api/bulk/admins', { method: 'POST', headers: cookieHeaders(adminCookie), body: JSON.stringify({ ids: [admins.data.admins[0].id], action: 'deactivate' }) }, 409);
 
   // RBAC: a content-only manager must not be able to read orders.
   const limitedUsername = `ci_content_${Date.now()}`;
@@ -199,6 +231,7 @@ const run = async () => {
   });
   const limitedCookie = cookieFrom(limitedLogin.response);
   await request('/api/orders', { headers: cookieHeaders(limitedCookie) }, 403);
+  await request('/api/bulk/products', { headers: cookieHeaders(limitedCookie) }, 403);
 
   // Encrypted integrations: plaintext secrets must never be returned.
   const secretValue = 'ci-secret-api-key-1234567890';

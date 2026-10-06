@@ -64,9 +64,14 @@ clearLegacyAppCaches();
 const root = document.getElementById('root');
 if (!root) throw new Error('ROOT_NOT_FOUND');
 
-if (root.dataset.serverAuthoritative === '1' || root.dataset.serverRendered === '1') {
-  // Public storefront: server HTML is the final document. JavaScript may only
-  // enhance interaction and must never replace or re-render public content.
+if (root.dataset.reactSsr === '1') {
+  // Exact public React markup is already complete server-side. The dedicated
+  // public-hydrate bundle hydrates the same DOM without replacing it.
+  document.documentElement.dataset.contentRendering = 'server';
+  root.dataset.jsRole = 'awaiting-hydration';
+} else if (root.dataset.serverAuthoritative === '1' || root.dataset.serverRendered === '1') {
+  // Safe semantic fallback: JavaScript may enhance interaction but must never
+  // replace or re-render public content.
   enhanceServerStorefront(root);
 } else {
   // Private/application routes keep the React application.

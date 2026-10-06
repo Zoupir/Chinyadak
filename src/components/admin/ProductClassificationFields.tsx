@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { Car, Factory, FolderTree, PackageSearch } from 'lucide-react';
 import type { CarBrand, Category, CategoryChild, Product, VehicleFitment, VehicleModel } from '../../types';
+import { RichTextEditor } from '../common/RichTextEditor';
 
 interface Props {
   value: Partial<Product>;
@@ -301,6 +302,17 @@ export const ProductClassificationFields: React.FC<Props> = ({
             {partCompanies.map(company => <option key={company} value={company} />)}
           </datalist>
         </label>
+      </div>
+
+      <div className="pt-4 border-t border-blue-100">
+        <RichTextEditor
+          label="توضیحات کوتاه محصول (ویرایشگر حرفه‌ای)"
+          value={value.shortDescription || ''}
+          onChange={next => patch({ shortDescription: next })}
+          rows={4}
+          placeholder="خلاصه کاربرد، مزیت‌ها و نکات اصلی محصول با امکان Bold، لیست، تیتر، لینک و جدول..."
+          helperText="این متن در معرفی سریع محصول نمایش داده می‌شود و تمام استایل‌های آن در بخش کاربری نیز حفظ خواهد شد."
+        />
       </div>
     </section>
   );

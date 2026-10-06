@@ -1,6 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { CheckCircle2, Gauge, Image as ImageIcon, Loader2, Search, ShieldCheck, Sparkles } from 'lucide-react';
 import type { SeoEntityDraft } from '../../types';
+import { RichTextEditor } from '../common/RichTextEditor';
+import { markdownToSafeHtml } from '../../utils/richText';
+import { updateMediaSeo, type MediaSeoMeta } from '../../api/media';
 
 type EntityType = 'product' | 'article' | 'page' | 'category' | 'brand' | 'model';
 
@@ -49,6 +52,72 @@ const api = async (url: string, options: RequestInit = {}) => {
   if (!response.ok) throw new Error(payload?.error || 'SEO_REQUEST_FAILED');
   return payload;
 };
+
+const localMediaRelativePath = (url: string): string => {
+  try {
+    const pathname = new URL(url, window.location.origin).pathname;
+    const marker = '/uploads/';
+    const index = pathname.indexOf(marker);
+    if (index < 0) return '';
+    return decodeURIComponent(pathname.slice(index + marker.length));
+  } catch {
+    const clean = String(url || '').split(/[?#]/)[0];
+    const index = clean.indexOf('/uploads/');
+    return index >= 0 ? decodeURIComponent(clean.slice(index + '/uploads/'.length)) : '';
+  }
+};
+
+const syncMediaSeoMap = async (
+  imageMap: NonNullable<SeoEntityDraft['images']>
+): Promise<number> => {
+  const tasks = Object.entries(imageMap || {}).flatMap(([url, meta]) => {
+    const relativePath = localMediaRelativePath(url);
+    if (!relativePath) return [];
+    const payload: Partial<MediaSeoMeta> = {
+      alt: String(meta?.alt || ''),
+      title: String(meta?.title || ''),
+      caption: String(meta?.caption || ''),
+      description: String(meta?.description || '')
+    };
+    return [updateMediaSeo(relativePath, payload)];
+  });
+  if (!tasks.length) return 0;
+  const results = await Promise.allSettled(tasks);
+  return results.filter(result => result.status === 'fulfilled').length;
+};
+
+const enrichAiDraftData = (data?: Record<string, any>): Record<string, any> => {
+  const source = data && typeof data === 'object' ? data : {};
+  const {
+    description: _description,
+    content: _content,
+    shortDescription: _shortDescription,
+    summary: _summary,
+    seo: _seo,
+    technicalSpecs: rawTechnicalSpecs,
+    ...adminFields
+  } = source;
+  const technicalSpecs = rawTechnicalSpecs && typeof rawTechnicalSpecs === 'object' && !Array.isArray(rawTechnicalSpecs)
+    ? rawTechnicalSpecs
+    : {};
+  return {
+    ...source,
+    technicalSpecs: {
+      ...technicalSpecs,
+      __allAdminFields: adminFields
+    }
+  };
+};
+
+const AI_FORMAT_INSTRUCTIONS = [
+  'از تمام اطلاعات ثبت‌شده در پنل ادمین که در زمینه داده شده استفاده کن؛ فیلدهای boolean/تیک‌ها، دسته‌بندی، خودروهای سازگار، سازندگان، مشخصات فنی، وضعیت‌ها و روابط را نادیده نگیر.',
+  'هیچ مشخصه‌ای را که در داده ادمین وجود ندارد اختراع نکن.',
+  'contentHtml را HTML معنایی و تمیز بنویس و برای ساختار متن از h2، h3، p، ul/ol، strong استفاده کن.',
+  'مشخصات فنی کلید/مقدار را در صورت کافی بودن داده به جدول HTML با table/thead/tbody/tr/th/td تبدیل کن.',
+  'اطلاعات Fitment و سازگاری خودرو را در صورت وجود داده به جدول HTML با ستون‌های برند، مدل، سال، موتور و گیربکس تبدیل کن.',
+  'shortDescription را کوتاه اما قابل استایل نگه دار؛ برای تأکید می‌توانی از Markdown ساده مانند **متن مهم** استفاده کنی.',
+  'برای تصویر نیز ALT، Title، Caption و Description دقیق و غیرتکراری بر اساس همین محصول/مقاله ارائه کن.'
+].join('\n');
 
 export const AdminEntitySeoPanel: React.FC<AdminEntitySeoPanelProps> = ({
   entityType,
@@ -107,17 +176,59 @@ export const AdminEntitySeoPanel: React.FC<AdminEntitySeoPanelProps> = ({
   const generateAi = async (operation: 'generate' | 'optimize') => {
     setBusy('ai'); setNotice(''); setAiPreview(null);
     try {
-      const result = await api('/api/seo/ai/run', { method: 'POST', body: JSON.stringify({ entityType, entityId: entityId || '', operation, instructions: aiInstructions, draft: { title: entityTitle, ...contentDraft } }) });
-      setAiPreview(result.package);
-      setNotice('خروجی تولید شد؛ پس از ویرایش و اعمال در فرم، دکمه ذخیره محتوا را بزنید.');
+      const result = await api('/api/seo/ai/run', {
+        method: 'POST',
+        body: JSON.stringify({
+          entityType,
+          entityId: entityId || '',
+          operation,
+          instructions: [AI_FORMAT_INSTRUCTIONS, aiInstructions].filter(Boolean).join('\n\n'),
+          draft: {
+            title: entityTitle,
+            ...contentDraft,
+            data: enrichAiDraftData(contentDraft?.data)
+          }
+        })
+      });
+      const pkg = result.package || {};
+      setAiPreview({
+        ...pkg,
+        shortDescription: markdownToSafeHtml(pkg.shortDescription || '')
+      });
+      setNotice('خروجی تولید شد؛ همه فیلدهای ثبت‌شده ادمین در زمینه AI قرار گرفتند. پس از بررسی، آن را در فرم اعمال و محتوا را ذخیره کنید.');
     } catch (error) { setNotice('تولید محتوا انجام نشد: ' + String((error as Error).message)); }
     finally { setBusy(''); }
   };
-  const applyAiToForm = () => {
+
+  const applyAiToForm = async () => {
     if (!aiPreview || !onAiContent) return;
-    const nextSeo = { ...seo, seoTitle: aiPreview.seoTitle, metaDescription: aiPreview.metaDescription, focusKeyword: aiPreview.primaryKeyword, secondaryKeywords: aiPreview.secondaryKeywords || [], schemaType: aiPreview.schemaType || seo.schemaType };
-    onAiContent(aiPreview, nextSeo);
-    setAiPreview(null); setNotice('محتوا و سئو در فرم قرار گرفت؛ برای ثبت نهایی، محتوا را ذخیره کنید.');
+    const normalizedShort = markdownToSafeHtml(aiPreview.shortDescription || '');
+    const generatedImage = aiPreview.image || {};
+    const nextImages = { ...(seo.images || {}) };
+    images.filter(Boolean).forEach((url, index) => {
+      const current = nextImages[url] || { alt: '' };
+      const suffix = index ? ` - ${index + 1}` : '';
+      nextImages[url] = {
+        ...current,
+        alt: String(generatedImage.alt || current.alt || `${aiPreview.primaryKeyword || seo.focusKeyword || entityTitle}${suffix}`).trim(),
+        title: String(generatedImage.title || current.title || entityTitle).trim(),
+        caption: String(generatedImage.caption || current.caption || '').trim(),
+        description: String(generatedImage.description || current.description || '').trim()
+      };
+    });
+    const nextSeo: SeoEntityDraft = {
+      ...seo,
+      seoTitle: aiPreview.seoTitle,
+      metaDescription: aiPreview.metaDescription,
+      focusKeyword: aiPreview.primaryKeyword,
+      secondaryKeywords: aiPreview.secondaryKeywords || [],
+      schemaType: aiPreview.schemaType || seo.schemaType,
+      images: nextImages
+    };
+    onAiContent({ ...aiPreview, shortDescription: normalizedShort }, nextSeo);
+    const synced = await syncMediaSeoMap(nextImages).catch(() => 0);
+    setAiPreview(null);
+    setNotice(`محتوا و سئو در فرم قرار گرفت؛ متادیتای ${synced.toLocaleString('fa-IR')} رسانه محلی نیز همگام شد. برای ثبت نهایی، محتوا را ذخیره کنید.`);
   };
 
   const saveMetaNow = async () => {
@@ -132,8 +243,9 @@ export const AdminEntitySeoPanel: React.FC<AdminEntitySeoPanelProps> = ({
         method: 'PUT',
         body: JSON.stringify(meta)
       });
+      const synced = await syncMediaSeoMap(seo.images || {}).catch(() => 0);
       setScore(Number(result?.meta?.score || 0));
-      setNotice('اطلاعات TakRank SEO ذخیره شد.');
+      setNotice(`اطلاعات TakRank SEO ذخیره شد و ${synced.toLocaleString('fa-IR')} رسانه محلی همگام شد.`);
     } catch {
       setNotice('ذخیره مستقیم سئو انجام نشد. با ذخیره محصول/مقاله/برگه دوباره ثبت می‌شود.');
     } finally {
@@ -173,12 +285,30 @@ export const AdminEntitySeoPanel: React.FC<AdminEntitySeoPanelProps> = ({
         method: 'POST',
         body: '{}'
       });
-      setNotice(`${Number(result?.changed || 0).toLocaleString('fa-IR')} تصویر داخل متن بهینه شد.`);
+      const synced = await syncMediaSeoMap(seo.images || {}).catch(() => 0);
+      setNotice(`${Number(result?.changed || 0).toLocaleString('fa-IR')} تصویر داخل متن بهینه شد و متادیتای ${synced.toLocaleString('fa-IR')} رسانه گالری همگام شد.`);
     } catch {
       setNotice('بهینه‌سازی ALT تصاویر داخل متن انجام نشد.');
     } finally {
       setBusy('');
     }
+  };
+
+  const autoFillImageSeo = async () => {
+    const nextImages = { ...(seo.images || {}) };
+    images.filter(Boolean).forEach((url, index) => {
+      const current = nextImages[url] || { alt: '' };
+      nextImages[url] = {
+        ...current,
+        alt: current.alt || `${seo.focusKeyword || entityTitle}${index ? ` - ${index + 1}` : ''}`,
+        title: current.title || entityTitle,
+        caption: current.caption || '',
+        description: current.description || seo.metaDescription || entityTitle
+      };
+    });
+    patch({ images: nextImages });
+    const synced = await syncMediaSeoMap(nextImages).catch(() => 0);
+    setNotice(`متادیتای تصویر تکمیل شد؛ ${synced.toLocaleString('fa-IR')} رسانه محلی نیز در کتابخانه رسانه به‌روزرسانی شد.`);
   };
 
   return (
@@ -192,7 +322,7 @@ export const AdminEntitySeoPanel: React.FC<AdminEntitySeoPanelProps> = ({
           <Search className="w-5 h-5 text-emerald-600" />
           <div>
             <strong className="block text-sm text-neutral-900">TakRank SEO این محتوا</strong>
-            <span className="text-[10px] text-neutral-500">متا، کلمات کلیدی، اسکیما، شبکه‌های اجتماعی، بردکرامب و سئوی تصاویر</span>
+            <span className="text-[10px] text-neutral-500">متا، کلمات کلیدی، اسکیما، شبکه‌های اجتماعی، بردکرامب، رسانه و سئوی تصاویر</span>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -205,15 +335,28 @@ export const AdminEntitySeoPanel: React.FC<AdminEntitySeoPanelProps> = ({
         <div className="p-4 sm:p-5 space-y-5 border-t border-emerald-100">
           {onAiContent && <div className="p-4 bg-white border rounded-xl space-y-3">
             <strong className="text-sm">تولید و ویرایش محتوا با هوش مصنوعی</strong>
-            <textarea value={aiInstructions} onChange={e => setAiInstructions(e.target.value)} placeholder="دستور، کلمه کلیدی و اطلاعات معتبر محصول یا مقاله" className="w-full p-3 border rounded-xl text-xs" />
+            <p className="text-[10px] text-neutral-500 leading-relaxed">تمام فیلدهای محصول/مقاله که در ادمین ثبت شده‌اند، شامل مشخصات فنی، فیتمنت، سازندگان، دسته‌ها، روابط و گزینه‌های فعال، به AI داده می‌شوند. جداول مشخصات و سازگاری نیز به‌صورت خودکار درخواست می‌شوند.</p>
+            <textarea value={aiInstructions} onChange={e => setAiInstructions(e.target.value)} placeholder="دستور تکمیلی، کلمه کلیدی یا نکته معتبر محصول/مقاله" className="w-full p-3 border rounded-xl text-xs" />
             <div className="flex gap-2"><button type="button" disabled={!!busy} onClick={() => void generateAi('generate')} className="px-3 py-2 bg-neutral-900 text-white rounded-lg text-xs">تولید محتوا و سئو</button><button type="button" disabled={!!busy} onClick={() => void generateAi('optimize')} className="px-3 py-2 bg-blue-700 text-white rounded-lg text-xs">ویرایش و بهینه‌سازی</button></div>
             {busy === 'ai' && <p className="text-xs">در حال دریافت پاسخ سرویس هوش مصنوعی…</p>}
-            {aiPreview && <div className="space-y-2">
+            {aiPreview && <div className="space-y-3">
               <input aria-label="عنوان سئوی پیشنهادی" value={aiPreview.seoTitle || ''} onChange={e => setAiPreview({ ...aiPreview, seoTitle: e.target.value })} className="w-full p-2 border rounded-lg" />
               <textarea aria-label="توضیحات متای پیشنهادی" value={aiPreview.metaDescription || ''} onChange={e => setAiPreview({ ...aiPreview, metaDescription: e.target.value })} className="w-full p-2 border rounded-lg" />
-              <textarea aria-label="خلاصه پیشنهادی" value={aiPreview.shortDescription || ''} onChange={e => setAiPreview({ ...aiPreview, shortDescription: e.target.value })} className="w-full p-2 border rounded-lg" />
-              <textarea aria-label="محتوای HTML پیشنهادی" rows={10} value={aiPreview.contentHtml || ''} onChange={e => setAiPreview({ ...aiPreview, contentHtml: e.target.value })} className="w-full p-2 border rounded-lg font-mono text-xs" />
-              <button type="button" onClick={applyAiToForm} className="px-3 py-2 bg-emerald-700 text-white rounded-lg text-xs">اعمال در فرم برای ذخیره</button>
+              <RichTextEditor
+                label="توضیحات کوتاه پیشنهادی"
+                value={aiPreview.shortDescription || ''}
+                onChange={next => setAiPreview({ ...aiPreview, shortDescription: next })}
+                rows={4}
+                placeholder="خلاصه حرفه‌ای محصول/مقاله..."
+              />
+              <RichTextEditor
+                label="محتوای کامل پیشنهادی"
+                value={aiPreview.contentHtml || ''}
+                onChange={next => setAiPreview({ ...aiPreview, contentHtml: next })}
+                rows={10}
+                placeholder="محتوای ساختاریافته همراه تیتر، لیست و جدول..."
+              />
+              <button type="button" onClick={() => void applyAiToForm()} className="px-3 py-2 bg-emerald-700 text-white rounded-lg text-xs">اعمال در فرم برای ذخیره</button>
             </div>}
           </div>}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -296,22 +439,11 @@ export const AdminEntitySeoPanel: React.FC<AdminEntitySeoPanelProps> = ({
                 <div className="flex items-center gap-2">
                   <ImageIcon className="w-4 h-4 text-violet-600" />
                   <div>
-                    <strong className="block text-xs text-neutral-900">سئوی تصاویر</strong>
-                    <span className="text-[9px] text-neutral-500">ALT، Title، Caption و توضیح هر تصویر به‌صورت مستقل</span>
+                    <strong className="block text-xs text-neutral-900">سئوی تصاویر و رسانه</strong>
+                    <span className="text-[9px] text-neutral-500">ALT، Title، Caption و توضیح هر تصویر؛ برای فایل‌های محلی با کتابخانه رسانه هم همگام می‌شود.</span>
                   </div>
                 </div>
-                <button type="button" onClick={() => {
-                  const nextImages = { ...(seo.images || {}) };
-                  images.filter(Boolean).forEach((url, index) => {
-                    const current = nextImages[url] || { alt: '' };
-                    nextImages[url] = {
-                      ...current,
-                      alt: current.alt || `${seo.focusKeyword || entityTitle}${index ? ` - ${index + 1}` : ''}`,
-                      title: current.title || entityTitle
-                    };
-                  });
-                  patch({ images: nextImages });
-                }} className="px-3 py-1.5 bg-violet-50 text-violet-700 rounded-lg text-[10px] font-bold cursor-pointer">تکمیل خودکار</button>
+                <button type="button" onClick={() => void autoFillImageSeo()} className="px-3 py-1.5 bg-violet-50 text-violet-700 rounded-lg text-[10px] font-bold cursor-pointer">تکمیل و همگام‌سازی</button>
               </div>
 
               <div className="space-y-3">
@@ -374,7 +506,7 @@ export const AdminEntitySeoPanel: React.FC<AdminEntitySeoPanelProps> = ({
             {(entityType === 'product' || entityType === 'article') && (
               <button type="button" onClick={optimizeContentImages} disabled={Boolean(busy)} className="px-4 py-2 bg-violet-100 text-violet-800 rounded-xl text-[11px] font-black flex items-center gap-1.5 cursor-pointer disabled:opacity-50">
                 <ShieldCheck className="w-3.5 h-3.5" />
-                ALT تصاویر داخل متن
+                سئوی تصاویر متن + رسانه
               </button>
             )}
           </div>

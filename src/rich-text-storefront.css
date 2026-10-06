@@ -1,0 +1,201 @@
+/* Storefront rich-text rendering and responsive semantic tables.
+   This file is loaded after the base theme so editor formatting survives
+   Tailwind/preflight resets in product and article pages. */
+
+.rich-text-content {
+  width: 100%;
+  min-width: 0;
+  color: inherit;
+  line-height: 1.95;
+  overflow-wrap: anywhere;
+}
+
+.rich-text-content > :first-child { margin-top: 0 !important; }
+.rich-text-content > :last-child { margin-bottom: 0 !important; }
+
+.rich-text-content p {
+  margin: 0 0 .9em;
+  line-height: 1.95;
+}
+
+.rich-text-content h2,
+.rich-text-content h3,
+.rich-text-content h4 {
+  margin: 1.45em 0 .65em;
+  color: #172033;
+  font-weight: 900;
+  line-height: 1.55;
+  letter-spacing: -.01em;
+}
+
+.rich-text-content h2 {
+  font-size: clamp(1.22rem, 1.05rem + .55vw, 1.65rem);
+  padding-bottom: .45em;
+  border-bottom: 2px solid #e5e7eb;
+}
+
+.rich-text-content h3 {
+  font-size: clamp(1.08rem, 1rem + .35vw, 1.35rem);
+}
+
+.rich-text-content h4 {
+  font-size: 1.02rem;
+}
+
+.rich-text-content strong,
+.rich-text-content b {
+  color: #111827;
+  font-weight: 800;
+}
+
+.rich-text-content ul,
+.rich-text-content ol {
+  margin: .75em 0 1em;
+  padding-right: 1.6em;
+  padding-left: 0;
+}
+
+.rich-text-content ul { list-style: disc; }
+.rich-text-content ol { list-style: decimal; }
+
+.rich-text-content li {
+  margin: .35em 0;
+  padding-right: .15em;
+  line-height: 1.85;
+}
+
+.rich-text-content li::marker {
+  color: #0f5f98;
+  font-weight: 800;
+}
+
+.rich-text-content blockquote {
+  margin: 1em 0;
+  border-right: 4px solid #f59e0b;
+  border-radius: 10px;
+  padding: .8em 1em;
+  background: #fffbeb;
+  color: #4b5563;
+}
+
+.rich-text-content pre {
+  max-width: 100%;
+  overflow-x: auto;
+  margin: 1em 0;
+  border-radius: 12px;
+  padding: 12px 14px;
+  direction: ltr;
+  text-align: left;
+  background: #111827;
+  color: #f9fafb;
+}
+
+.rich-text-content code:not(pre code) {
+  border-radius: 6px;
+  padding: .1em .35em;
+  direction: ltr;
+  background: #f3f4f6;
+  color: #9a3412;
+}
+
+.rich-text-content hr {
+  height: 1px;
+  margin: 1.5em 0;
+  border: 0;
+  background: #e5e7eb;
+}
+
+.rich-text-table-wrap {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+  margin: 1.1em 0 1.35em;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 4px 18px rgba(15, 23, 42, .045);
+  -webkit-overflow-scrolling: touch;
+}
+
+.rich-text-content .rich-text-table-wrap table {
+  width: 100%;
+  min-width: 620px;
+  margin: 0;
+  border: 0;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: .94em;
+}
+
+.rich-text-content .rich-text-table-wrap th,
+.rich-text-content .rich-text-table-wrap td {
+  border: 0;
+  border-bottom: 1px solid #e5e7eb;
+  border-left: 1px solid #eef2f7;
+  padding: 11px 13px;
+  text-align: right;
+  vertical-align: top;
+  white-space: normal;
+}
+
+.rich-text-content .rich-text-table-wrap th {
+  background: #f1f5f9;
+  color: #0f172a;
+  font-weight: 850;
+}
+
+.rich-text-content .rich-text-table-wrap thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #eaf1f7;
+}
+
+.rich-text-content .rich-text-table-wrap tbody tr:nth-child(even) td {
+  background: #fafcfe;
+}
+
+.rich-text-content .rich-text-table-wrap tr:last-child > * {
+  border-bottom: 0;
+}
+
+.rich-text-content .rich-text-table-wrap tr > *:last-child {
+  border-left: 0;
+}
+
+/* Product short description is now edited by the professional rich editor in
+   ProductClassificationFields. Hide the two legacy plain textareas to avoid a
+   duplicate control while preserving backwards compatibility in AdminView. */
+div:has(> textarea[placeholder="خلاصه ۲ خطی مشخصات..."]) {
+  display: none !important;
+}
+
+@media (max-width: 640px) {
+  .rich-text-content {
+    line-height: 1.9;
+  }
+
+  .rich-text-content h2 {
+    font-size: 1.2rem;
+  }
+
+  .rich-text-content h3 {
+    font-size: 1.08rem;
+  }
+
+  .rich-text-table-wrap {
+    margin-inline: 0;
+    border-radius: 11px;
+  }
+
+  .rich-text-content .rich-text-table-wrap table {
+    min-width: 560px;
+    font-size: .88em;
+  }
+
+  .rich-text-content .rich-text-table-wrap th,
+  .rich-text-content .rich-text-table-wrap td {
+    padding: 9px 10px;
+  }
+}

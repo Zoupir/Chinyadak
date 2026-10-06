@@ -8,6 +8,11 @@ interface RichTextContentProps {
   inline?: boolean;
 }
 
+const wrapResponsiveTables = (html: string): string =>
+  html
+    .replace(/<table\b([^>]*)>/gi, '<div class="rich-text-table-wrap" role="region" aria-label="جدول اطلاعات"><table$1>')
+    .replace(/<\/table>/gi, '</table></div>');
+
 export const RichTextContent: React.FC<RichTextContentProps> = ({
   content = '',
   className = '',
@@ -27,5 +32,5 @@ export const RichTextContent: React.FC<RichTextContentProps> = ({
     );
   }
 
-  return <div className={classes} dangerouslySetInnerHTML={{ __html: html }} />;
+  return <div className={classes} dangerouslySetInnerHTML={{ __html: wrapResponsiveTables(html) }} />;
 };

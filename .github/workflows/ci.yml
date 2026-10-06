@@ -35,6 +35,14 @@ jobs:
           JWT_SECRET: '01234567890123456789012345678901'
         run: npm run build
 
+      - name: Install responsive test browser
+        run: |
+          npm install --no-save --package-lock=false playwright@1.62.1
+          npx playwright install --with-deps chromium --only-shell
+
+      - name: Responsive menu and media regression
+        run: node scripts/test-responsive.cjs
+
   integration:
     name: integration (${{ matrix.database }})
     runs-on: ubuntu-latest

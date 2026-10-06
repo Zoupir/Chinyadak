@@ -3,16 +3,17 @@ set -Eeuo pipefail
 
 APP_DIR="/home/geelgoco/Chinyadak"
 APP_ROOT="Chinyadak"
+APP_USER="${USER:-geelgoco}"
 BRANCH="marketplace-rtl-phase1"
 NODE_BIN="/opt/alt/alt-nodejs22/root/usr/bin"
 DEPLOY_TAG="marketplace-rtl-phase1-builds"
 DEPLOY_ASSET="chinyadak-build.tar.gz"
 DEPLOY_URL="https://github.com/Zoupir/Chinyadak/releases/download/${DEPLOY_TAG}/${DEPLOY_ASSET}"
+HEALTH_URL="https://yadak.store/api/health"
 
 export PATH="$NODE_BIN:$PATH"
 export GOMAXPROCS=1
 export RAYON_NUM_THREADS=1
-export UV_THREADPOOL_SIZE=1
 
 cd "$APP_DIR"
 mkdir -p tmp
@@ -36,6 +37,80 @@ if ! git diff --quiet || ! git diff --cached --quiet; then
   echo "ERROR: tracked local changes exist. Update cancelled."
   exit 1
 fi
+
+APP_NODE_PIDS=()
+APP_NODE_THREADS=0
+collect_app_nodes() {
+  APP_NODE_PIDS=()
+  APP_NODE_THREADS=0
+  local p pid uid threads args x
+
+  for p in /proc/[0-9]*; do
+    pid=${p##*/}
+    uid=""
+    threads=0
+    args=""
+
+    while read -r key a b c d; do
+      case "$key" in
+        Uid:) uid="$a" ;;
+        Threads:) threads="$a" ;;
+      esac
+    done < "$p/status" 2>/dev/null || true
+
+    [[ "$uid" == "$UID" ]] || continue
+
+    while IFS= read -r -d '' x; do
+      args="${args}${args:+ }${x}"
+    done < "$p/cmdline" 2>/dev/null || true
+
+    case "$args" in
+      *"lsnode:$APP_DIR/"*)
+        APP_NODE_PIDS+=("$pid")
+        ((APP_NODE_THREADS+=threads))
+        ;;
+    esac
+  done
+}
+
+wait_for_app_exit() {
+  local rounds="${1:-20}"
+  local i
+  for ((i=0; i<rounds; i++)); do
+    collect_app_nodes
+    if (( ${#APP_NODE_PIDS[@]} == 0 )); then
+      return 0
+    fi
+    sleep 0.5
+  done
+  collect_app_nodes
+  (( ${#APP_NODE_PIDS[@]} == 0 ))
+}
+
+stop_stale_app_workers() {
+  collect_app_nodes
+  if (( ${#APP_NODE_PIDS[@]} == 0 )); then
+    return 0
+  fi
+
+  echo "Waiting Passenger workers did not exit; terminating stale workers: ${APP_NODE_PIDS[*]}"
+  local pid
+  for pid in "${APP_NODE_PIDS[@]}"; do
+    kill -TERM "$pid" 2>/dev/null || true
+  done
+
+  if wait_for_app_exit 10; then
+    return 0
+  fi
+
+  collect_app_nodes
+  echo "Force-stopping stale workers: ${APP_NODE_PIDS[*]}"
+  for pid in "${APP_NODE_PIDS[@]}"; do
+    kill -KILL "$pid" 2>/dev/null || true
+  done
+
+  wait_for_app_exit 6
+}
 
 echo "[1/9] Pull latest code"
 git pull --ff-only origin "$BRANCH"
@@ -108,28 +183,43 @@ BACKUP_DIR="tmp/deploy-backup"
 rollback_deploy() {
   local rc="${1:-1}"
   set +e
+
+  if [[ -n "$SELECTOR" ]]; then
+    "$SELECTOR" stop --json --interpreter nodejs --user "$APP_USER" --app-root "$APP_ROOT" >/dev/null 2>&1 || true
+    wait_for_app_exit 10 || stop_stale_app_workers || true
+  fi
+
   if [[ "$DEPLOY_SWAPPED" == "1" ]]; then
     rm -rf dist
     rm -f server.js
     [[ -d "$BACKUP_DIR/dist" ]] && mv "$BACKUP_DIR/dist" dist
     [[ -f "$BACKUP_DIR/server.js" ]] && mv "$BACKUP_DIR/server.js" server.js
   fi
-  if [[ "$APP_STOPPED" == "1" && -n "$SELECTOR" ]]; then
-    "$SELECTOR" start --json --interpreter nodejs --app-root "$APP_ROOT" >/dev/null 2>&1 || \
-      "$SELECTOR" restart --json --interpreter nodejs --app-root "$APP_ROOT" >/dev/null 2>&1 || true
+
+  if [[ -n "$SELECTOR" && "$APP_STOPPED" == "1" ]]; then
+    "$SELECTOR" start --json --interpreter nodejs --user "$APP_USER" --app-root "$APP_ROOT" >/dev/null 2>&1 || true
+  elif [[ -z "$SELECTOR" ]]; then
+    mkdir -p tmp
+    : > tmp/restart.txt
   fi
-  mkdir -p tmp
-  : > tmp/restart.txt
+
   exit "$rc"
 }
 trap 'rollback_deploy $?' ERR INT TERM
 
 echo "[8/9] Deploy prebuilt bundle and restart application"
 if [[ -n "$SELECTOR" ]]; then
-  if "$SELECTOR" stop --json --interpreter nodejs --app-root "$APP_ROOT" >/dev/null 2>&1; then
-    APP_STOPPED=1
-  else
-    echo "Node selector stop was skipped; deployment will use restart fallback."
+  if ! "$SELECTOR" stop --json --interpreter nodejs --user "$APP_USER" --app-root "$APP_ROOT" >/dev/null 2>&1; then
+    echo "ERROR: CloudLinux could not stop the Node application safely."
+    false
+  fi
+  APP_STOPPED=1
+
+  if ! wait_for_app_exit 20; then
+    if ! stop_stale_app_workers; then
+      echo "ERROR: old Passenger workers are still running; deployment cancelled."
+      false
+    fi
   fi
 fi
 
@@ -142,28 +232,41 @@ mv "$STAGE/server.js" server.js
 DEPLOY_SWAPPED=1
 
 if [[ -n "$SELECTOR" ]]; then
-  if [[ "$APP_STOPPED" == "1" ]]; then
-    if "$SELECTOR" start --json --interpreter nodejs --app-root "$APP_ROOT" >/dev/null 2>&1; then
-      :
-    elif "$SELECTOR" restart --json --interpreter nodejs --app-root "$APP_ROOT" >/dev/null 2>&1; then
-      :
-    else
-      echo "ERROR: prebuilt bundle installed but CloudLinux could not start the Node application."
-      false
-    fi
-  else
-    if "$SELECTOR" restart --json --interpreter nodejs --app-root "$APP_ROOT" >/dev/null 2>&1; then
-      :
-    elif "$SELECTOR" start --json --interpreter nodejs --app-root "$APP_ROOT" >/dev/null 2>&1; then
-      :
-    else
-      echo "ERROR: prebuilt bundle installed but CloudLinux could not restart the Node application."
-      false
-    fi
+  # Start exactly once. Do not call restart as a fallback and do not touch
+  # tmp/restart.txt afterwards: either action can make Passenger overlap workers.
+  if ! "$SELECTOR" start --json --interpreter nodejs --user "$APP_USER" --app-root "$APP_ROOT" >/dev/null 2>&1; then
+    echo "ERROR: prebuilt bundle installed but CloudLinux could not start the Node application."
+    false
   fi
+else
+  : > tmp/restart.txt
 fi
 
-: > tmp/restart.txt
+HEALTH_OK=0
+for attempt in {1..20}; do
+  if curl -fsS --connect-timeout 5 --max-time 10 \
+    "${HEALTH_URL}?deploy=${HEAD_SHA}&attempt=${attempt}" >/dev/null 2>&1; then
+    HEALTH_OK=1
+    break
+  fi
+  sleep 1
+done
+
+if [[ "$HEALTH_OK" != "1" ]]; then
+  echo "ERROR: deployment health check failed; rolling back."
+  false
+fi
+
+collect_app_nodes
+if (( ${#APP_NODE_PIDS[@]} > 1 )); then
+  echo "ERROR: Passenger started more than one Chinyadak worker (${APP_NODE_PIDS[*]})."
+  echo "Deployment will roll back rather than exhaust the CloudLinux process limit."
+  false
+fi
+
+if (( ${#APP_NODE_PIDS[@]} == 1 )); then
+  echo "Passenger worker OK: PID=${APP_NODE_PIDS[0]} threads=${APP_NODE_THREADS}"
+fi
 
 DEPLOY_SWAPPED=0
 APP_STOPPED=0

@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { markSeoGraphStale } from '../seo/platform';
 import { requireAdminPermission, type AuthenticatedRequest } from '../auth';
 import { pool, withTransaction, refundOrderLoyalty, type RowDataPacket } from '../db';
 
@@ -103,6 +104,7 @@ bulkRouter.post('/:kind', async (req: AuthenticatedRequest, res) => {
       }
       return rows.length;
     });
+    if (['products','categories','articles','pages','brands','models'].includes(kind)) await markSeoGraphStale('bulk_' + action);
     res.json({ changed });
   } catch (error) { res.status(409).json({ error: String((error as Error).message) }); }
 });

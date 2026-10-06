@@ -1690,7 +1690,7 @@ export const runFullSeoAudit = async (actorId?: string, liveLimit = 0) => {
     const meta = stored || deriveSeoMeta(entity);
     const analysis = await analyzeSeoEntity(entity, meta);
     const taxonomy = ['category','brand','model'].includes(entity.type);
-    const applicableChecks = analysis.checks.filter(check => !taxonomy || ['title_length','meta_description','indexability'].includes(check.key));
+    const applicableChecks = analysis.checks.filter(check => (Boolean(meta.focusKeyword) || !['focus_in_description','keyword_density'].includes(check.key)) && (!taxonomy || ['title_length','meta_description','indexability'].includes(check.key)));
     checksRun += applicableChecks.length;
     for (const check of applicableChecks.filter(check => check.status !== 'good')) {
       await upsertSeoIssue({ issueKey: `check:${entity.type}:${entity.id}:${check.key}`, entityType: entity.type, entityId: entity.id, url: entity.url,

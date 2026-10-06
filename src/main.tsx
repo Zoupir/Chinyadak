@@ -1,6 +1,3 @@
-import { StrictMode } from 'react';
-import { createRoot } from 'react-dom/client';
-import App from './App.tsx';
 import './index.css';
 import './home-layout-overrides.css';
 import './responsive-header-fixes.css';
@@ -35,8 +32,8 @@ const clearLegacyAppCaches = () => {
 };
 
 const enhanceServerStorefront = (root: HTMLElement) => {
-  document.documentElement.dataset.contentRendering = 'server-first';
-  root.dataset.jsRole = 'server-first-progressive-enhancement';
+  document.documentElement.dataset.contentRendering = 'server';
+  root.dataset.jsRole = 'progressive-enhancement-only';
 
   root.querySelectorAll<HTMLElement>('[data-yadak-slider]').forEach(slider => {
     const slides = Array.from(slider.querySelectorAll<HTMLElement>('[data-slide]'));
@@ -64,51 +61,24 @@ const enhanceServerStorefront = (root: HTMLElement) => {
 
 clearLegacyAppCaches();
 
-const serverRoot = document.getElementById('root');
-if (!serverRoot) throw new Error('ROOT_NOT_FOUND');
+const root = document.getElementById('root');
+if (!root) throw new Error('ROOT_NOT_FOUND');
 
-const app = (
-  <StrictMode>
-    <App />
-  </StrictMode>
-);
-
-if (serverRoot.dataset.serverAuthoritative === '1' || serverRoot.dataset.serverRendered === '1') {
-  // The server HTML remains the real first response and stays visible while the
-  // existing storefront initializes. Once the client storefront is fully ready,
-  // swap it in so the public visual design remains exactly the same as before.
-  // Crawlers and no-JS clients still receive meaningful server-rendered content.
-  enhanceServerStorefront(serverRoot);
-
-  const clientRoot = document.createElement('div');
-  clientRoot.id = 'yadak-client-root';
-  clientRoot.hidden = true;
-  serverRoot.after(clientRoot);
-
-  createRoot(clientRoot).render(app);
-
-  let swapped = false;
-  const revealClient = () => {
-    if (swapped) return;
-    if (clientRoot.childElementCount === 0) return;
-    if (clientRoot.querySelector('[aria-label="در حال بارگذاری فروشگاه"]')) return;
-
-    swapped = true;
-    const previousTop = window.scrollY;
-    clientRoot.hidden = false;
-    serverRoot.replaceWith(clientRoot);
-    clientRoot.id = 'root';
-    document.documentElement.dataset.contentRendering = 'server-first-enhanced';
-    window.scrollTo({ top: previousTop, behavior: 'auto' });
-    observer.disconnect();
-  };
-
-  const observer = new MutationObserver(revealClient);
-  observer.observe(clientRoot, { subtree: true, childList: true });
-  queueMicrotask(revealClient);
-  window.setTimeout(revealClient, 100);
-  window.setTimeout(revealClient, 1000);
-  window.setTimeout(revealClient, 3000);
+if (root.dataset.serverAuthoritative === '1' || root.dataset.serverRendered === '1') {
+  // Public storefront: server HTML is the final document. JavaScript may only
+  // enhance interaction and must never replace or re-render public content.
+  enhanceServerStorefront(root);
 } else {
-  createRoot(serverRoot).render(app);
+  // Private/application routes keep the React application.
+  void Promise.all([
+    import('react'),
+    import('react-dom/client'),
+    import('./App.tsx')
+  ]).then(([ReactModule, ReactDomModule, AppModule]) => {
+    const { StrictMode, createElement } = ReactModule;
+    const { createRoot } = ReactDomModule;
+    createRoot(root).render(
+      createElement(StrictMode, null, createElement(AppModule.default))
+    );
+  });
 }

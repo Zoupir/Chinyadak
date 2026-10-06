@@ -14,6 +14,10 @@ HEALTH_URL="https://yadak.store/api/health"
 export PATH="$NODE_BIN:$PATH"
 export GOMAXPROCS=1
 export RAYON_NUM_THREADS=1
+export UV_THREADPOOL_SIZE="${UV_THREADPOOL_SIZE:-2}"
+if [[ -z "${NODE_OPTIONS:-}" ]]; then
+  export NODE_OPTIONS="--v8-pool-size=2"
+fi
 
 cd "$APP_DIR"
 mkdir -p tmp
@@ -112,20 +116,84 @@ stop_stale_app_workers() {
   wait_for_app_exit 6
 }
 
+normalized_package_signature_from_file() {
+  sed -E '/^[[:space:]]*"version"[[:space:]]*:/d' "$1" | cksum
+}
+
+normalized_package_signature_from_git() {
+  local ref="$1"
+  git show "${ref}:package.json" 2>/dev/null | sed -E '/^[[:space:]]*"version"[[:space:]]*:/d' | cksum
+}
+
+OLD_HEAD="$(git rev-parse HEAD)"
+OLD_PKG_SIG="$(normalized_package_signature_from_git "$OLD_HEAD" || true)"
+
 echo "[1/9] Pull latest code"
 git pull --ff-only origin "$BRANCH"
 HEAD_SHA="$(git rev-parse HEAD)"
-
-PKG_SIG="$(cksum package.json)"
+PKG_SIG="$(normalized_package_signature_from_file package.json)"
+SIG_FILE="tmp/.package-signature-v2"
 LAST_SIG=""
-if [[ -f tmp/.package-signature ]]; then
-  IFS= read -r LAST_SIG < tmp/.package-signature || true
+if [[ -f "$SIG_FILE" ]]; then
+  IFS= read -r LAST_SIG < "$SIG_FILE" || true
 fi
 
-if [[ ! -d node_modules || "$PKG_SIG" != "$LAST_SIG" ]]; then
+NEEDS_INSTALL=0
+if [[ ! -d node_modules ]]; then
+  NEEDS_INSTALL=1
+elif [[ -n "$LAST_SIG" && "$PKG_SIG" == "$LAST_SIG" ]]; then
+  NEEDS_INSTALL=0
+elif [[ -z "$LAST_SIG" && -n "$OLD_PKG_SIG" && "$PKG_SIG" == "$OLD_PKG_SIG" ]]; then
+  # Migrate from the legacy full-package signature without reinstalling merely
+  # because the application version changed.
+  printf '%s\n' "$PKG_SIG" > "$SIG_FILE"
+  NEEDS_INSTALL=0
+else
+  NEEDS_INSTALL=1
+fi
+
+DEPENDENCY_APP_STOPPED=0
+restart_after_dependency_failure() {
+  local rc=$?
+  set +e
+  if [[ "$DEPENDENCY_APP_STOPPED" == "1" && -n "$SELECTOR" ]]; then
+    "$SELECTOR" start --json --interpreter nodejs --user "$APP_USER" --app-root "$APP_ROOT" >/dev/null 2>&1 || true
+  fi
+  exit "$rc"
+}
+
+if [[ "$NEEDS_INSTALL" == "1" ]]; then
   echo "[2/9] Install dependencies"
+
+  # npm can create enough threads to hit a small CloudLinux LVE/NPROC ceiling
+  # while Passenger is running. Stop only for a real dependency change; normal
+  # version-only releases stay online until the final atomic deploy.
+  if [[ -n "$SELECTOR" ]]; then
+    trap restart_after_dependency_failure ERR INT TERM
+    if ! "$SELECTOR" stop --json --interpreter nodejs --user "$APP_USER" --app-root "$APP_ROOT" >/dev/null 2>&1; then
+      echo "ERROR: CloudLinux could not stop the Node application before dependency installation."
+      false
+    fi
+    DEPENDENCY_APP_STOPPED=1
+    if ! wait_for_app_exit 20; then
+      if ! stop_stale_app_workers; then
+        echo "ERROR: Passenger workers are still running; dependency installation cancelled."
+        false
+      fi
+    fi
+  fi
+
   npm install --no-audit --no-fund --package-lock=false
-  printf '%s\n' "$PKG_SIG" > tmp/.package-signature
+  printf '%s\n' "$PKG_SIG" > "$SIG_FILE"
+
+  if [[ "$DEPENDENCY_APP_STOPPED" == "1" && -n "$SELECTOR" ]]; then
+    if ! "$SELECTOR" start --json --interpreter nodejs --user "$APP_USER" --app-root "$APP_ROOT" >/dev/null 2>&1; then
+      echo "ERROR: dependencies installed but CloudLinux could not restart the current application."
+      false
+    fi
+    DEPENDENCY_APP_STOPPED=0
+    trap - ERR INT TERM
+  fi
 else
   echo "[2/9] Dependencies unchanged - skipped"
 fi

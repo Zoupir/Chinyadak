@@ -18,10 +18,16 @@ type ServerRoutePayload = {
     slug?: string;
     data?: Record<string, any>;
   } | null;
+  bootstrap?: {
+    catalog?: unknown;
+    categories?: unknown;
+    vehicles?: unknown;
+    cms?: unknown;
+  };
 };
 
 let cachedServerRoute: ServerRoutePayload | null | undefined;
-let catalogBootstrapConsumed = false;
+const consumedBootstrapKeys = new Set<string>();
 
 const getServerRoutePayload = (): ServerRoutePayload | null => {
   if (cachedServerRoute !== undefined) return cachedServerRoute;
@@ -42,63 +48,59 @@ const getServerRoutePayload = (): ServerRoutePayload | null => {
   return cachedServerRoute;
 };
 
-const isInitialCatalogRequest = (url: string, options: RequestInit): boolean =>
-  !catalogBootstrapConsumed &&
-  (!options.method || String(options.method).toUpperCase() === 'GET') &&
-  url === '/api/catalog/products?limit=48&offset=0';
+const isGet = (options: RequestInit): boolean =>
+  !options.method || String(options.method).toUpperCase() === 'GET';
 
-const resolveRouteAwareRequest = <T>(
-  url: string,
-  options: RequestInit
-): { url: string; immediate?: T } => {
-  if (!isInitialCatalogRequest(url, options) || typeof window === 'undefined') {
-    return { url };
-  }
+const consumeBootstrap = <T>(key: string, value: unknown): T | undefined => {
+  if (value === undefined || consumedBootstrapKeys.has(key)) return undefined;
+  consumedBootstrapKeys.add(key);
+  return value as T;
+};
 
-  catalogBootstrapConsumed = true;
+const bootstrapResponseFor = <T>(url: string, options: RequestInit): T | undefined => {
+  if (!isGet(options)) return undefined;
   const payload = getServerRoutePayload();
-  if (payload?.mode === 'website' && payload.entity?.type === 'product' && payload.entity.data) {
-    const product = {
-      ...payload.entity.data,
-      id: payload.entity.id || payload.entity.data.id,
-      slug: payload.entity.slug || payload.entity.data.slug
-    };
-    return {
-      url,
-      immediate: {
-        products: [product],
-        total: 1,
-        offset: 0,
-        limit: 1,
-        nextOffset: 1,
-        hasMore: false
-      } as T
-    };
+  if (payload?.mode !== 'website' || !payload.bootstrap) return undefined;
+
+  if (url === '/api/catalog/products?limit=48&offset=0') {
+    return consumeBootstrap<T>('catalog', payload.bootstrap.catalog);
+  }
+  if (url === '/api/catalog/categories') {
+    return consumeBootstrap<T>('categories', payload.bootstrap.categories);
+  }
+  if (url === '/api/vehicles') {
+    return consumeBootstrap<T>('vehicles', payload.bootstrap.vehicles);
+  }
+  if (url === '/api/cms/bundle') {
+    return consumeBootstrap<T>('cms', payload.bootstrap.cms);
   }
 
-  const categoryMatch = window.location.pathname.match(/^\/category\/([^/]+)\/?$/);
-  if (categoryMatch) {
-    let category = categoryMatch[1];
-    try { category = decodeURIComponent(category); } catch {}
-    const params = new URLSearchParams({
-      limit: '48',
-      offset: '0',
-      category
-    });
-    return { url: `/api/catalog/products?${params.toString()}` };
+  if (payload.entity?.type === 'product' && payload.entity.data) {
+    const prefix = '/api/catalog/products/';
+    if (url.startsWith(prefix)) {
+      const requested = decodeURIComponent(url.slice(prefix.length).split('?')[0] || '');
+      if (requested === payload.entity.id || requested === payload.entity.slug) {
+        const product = {
+          ...payload.entity.data,
+          id: payload.entity.id || payload.entity.data.id,
+          slug: payload.entity.slug || payload.entity.data.slug
+        };
+        return consumeBootstrap<T>('entity-product', { product });
+      }
+    }
   }
 
-  return { url };
+  return undefined;
 };
 
 export const apiRequest = async <T>(
   url: string,
   options: RequestInit = {}
 ): Promise<T> => {
-  const resolved = resolveRouteAwareRequest<T>(url, options);
-  if (resolved.immediate !== undefined) return resolved.immediate;
+  const bootstrapped = bootstrapResponseFor<T>(url, options);
+  if (bootstrapped !== undefined) return bootstrapped;
 
-  const response = await fetch(resolved.url, {
+  const response = await fetch(url, {
     ...options,
     credentials: 'include',
     headers: {

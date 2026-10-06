@@ -1,4 +1,5 @@
 import { config } from './config';
+import { pool, type RowDataPacket } from './db';
 import {
   loadEntity,
   normalizeSeoText,
@@ -20,6 +21,54 @@ const privatePrefixes = [
   '/wishlist'
 ];
 
+interface JsonRow extends RowDataPacket {
+  id: string;
+  data_json: any;
+}
+
+interface ProductRow extends JsonRow {
+  stock: number;
+  reserved_stock: number;
+}
+
+interface SettingRow extends RowDataPacket {
+  setting_key: string;
+  setting_value: any;
+}
+
+type CatalogBootstrap = {
+  products: any[];
+  total: number;
+  offset: number;
+  limit: number;
+  nextOffset: number;
+  hasMore: boolean;
+};
+
+type StorefrontBootstrap = {
+  catalog: CatalogBootstrap;
+  categories: { categories: any[] };
+  vehicles: { brands: any[]; models: any[] };
+  cms: {
+    articles: any[];
+    articleCategories: any[];
+    sliders: any[];
+    pages: any[];
+    settings: any | null;
+    paymentGateways: any[];
+  };
+};
+
+const parseJson = <T>(value: unknown, fallback: T): T => {
+  if (value == null) return fallback;
+  if (typeof value === 'object') return value as T;
+  try {
+    return JSON.parse(String(value)) as T;
+  } catch {
+    return fallback;
+  }
+};
+
 const escapeHtml = (value: unknown): string =>
   String(value ?? '')
     .replace(/&/g, '&amp;')
@@ -28,15 +77,31 @@ const escapeHtml = (value: unknown): string =>
     .replace(/>/g, '&gt;')
     .replace(/'/g, '&#039;');
 
+const safeJson = (value: unknown): string =>
+  JSON.stringify(value)
+    .replace(/</g, '\\u003c')
+    .replace(/>/g, '\\u003e')
+    .replace(/&/g, '\\u0026')
+    .replace(/\u2028/g, '\\u2028')
+    .replace(/\u2029/g, '\\u2029');
+
 const cleanText = (value: unknown, max = 8000): string =>
   normalizeSeoText(value).slice(0, max);
 
+const sanitizeRichHtml = (value: unknown, max = 60000): string => {
+  let html = String(value ?? '').slice(0, max);
+  if (!html.trim()) return '';
+  html = html
+    .replace(/<(script|style|iframe|object|embed|form|input|button|textarea|select|option|meta|link)\b[^>]*>[\s\S]*?<\/\1>/gi, '')
+    .replace(/<(script|style|iframe|object|embed|form|input|button|textarea|select|option|meta|link)\b[^>]*\/?\s*>/gi, '')
+    .replace(/\s+on[a-z]+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, '')
+    .replace(/\s+style\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, '')
+    .replace(/(href|src)\s*=\s*(["'])\s*javascript:[\s\S]*?\2/gi, '$1="#"');
+  return html;
+};
+
 const decodePart = (value: string): string => {
-  try {
-    return decodeURIComponent(value);
-  } catch {
-    return value;
-  }
+  try { return decodeURIComponent(value); } catch { return value; }
 };
 
 const normalizeRoutePath = (pathname: string): string => {
@@ -75,12 +140,162 @@ const resolveRouteEntity = async (pathname: string): Promise<SeoEntity | null> =
     };
     return loadEntity(typeMap[match[1]], decodePart(match[2]));
   }
+  if (path === '/about' || path === '/guarantee') return loadEntity('page', path.slice(1));
+  return null;
+};
 
-  if (path === '/about' || path === '/guarantee') {
-    return loadEntity('page', path.slice(1));
+const productDto = (row: ProductRow): any => {
+  const data = parseJson<any>(row.data_json, {});
+  const availableStock = Math.max(0, Number(row.stock || 0) - Number(row.reserved_stock || 0));
+  return {
+    ...data,
+    id: row.id,
+    stock: availableStock,
+    stockStatus: availableStock <= 0 ? 'out_of_stock' : availableStock <= 3 ? 'low_stock' : 'in_stock'
+  };
+};
+
+const queryLatestProducts = async (limit: number): Promise<{ products: any[]; total: number }> => {
+  const [[countRow], [rows]] = await Promise.all([
+    pool.query<Array<RowDataPacket & { total: number }>>("SELECT COUNT(*) AS total FROM products WHERE status = 'active'"),
+    pool.query<ProductRow[]>(
+      "SELECT id, stock, reserved_stock, data_json FROM products WHERE status = 'active' ORDER BY updated_at DESC LIMIT ?",
+      [limit]
+    )
+  ]);
+  return { products: rows.map(productDto), total: Number(countRow?.total || 0) };
+};
+
+const queryCategoryProducts = async (slug: string, limit: number): Promise<{ products: any[]; total: number }> => {
+  const params = [slug, slug];
+  const where = "status = 'active' AND (category_slug = ? OR JSON_UNQUOTE(JSON_EXTRACT(data_json, '$.subcategorySlug')) = ?)";
+  const [[countRow], [rows]] = await Promise.all([
+    pool.query<Array<RowDataPacket & { total: number }>>(`SELECT COUNT(*) AS total FROM products WHERE ${where}`, params),
+    pool.query<ProductRow[]>(
+      `SELECT id, stock, reserved_stock, data_json FROM products WHERE ${where} ORDER BY updated_at DESC LIMIT ?`,
+      [...params, limit]
+    )
+  ]);
+  return { products: rows.map(productDto), total: Number(countRow?.total || 0) };
+};
+
+const querySingleProductWithRelated = async (entity: SeoEntity): Promise<any[]> => {
+  const [exactRows] = await pool.query<ProductRow[]>(
+    "SELECT id, stock, reserved_stock, data_json FROM products WHERE status = 'active' AND id = ? LIMIT 1",
+    [entity.id]
+  );
+  const exact = exactRows[0] ? productDto(exactRows[0]) : { ...entity.data, id: entity.id, slug: entity.slug };
+  const categorySlug = String(exact.categorySlug || '').trim();
+  if (!categorySlug) return [exact];
+  const [relatedRows] = await pool.query<ProductRow[]>(
+    "SELECT id, stock, reserved_stock, data_json FROM products WHERE status = 'active' AND category_slug = ? AND id <> ? ORDER BY updated_at DESC LIMIT 12",
+    [categorySlug, entity.id]
+  );
+  return [exact, ...relatedRows.map(productDto)];
+};
+
+const queryEntityProducts = async (entity: SeoEntity, limit = 48): Promise<any[]> => {
+  const [rows] = await pool.query<ProductRow[]>(
+    "SELECT id, stock, reserved_stock, data_json FROM products WHERE status = 'active' ORDER BY updated_at DESC LIMIT 240"
+  );
+  const candidates = rows.map(productDto);
+  const key = entity.type === 'brand' ? 'vehicleBrandIds' : 'vehicleModelIds';
+  const filtered = candidates.filter(product => Array.isArray(product?.[key]) && product[key].includes(entity.id));
+  return (filtered.length ? filtered : candidates).slice(0, limit);
+};
+
+const queryArticles = async (limit: number, exactId?: string): Promise<any[]> => {
+  const params: any[] = [];
+  let sql = "SELECT id, data_json FROM articles WHERE is_active = 1 ORDER BY updated_at DESC LIMIT ?";
+  params.push(Math.max(limit, 1));
+  const [rows] = await pool.query<JsonRow[]>(sql, params);
+  const articles = rows
+    .map(row => ({ ...parseJson<any>(row.data_json, {}), id: row.id }))
+    .filter(article => !article.__trashed);
+  if (!exactId || articles.some(article => article.id === exactId)) return articles;
+  const [exactRows] = await pool.query<JsonRow[]>(
+    'SELECT id, data_json FROM articles WHERE is_active = 1 AND id = ? LIMIT 1',
+    [exactId]
+  );
+  if (!exactRows[0]) return articles;
+  const exact = { ...parseJson<any>(exactRows[0].data_json, {}), id: exactRows[0].id };
+  return [exact, ...articles.filter(article => article.id !== exact.id)].slice(0, limit + 1);
+};
+
+const buildStorefrontBootstrap = async (pathname: string, entity: SeoEntity | null): Promise<StorefrontBootstrap> => {
+  const path = normalizeRoutePath(pathname);
+  const isHome = path === '/';
+  const isBlog = path === '/blog' || path.startsWith('/blog/');
+  const isArticle = entity?.type === 'article';
+
+  const commonPromise = Promise.all([
+    pool.query<JsonRow[]>('SELECT id, data_json FROM categories WHERE is_active = 1 AND parent_id IS NULL ORDER BY sort_order ASC, name_fa ASC'),
+    pool.query<JsonRow[]>('SELECT id, data_json FROM vehicle_brands WHERE is_active = 1 ORDER BY name_fa ASC'),
+    pool.query<JsonRow[]>('SELECT id, data_json FROM vehicle_models WHERE is_active = 1 ORDER BY name_fa ASC'),
+    pool.query<JsonRow[]>('SELECT id, data_json FROM article_categories ORDER BY name ASC'),
+    pool.query<JsonRow[]>('SELECT id, data_json FROM site_pages ORDER BY is_system DESC, updated_at DESC'),
+    pool.query<SettingRow[]>("SELECT setting_key, setting_value FROM app_settings WHERE setting_key IN ('site_settings','payment_gateways')")
+  ]);
+
+  let catalogPromise: Promise<{ products: any[]; total: number }>;
+  if (entity?.type === 'product') {
+    catalogPromise = querySingleProductWithRelated(entity).then(products => ({ products, total: products.length }));
+  } else if (entity?.type === 'category') {
+    catalogPromise = queryCategoryProducts(entity.slug, 48);
+  } else if (entity?.type === 'brand' || entity?.type === 'model') {
+    catalogPromise = queryEntityProducts(entity, 48).then(products => ({ products, total: products.length }));
+  } else if (isHome || path === '/shop' || path.startsWith('/shop/')) {
+    catalogPromise = queryLatestProducts(48);
+  } else {
+    catalogPromise = queryLatestProducts(16);
   }
 
-  return null;
+  const articleLimit = isBlog ? 24 : isArticle ? 8 : isHome ? 8 : 4;
+  const articlesPromise = queryArticles(articleLimit, isArticle ? entity?.id : undefined);
+  const slidersPromise = isHome
+    ? pool.query<JsonRow[]>('SELECT id, data_json FROM sliders WHERE is_active = 1 ORDER BY sort_order ASC, updated_at DESC')
+    : Promise.resolve<[JsonRow[], any]>([[], []] as any);
+
+  const [[categoryRows, brandRows, modelRows, articleCategoryRows, pageRows, settingRows], catalog, articles, sliderResult] = await Promise.all([
+    commonPromise,
+    catalogPromise,
+    articlesPromise,
+    slidersPromise
+  ]);
+
+  const settingsMap = new Map(settingRows.map(row => [row.setting_key, parseJson<any>(row.setting_value, null)]));
+  const sliders = Array.isArray(sliderResult?.[0]) ? sliderResult[0] : [];
+  const categories = categoryRows.map(row => ({ ...parseJson<any>(row.data_json, {}), id: row.id }));
+  const brands = brandRows.map(row => ({ ...parseJson<any>(row.data_json, {}), id: row.id }));
+  const models = modelRows.map(row => ({ ...parseJson<any>(row.data_json, {}), id: row.id }));
+  const articleCategories = articleCategoryRows
+    .map(row => ({ ...parseJson<any>(row.data_json, {}), id: row.id }))
+    .filter(item => !item.__trashed && item.isActive !== false);
+  const pages = pageRows
+    .map(row => ({ ...parseJson<any>(row.data_json, {}), id: row.id }))
+    .filter(item => !item.__trashed && item.isVisible !== false);
+
+  const limit = catalog.products.length;
+  return {
+    catalog: {
+      products: catalog.products,
+      total: catalog.total,
+      offset: 0,
+      limit,
+      nextOffset: limit,
+      hasMore: catalog.total > limit && (path === '/' || path === '/shop' || path.startsWith('/shop/') || entity?.type === 'category')
+    },
+    categories: { categories },
+    vehicles: { brands, models },
+    cms: {
+      articles,
+      articleCategories,
+      sliders: sliders.map(row => ({ ...parseJson<any>(row.data_json, {}), id: row.id })),
+      pages,
+      settings: settingsMap.get('site_settings') || null,
+      paymentGateways: settingsMap.get('payment_gateways') || []
+    }
+  };
 };
 
 const scalarValue = (value: unknown): string => {
@@ -91,234 +306,193 @@ const scalarValue = (value: unknown): string => {
   return '';
 };
 
-const renderRows = (rows: Array<[string, unknown]>): string => {
-  const normalized = rows
-    .map(([label, value]) => [label, scalarValue(value)] as const)
-    .filter(([, value]) => Boolean(value));
-  if (!normalized.length) return '';
-  return normalized.map(([label, value]) =>
-    `<tr><th scope="row">${escapeHtml(label)}</th><td>${escapeHtml(value)}</td></tr>`
-  ).join('');
+const renderRows = (rows: Array<[string, unknown]>): string => rows
+  .map(([label, value]) => [label, scalarValue(value)] as const)
+  .filter(([, value]) => Boolean(value))
+  .map(([label, value]) => `<tr><th scope="row">${escapeHtml(label)}</th><td>${escapeHtml(value)}</td></tr>`)
+  .join('');
+
+const renderTable = (title: string, rows: string): string => rows ? `
+  <section class="ys-section">
+    <h2>${escapeHtml(title)}</h2>
+    <div class="ys-table-wrap"><table><tbody>${rows}</tbody></table></div>
+  </section>` : '';
+
+const renderProductCard = (product: any): string => {
+  const image = safeImageUrl(product?.images?.[0]);
+  const slug = String(product?.slug || product?.id || '');
+  const title = String(product?.nameFa || product?.nameEn || 'قطعه خودرو');
+  const price = Number(product?.discountPrice ?? product?.price ?? 0);
+  const priceLabel = Number.isFinite(price) && price > 0 ? `${new Intl.NumberFormat('fa-IR').format(price)} تومان` : 'استعلام قیمت';
+  return `<article class="ys-card">
+    <a href="/product/${encodeURIComponent(slug)}" aria-label="${escapeHtml(title)}">
+      ${image ? `<img src="${escapeHtml(image)}" alt="${escapeHtml(title)}" width="320" height="240" loading="lazy" />` : '<div class="ys-card-placeholder" aria-hidden="true"></div>'}
+      <h3>${escapeHtml(title)}</h3>
+      ${product?.oemNumber ? `<p>OEM: ${escapeHtml(product.oemNumber)}</p>` : ''}
+      <strong>${escapeHtml(priceLabel)}</strong>
+    </a>
+  </article>`;
 };
 
-const renderTable = (title: string, rows: string, className = ''): string => {
-  if (!rows) return '';
-  return `
-    <section class="yadak-server-section ${escapeHtml(className)}">
-      <h2>${escapeHtml(title)}</h2>
-      <div class="yadak-server-table-wrap">
-        <table><tbody>${rows}</tbody></table>
-      </div>
-    </section>`;
+const renderProductGrid = (products: any[], title = 'محصولات'): string => {
+  if (!products.length) return '';
+  return `<section class="ys-section"><h2>${escapeHtml(title)}</h2><div class="ys-grid">${products.map(renderProductCard).join('')}</div></section>`;
 };
+
+const renderArticleCard = (article: any): string => {
+  const image = safeImageUrl(article?.imageUrl);
+  const slug = String(article?.slug || article?.id || '');
+  const title = String(article?.title || 'مقاله');
+  return `<article class="ys-card ys-article-card"><a href="/article/${encodeURIComponent(slug)}">
+    ${image ? `<img src="${escapeHtml(image)}" alt="${escapeHtml(title)}" width="420" height="260" loading="lazy" />` : ''}
+    <h3>${escapeHtml(title)}</h3>
+    ${article?.summary ? `<p>${escapeHtml(cleanText(article.summary, 180))}</p>` : ''}
+  </a></article>`;
+};
+
+const renderArticleGrid = (articles: any[], title = 'آخرین مقالات'): string => articles.length
+  ? `<section class="ys-section"><h2>${escapeHtml(title)}</h2><div class="ys-grid ys-article-grid">${articles.map(renderArticleCard).join('')}</div></section>`
+  : '';
 
 const renderFitments = (entity: SeoEntity): string => {
-  const fitments = Array.isArray(entity.data?.fitments) ? entity.data.fitments.slice(0, 40) : [];
+  const fitments = Array.isArray(entity.data?.fitments) ? entity.data.fitments.slice(0, 80) : [];
   if (!fitments.length) return '';
-
   const body = fitments.map((item: any) => {
     const yearFrom = scalarValue(item?.yearFrom);
     const yearTo = scalarValue(item?.yearTo);
-    const year = yearFrom || yearTo
-      ? `${yearFrom || '—'}${yearTo && yearTo !== yearFrom ? ` تا ${yearTo}` : ''}`
-      : '—';
-    return `<tr>
-      <td>${escapeHtml(item?.brandName || item?.brand || '')}</td>
-      <td>${escapeHtml(item?.modelName || item?.model || '')}</td>
-      <td>${escapeHtml(year)}</td>
-      <td>${escapeHtml(item?.engine || item?.engineCode || '')}</td>
-      <td>${escapeHtml(item?.transmission || '')}</td>
-    </tr>`;
+    const year = yearFrom || yearTo ? `${yearFrom || '—'}${yearTo && yearTo !== yearFrom ? ` تا ${yearTo}` : ''}` : '—';
+    return `<tr><td>${escapeHtml(item?.brandName || item?.brand || '')}</td><td>${escapeHtml(item?.modelName || item?.model || '')}</td><td>${escapeHtml(year)}</td><td>${escapeHtml(item?.engine || item?.engineCode || '')}</td><td>${escapeHtml(item?.transmission || '')}</td></tr>`;
   }).join('');
-
-  return `
-    <section class="yadak-server-section">
-      <h2>سازگاری خودرو</h2>
-      <div class="yadak-server-table-wrap">
-        <table>
-          <thead><tr><th>برند</th><th>مدل</th><th>سال</th><th>موتور</th><th>گیربکس</th></tr></thead>
-          <tbody>${body}</tbody>
-        </table>
-      </div>
-    </section>`;
+  return `<section class="ys-section"><h2>راهنمای سازگاری خودرو (Fitment)</h2><div class="ys-table-wrap"><table><thead><tr><th>برند</th><th>مدل</th><th>سال</th><th>موتور</th><th>گیربکس</th></tr></thead><tbody>${body}</tbody></table></div></section>`;
 };
 
 const renderTechnicalSpecs = (entity: SeoEntity): string => {
-  const specs = entity.data?.technicalSpecs && typeof entity.data.technicalSpecs === 'object'
-    ? entity.data.technicalSpecs
-    : {};
-  const rows = Object.entries(specs)
-    .slice(0, 80)
-    .map(([label, value]) => [label, value] as [string, unknown]);
-  return renderTable('مشخصات فنی', renderRows(rows));
+  const specs = entity.data?.technicalSpecs && typeof entity.data.technicalSpecs === 'object' ? entity.data.technicalSpecs : {};
+  return renderTable('مشخصات فنی', renderRows(Object.entries(specs).slice(0, 100) as Array<[string, unknown]>));
 };
 
-const renderProduct = (entity: SeoEntity): string => {
+const renderProduct = (entity: SeoEntity, bootstrap: StorefrontBootstrap): string => {
   const data = entity.data || {};
-  const image = safeImageUrl(entity.image || data?.images?.[0]);
-  const shortDescription = cleanText(data.shortDescription || entity.description, 1800);
-  const longDescription = cleanText(entity.content || data.description, 9000);
-  const categorySlug = scalarValue(data.categorySlug);
-  const price = Number(data.discountPrice ?? data.price ?? 0);
-  const priceLabel = Number.isFinite(price) && price > 0
-    ? new Intl.NumberFormat('fa-IR').format(price) + ' تومان'
-    : '';
-
+  const product = bootstrap.catalog.products.find(item => item.id === entity.id) || { ...data, id: entity.id };
+  const image = safeImageUrl(entity.image || product?.images?.[0]);
+  const shortDescription = sanitizeRichHtml(product.shortDescription || entity.description, 12000);
+  const longDescription = sanitizeRichHtml(entity.content || product.description, 60000);
+  const price = Number(product.discountPrice ?? product.price ?? 0);
+  const priceLabel = Number.isFinite(price) && price > 0 ? `${new Intl.NumberFormat('fa-IR').format(price)} تومان` : '';
   const identityRows = renderRows([
-    ['SKU', data.sku],
-    ['شماره OEM', data.oemNumber],
-    ['شماره قطعه', data.partNumber],
-    ['برند سازنده', data.brandManufacturer],
-    ['شرکت سازنده قطعه', data.partManufacturerCompany],
-    ['کشور مبدا', data.countryOfOrigin],
-    ['گرید کیفی', data.grade],
-    ['محل نصب', data.placement],
-    ['وزن', data.weightKg ? `${data.weightKg} kg` : ''],
-    ['ابعاد', data.dimensionsCm],
-    ['گارانتی', data.warrantyMonths ? `${data.warrantyMonths} ماه` : '']
+    ['SKU', product.sku], ['شماره OEM', product.oemNumber], ['شماره قطعه', product.partNumber],
+    ['برند سازنده', product.brandManufacturer], ['شرکت سازنده قطعه', product.partManufacturerCompany],
+    ['کشور مبدا', product.countryOfOrigin], ['گرید کیفی', product.grade], ['محل نصب', product.placement],
+    ['وزن', product.weightKg ? `${product.weightKg} kg` : ''], ['ابعاد', product.dimensionsCm],
+    ['گارانتی', product.warrantyMonths ? `${product.warrantyMonths} ماه` : '']
   ]);
-
-  return `
-    <main class="yadak-server-shell" data-yadak-server-route="product">
-      <nav class="yadak-server-breadcrumb" aria-label="مسیر صفحه">
-        <a href="/">خانه</a><span>/</span><a href="/shop">فروشگاه</a>
-        ${categorySlug ? `<span>/</span><a href="/category/${encodeURIComponent(categorySlug)}">دسته‌بندی</a>` : ''}
-      </nav>
-      <article>
-        <div class="yadak-server-product-head">
-          ${image ? `<img src="${escapeHtml(image)}" alt="${escapeHtml(entity.title)}" width="520" height="420" loading="eager" />` : ''}
-          <div>
-            <h1>${escapeHtml(entity.title)}</h1>
-            ${shortDescription ? `<p class="yadak-server-lead">${escapeHtml(shortDescription)}</p>` : ''}
-            ${priceLabel ? `<p class="yadak-server-price">${escapeHtml(priceLabel)}</p>` : ''}
-          </div>
-        </div>
-        ${renderTable('اطلاعات قطعه', identityRows)}
-        ${renderTechnicalSpecs(entity)}
-        ${renderFitments(entity)}
-        ${longDescription ? `<section class="yadak-server-section"><h2>توضیحات محصول</h2><p>${escapeHtml(longDescription)}</p></section>` : ''}
-      </article>
-    </main>`;
+  const related = bootstrap.catalog.products.filter(item => item.id !== entity.id).slice(0, 12);
+  return `<main class="ys-main" data-yadak-server-route="product">
+    <nav class="ys-breadcrumb"><a href="/">خانه</a><span>/</span><a href="/shop">فروشگاه</a></nav>
+    <article>
+      <div class="ys-product-head">
+        ${image ? `<img src="${escapeHtml(image)}" alt="${escapeHtml(entity.title)}" width="520" height="420" loading="eager" />` : ''}
+        <div><h1>${escapeHtml(entity.title)}</h1>${shortDescription ? `<div class="ys-rich ys-lead">${shortDescription}</div>` : ''}${priceLabel ? `<p class="ys-price">${escapeHtml(priceLabel)}</p>` : ''}</div>
+      </div>
+      ${renderTable('اطلاعات قطعه', identityRows)}
+      ${renderTechnicalSpecs(entity)}
+      ${renderFitments(entity)}
+      ${longDescription ? `<section class="ys-section ys-rich"><h2>توضیحات محصول</h2>${longDescription}</section>` : ''}
+      ${renderProductGrid(related, 'محصولات مرتبط')}
+    </article>
+  </main>`;
 };
 
 const renderArticle = (entity: SeoEntity): string => {
   const data = entity.data || {};
   const image = safeImageUrl(entity.image || data.imageUrl);
-  const summary = cleanText(entity.description || data.summary, 1800);
-  const content = cleanText(entity.content || data.content, 12000);
-
-  return `
-    <main class="yadak-server-shell" data-yadak-server-route="article">
-      <nav class="yadak-server-breadcrumb" aria-label="مسیر صفحه"><a href="/">خانه</a><span>/</span><a href="/blog">مجله</a></nav>
-      <article>
-        <h1>${escapeHtml(entity.title)}</h1>
-        ${summary ? `<p class="yadak-server-lead">${escapeHtml(summary)}</p>` : ''}
-        ${image ? `<img class="yadak-server-hero" src="${escapeHtml(image)}" alt="${escapeHtml(entity.title)}" width="1100" height="620" loading="eager" />` : ''}
-        ${content ? `<section class="yadak-server-section"><h2>متن مقاله</h2><p>${escapeHtml(content)}</p></section>` : ''}
-      </article>
-    </main>`;
+  const summary = sanitizeRichHtml(entity.description || data.summary, 12000);
+  const content = sanitizeRichHtml(entity.content || data.content, 80000);
+  return `<main class="ys-main" data-yadak-server-route="article"><nav class="ys-breadcrumb"><a href="/">خانه</a><span>/</span><a href="/blog">مجله</a></nav><article>
+    <h1>${escapeHtml(entity.title)}</h1>${summary ? `<div class="ys-rich ys-lead">${summary}</div>` : ''}
+    ${image ? `<img class="ys-hero" src="${escapeHtml(image)}" alt="${escapeHtml(entity.title)}" width="1100" height="620" loading="eager" />` : ''}
+    ${content ? `<section class="ys-section ys-rich">${content}</section>` : ''}
+  </article></main>`;
 };
 
-const renderGenericEntity = (entity: SeoEntity): string => {
-  const description = cleanText(entity.description, 2400);
-  const content = cleanText(entity.content, 9000);
+const renderGenericEntity = (entity: SeoEntity, bootstrap: StorefrontBootstrap): string => {
+  const description = sanitizeRichHtml(entity.description, 16000);
+  const content = sanitizeRichHtml(entity.content, 60000);
   const image = safeImageUrl(entity.image);
-  return `
-    <main class="yadak-server-shell" data-yadak-server-route="${escapeHtml(entity.type)}">
-      <nav class="yadak-server-breadcrumb" aria-label="مسیر صفحه"><a href="/">خانه</a></nav>
-      <article>
-        <h1>${escapeHtml(entity.title)}</h1>
-        ${description ? `<p class="yadak-server-lead">${escapeHtml(description)}</p>` : ''}
-        ${image ? `<img class="yadak-server-hero" src="${escapeHtml(image)}" alt="${escapeHtml(entity.title)}" width="1100" height="620" loading="eager" />` : ''}
-        ${content ? `<section class="yadak-server-section"><h2>اطلاعات بیشتر</h2><p>${escapeHtml(content)}</p></section>` : ''}
-      </article>
-    </main>`;
+  const title = entity.title;
+  const productTitle = entity.type === 'category' ? 'محصولات این دسته' : entity.type === 'brand' ? 'قطعات این برند' : entity.type === 'model' ? 'قطعات سازگار' : '';
+  return `<main class="ys-main" data-yadak-server-route="${escapeHtml(entity.type)}"><nav class="ys-breadcrumb"><a href="/">خانه</a></nav><article>
+    <h1>${escapeHtml(title)}</h1>${description ? `<div class="ys-rich ys-lead">${description}</div>` : ''}
+    ${image ? `<img class="ys-hero" src="${escapeHtml(image)}" alt="${escapeHtml(title)}" width="1100" height="620" loading="eager" />` : ''}
+    ${productTitle ? renderProductGrid(bootstrap.catalog.products, productTitle) : ''}
+    ${content ? `<section class="ys-section ys-rich">${content}</section>` : ''}
+  </article></main>`;
 };
 
-const renderStaticRoute = (pathname: string): string => {
+const renderStaticRoute = (pathname: string, bootstrap: StorefrontBootstrap): string => {
   const path = normalizeRoutePath(pathname);
-  const map: Record<string, { title: string; description: string }> = {
-    '/': {
-      title: 'فروشگاه تخصصی قطعات خودروهای چینی',
-      description: 'جستجو و خرید قطعات یدکی خودروهای چینی بر اساس برند، مدل، شماره فنی و مشخصات سازگاری خودرو.'
-    },
-    '/shop': {
-      title: 'فروشگاه و کاتالوگ قطعات',
-      description: 'کاتالوگ قطعات یدکی با فیلتر خودرو، شماره OEM، شماره قطعه، برند سازنده و وضعیت موجودی.'
-    },
-    '/blog': {
-      title: 'مجله و آموزش تخصصی خودرو',
-      description: 'مقالات فنی، راهنمای نگهداری، عیب‌یابی، تشخیص قطعه و آموزش‌های تخصصی خودروهای چینی.'
-    }
-  };
-  const item = map[path] || (path.startsWith('/shop/') ? map['/shop'] : path.startsWith('/blog/') ? map['/blog'] : null);
-  if (!item) return '';
-  return `
-    <main class="yadak-server-shell" data-yadak-server-route="static">
-      <nav class="yadak-server-breadcrumb" aria-label="مسیر صفحه"><a href="/">خانه</a></nav>
-      <section>
-        <h1>${escapeHtml(item.title)}</h1>
-        <p class="yadak-server-lead">${escapeHtml(item.description)}</p>
-        ${path !== '/shop' ? '<p><a class="yadak-server-cta" href="/shop">مشاهده فروشگاه قطعات</a></p>' : ''}
-      </section>
-    </main>`;
+  if (path === '/' ) {
+    return `<main class="ys-main" data-yadak-server-route="home"><section class="ys-hero-copy"><h1>فروشگاه تخصصی قطعات خودروهای چینی</h1><p class="ys-lead">جستجو و خرید قطعات بر اساس برند، مدل، شماره فنی و سازگاری دقیق خودرو.</p><a class="ys-cta" href="/shop">مشاهده فروشگاه</a></section>${renderProductGrid(bootstrap.catalog.products.slice(0, 24), 'محصولات جدید و منتخب')}${renderArticleGrid(bootstrap.cms.articles, 'آخرین مقالات تخصصی')}</main>`;
+  }
+  if (path === '/shop' || path.startsWith('/shop/')) {
+    return `<main class="ys-main" data-yadak-server-route="shop"><h1>فروشگاه و کاتالوگ قطعات</h1><p class="ys-lead">قطعات را بر اساس شماره OEM، مدل خودرو، برند سازنده و وضعیت موجودی بررسی کنید.</p>${renderProductGrid(bootstrap.catalog.products, 'محصولات')}</main>`;
+  }
+  if (path === '/blog' || path.startsWith('/blog/')) {
+    return `<main class="ys-main" data-yadak-server-route="blog"><h1>مجله و آموزش تخصصی خودرو</h1><p class="ys-lead">مقالات فنی، نگهداری، عیب‌یابی و راهنمای قطعات خودروهای چینی.</p>${renderArticleGrid(bootstrap.cms.articles, 'مقالات')}</main>`;
+  }
+  return '';
 };
 
-const shellCss = `
-<style id="yadak-server-shell-style">
-  .yadak-server-shell{max-width:1280px;margin:0 auto;padding:28px 20px 48px;font-family:Vazirmatn,system-ui,sans-serif;direction:rtl;color:#171717;background:#fff}
-  .yadak-server-shell h1{font-size:clamp(1.6rem,3vw,2.5rem);line-height:1.5;margin:18px 0 12px;font-weight:900}
-  .yadak-server-shell h2{font-size:1.2rem;line-height:1.6;margin:0 0 14px;font-weight:850}
-  .yadak-server-shell p{line-height:2;margin:0 0 14px}
-  .yadak-server-breadcrumb{display:flex;flex-wrap:wrap;gap:7px;align-items:center;font-size:.78rem;color:#737373;margin-bottom:14px}
-  .yadak-server-breadcrumb a{color:#404040;text-decoration:none}
-  .yadak-server-lead{font-size:1rem;color:#525252;max-width:900px}
-  .yadak-server-price{font-size:1.25rem;font-weight:900;color:#b91c1c}
-  .yadak-server-product-head{display:grid;grid-template-columns:minmax(280px,460px) 1fr;gap:28px;align-items:start}
-  .yadak-server-product-head img,.yadak-server-hero{display:block;width:100%;height:auto;max-height:620px;object-fit:contain;border:1px solid #e5e5e5;border-radius:18px;background:#fff}
-  .yadak-server-section{margin-top:30px;padding-top:24px;border-top:1px solid #e5e5e5}
-  .yadak-server-table-wrap{width:100%;overflow-x:auto;border:1px solid #e5e5e5;border-radius:14px}
-  .yadak-server-shell table{width:100%;border-collapse:collapse;min-width:560px;background:#fff}
-  .yadak-server-shell th,.yadak-server-shell td{padding:11px 13px;border-bottom:1px solid #eee;text-align:right;vertical-align:top}
-  .yadak-server-shell th{font-weight:800;background:#fafafa;white-space:nowrap}
-  .yadak-server-cta{display:inline-block;padding:10px 16px;border-radius:10px;background:#111827;color:#fff;text-decoration:none;font-weight:800}
-  @media(max-width:760px){.yadak-server-shell{padding:18px 14px 36px}.yadak-server-product-head{grid-template-columns:1fr}.yadak-server-product-head img{max-height:360px}.yadak-server-shell table{min-width:620px}}
+const renderHeader = (bootstrap: StorefrontBootstrap): string => {
+  const settings = bootstrap.cms.settings || {};
+  const title = String(settings.siteTitle || 'یدک استور').split('|')[0].trim();
+  const logo = safeImageUrl(settings.logoUrl);
+  const cats = bootstrap.categories.categories.slice(0, 8);
+  return `<header class="ys-header"><div class="ys-header-inner"><a class="ys-brand" href="/">${logo ? `<img src="${escapeHtml(logo)}" alt="${escapeHtml(title)}" width="150" height="52" />` : `<strong>${escapeHtml(title)}</strong>`}</a><nav aria-label="منوی اصلی"><a href="/shop">فروشگاه</a>${cats.map(cat => `<a href="/category/${encodeURIComponent(String(cat.slug || cat.id))}">${escapeHtml(cat.nameFa || cat.nameEn || '')}</a>`).join('')}<a href="/blog">مجله</a></nav></div></header>`;
+};
+
+const renderFooter = (bootstrap: StorefrontBootstrap): string => {
+  const settings = bootstrap.cms.settings || {};
+  const title = String(settings.siteTitle || 'یدک استور').split('|')[0].trim();
+  return `<footer class="ys-footer"><div><strong>${escapeHtml(title)}</strong><p>${escapeHtml(settings.siteSlogan || 'فروشگاه تخصصی قطعات خودرو')}</p></div><nav><a href="/shop">فروشگاه</a><a href="/blog">مجله</a><a href="/about">درباره ما</a><a href="/guarantee">ضمانت و اصالت</a></nav></footer>`;
+};
+
+const shellCss = `<style id="yadak-server-shell-style">
+  #root[data-server-rendered="1"]{min-height:100vh;background:#f8fafc;color:#171717;font-family:Vazirmatn,system-ui,sans-serif;direction:rtl}
+  .ys-header{background:#fff;border-bottom:1px solid #e5e7eb;position:relative;z-index:2}.ys-header-inner{max-width:1280px;margin:auto;padding:12px 20px;display:flex;align-items:center;gap:24px}.ys-brand{display:flex;align-items:center;text-decoration:none;color:#111827;font-size:1.2rem;white-space:nowrap}.ys-brand img{max-height:52px;width:auto;object-fit:contain}.ys-header nav{display:flex;align-items:center;gap:14px;overflow:auto;white-space:nowrap;scrollbar-width:none}.ys-header nav::-webkit-scrollbar{display:none}.ys-header nav a{font-size:.8rem;color:#374151;text-decoration:none;font-weight:700}
+  .ys-main{max-width:1280px;margin:0 auto;padding:28px 20px 56px}.ys-main h1{font-size:clamp(1.55rem,3vw,2.45rem);line-height:1.55;margin:12px 0 14px;font-weight:900}.ys-main h2{font-size:1.22rem;line-height:1.7;margin:0 0 15px;font-weight:900}.ys-main h3{font-size:.94rem;line-height:1.7;margin:10px 0 6px}.ys-lead{font-size:1rem;color:#525252;line-height:2;max-width:940px}.ys-breadcrumb{display:flex;flex-wrap:wrap;gap:7px;font-size:.78rem;color:#737373;margin-bottom:14px}.ys-breadcrumb a{color:#404040;text-decoration:none}.ys-hero-copy{padding:34px;border-radius:18px;background:#fff;border:1px solid #e5e7eb}.ys-cta{display:inline-block;margin-top:8px;padding:11px 18px;border-radius:10px;background:#111827;color:#fff;text-decoration:none;font-weight:850}
+  .ys-product-head{display:grid;grid-template-columns:minmax(280px,460px) 1fr;gap:30px;align-items:start}.ys-product-head>img,.ys-hero{display:block;width:100%;height:auto;max-height:620px;object-fit:contain;border:1px solid #e5e7eb;border-radius:18px;background:#fff}.ys-price{font-size:1.25rem;font-weight:900;color:#b91c1c}.ys-section{margin-top:30px;padding-top:24px;border-top:1px solid #e5e7eb}.ys-rich{line-height:2}.ys-rich h2,.ys-rich h3,.ys-rich h4{margin:24px 0 10px}.ys-rich ul,.ys-rich ol{padding-right:24px;margin:12px 0}.ys-rich blockquote{border-right:4px solid #d1d5db;margin:18px 0;padding:8px 16px;background:#f9fafb}.ys-rich a{color:#1d4ed8}.ys-rich img{max-width:100%;height:auto}.ys-table-wrap{width:100%;overflow-x:auto;border:1px solid #e5e7eb;border-radius:14px;background:#fff}.ys-main table{width:100%;border-collapse:collapse;min-width:560px}.ys-main th,.ys-main td{padding:11px 13px;border-bottom:1px solid #eee;text-align:right;vertical-align:top}.ys-main th{font-weight:850;background:#fafafa;white-space:nowrap}
+  .ys-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}.ys-card{background:#fff;border:1px solid #e5e7eb;border-radius:14px;overflow:hidden;min-width:0}.ys-card>a{display:block;padding:12px;text-decoration:none;color:#171717;height:100%}.ys-card img,.ys-card-placeholder{width:100%;aspect-ratio:4/3;object-fit:contain;border-radius:10px;background:#f8fafc}.ys-card p{font-size:.75rem;color:#737373;line-height:1.7}.ys-card strong{font-size:.86rem}.ys-article-card img{aspect-ratio:16/9;object-fit:cover}.ys-article-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .ys-footer{border-top:1px solid #e5e7eb;background:#111827;color:#fff;padding:30px max(20px,calc((100vw - 1240px)/2));display:flex;justify-content:space-between;gap:24px;align-items:start}.ys-footer p{color:#d1d5db;font-size:.82rem}.ys-footer nav{display:flex;gap:16px;flex-wrap:wrap}.ys-footer a{color:#e5e7eb;text-decoration:none;font-size:.8rem}
+  @media(max-width:900px){.ys-header-inner{display:block}.ys-header nav{margin-top:10px}.ys-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.ys-article-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.ys-product-head{grid-template-columns:1fr}.ys-footer{display:block}.ys-footer nav{margin-top:18px}}
+  @media(max-width:560px){.ys-main{padding:20px 14px 46px}.ys-hero-copy{padding:22px 18px}.ys-grid{gap:9px}.ys-card>a{padding:9px}.ys-article-grid{grid-template-columns:1fr}.ys-footer{padding:26px 16px}}
 </style>`;
 
-const safeJson = (value: unknown): string =>
-  JSON.stringify(value)
-    .replace(/</g, '\\u003c')
-    .replace(/>/g, '\\u003e')
-    .replace(/&/g, '\\u0026');
-
 export const renderStorefrontDocument = async (template: string, pathname: string): Promise<string> => {
-  if (!template.includes(ROOT_MARKER) || isPrivatePath(pathname)) return template;
+  const path = normalizeRoutePath(pathname);
+  if (isPrivatePath(path)) return template;
 
-  const entity = await resolveRouteEntity(pathname);
-  let body = '';
-  if (entity?.type === 'product') body = renderProduct(entity);
-  else if (entity?.type === 'article') body = renderArticle(entity);
-  else if (entity) body = renderGenericEntity(entity);
-  else body = renderStaticRoute(pathname);
+  const entity = await resolveRouteEntity(path);
+  const bootstrap = await buildStorefrontBootstrap(path, entity);
 
-  if (!body) return template;
+  let main = '';
+  if (entity?.type === 'product') main = renderProduct(entity, bootstrap);
+  else if (entity?.type === 'article') main = renderArticle(entity);
+  else if (entity) main = renderGenericEntity(entity, bootstrap);
+  else main = renderStaticRoute(path, bootstrap);
+
+  if (!main) return template;
 
   const payload = {
     mode: 'website',
-    path: normalizeRoutePath(pathname),
-    entity: entity ? {
-      type: entity.type,
-      id: entity.id,
-      slug: entity.slug,
-      title: entity.title,
-      url: entity.url,
-      description: entity.description,
-      content: entity.content,
-      image: entity.image || '',
-      data: { ...entity.data, id: entity.id, slug: entity.slug }
-    } : null
+    path,
+    entity: entity ? { type: entity.type, id: entity.id, slug: entity.slug, data: entity.data } : null,
+    bootstrap
   };
+  const root = `<div id="root" data-server-rendered="1">${renderHeader(bootstrap)}${main}${renderFooter(bootstrap)}</div>`;
+  const dataScript = `<script id="__YADAK_SERVER_ROUTE__" type="application/json">${safeJson(payload)}</script>`;
 
-  const routeScript = `<script id="__YADAK_SERVER_ROUTE__" type="application/json">${safeJson(payload)}</script>`;
-  return template.replace(ROOT_MARKER, `<div id="root" data-render-mode="website">${shellCss}${body}</div>${routeScript}`);
+  return template
+    .replace(ROOT_MARKER, `${shellCss}${root}${dataScript}`)
+    .replace('<html lang="fa" dir="rtl"', '<html lang="fa" dir="rtl" data-render-mode="website"');
 };

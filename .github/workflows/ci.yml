@@ -1,5 +1,8 @@
 name: CI
 
+permissions:
+  contents: write
+
 on:
   push:
     branches: [main, production-hardening, marketplace-rtl-phase1]
@@ -42,6 +45,21 @@ jobs:
 
       - name: Responsive menu and media regression
         run: node scripts/test-responsive.cjs
+
+      - name: Package production deployment bundle
+        if: github.event_name == 'push' && github.ref == 'refs/heads/marketplace-rtl-phase1'
+        run: |
+          printf '%s\n' "$GITHUB_SHA" > BUILD_COMMIT
+          tar -czf chinyadak-build.tar.gz dist server.js BUILD_COMMIT
+
+      - name: Upload production deployment bundle
+        if: github.event_name == 'push' && github.ref == 'refs/heads/marketplace-rtl-phase1'
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-build
+          path: chinyadak-build.tar.gz
+          if-no-files-found: error
+          retention-days: 7
 
   integration:
     name: integration (${{ matrix.database }})
@@ -151,3 +169,29 @@ jobs:
       - name: Show server log on failure
         if: failure()
         run: cat /tmp/chinpart-server.log || true
+
+  publish:
+    name: publish prebuilt deployment bundle
+    needs: [build, integration]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/marketplace-rtl-phase1'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download tested production bundle
+        uses: actions/download-artifact@v4
+        with:
+          name: production-build
+
+      - name: Publish rolling deployment asset
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="marketplace-rtl-phase1-builds"
+          ASSET="chinyadak-build.tar.gz"
+          if ! gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release create "$TAG" \
+              --repo "$GITHUB_REPOSITORY" \
+              --target "$GITHUB_SHA" \
+              --title "Marketplace RTL prebuilt deployments" \
+              --notes "Rolling tested production bundle for marketplace-rtl-phase1."
+          fi
+          gh release upload "$TAG" "$ASSET" --clobber --repo "$GITHUB_REPOSITORY"

@@ -266,7 +266,9 @@ seoRouter.post('/graph/rebuild', manageSeo, async (req: AuthenticatedRequest, re
   if (graphBuildRunning) { res.status(202).json({ accepted: true, running: true }); return; }
   graphBuildRunning = true;
   const actor = actorId(req);
-  await writeAppSetting('takrank_seo_graph_progress', { status: 'running', startedAt: new Date().toISOString() });
+  try {
+    await writeAppSetting('takrank_seo_graph_progress', { status: 'running', startedAt: new Date().toISOString() });
+  } catch (error) { graphBuildRunning = false; throw error; }
   res.status(202).json({ accepted: true });
   setImmediate(async () => {
     try {

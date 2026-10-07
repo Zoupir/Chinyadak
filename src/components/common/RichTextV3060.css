@@ -1,0 +1,82 @@
+/* v30.6.0 — definitive rich-text color inheritance + external media embeds */
+.rich-text-content strong,
+.rich-text-content b,
+.rich-text-editor__surface strong,
+.rich-text-editor__surface b,
+.footer-copyright-rich strong,
+.footer-copyright-rich b {
+  color: inherit !important;
+}
+
+.rich-text-content em,
+.rich-text-content i,
+.rich-text-editor__surface em,
+.rich-text-editor__surface i,
+.footer-copyright-rich em,
+.footer-copyright-rich i {
+  color: inherit;
+}
+
+/* Explicit inline colors written by the sanitizer remain stronger than this
+   inheritance rule because they are emitted as inline !important styles. */
+.rich-text-content [style*="color"] strong,
+.rich-text-content [style*="color"] b,
+.rich-text-editor__surface [style*="color"] strong,
+.rich-text-editor__surface [style*="color"] b,
+.footer-copyright-rich [style*="color"] strong,
+.footer-copyright-rich [style*="color"] b {
+  color: inherit !important;
+}
+
+.rich-text-editor__surface iframe[data-rich-embed],
+.rich-text-content iframe[data-rich-embed] {
+  display: block;
+  width: min(100%, 960px);
+  aspect-ratio: 16 / 9;
+  height: auto;
+  min-height: 220px;
+  margin: 16px auto;
+  border: 0;
+  border-radius: 12px;
+  background: #0a0a0a;
+  box-shadow: 0 8px 28px #00000018;
+}
+
+.rich-text-editor__surface iframe.ProseMirror-selectednode {
+  outline: 3px solid #fb923c;
+  outline-offset: 3px;
+}
+
+.rich-text-media-form__upload {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+  padding-top: 8px;
+  border-top: 1px solid #f1f5f9;
+}
+
+.rich-text-media-form__upload input[type="file"] {
+  height: auto;
+  padding: 7px 9px;
+  direction: rtl;
+  font-size: 10px;
+}
+
+.rich-text-media-form__hint {
+  grid-column: 1 / -1;
+  color: #64748b;
+  font-size: 10px;
+  line-height: 1.7;
+}
+
+@media (max-width: 640px) {
+  .rich-text-editor__surface iframe[data-rich-embed],
+  .rich-text-content iframe[data-rich-embed] {
+    min-height: 190px;
+  }
+  .rich-text-media-form__upload {
+    grid-template-columns: 1fr;
+  }
+}

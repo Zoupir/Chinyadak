@@ -1,14 +1,14 @@
 {
   "name": "chinpart",
   "private": true,
-  "version": "30.5.3",
+  "version": "30.6.0",
   "type": "module",
   "scripts": {
     "prepare:source": "node scripts/prepare-source.mjs",
     "dev": "npm run prepare:source && tsx server.ts",
     "build": "npm run prepare:source && vite build && node scripts/build-server.mjs",
     "start": "NODE_ENV=production node server.js",
-    "db:init": "tsx scripts/init-db.ts",
+    "db:init": "tsx scripts/init-db.ts && tsx scripts/migrate-v3060-part-brands.ts",
     "clean": "rm -rf dist server.js",
     "lint": "npm run prepare:source && tsc --noEmit",
     "db:seed": "tsx scripts/seed-catalog.ts",

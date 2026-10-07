@@ -2,6 +2,9 @@
 set -Eeuo pipefail
 
 APP_DIR="/home/geelgoco/Chinyadak"
+APP_ROOT="Chinyadak"
+APP_USER="${USER:-geelgoco}"
+BRANCH="marketplace-rtl-phase1"
 HISTORY_DIR="$APP_DIR/tmp/update-history"
 LOG_DIR="$APP_DIR/tmp/update-logs"
 LOCK_DIR="$APP_DIR/tmp/.safe-update-lock"
@@ -45,17 +48,81 @@ fi
 echo "SAFE_UPDATE_BACKUP=$BACKUP"
 echo "SAFE_UPDATE_LOG=$LOG_FILE"
 
+SELECTOR=""
+if command -v cloudlinux-selector >/dev/null 2>&1; then
+  SELECTOR="$(command -v cloudlinux-selector)"
+elif [[ -x /usr/sbin/cloudlinux-selector ]]; then
+  SELECTOR="/usr/sbin/cloudlinux-selector"
+fi
+
+APP_PRESTOPPED=0
+restart_old_runtime() {
+  if [[ "$APP_PRESTOPPED" == "1" && -n "$SELECTOR" ]]; then
+    "$SELECTOR" start --json --interpreter nodejs --user "$APP_USER" --app-root "$APP_ROOT" >/dev/null 2>&1 || true
+  fi
+}
+
+# CloudLinux on this account can hit its task ceiling while Passenger is alive.
+# Stop the current runtime before Git/network/package work so the updater itself
+# never competes with a 45-thread lsnode worker for the final available tasks.
+if [[ -n "$SELECTOR" ]]; then
+  echo "[safe] Stop current Node runtime before update preflight"
+  "$SELECTOR" stop --json --interpreter nodejs --user "$APP_USER" --app-root "$APP_ROOT" >/dev/null 2>&1 || true
+  APP_PRESTOPPED=1
+
+  for _ in {1..20}; do
+    found=0
+    for p in /proc/[0-9]*; do
+      uid=""; args=""; pid=${p##*/}
+      while read -r key a b c d; do
+        [[ "$key" == "Uid:" ]] && uid="$a"
+      done < "$p/status" 2>/dev/null || true
+      [[ "$uid" == "$UID" ]] || continue
+      while IFS= read -r -d '' x; do args="${args}${args:+ }${x}"; done < "$p/cmdline" 2>/dev/null || true
+      case "$args" in *"lsnode:$APP_DIR/"*) found=1 ;; esac
+    done
+    [[ "$found" == "0" ]] && break
+    sleep 0.25
+  done
+
+  # Passenger occasionally leaves a stale worker after reporting stopped.
+  for p in /proc/[0-9]*; do
+    uid=""; args=""; pid=${p##*/}
+    while read -r key a b c d; do
+      [[ "$key" == "Uid:" ]] && uid="$a"
+    done < "$p/status" 2>/dev/null || true
+    [[ "$uid" == "$UID" ]] || continue
+    while IFS= read -r -d '' x; do args="${args}${args:+ }${x}"; done < "$p/cmdline" 2>/dev/null || true
+    case "$args" in
+      *"lsnode:$APP_DIR/"*)
+        echo "[safe] Terminating stale Passenger worker $pid"
+        kill -TERM "$pid" 2>/dev/null || true
+        ;;
+    esac
+  done
+  sleep 1
+fi
+
+# safe-update owns the only source update. update.sh is told not to pull again.
+if ! git pull --ff-only origin "$BRANCH"; then
+  echo "SAFE_UPDATE_FAILED: git pull failed before deployment"
+  restart_old_runtime
+  exit 1
+fi
+
 set +e
 set -o pipefail
-bash "$APP_DIR/update.sh" 2>&1 | tee "$LOG_FILE"
+YADAK_SKIP_PULL=1 YADAK_APP_PRESTOPPED="$APP_PRESTOPPED" bash "$APP_DIR/update.sh" 2>&1 | tee "$LOG_FILE"
 RC=${PIPESTATUS[0]}
 set -e
 
 if [[ "$RC" -ne 0 ]]; then
   echo "SAFE_UPDATE_FAILED rc=$RC"
   echo "Rollback is available with: bash $APP_DIR/rollback.sh --latest"
+  restart_old_runtime
   exit "$RC"
 fi
+APP_PRESTOPPED=0
 
 cp "$LOG_FILE" "$APP_DIR/tmp/last-update.log" 2>/dev/null || true
 

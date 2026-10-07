@@ -10,6 +10,8 @@ DEPLOY_TAG="marketplace-rtl-phase1-builds"
 DEPLOY_ASSET="chinyadak-build.tar.gz"
 DEPLOY_URL="https://github.com/Zoupir/Chinyadak/releases/download/${DEPLOY_TAG}/${DEPLOY_ASSET}"
 HEALTH_URL="https://yadak.store/api/health"
+SKIP_PULL="${YADAK_SKIP_PULL:-0}"
+APP_PRESTOPPED="${YADAK_APP_PRESTOPPED:-0}"
 
 export PATH="$NODE_BIN:$PATH"
 export GOMAXPROCS=1
@@ -129,7 +131,11 @@ OLD_HEAD="$(git rev-parse HEAD)"
 OLD_PKG_SIG="$(normalized_package_signature_from_git "$OLD_HEAD" || true)"
 
 echo "[1/9] Pull latest code"
-git pull --ff-only origin "$BRANCH"
+if [[ "$SKIP_PULL" == "1" ]]; then
+  echo "Source already updated by safe-update - skipped"
+else
+  git pull --ff-only origin "$BRANCH"
+fi
 HEAD_SHA="$(git rev-parse HEAD)"
 PKG_SIG="$(normalized_package_signature_from_file package.json)"
 SIG_FILE="tmp/.package-signature-v2"
@@ -144,8 +150,6 @@ if [[ ! -d node_modules ]]; then
 elif [[ -n "$LAST_SIG" && "$PKG_SIG" == "$LAST_SIG" ]]; then
   NEEDS_INSTALL=0
 elif [[ -z "$LAST_SIG" && -n "$OLD_PKG_SIG" && "$PKG_SIG" == "$OLD_PKG_SIG" ]]; then
-  # Migrate from the legacy full-package signature without reinstalling merely
-  # because the application version changed.
   printf '%s\n' "$PKG_SIG" > "$SIG_FILE"
   NEEDS_INSTALL=0
 else
@@ -156,7 +160,7 @@ DEPENDENCY_APP_STOPPED=0
 restart_after_dependency_failure() {
   local rc=$?
   set +e
-  if [[ "$DEPENDENCY_APP_STOPPED" == "1" && -n "$SELECTOR" ]]; then
+  if [[ "$DEPENDENCY_APP_STOPPED" == "1" && "$APP_PRESTOPPED" != "1" && -n "$SELECTOR" ]]; then
     "$SELECTOR" start --json --interpreter nodejs --user "$APP_USER" --app-root "$APP_ROOT" >/dev/null 2>&1 || true
   fi
   exit "$rc"
@@ -165,10 +169,7 @@ restart_after_dependency_failure() {
 if [[ "$NEEDS_INSTALL" == "1" ]]; then
   echo "[2/9] Install dependencies"
 
-  # npm can create enough threads to hit a small CloudLinux LVE/NPROC ceiling
-  # while Passenger is running. Stop only for a real dependency change; normal
-  # version-only releases stay online until the final atomic deploy.
-  if [[ -n "$SELECTOR" ]]; then
+  if [[ -n "$SELECTOR" && "$APP_PRESTOPPED" != "1" ]]; then
     trap restart_after_dependency_failure ERR INT TERM
     if ! "$SELECTOR" stop --json --interpreter nodejs --user "$APP_USER" --app-root "$APP_ROOT" >/dev/null 2>&1; then
       echo "ERROR: CloudLinux could not stop the Node application before dependency installation."
@@ -181,12 +182,14 @@ if [[ "$NEEDS_INSTALL" == "1" ]]; then
         false
       fi
     fi
+  elif [[ "$APP_PRESTOPPED" == "1" ]]; then
+    DEPENDENCY_APP_STOPPED=1
   fi
 
   npm install --no-audit --no-fund --package-lock=false
   printf '%s\n' "$PKG_SIG" > "$SIG_FILE"
 
-  if [[ "$DEPENDENCY_APP_STOPPED" == "1" && -n "$SELECTOR" ]]; then
+  if [[ "$DEPENDENCY_APP_STOPPED" == "1" && "$APP_PRESTOPPED" != "1" && -n "$SELECTOR" ]]; then
     if ! "$SELECTOR" start --json --interpreter nodejs --user "$APP_USER" --app-root "$APP_ROOT" >/dev/null 2>&1; then
       echo "ERROR: dependencies installed but CloudLinux could not restart the current application."
       false
@@ -264,7 +267,7 @@ rollback_deploy() {
     [[ -f "$BACKUP_DIR/server.js" ]] && mv "$BACKUP_DIR/server.js" server.js
   fi
 
-  if [[ -n "$SELECTOR" && "$APP_STOPPED" == "1" ]]; then
+  if [[ -n "$SELECTOR" && ( "$APP_STOPPED" == "1" || "$APP_PRESTOPPED" == "1" ) ]]; then
     "$SELECTOR" start --json --interpreter nodejs --user "$APP_USER" --app-root "$APP_ROOT" >/dev/null 2>&1 || true
   elif [[ -z "$SELECTOR" ]]; then
     mkdir -p tmp
@@ -277,9 +280,11 @@ trap 'rollback_deploy $?' ERR INT TERM
 
 echo "[8/9] Deploy prebuilt bundle and restart application"
 if [[ -n "$SELECTOR" ]]; then
-  if ! "$SELECTOR" stop --json --interpreter nodejs --user "$APP_USER" --app-root "$APP_ROOT" >/dev/null 2>&1; then
-    echo "ERROR: CloudLinux could not stop the Node application safely."
-    false
+  if [[ "$APP_PRESTOPPED" != "1" ]]; then
+    if ! "$SELECTOR" stop --json --interpreter nodejs --user "$APP_USER" --app-root "$APP_ROOT" >/dev/null 2>&1; then
+      echo "ERROR: CloudLinux could not stop the Node application safely."
+      false
+    fi
   fi
   APP_STOPPED=1
 
@@ -300,8 +305,6 @@ mv "$STAGE/server.js" server.js
 DEPLOY_SWAPPED=1
 
 if [[ -n "$SELECTOR" ]]; then
-  # Start exactly once. Do not call restart as a fallback and do not touch
-  # tmp/restart.txt afterwards: either action can make Passenger overlap workers.
   if ! "$SELECTOR" start --json --interpreter nodejs --user "$APP_USER" --app-root "$APP_ROOT" >/dev/null 2>&1; then
     echo "ERROR: prebuilt bundle installed but CloudLinux could not start the Node application."
     false
@@ -338,6 +341,7 @@ fi
 
 DEPLOY_SWAPPED=0
 APP_STOPPED=0
+APP_PRESTOPPED=0
 trap - ERR INT TERM
 rm -rf "$BACKUP_DIR" "$STAGE" "$BUNDLE"
 

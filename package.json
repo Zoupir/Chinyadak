@@ -1,10 +1,10 @@
 {
   "name": "chinpart",
   "private": true,
-  "version": "30.5.0",
+  "version": "30.5.1",
   "type": "module",
   "scripts": {
-    "prepare:source": "node scripts/pre-v3050-adminview.mjs && node scripts/apply-v3050-patches.mjs && node scripts/post-v3050-adminview.mjs",
+    "prepare:source": "node scripts/pre-v3050-adminview.mjs && node scripts/apply-v3050-patches.mjs && node scripts/post-v3050-adminview.mjs && node scripts/apply-v3051-patches.mjs",
     "dev": "npm run prepare:source && tsx server.ts",
     "build": "npm run prepare:source && vite build && node scripts/build-server.mjs",
     "start": "NODE_ENV=production node server.js",

@@ -32,6 +32,8 @@ const safeColor = (value: unknown, fallback: string): string => {
 
 const safeFont = (value: unknown): string => String(value || 'Vazirmatn').replace(/["'<>;{}]/g, '').slice(0, 80) || 'Vazirmatn';
 
+const toPersianDigits = (value: unknown): string => String(value ?? '').replace(/[0-9]/g, digit => '۰۱۲۳۴۵۶۷۸۹'[Number(digit)]);
+
 const parsePayload = (html: string): PublicPayload | null => {
   const start = html.indexOf(PAYLOAD_START);
   if (start < 0) return null;
@@ -39,6 +41,66 @@ const parsePayload = (html: string): PublicPayload | null => {
   const end = html.indexOf('</script>', contentStart);
   if (end < 0) return null;
   try { return JSON.parse(html.slice(contentStart, end)) as PublicPayload; } catch { return null; }
+};
+
+const safePayloadJson = (value: unknown): string => JSON.stringify(value)
+  .replace(/</g, '\\u003c')
+  .replace(/>/g, '\\u003e')
+  .replace(/&/g, '\\u0026')
+  .replace(/\u2028/g, '\\u2028')
+  .replace(/\u2029/g, '\\u2029');
+
+const replacePayloadScript = (html: string, payload: PublicPayload): string => {
+  const start = html.indexOf(PAYLOAD_START);
+  if (start < 0) return html;
+  const contentStart = start + PAYLOAD_START.length;
+  const end = html.indexOf('</script>', contentStart);
+  if (end < 0) return html;
+  return html.slice(0, contentStart) + safePayloadJson(payload) + html.slice(end);
+};
+
+const localizePublicDisplaySettings = (payload: PublicPayload): PublicPayload => {
+  const bootstrap = payload.bootstrap || {};
+  const cms = bootstrap.cms || {};
+  const settings = cms.settings;
+  if (!settings) return payload;
+
+  const localizedSettings = { ...settings };
+  for (const key of ['contactPhone', 'supportPhone', 'sellerPhone']) {
+    if (typeof localizedSettings[key] === 'string' && localizedSettings[key].trim()) {
+      localizedSettings[key] = toPersianDigits(localizedSettings[key]);
+    }
+  }
+
+  return {
+    ...payload,
+    bootstrap: {
+      ...bootstrap,
+      cms: {
+        ...cms,
+        settings: localizedSettings
+      }
+    }
+  };
+};
+
+const safeFaviconHref = (value: unknown): string => {
+  const raw = String(value ?? '').trim();
+  if (!raw) return '';
+  if (/^https?:\/\/[^\s"'<>]+$/i.test(raw)) return raw;
+  if (/^\/(?!\/)[^\s"'<>]+$/.test(raw)) return raw;
+  if (/^[a-z0-9][a-z0-9/_-]*\.(?:ico|png|jpg|jpeg|webp|svg)(?:\?[^\s"'<>]*)?$/i.test(raw) && !raw.includes('..')) return '/' + raw;
+  if (/^data:image\/(?:png|x-icon|vnd\.microsoft\.icon|svg\+xml);base64,[a-z0-9+/=]+$/i.test(raw)) return raw;
+  return '';
+};
+
+const applyFaviconToHtml = (html: string, settings: AnyRecord): string => {
+  const href = safeFaviconHref(settings.faviconUrl);
+  if (!href) return html;
+  const withoutOldIcons = html.replace(/<link\b(?=[^>]*\brel\s*=\s*["'][^"']*icon[^"']*["'])[^>]*>\s*/gi, '');
+  const escaped = escapeAttr(href);
+  const links = `<link rel="icon" href="${escaped}"><link rel="shortcut icon" href="${escaped}"><link rel="apple-touch-icon" href="${escaped}">`;
+  return withoutOldIcons.replace('</head>', links + '</head>');
 };
 
 const applyThemeToHtml = (html: string, settings: AnyRecord): string => {
@@ -69,14 +131,18 @@ const applyThemeToHtml = (html: string, settings: AnyRecord): string => {
 
 export const normalizePublicStorefrontDocument = (html: string, pathname: string): string => {
   if (isPrivateStorefrontPath(pathname)) return html;
-  const payload = parsePayload(html);
-  if (!payload) return html;
+  const parsedPayload = parsePayload(html);
+  if (!parsedPayload) return html;
 
   const rootStart = html.indexOf(ROOT_START);
   const payloadStart = html.indexOf(PAYLOAD_START);
   if (rootStart < 0 || payloadStart < 0 || payloadStart <= rootStart) return html;
 
   try {
+    // Public display settings are localized before both SSR and hydration so the
+    // server HTML and hydrated React tree remain identical with JS on or off.
+    const payload = localizePublicDisplaySettings(parsedPayload);
+
     // Render the exact same Header/Home/Shop/Product/Footer React components
     // that historically produced the storefront. JavaScript is not needed to
     // create content or layout; it only hydrates this already-complete HTML.
@@ -84,9 +150,14 @@ export const normalizePublicStorefrontDocument = (html: string, pathname: string
     const root = `<div id="root" data-server-rendered="1" data-server-authoritative="1" data-react-ssr="1" data-content-source="server">${markup}</div>`;
     let upgraded = `${html.slice(0, rootStart)}${root}${html.slice(payloadStart)}`;
 
+    // The hydration payload must contain the same localized settings used by SSR.
+    upgraded = replacePayloadScript(upgraded, payload);
+
     // The old semantic fallback stylesheet belongs only to the fallback DOM.
     upgraded = upgraded.replace(/<style id="yadak-server-shell-style">[\s\S]*?<\/style>/, '');
-    upgraded = applyThemeToHtml(upgraded, payload.bootstrap?.cms?.settings || {});
+    const settings = payload.bootstrap?.cms?.settings || {};
+    upgraded = applyThemeToHtml(upgraded, settings);
+    upgraded = applyFaviconToHtml(upgraded, settings);
 
     if (!upgraded.includes('/assets/public-hydrate.js')) {
       upgraded = upgraded.replace('</body>', '<script type="module" src="/assets/public-hydrate.js"></script></body>');

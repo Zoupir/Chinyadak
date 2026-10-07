@@ -36,10 +36,13 @@ const safeStyleFor = (tagName: string, rawAttrs: string): string => {
     if (align) safe.push('text-align:' + align[1].toLowerCase());
   }
 
-  if (tagName === 'SPAN') {
+  if (['SPAN', 'A', 'STRONG', 'B', 'EM', 'I', 'U', 'S', 'DEL'].includes(tagName)) {
     const color = style.match(/(?:^|;)\s*color\s*:\s*([^;]+)/i);
     const background = style.match(/(?:^|;)\s*background-color\s*:\s*([^;]+)/i);
     const fontSize = style.match(/(?:^|;)\s*font-size\s*:\s*([^;]+)/i);
+    const fontWeight = style.match(/(?:^|;)\s*font-weight\s*:\s*(normal|bold|[1-9]00)\s*(?:;|$)/i);
+    const fontStyle = style.match(/(?:^|;)\s*font-style\s*:\s*(normal|italic)\s*(?:;|$)/i);
+    const decoration = style.match(/(?:^|;)\s*text-decoration(?:-line)?\s*:\s*(none|underline|line-through|underline\s+line-through|line-through\s+underline)\s*(?:;|$)/i);
     const safeTextColor = color && safeColor(color[1]);
     const safeBackground = background && safeColor(background[1]);
     if (safeTextColor) safe.push('color:' + safeTextColor);
@@ -47,6 +50,9 @@ const safeStyleFor = (tagName: string, rawAttrs: string): string => {
     if (fontSize && /^(?:[6-9]|[1-8]\d|9[0-6])(?:px|pt|rem|em|%)$/i.test(fontSize[1].trim())) {
       safe.push('font-size:' + fontSize[1].trim().toLowerCase());
     }
+    if (fontWeight) safe.push('font-weight:' + fontWeight[1].toLowerCase());
+    if (fontStyle) safe.push('font-style:' + fontStyle[1].toLowerCase());
+    if (decoration) safe.push('text-decoration:' + decoration[1].toLowerCase().replace(/\s+/g, ' '));
   }
 
   return safe.length ? ' style="' + escapeRichText(safe.join(';')) + '"' : '';
@@ -67,8 +73,10 @@ export const sanitizeRichHtml = (value: string): string => {
     if (name === 'A') {
       const hrefMatch = rawAttrs.match(/\bhref\s*=\s*(["'])(.*?)\1/i);
       const href = hrefMatch?.[2] || '';
-      if (!href || !safeRichHref(href)) return '<a>';
-      return '<a href="' + escapeRichText(href) + '" rel="nofollow noopener noreferrer">';
+      const targetBlank = /\btarget\s*=\s*(["'])_blank\1/i.test(rawAttrs);
+      const safeStyle = safeStyleFor(name, rawAttrs);
+      if (!href || !safeRichHref(href)) return '<a' + safeStyle + '>';
+      return '<a href="' + escapeRichText(href) + '"' + (targetBlank ? ' target="_blank"' : '') + ' rel="nofollow noopener noreferrer"' + safeStyle + '>';
     }
 
     if (name === 'TD' || name === 'TH') {

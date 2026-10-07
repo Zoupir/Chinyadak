@@ -59,8 +59,20 @@ fi
 
 cp "$LOG_FILE" "$APP_DIR/tmp/last-update.log" 2>/dev/null || true
 
-# Retain the five newest restore points.
-mapfile -t BACKUPS < <(find "$HISTORY_DIR" -mindepth 1 -maxdepth 1 -type d -printf '%T@ %p\n' 2>/dev/null | sort -nr | awk '{print $2}')
+# Retain the five newest restore points without process substitution. Some
+# DirectAdmin/CloudLinux shells do not expose /dev/fd reliably.
+BACKUPS=()
+BACKUP_LIST="$APP_DIR/tmp/.backup-list.$$"
+find "$HISTORY_DIR" -mindepth 1 -maxdepth 1 -type d -printf '%T@ %p\n' 2>/dev/null \
+  | sort -nr \
+  | awk '{print $2}' > "$BACKUP_LIST"
+
+while IFS= read -r backup; do
+  [[ -n "$backup" ]] && BACKUPS+=("$backup")
+done < "$BACKUP_LIST"
+
+rm -f "$BACKUP_LIST"
+
 if (( ${#BACKUPS[@]} > 5 )); then
   for ((i=5; i<${#BACKUPS[@]}; i++)); do rm -rf "${BACKUPS[$i]}"; done
 fi

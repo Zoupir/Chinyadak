@@ -50,6 +50,7 @@ const run = script => {
 
 if (hasChecks(v3052Checks) && hasChecks(v3053Checks) && hasChecks(v3060Checks)) {
   run('scripts/repair-v3052-footer.mjs');
+  run('scripts/repair-v3060-admin.mjs');
   console.log('Source preparation already at v30.6.0; verified.');
   process.exit(0);
 }
@@ -74,5 +75,6 @@ if (!hasChecks(v3052Checks)) throw new Error('Source preparation did not reach v
 if (!hasChecks(v3053Checks)) throw new Error('Source preparation did not reach v30.5.3 rich-editor markers.');
 
 if (!hasChecks(v3060Checks)) run('scripts/apply-v3060-part-brands-media.mjs');
+run('scripts/repair-v3060-admin.mjs');
 if (!hasChecks(v3060Checks)) throw new Error('Source preparation did not reach v30.6.0 part-brand/media markers.');
 console.log('Source preparation completed at v30.6.0.');

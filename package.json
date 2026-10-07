@@ -1,7 +1,7 @@
 {
   "name": "chinpart",
   "private": true,
-  "version": "30.5.2",
+  "version": "30.5.3",
   "type": "module",
   "scripts": {
     "prepare:source": "node scripts/prepare-source.mjs",
@@ -23,6 +23,7 @@
   "dependencies": {
     "@google/genai": "^2.4.0",
     "@tailwindcss/vite": "^4.3.3",
+    "@tiptap/core": "3.31.4",
     "@tiptap/extension-placeholder": "3.31.4",
     "@tiptap/extension-table": "3.31.4",
     "@tiptap/extension-text-align": "3.31.4",

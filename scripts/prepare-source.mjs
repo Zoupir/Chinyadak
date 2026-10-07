@@ -15,6 +15,13 @@ const v3052Checks = [
   ['src/index.css', 'v30.5.2 — copyright placement and media controls']
 ];
 
+const v3053Checks = [
+  ['src/components/common/RichTextEditor.tsx', 'data-rich-editor-version="30.5.3"'],
+  ['src/components/common/RichTextComposer.tsx', "name: 'richAudio'"],
+  ['src/utils/richText.ts', "'IMG', 'AUDIO', 'VIDEO'"],
+  ['src/components/common/RichTextEditorEnhancements.css', 'v30.5.3 — rich editor source/media and bold-color fidelity']
+];
+
 const hasChecks = checks => checks.every(([path, marker]) => {
   try { return fs.readFileSync(path, 'utf8').includes(marker); }
   catch { return false; }
@@ -26,11 +33,12 @@ const run = script => {
   if (result.status !== 0) process.exit(result.status || 1);
 };
 
-// lint and build run in the same checkout. Once the newest markers exist,
-// verify/repair the generated footer, but do not replay older migrations.
-if (hasChecks(v3052Checks)) {
+// lint and build execute in the same checkout. v30.5.3 editor files are
+// committed directly, while the older generated storefront/footer migrations
+// are still prepared when the checkout has not reached v30.5.2 yet.
+if (hasChecks(v3052Checks) && hasChecks(v3053Checks)) {
   run('scripts/repair-v3052-footer.mjs');
-  console.log('Source preparation already at v30.5.2; verified.');
+  console.log('Source preparation already at v30.5.3; verified.');
   process.exit(0);
 }
 
@@ -48,8 +56,11 @@ if (!hasChecks(v3051Checks)) {
 
 if (!hasChecks(v3051Checks)) throw new Error('Source preparation did not reach v30.5.1 prerequisite markers.');
 
-run('scripts/apply-v3052-footer-copyright.mjs');
+if (!hasChecks(v3052Checks)) {
+  run('scripts/apply-v3052-footer-copyright.mjs');
+}
 run('scripts/repair-v3052-footer.mjs');
 
 if (!hasChecks(v3052Checks)) throw new Error('Source preparation did not reach v30.5.2 markers.');
-console.log('Source preparation completed at v30.5.2.');
+if (!hasChecks(v3053Checks)) throw new Error('Source preparation did not reach v30.5.3 rich-editor markers.');
+console.log('Source preparation completed at v30.5.3.');

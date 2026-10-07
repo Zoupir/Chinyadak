@@ -1,6 +1,7 @@
 import React from 'react';
 import { markdownToSafeHtml } from '../../utils/richText';
 import './RichTextEditor.css';
+import './RichTextEditorEnhancements.css';
 
 interface RichTextContentProps {
   content?: string;

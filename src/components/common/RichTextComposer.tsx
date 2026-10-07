@@ -6,10 +6,12 @@ import {
   AlignRight,
   Bold,
   Eraser,
+  ImagePlus,
   Italic,
   Link as LinkIcon,
   List,
   ListOrdered,
+  Music2,
   Palette,
   Quote,
   Redo2,
@@ -17,15 +19,18 @@ import {
   Table,
   Underline,
   Undo2,
-  Unlink
+  Unlink,
+  Video
 } from 'lucide-react';
 import { EditorContent, useEditor } from '@tiptap/react';
+import { Node, mergeAttributes } from '@tiptap/core';
 import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
 import { TableKit } from '@tiptap/extension-table';
 import TextAlign from '@tiptap/extension-text-align';
 import { Color, FontSize, TextStyle } from '@tiptap/extension-text-style';
-import { markdownToSafeHtml, safeRichHref, sanitizeRichHtml } from '../../utils/richText';
+import { markdownToSafeHtml, safeRichHref, safeRichSrc, sanitizeRichHtml } from '../../utils/richText';
+import { MediaPickerModal } from './MediaPickerModal';
 import './RichTextEditor.css';
 
 interface RichTextComposerProps {
@@ -42,6 +47,66 @@ interface ToolButtonProps {
   disabled?: boolean;
   children: React.ReactNode;
 }
+
+type UrlMediaType = 'audio' | 'video';
+
+const RichImage = Node.create({
+  name: 'richImage',
+  group: 'block',
+  atom: true,
+  draggable: true,
+  selectable: true,
+  addAttributes() {
+    return {
+      src: { default: '' },
+      alt: { default: '' },
+      title: { default: null }
+    };
+  },
+  parseHTML() {
+    return [{ tag: 'img[src]' }];
+  },
+  renderHTML({ HTMLAttributes }) {
+    return ['img', mergeAttributes(HTMLAttributes, { loading: 'lazy' })];
+  }
+});
+
+const RichAudio = Node.create({
+  name: 'richAudio',
+  group: 'block',
+  atom: true,
+  draggable: true,
+  selectable: true,
+  addAttributes() {
+    return { src: { default: '' } };
+  },
+  parseHTML() {
+    return [{ tag: 'audio[src]' }];
+  },
+  renderHTML({ HTMLAttributes }) {
+    return ['audio', mergeAttributes(HTMLAttributes, { controls: 'controls', preload: 'metadata' })];
+  }
+});
+
+const RichVideo = Node.create({
+  name: 'richVideo',
+  group: 'block',
+  atom: true,
+  draggable: true,
+  selectable: true,
+  addAttributes() {
+    return {
+      src: { default: '' },
+      poster: { default: null }
+    };
+  },
+  parseHTML() {
+    return [{ tag: 'video[src]' }];
+  },
+  renderHTML({ HTMLAttributes }) {
+    return ['video', mergeAttributes(HTMLAttributes, { controls: 'controls', preload: 'metadata', playsinline: 'playsinline' })];
+  }
+});
 
 const ToolButton: React.FC<ToolButtonProps> = ({ title, onClick, active, disabled, children }) => (
   <button
@@ -74,7 +139,12 @@ export const RichTextComposer: React.FC<RichTextComposerProps> = ({
   const [linkError, setLinkError] = useState('');
   const [fontSize, setFontSize] = useState('');
   const [textColor, setTextColor] = useState('#c2410c');
+  const [imagePickerOpen, setImagePickerOpen] = useState(false);
+  const [urlMediaType, setUrlMediaType] = useState<UrlMediaType | null>(null);
+  const [mediaUrl, setMediaUrl] = useState('');
+  const [mediaError, setMediaError] = useState('');
   const linkInputRef = useRef<HTMLInputElement>(null);
+  const mediaInputRef = useRef<HTMLInputElement>(null);
 
   const extensions = useMemo(() => [
     StarterKit.configure({
@@ -93,6 +163,9 @@ export const RichTextComposer: React.FC<RichTextComposerProps> = ({
       defaultAlignment: 'right'
     }),
     TableKit,
+    RichImage,
+    RichAudio,
+    RichVideo,
     Placeholder.configure({
       placeholder,
       showOnlyWhenEditable: true
@@ -137,11 +210,14 @@ export const RichTextComposer: React.FC<RichTextComposerProps> = ({
     if (linkDialogOpen) linkInputRef.current?.focus();
   }, [linkDialogOpen]);
 
+  useEffect(() => {
+    if (urlMediaType) mediaInputRef.current?.focus();
+  }, [urlMediaType]);
+
   if (!editor) {
     return <div className="rich-text-editor__loading" role="status">در حال آماده‌سازی ادیتور…</div>;
   }
 
-  // Read the current selection state so the toolbar reports which formatting is active.
   void toolbarRevision;
   const activeBlock = editor.isActive('heading', { level: 2 }) ? 'h2'
     : editor.isActive('heading', { level: 3 }) ? 'h3'
@@ -153,6 +229,7 @@ export const RichTextComposer: React.FC<RichTextComposerProps> = ({
     setLinkUrl(String(editor.getAttributes('link').href || ''));
     setLinkError('');
     setLinkDialogOpen(true);
+    setUrlMediaType(null);
   };
 
   const applyLink = (event: React.FormEvent) => {
@@ -177,8 +254,44 @@ export const RichTextComposer: React.FC<RichTextComposerProps> = ({
     editor.isActive(name, attributes as never);
   const activeAlign = (alignment: string) => editor.isActive({ textAlign: alignment });
 
+  const insertImage = (url: string, item?: { seo?: { alt?: string; title?: string } }) => {
+    if (!safeRichSrc(url)) return;
+    editor.chain().focus().insertContent({
+      type: 'richImage',
+      attrs: {
+        src: url,
+        alt: item?.seo?.alt || '',
+        title: item?.seo?.title || null
+      }
+    }).run();
+    setImagePickerOpen(false);
+  };
+
+  const openUrlMedia = (type: UrlMediaType) => {
+    setLinkDialogOpen(false);
+    setUrlMediaType(type);
+    setMediaUrl('');
+    setMediaError('');
+  };
+
+  const insertUrlMedia = (event: React.FormEvent) => {
+    event.preventDefault();
+    const src = mediaUrl.trim();
+    if (!src || !safeRichSrc(src)) {
+      setMediaError('آدرس فایل باید با https://، http:// یا / شروع شود.');
+      return;
+    }
+    editor.chain().focus().insertContent({
+      type: urlMediaType === 'video' ? 'richVideo' : 'richAudio',
+      attrs: { src }
+    }).run();
+    setUrlMediaType(null);
+    setMediaUrl('');
+    setMediaError('');
+  };
+
   return (
-    <div className="rich-text-editor__frame">
+    <div className="rich-text-editor__frame" data-rich-media-editor="1">
       <div className="rich-text-toolbar" role="toolbar" aria-label="ابزارهای قالب‌بندی متن">
         <div className="rich-text-toolbar__group">
           <ToolButton title="واگرد" disabled={!editor.can().undo()} onClick={() => editor.chain().focus().undo().run()}>
@@ -299,6 +412,15 @@ export const RichTextComposer: React.FC<RichTextComposerProps> = ({
           <ToolButton title="حذف پیوند" disabled={!active('link')} onClick={() => editor.chain().focus().unsetLink().run()}>
             <Unlink aria-hidden="true" />
           </ToolButton>
+          <ToolButton title="افزودن تصویر" onClick={() => { setLinkDialogOpen(false); setUrlMediaType(null); setImagePickerOpen(true); }}>
+            <ImagePlus aria-hidden="true" />
+          </ToolButton>
+          <ToolButton title="افزودن فایل صوتی" onClick={() => openUrlMedia('audio')}>
+            <Music2 aria-hidden="true" />
+          </ToolButton>
+          <ToolButton title="افزودن ویدئو" onClick={() => openUrlMedia('video')}>
+            <Video aria-hidden="true" />
+          </ToolButton>
           <ToolButton title="افزودن جدول دو ستونه" onClick={() => editor.chain().focus().insertTable({ rows: 2, cols: 2, withHeaderRow: true }).run()}>
             <Table aria-hidden="true" />
           </ToolButton>
@@ -321,6 +443,24 @@ export const RichTextComposer: React.FC<RichTextComposerProps> = ({
             <button type="button" onMouseDown={event => event.preventDefault()} onClick={() => setLinkDialogOpen(false)}>انصراف</button>
           </form>
         )}
+
+        {urlMediaType && (
+          <form className="rich-text-media-form" onSubmit={insertUrlMedia}>
+            <label htmlFor="rich-text-media-url">{urlMediaType === 'video' ? 'نشانی فایل ویدئویی' : 'نشانی فایل صوتی'}</label>
+            <input
+              id="rich-text-media-url"
+              ref={mediaInputRef}
+              type="text"
+              inputMode="url"
+              value={mediaUrl}
+              placeholder={urlMediaType === 'video' ? 'https://example.com/video.mp4' : 'https://example.com/audio.mp3'}
+              onChange={event => setMediaUrl(event.currentTarget.value)}
+            />
+            {mediaError && <span className="rich-text-media-form__error" role="alert">{mediaError}</span>}
+            <button type="submit">درج {urlMediaType === 'video' ? 'ویدئو' : 'صدا'}</button>
+            <button type="button" onMouseDown={event => event.preventDefault()} onClick={() => setUrlMediaType(null)}>انصراف</button>
+          </form>
+        )}
       </div>
 
       <EditorContent
@@ -336,6 +476,15 @@ export const RichTextComposer: React.FC<RichTextComposerProps> = ({
           <button type="button" onMouseDown={event => event.preventDefault()} onClick={() => editor.chain().focus().deleteTable().run()}>حذف جدول</button>
         </div>
       )}
+
+      <MediaPickerModal
+        isOpen={imagePickerOpen}
+        onClose={() => setImagePickerOpen(false)}
+        onSelect={(url, item) => insertImage(url, item)}
+        category="articles"
+        title="درج تصویر در متن"
+        allowUrl
+      />
     </div>
   );
 };

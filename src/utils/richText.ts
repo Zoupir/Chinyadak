@@ -2,7 +2,7 @@ const allowedTags = new Set([
   'P', 'BR', 'STRONG', 'B', 'EM', 'I', 'U', 'S', 'DEL',
   'H2', 'H3', 'H4', 'UL', 'OL', 'LI', 'BLOCKQUOTE',
   'A', 'CODE', 'PRE', 'TABLE', 'TBODY', 'THEAD', 'TR',
-  'TD', 'TH', 'SPAN', 'HR'
+  'TD', 'TH', 'SPAN', 'HR', 'IMG', 'AUDIO', 'VIDEO'
 ]);
 
 export const escapeRichText = (value: string): string => value
@@ -15,8 +15,11 @@ export const escapeRichText = (value: string): string => value
 export const safeRichHref = (href: string): boolean =>
   /^(https?:\/\/|mailto:|tel:|\/|#)/i.test(href.trim());
 
+export const safeRichSrc = (src: string): boolean =>
+  /^(https?:\/\/|\/)/i.test(src.trim());
+
 const safeColor = (input: string): string | null => {
-  const value = input.trim();
+  const value = input.trim().replace(/\s*!important\s*$/i, '');
   if (/^#[0-9a-f]{3,8}$/i.test(value)) return value.toLowerCase();
   if (/^(?:rgb|rgba|hsl|hsla)\(\s*[\d.%\s,+-]+\)$/i.test(value)) return value;
   if (/^(?:black|white|red|green|blue|orange|purple|gray|grey|navy|teal|maroon|olive|silver|lime|aqua|fuchsia|yellow|transparent|currentcolor)$/i.test(value)) {
@@ -36,7 +39,7 @@ const safeStyleFor = (tagName: string, rawAttrs: string): string => {
     if (align) safe.push('text-align:' + align[1].toLowerCase());
   }
 
-  if (['SPAN', 'A', 'STRONG', 'B', 'EM', 'I', 'U', 'S', 'DEL'].includes(tagName)) {
+  if (['P', 'H2', 'H3', 'H4', 'BLOCKQUOTE', 'SPAN', 'A', 'STRONG', 'B', 'EM', 'I', 'U', 'S', 'DEL'].includes(tagName)) {
     const color = style.match(/(?:^|;)\s*color\s*:\s*([^;]+)/i);
     const background = style.match(/(?:^|;)\s*background-color\s*:\s*([^;]+)/i);
     const fontSize = style.match(/(?:^|;)\s*font-size\s*:\s*([^;]+)/i);
@@ -45,7 +48,7 @@ const safeStyleFor = (tagName: string, rawAttrs: string): string => {
     const decoration = style.match(/(?:^|;)\s*text-decoration(?:-line)?\s*:\s*(none|underline|line-through|underline\s+line-through|line-through\s+underline)\s*(?:;|$)/i);
     const safeTextColor = color && safeColor(color[1]);
     const safeBackground = background && safeColor(background[1]);
-    if (safeTextColor) safe.push('color:' + safeTextColor);
+    if (safeTextColor) safe.push('color:' + safeTextColor + '!important');
     if (safeBackground) safe.push('background-color:' + safeBackground);
     if (fontSize && /^(?:[6-9]|[1-8]\d|9[0-6])(?:px|pt|rem|em|%)$/i.test(fontSize[1].trim())) {
       safe.push('font-size:' + fontSize[1].trim().toLowerCase());
@@ -58,6 +61,11 @@ const safeStyleFor = (tagName: string, rawAttrs: string): string => {
   return safe.length ? ' style="' + escapeRichText(safe.join(';')) + '"' : '';
 };
 
+const safeAttr = (rawAttrs: string, name: string): string => {
+  const match = rawAttrs.match(new RegExp('\\b' + name + '\\s*=\\s*(["\\\'])(.*?)\\1', 'i'));
+  return match?.[2] || '';
+};
+
 export const sanitizeRichHtml = (value: string): string => {
   let html = String(value || '')
     .replace(/<(script|style|iframe|object|embed|svg|math|form|input|button)[^>]*>[\s\S]*?<\/\1\s*>/gi, '')
@@ -67,16 +75,37 @@ export const sanitizeRichHtml = (value: string): string => {
     const name = rawName.toUpperCase();
     if (!allowedTags.has(name)) return '';
     const closing = /^<\//.test(tag);
-    if (closing) return ['BR', 'HR'].includes(name) ? '' : '</' + name.toLowerCase() + '>';
+    if (closing) return ['BR', 'HR', 'IMG'].includes(name) ? '' : '</' + name.toLowerCase() + '>';
     if (name === 'BR' || name === 'HR') return '<' + name.toLowerCase() + '>';
 
     if (name === 'A') {
-      const hrefMatch = rawAttrs.match(/\bhref\s*=\s*(["'])(.*?)\1/i);
-      const href = hrefMatch?.[2] || '';
+      const href = safeAttr(rawAttrs, 'href');
       const targetBlank = /\btarget\s*=\s*(["'])_blank\1/i.test(rawAttrs);
       const safeStyle = safeStyleFor(name, rawAttrs);
       if (!href || !safeRichHref(href)) return '<a' + safeStyle + '>';
       return '<a href="' + escapeRichText(href) + '"' + (targetBlank ? ' target="_blank"' : '') + ' rel="nofollow noopener noreferrer"' + safeStyle + '>';
+    }
+
+    if (name === 'IMG') {
+      const src = safeAttr(rawAttrs, 'src');
+      if (!src || !safeRichSrc(src)) return '';
+      const alt = safeAttr(rawAttrs, 'alt');
+      const title = safeAttr(rawAttrs, 'title');
+      return '<img src="' + escapeRichText(src) + '" alt="' + escapeRichText(alt) + '"' + (title ? ' title="' + escapeRichText(title) + '"' : '') + ' loading="lazy">';
+    }
+
+    if (name === 'AUDIO') {
+      const src = safeAttr(rawAttrs, 'src');
+      if (!src || !safeRichSrc(src)) return '<audio controls preload="metadata">';
+      return '<audio src="' + escapeRichText(src) + '" controls preload="metadata">';
+    }
+
+    if (name === 'VIDEO') {
+      const src = safeAttr(rawAttrs, 'src');
+      const poster = safeAttr(rawAttrs, 'poster');
+      const posterAttr = poster && safeRichSrc(poster) ? ' poster="' + escapeRichText(poster) + '"' : '';
+      if (!src || !safeRichSrc(src)) return '<video controls preload="metadata" playsinline' + posterAttr + '>';
+      return '<video src="' + escapeRichText(src) + '" controls preload="metadata" playsinline' + posterAttr + '>';
     }
 
     if (name === 'TD' || name === 'TH') {
@@ -97,7 +126,7 @@ export const sanitizeRichHtml = (value: string): string => {
 
 export const markdownToSafeHtml = (value: string): string => {
   const source = String(value || '');
-  if (/<\/?(p|br|strong|b|em|i|u|s|del|h[1-6]|ul|ol|li|blockquote|a|code|pre|table|thead|tbody|tr|td|th|span|hr)\b/i.test(source)) {
+  if (/<\/?(p|br|strong|b|em|i|u|s|del|h[1-6]|ul|ol|li|blockquote|a|code|pre|table|thead|tbody|tr|td|th|span|hr|img|audio|video)\b/i.test(source)) {
     return sanitizeRichHtml(source);
   }
 

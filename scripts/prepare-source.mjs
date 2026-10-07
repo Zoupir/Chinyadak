@@ -27,8 +27,9 @@ const run = script => {
 };
 
 // lint and build run in the same checkout. Once the newest markers exist,
-// leave the migrated source alone instead of replaying older migrations.
+// verify/repair the generated footer, but do not replay older migrations.
 if (hasChecks(v3052Checks)) {
+  run('scripts/repair-v3052-footer.mjs');
   console.log('Source preparation already at v30.5.2; verified.');
   process.exit(0);
 }
@@ -48,6 +49,7 @@ if (!hasChecks(v3051Checks)) {
 if (!hasChecks(v3051Checks)) throw new Error('Source preparation did not reach v30.5.1 prerequisite markers.');
 
 run('scripts/apply-v3052-footer-copyright.mjs');
+run('scripts/repair-v3052-footer.mjs');
 
 if (!hasChecks(v3052Checks)) throw new Error('Source preparation did not reach v30.5.2 markers.');
 console.log('Source preparation completed at v30.5.2.');

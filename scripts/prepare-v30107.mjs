@@ -30,6 +30,7 @@ if (missing.length) {
 if (pkg.version !== '30.10.7') throw new Error(`Expected package version 30.10.7, got ${pkg.version}`);
 if (pkg.devDependencies?.autoprefixer) throw new Error('Dead autoprefixer dependency is still present.');
 if (!String(pkg.dependencies?.multer || '').includes('2.4')) throw new Error('Multer 2.4.x release line is required.');
+if (!String(pkg.dependencies?.sharp || '').includes('0.35.5')) throw new Error('Sharp 0.35.5+ security release is required.');
 if (!String(pkg.overrides?.protobufjs || '').includes('7.6.5')) throw new Error('protobufjs security override is missing.');
 if (!String(pkg.overrides?.ws || '').includes('8.20.1')) throw new Error('ws security override is missing.');
 if (fs.existsSync('package-lock.json')) {

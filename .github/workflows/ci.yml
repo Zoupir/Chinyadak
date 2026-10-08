@@ -23,11 +23,17 @@ jobs:
       - name: Install dependencies
         run: npm install --include=dev
 
+      - name: Production dependency audit
+        run: npm run audit:prod
+
       - name: Type check
         run: npm run lint
 
       - name: Validate one-step updater
-        run: bash -n update.sh
+        run: |
+          bash -n update.sh
+          bash -n safe-update.sh
+          bash -n rollback.sh
 
       - name: Production build
         env:
@@ -37,6 +43,9 @@ jobs:
           DB_PASSWORD: ci
           JWT_SECRET: '01234567890123456789012345678901'
         run: npm run build
+
+      - name: Final release artifact audit
+        run: node scripts/audit-release.mjs
 
       - name: Install responsive test browser
         run: |
@@ -170,9 +179,98 @@ jobs:
         if: failure()
         run: cat /tmp/chinpart-server.log || true
 
+  e2e:
+    name: final browser E2E
+    runs-on: ubuntu-latest
+    services:
+      database:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: ci
+          MYSQL_USER: ci
+          MYSQL_PASSWORD: ci
+        ports:
+          - 3306:3306
+
+    env:
+      NODE_ENV: production
+      PORT: 3000
+      APP_URL: http://127.0.0.1:3000
+      DB_HOST: 127.0.0.1
+      DB_PORT: 3306
+      DB_NAME: ci
+      DB_USER: ci
+      DB_PASSWORD: ci
+      DB_CONNECTION_LIMIT: 5
+      JWT_SECRET: '01234567890123456789012345678901'
+      SESSION_COOKIE_NAME: chinpart_e2e_session
+      ADMIN_BOOTSTRAP_USER: admin
+      ADMIN_BOOTSTRAP_PASSWORD: CI-Admin-Password-123!
+      ADMIN_BOOTSTRAP_NAME: CI Administrator
+      APP_ENCRYPTION_KEY: 01234567890123456789012345678901-e2e-encryption-key
+      UPLOAD_DIR: uploads-e2e
+      MAX_UPLOAD_MB: 2
+      TRUST_PROXY: 1
+      TEST_BASE_URL: http://127.0.0.1:3000
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm install --include=dev
+
+      - name: Wait for database
+        run: npm run db:wait
+
+      - name: Prepare E2E database
+        run: |
+          npm run db:init
+          npm run db:seed
+          ./node_modules/.bin/tsx scripts/seed-categories.ts
+          ./node_modules/.bin/tsx scripts/seed-real-defaults.ts
+          ./node_modules/.bin/tsx scripts/seed-lucano-l8-reference.ts
+
+      - name: Production build
+        run: npm run build
+
+      - name: Install E2E browser
+        run: |
+          npm install --no-save --package-lock=false playwright@1.62.1
+          npx playwright install --with-deps chromium --only-shell
+
+      - name: Start production server
+        run: |
+          npm start > /tmp/chinpart-e2e-server.log 2>&1 &
+          echo $! > /tmp/chinpart-e2e-server.pid
+
+      - name: Wait for health
+        run: |
+          for i in {1..30}; do
+            if curl -fsS http://127.0.0.1:3000/api/health >/dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/chinpart-e2e-server.log
+          exit 1
+
+      - name: Real browser E2E
+        run: npm run test:e2e
+
+      - name: Show E2E server log on failure
+        if: failure()
+        run: cat /tmp/chinpart-e2e-server.log || true
+
   publish:
     name: publish prebuilt deployment bundle
-    needs: [build, integration]
+    needs: [build, integration, e2e]
     if: github.event_name == 'push' && github.ref == 'refs/heads/marketplace-rtl-phase1'
     runs-on: ubuntu-latest
     steps:

@@ -52,4 +52,16 @@ edit('src/server/routes/bulk.ts', source => {
   return source;
 });
 
+edit('src/server/routes/catalog.ts', source => {
+  source = source.replace(
+    '  const [[countRow], [rows], refs] = await Promise.all([',
+    '  const [[countRows], [rows], refs] = await Promise.all(['
+  );
+  source = source.replace(
+    '  const total = Number(countRow?.total || 0);',
+    '  const total = Number(countRows[0]?.total || 0);'
+  );
+  return source;
+});
+
 console.log('v30.10.2 data-integrity wiring:', changed.length ? changed.join(', ') : 'already satisfied');

@@ -11,9 +11,6 @@ const has = (file, marker) => {
   catch { return false; }
 };
 
-run('scripts/prepare-v30108.mjs');
-run('scripts/apply-v30109-product-editor-live-save.mjs');
-
 const checks = [
   ['src/components/common/RichTextComposer.tsx', 'data-quill-rich-editor="30.10.9"'],
   ['src/components/common/RichTextComposer.tsx', "from 'quill'"],
@@ -25,6 +22,19 @@ const checks = [
   ['src/server/ssr-store-context.tsx', 'const persistPublicPage = async'],
   ['src/components/common/RichTextEditor.css', 'v30.10.9 Quill editor']
 ];
+const isPrepared = () => checks.every(([file, marker]) => has(file, marker));
+
+// Older preparation stages intentionally enforce their historical editor
+// implementation. Once 30.10.9 has replaced it with Quill, re-running the old
+// chain would overwrite or reject the final source. Build/lint call
+// prepare:source repeatedly, so verify-and-skip on an already prepared tree.
+if (!isPrepared()) {
+  run('scripts/prepare-v30108.mjs');
+  run('scripts/apply-v30109-product-editor-live-save.mjs');
+} else {
+  console.log('Source preparation already at v30.10.9; legacy editor transforms skipped.');
+}
+
 const missing = checks.filter(([file, marker]) => !has(file, marker));
 if (missing.length) throw new Error('v30.10.9 preparation incomplete: ' + missing.map(([file, marker]) => `${file} :: ${marker}`).join(' | '));
 

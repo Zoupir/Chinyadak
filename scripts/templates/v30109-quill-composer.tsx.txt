@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import Quill from 'quill';
-import 'quill/dist/quill.snow.css';
+import './quill-vendor.css';
 import { sanitizeRichHtml, markdownToSafeHtml, safeRichHref, safeRichSrc } from '../../utils/richText';
 import { MediaPickerModal } from './MediaPickerModal';
 import './RichTextEditor.css';

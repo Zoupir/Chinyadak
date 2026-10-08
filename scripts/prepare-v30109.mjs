@@ -39,6 +39,7 @@ if (!isPrepared()) {
   console.log('Source preparation already at v30.10.9; legacy editor transforms skipped.');
 }
 run('scripts/repair-v30109-e2e.mjs');
+run('scripts/repair-v30109-session-cookie.mjs');
 
 // Do not let the Node SSR bundle retain a runtime import of
 // node_modules/quill/dist/quill.snow.css. Build tools already handle local CSS
@@ -53,6 +54,7 @@ if (!fs.readFileSync(quillCssTarget, 'utf8').includes('.ql-container')) throw ne
 const missing = checks.filter(([file, marker]) => !has(file, marker));
 if (missing.length) throw new Error('v30.10.9 preparation incomplete: ' + missing.map(([file, marker]) => `${file} :: ${marker}`).join(' | '));
 if (!has('scripts/test-e2e.cjs', 'data-v30109-live-save-e2e')) throw new Error('v30.10.9 theme-aware live-save E2E marker missing.');
+if (!has('src/server/auth.ts', "secure: config.nodeEnv === 'production' && /^https:/i.test(config.appUrl),")) throw new Error('v30.10.9 protocol-aware session cookie rule missing.');
 
 const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
 if (pkg.version !== '30.10.9') throw new Error(`Expected package version 30.10.9, got ${pkg.version}`);

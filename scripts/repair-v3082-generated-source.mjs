@@ -29,7 +29,11 @@ edit('src/types/index.ts', source => {
 
 // Previous migrations may reorder the StoreContext destructuring. Inject
 // showToast based on the component's useStore call instead of an exact string.
+// v30.9.0 replaces this implementation with a small re-export; in that final
+// state there is intentionally no local useStore destructuring left to repair.
 edit('src/components/parts/PartRequestView.tsx', source => {
+  if (source.includes('PartRequestViewProfessional')) return source;
+
   const componentAt = source.indexOf('export const PartRequestView');
   if (componentAt < 0) throw new Error('v30.8.2 repair: PartRequestView component missing');
   const useStoreAt = source.indexOf('= useStore();', componentAt);

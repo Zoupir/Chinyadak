@@ -1,10 +1,10 @@
 {
   "name": "chinpart",
   "private": true,
-  "version": "30.10.2",
+  "version": "30.10.3",
   "type": "module",
   "scripts": {
-    "prepare:source": "node scripts/prepare-v30102.mjs",
+    "prepare:source": "node scripts/prepare-v30103.mjs",
     "dev": "npm run prepare:source && tsx server.ts",
     "build": "npm run prepare:source && vite build && node scripts/build-server.mjs",
     "start": "NODE_ENV=production node server.js",
@@ -13,7 +13,7 @@
     "lint": "npm run prepare:source && tsc --noEmit",
     "db:seed": "tsx scripts/seed-catalog.ts",
     "payments:release-expired": "tsx scripts/release-expired-reservations.ts",
-    "test:smoke": "tsx scripts/smoke-test.ts && tsx scripts/smoke-v3082.ts && tsx scripts/smoke-v3090.ts && tsx scripts/smoke-v3091.ts && tsx scripts/smoke-v3092.ts && tsx scripts/smoke-v30100.ts && tsx scripts/smoke-v30101.ts && tsx scripts/smoke-v30102.ts",
+    "test:smoke": "tsx scripts/smoke-test.ts && tsx scripts/smoke-v3082.ts && tsx scripts/smoke-v3090.ts && tsx scripts/smoke-v3091.ts && tsx scripts/smoke-v3092.ts && tsx scripts/smoke-v30100.ts && tsx scripts/smoke-v30101.ts && tsx scripts/smoke-v30102.ts && tsx scripts/smoke-v30103.ts",
     "db:wait": "tsx scripts/wait-for-db.ts",
     "seo:worker": "tsx -e \"import('./src/server/seo/platform.ts').then(async m=>{await m.runFullSeoAudit();process.exit(0)})\"",
     "seo:graph": "tsx -e \"import('./src/server/seo/platform.ts').then(async m=>{await m.rebuildSeoKnowledgeGraph();process.exit(0)})\"",

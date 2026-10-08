@@ -19,7 +19,9 @@ const checks = [
   ['src/components/admin/AdminView.tsx', 'fixed inset-x-0 top-16 bottom-0'],
   ['src/components/common/LiveSectionModal.tsx', 'data-live-section-save="1"'],
   ['src/server/ssr-store-context.tsx', 'data-v30109-public-admin-session'],
+  ['src/server/ssr-store-context.tsx', 'data-v30109-live-edit-session'],
   ['src/server/ssr-store-context.tsx', 'const persistPublicPage = async'],
+  ['src/context/StoreContext.tsx', 'data-v30109-live-edit-session'],
   ['src/components/common/RichTextEditor.css', 'v30.10.9 Quill editor']
 ];
 const isPrepared = () => checks.every(([file, marker]) => has(file, marker));
@@ -41,5 +43,5 @@ if (missing.length) throw new Error('v30.10.9 preparation incomplete: ' + missin
 
 const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
 if (pkg.version !== '30.10.9') throw new Error(`Expected package version 30.10.9, got ${pkg.version}`);
-if (!pkg.dependencies?.quill) throw new Error('Quill dependency missing.');
+if (pkg.dependencies?.quill !== '2.0.2') throw new Error(`Expected Quill 2.0.2, got ${pkg.dependencies?.quill || 'missing'}`);
 console.log('Source preparation completed at v30.10.9 product editor / Quill / live-save hotfix.');

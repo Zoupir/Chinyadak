@@ -51,10 +51,15 @@ source = source
   .replace(`setTextColor(event.currentTarget.value); exec('foreColor', event.currentTarget.value);`, `setTextColor(event.currentTarget.value); applyInlineStyle({ color: event.currentTarget.value });`)
   .replace(`setHighlightColor(event.currentTarget.value); exec('hiliteColor', event.currentTarget.value);`, `setHighlightColor(event.currentTarget.value); applyInlineStyle({ backgroundColor: event.currentTarget.value });`);
 
-const toolPointerNeedle = '    onMouseDown={event => event.preventDefault()}';
-const toolPointerReplacement = '    onPointerDown={event => event.preventDefault()}\n    onMouseDown={event => event.preventDefault()}';
-if (source.includes(toolPointerNeedle) && !source.includes('onPointerDown={event => event.preventDefault()}')) {
-  source = source.replace(toolPointerNeedle, toolPointerReplacement);
+const oldToolInteraction = `    onMouseDown={event => event.preventDefault()}\n    onClick={onClick}`;
+const pointerSafeToolInteraction = `    onPointerDown={event => {\n      event.preventDefault();\n      if (event.button === 0) onClick();\n    }}\n    onMouseDown={event => event.preventDefault()}\n    onClick={event => {\n      if (event.detail === 0) onClick();\n    }}`;
+if (source.includes(oldToolInteraction)) {
+  source = source.replace(oldToolInteraction, pointerSafeToolInteraction);
+} else {
+  const intermediateToolInteraction = `    onPointerDown={event => event.preventDefault()}\n    onMouseDown={event => event.preventDefault()}\n    onClick={onClick}`;
+  if (source.includes(intermediateToolInteraction)) {
+    source = source.replace(intermediateToolInteraction, pointerSafeToolInteraction);
+  }
 }
 
 const toolbarNeedle = '<div className="rich-text-toolbar" role="toolbar" aria-label="ابزارهای قالب‌بندی متن">';
@@ -65,13 +70,14 @@ if (!source.includes('const applyInlineStyle =')) throw new Error('v30.10.8 dete
 if (!source.includes('const lastNonCollapsedRangeRef =')) throw new Error('v30.10.8 non-collapsed selection memory missing.');
 if (!source.includes('restoreSelection(true)')) throw new Error('v30.10.8 inline formatting does not prefer selected text.');
 if (!source.includes('onPointerDownCapture={saveSelection}')) throw new Error('v30.10.8 toolbar selection capture missing.');
-if (!source.includes('onPointerDown={event => event.preventDefault()}')) throw new Error('v30.10.8 toolbar buttons can still collapse editor selection.');
+if (!source.includes('if (event.button === 0) onClick();')) throw new Error('v30.10.8 toolbar actions are not executed before pointer focus collapse.');
+if (!source.includes('if (event.detail === 0) onClick();')) throw new Error('v30.10.8 keyboard toolbar activation missing.');
 if (!source.includes("applyInlineStyle({ fontWeight: '700' })")) throw new Error('v30.10.8 bold range style wiring missing.');
 if (!source.includes('applyInlineStyle({ color: event.currentTarget.value })')) throw new Error('v30.10.8 color range style wiring missing.');
 
 if (source !== before) {
   fs.writeFileSync(file, source);
-  console.log('v30.10.8 WYSIWYG template upgraded with pointer-safe persistent Range styling.');
+  console.log('v30.10.8 WYSIWYG template upgraded with pre-focus toolbar execution and persistent Range styling.');
 } else {
-  console.log('v30.10.8 WYSIWYG template pointer-safe Range styling already active.');
+  console.log('v30.10.8 WYSIWYG template pre-focus toolbar execution already active.');
 }

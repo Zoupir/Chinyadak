@@ -12,6 +12,7 @@ const has = (file, marker) => {
 };
 
 run('scripts/prepare-v30107.mjs');
+run('scripts/repair-v30108-hotfix-transform.mjs');
 run('scripts/apply-v30108-editor-hotfix.mjs');
 
 const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));

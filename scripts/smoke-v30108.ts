@@ -16,7 +16,8 @@ if (legacyStableEditor) {
   assert.match(composer, /document\.execCommand\('styleWithCSS'/);
   assert.match(composer, /onPaste=\{onPaste\}/);
 } else {
-  assert.match(composer, /from 'quill'/);
+  assert.match(composer, /await import\('quill'\)/);
+  assert.doesNotMatch(composer, /^import Quill from 'quill';/m);
   assert.match(composer, /getSemanticHTML/);
   assert.doesNotMatch(composer, /document\.execCommand/);
 }

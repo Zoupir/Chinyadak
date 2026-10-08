@@ -128,8 +128,9 @@ export const RichTextComposer: React.FC<RichTextComposerProps> = ({ value, onCha
     });
 
     const toolbar = quill.getModule('toolbar') as any;
-    toolbar.addHandler('undo', () => quill.history.undo());
-    toolbar.addHandler('redo', () => quill.history.redo());
+    const history = quill.getModule('history') as any;
+    toolbar.addHandler('undo', () => history?.undo?.());
+    toolbar.addHandler('redo', () => history?.redo?.());
     toolbar.addHandler('image', () => {
       rememberRange(quill.getSelection(true));
       setImagePickerOpen(true);

@@ -10,11 +10,13 @@ const run = script => {
 run('scripts/prepare-v3091.mjs');
 run('scripts/normalize-v3092-pre.mjs');
 run('scripts/apply-v3092-editor-pages-live-save.mjs');
+run('scripts/repair-v3092-final.mjs');
 
 const checks = [
   ['src/context/StoreContext.tsx', 'data-v3092-product-save'],
   ['src/context/StoreContext.tsx', 'Promise<Product | null>'],
   ['src/context/StoreContext.tsx', 'data-v3092-article-save'],
+  ['src/context/StoreContext.tsx', "const discountMode: NonNullable<Product['discountMode']> = updated.discountMode || 'none'"],
   ['src/utils/pricing.ts', '!hasExplicitDiscountMode && legacy > 0'],
   ['src/components/admin/AdminView.tsx', 'data-product-editor-page={isStandaloneProductEditor'],
   ['src/components/admin/AdminView.tsx', '/admin/product-edit/'],

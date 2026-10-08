@@ -41,7 +41,7 @@ export const PRODUCT_CANONICAL_COLUMNS = `
   images_json, specs_json, fitments_json, data_json, short_description, description
 `;
 
-export const canonicalProductDto = (row: CanonicalProductRow, overrideFitments?: any[]) => {
+export const canonicalProductDto = (row: CanonicalProductRow, overrideFitments?: any[]): Record<string, any> => {
   const data = parseStoredJson<Record<string, any>>(row.data_json, {});
   const images = parseStoredJson<any[]>(row.images_json, Array.isArray(data.images) ? data.images : []);
   const specs = parseStoredJson<Record<string, string>>(row.specs_json, data.technicalSpecs && typeof data.technicalSpecs === 'object' ? data.technicalSpecs : {});
@@ -51,7 +51,7 @@ export const canonicalProductDto = (row: CanonicalProductRow, overrideFitments?:
   const availableStock = Math.max(0, physicalStock - reservedStock);
 
   // SQL columns are authoritative. data_json is extension/content storage only;
-  // the final spread below deliberately prevents stale JSON from overriding SQL.
+  // the final explicit fields deliberately prevent stale JSON from overriding SQL.
   return {
     ...data,
     id: row.id,
@@ -88,7 +88,7 @@ export interface CanonicalCategoryRow extends RowDataPacket {
   sort_order: number;
 }
 
-export const canonicalCategoryDto = (row: CanonicalCategoryRow) => ({
+export const canonicalCategoryDto = (row: CanonicalCategoryRow): Record<string, any> => ({
   ...parseStoredJson<Record<string, any>>(row.data_json, {}),
   id: row.id,
   slug: row.slug,
@@ -107,7 +107,7 @@ export interface CanonicalBrandRow extends RowDataPacket {
   is_active: number;
 }
 
-export const canonicalBrandDto = (row: CanonicalBrandRow) => ({
+export const canonicalBrandDto = (row: CanonicalBrandRow): Record<string, any> => ({
   ...parseStoredJson<Record<string, any>>(row.data_json, {}),
   id: row.id,
   slug: row.slug,
@@ -125,7 +125,7 @@ export interface CanonicalModelRow extends RowDataPacket {
   is_active: number;
 }
 
-export const canonicalModelDto = (row: CanonicalModelRow) => ({
+export const canonicalModelDto = (row: CanonicalModelRow): Record<string, any> => ({
   ...parseStoredJson<Record<string, any>>(row.data_json, {}),
   id: row.id,
   brandId: row.brand_id,

@@ -14,6 +14,7 @@ const has = (file, marker) => {
 run('scripts/prepare-v30107.mjs');
 run('scripts/repair-v30108-hotfix-transform.mjs');
 run('scripts/repair-v30108-wysiwyg-template.mjs');
+run('scripts/repair-v30108-selectall.mjs');
 run('scripts/apply-v30108-editor-hotfix.mjs');
 
 const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
@@ -24,6 +25,7 @@ const checks = [
   ['src/components/common/RichTextComposer.tsx', "document.execCommand('styleWithCSS'"],
   ['src/components/common/RichTextComposer.tsx', 'const applyInlineStyle ='],
   ['src/components/common/RichTextComposer.tsx', "applyInlineStyle({ fontWeight: '700' })"],
+  ['src/components/common/RichTextComposer.tsx', 'range.selectNodeContents(root);'],
   ['src/components/common/RichTextComposer.tsx', 'onPaste={onPaste}'],
   ['src/utils/richText.ts', 'font-family:'],
   ['src/utils/richText.ts', 'line-height:'],

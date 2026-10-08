@@ -31,6 +31,7 @@ const isPrepared = () => checks.every(([file, marker]) => has(file, marker));
 if (!isPrepared()) {
   run('scripts/prepare-v30108.mjs');
   run('scripts/apply-v30109-product-editor-live-save.mjs');
+  run('scripts/repair-v30109-generated.mjs');
 } else {
   console.log('Source preparation already at v30.10.9; legacy editor transforms skipped.');
 }

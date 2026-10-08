@@ -37,9 +37,11 @@ if (!isPrepared()) {
 } else {
   console.log('Source preparation already at v30.10.9; legacy editor transforms skipped.');
 }
+run('scripts/repair-v30109-e2e.mjs');
 
 const missing = checks.filter(([file, marker]) => !has(file, marker));
 if (missing.length) throw new Error('v30.10.9 preparation incomplete: ' + missing.map(([file, marker]) => `${file} :: ${marker}`).join(' | '));
+if (!has('scripts/test-e2e.cjs', 'data-v30109-live-save-e2e')) throw new Error('v30.10.9 theme-aware live-save E2E marker missing.');
 
 const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
 if (pkg.version !== '30.10.9') throw new Error(`Expected package version 30.10.9, got ${pkg.version}`);

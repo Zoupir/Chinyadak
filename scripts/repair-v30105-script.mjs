@@ -17,3 +17,18 @@ if (source !== before) {
 } else {
   console.log('v30.10.5 transform template literals already safe.');
 }
+
+// Stage-5 server source uses a regex literal. Patch the semantic token directly
+// rather than relying on escaping details inside the transform's string literal.
+const serverFile = 'server.ts';
+const serverBefore = fs.readFileSync(serverFile, 'utf8');
+const serverAfter = serverBefore.replace(
+  'sitemap-(products|articles|categories|pages|brands|models)',
+  'sitemap-(static|products|articles|categories|pages|brands|models)'
+);
+if (serverAfter !== serverBefore) {
+  fs.writeFileSync(serverFile, serverAfter);
+  console.log('v30.10.5 sitemap route matcher normalized.');
+} else {
+  console.log('v30.10.5 sitemap route matcher already normalized.');
+}

@@ -21,7 +21,7 @@ const checks = [
   ['src/server/ssr-store-context.tsx', 'data-v30109-public-admin-session'],
   ['src/server/ssr-store-context.tsx', 'data-v30109-live-edit-session'],
   ['src/server/ssr-store-context.tsx', 'const persistPublicPage = async'],
-  ['src/context/StoreContext.tsx', 'data-v30109-live-edit-session'],
+  ['src/components/admin/AdminPagesTab.tsx', 'data-v30109-admin-live-edit-session'],
   ['src/components/common/RichTextEditor.css', 'v30.10.9 Quill editor']
 ];
 const isPrepared = () => checks.every(([file, marker]) => has(file, marker));

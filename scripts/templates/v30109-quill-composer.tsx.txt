@@ -1,5 +1,4 @@
 import React, { useEffect, useRef, useState } from 'react';
-import Quill from 'quill';
 import './quill-vendor.css';
 import { sanitizeRichHtml, markdownToSafeHtml, safeRichHref, safeRichSrc } from '../../utils/richText';
 import { MediaPickerModal } from './MediaPickerModal';
@@ -14,12 +13,16 @@ interface RichTextComposerProps {
 }
 
 type QuillRange = { index: number; length: number };
+type QuillConstructor = typeof import('quill').default;
+type QuillInstance = InstanceType<QuillConstructor>;
 
 const FONT_SIZES = ['12px','14px','16px','18px','20px','24px','28px','32px','40px'];
 const FONT_VALUES = ['vazirmatn','tahoma','arial','serif','monospace'];
 const COLOR_VALUES = ['#111827','#374151','#6b7280','#dc2626','#e63236','#f59e0b','#16a34a','#0284c7','#2563eb','#7c3aed','#ffffff'];
 
-const registerStyleFormats = () => {
+const registeredConstructors = new WeakSet<object>();
+
+const registerStyleFormats = (Quill: QuillConstructor) => {
   const AlignStyle = Quill.import('attributors/style/align') as any;
   const BackgroundStyle = Quill.import('attributors/style/background') as any;
   const ColorStyle = Quill.import('attributors/style/color') as any;
@@ -65,14 +68,13 @@ const registerStyleFormats = () => {
   Quill.register(VideoFileBlot, true);
 };
 
-let registered = false;
-const ensureRegistered = () => {
-  if (registered) return;
-  registerStyleFormats();
-  registered = true;
+const ensureRegistered = (Quill: QuillConstructor) => {
+  if (registeredConstructors.has(Quill as unknown as object)) return;
+  registerStyleFormats(Quill);
+  registeredConstructors.add(Quill as unknown as object);
 };
 
-const safeSemanticHtml = (quill: Quill): string => {
+const safeSemanticHtml = (quill: QuillInstance): string => {
   const length = Math.max(0, quill.getLength() - 1);
   const html = length > 0 ? quill.getSemanticHTML(0, length) : '';
   return sanitizeRichHtml(html);
@@ -81,102 +83,124 @@ const safeSemanticHtml = (quill: Quill): string => {
 export const RichTextComposer: React.FC<RichTextComposerProps> = ({ value, onChange, placeholder, rows }) => {
   const toolbarRef = useRef<HTMLDivElement>(null);
   const editorRef = useRef<HTMLDivElement>(null);
-  const quillRef = useRef<Quill | null>(null);
+  const quillRef = useRef<QuillInstance | null>(null);
   const onChangeRef = useRef(onChange);
+  const valueRef = useRef(value);
   const lastEmittedRef = useRef('');
   const savedRangeRef = useRef<QuillRange | null>(null);
   const [imagePickerOpen, setImagePickerOpen] = useState(false);
 
   onChangeRef.current = onChange;
+  valueRef.current = value;
 
   useEffect(() => {
-    ensureRegistered();
-    if (!toolbarRef.current || !editorRef.current || quillRef.current) return;
+    let disposed = false;
+    let instance: QuillInstance | null = null;
+    let rememberRange: ((range: QuillRange | null) => void) | null = null;
+    let handleTextChange: ((delta: unknown, oldDelta: unknown, source: string) => void) | null = null;
 
-    const quill = new Quill(editorRef.current, {
-      theme: 'snow',
-      placeholder,
-      formats: [
-        'header','font','size','bold','italic','underline','strike','color','background',
-        'script','blockquote','code-block','list','indent','align','direction','link','image',
-        'audioFile','videoFile'
-      ],
-      modules: {
-        toolbar: { container: toolbarRef.current },
-        history: { delay: 700, maxStack: 150, userOnly: true }
-      }
-    });
-    quillRef.current = quill;
-    quill.root.setAttribute('dir', 'rtl');
-    quill.root.setAttribute('lang', 'fa');
-    quill.root.dataset.quillStableEditor = '30.10.9';
-    quill.root.style.minHeight = `${Math.max(180, rows * 28)}px`;
+    const initialize = async () => {
+      if (!toolbarRef.current || !editorRef.current || quillRef.current) return;
+      const module = await import('quill');
+      if (disposed || !toolbarRef.current || !editorRef.current) return;
+      const Quill = module.default;
+      ensureRegistered(Quill);
 
-    const initial = markdownToSafeHtml(value || '');
-    if (initial) quill.clipboard.dangerouslyPasteHTML(0, initial, 'silent');
-    lastEmittedRef.current = safeSemanticHtml(quill);
+      const quill = new Quill(editorRef.current, {
+        theme: 'snow',
+        placeholder,
+        formats: [
+          'header','font','size','bold','italic','underline','strike','color','background',
+          'script','blockquote','code-block','list','indent','align','direction','link','image',
+          'audioFile','videoFile'
+        ],
+        modules: {
+          toolbar: { container: toolbarRef.current },
+          history: { delay: 700, maxStack: 150, userOnly: true }
+        }
+      });
+      if (disposed) return;
+      instance = quill;
+      quillRef.current = quill;
+      quill.root.setAttribute('dir', 'rtl');
+      quill.root.setAttribute('lang', 'fa');
+      quill.root.dataset.quillStableEditor = '30.10.9';
+      quill.root.style.minHeight = `${Math.max(180, rows * 28)}px`;
 
-    const rememberRange = (range: QuillRange | null) => {
-      if (range) savedRangeRef.current = { index: range.index, length: range.length };
+      const initial = markdownToSafeHtml(valueRef.current || '');
+      if (initial) quill.clipboard.dangerouslyPasteHTML(0, initial, 'silent');
+      lastEmittedRef.current = safeSemanticHtml(quill);
+
+      rememberRange = (range: QuillRange | null) => {
+        if (range) savedRangeRef.current = { index: range.index, length: range.length };
+      };
+      handleTextChange = (_delta: unknown, _oldDelta: unknown, source: string) => {
+        if (source === 'silent') return;
+        const safe = safeSemanticHtml(quill);
+        lastEmittedRef.current = safe;
+        onChangeRef.current(safe);
+      };
+      quill.on('selection-change', rememberRange as any);
+      quill.on('text-change', handleTextChange as any);
+
+      const toolbar = quill.getModule('toolbar') as any;
+      const history = quill.getModule('history') as any;
+      toolbar.addHandler('undo', () => history?.undo?.());
+      toolbar.addHandler('redo', () => history?.redo?.());
+      toolbar.addHandler('image', () => {
+        const current = quill.getSelection(true);
+        if (current) savedRangeRef.current = { index: current.index, length: current.length };
+        setImagePickerOpen(true);
+      });
+      toolbar.addHandler('link', () => {
+        const range = quill.getSelection(true) || savedRangeRef.current;
+        if (!range) return;
+        const current = range.length ? String(quill.getFormat(range).link || '') : '';
+        const href = window.prompt('آدرس لینک را وارد کنید:', current);
+        if (href === null) return;
+        quill.setSelection(range.index, range.length, 'silent');
+        if (!href.trim()) {
+          quill.format('link', false, 'user');
+          return;
+        }
+        if (!safeRichHref(href)) {
+          window.alert('آدرس لینک معتبر نیست.');
+          return;
+        }
+        quill.format('link', href.trim(), 'user');
+      });
+      toolbar.addHandler('audioFile', () => {
+        const range = quill.getSelection(true) || savedRangeRef.current || { index: Math.max(0, quill.getLength() - 1), length: 0 };
+        const src = window.prompt('آدرس فایل صوتی را وارد کنید:');
+        if (!src || !safeRichSrc(src)) return;
+        quill.insertEmbed(range.index, 'audioFile', src.trim(), 'user');
+        quill.setSelection(range.index + 1, 0, 'silent');
+      });
+      toolbar.addHandler('videoFile', () => {
+        const range = quill.getSelection(true) || savedRangeRef.current || { index: Math.max(0, quill.getLength() - 1), length: 0 };
+        const src = window.prompt('آدرس فایل ویدئویی را وارد کنید:');
+        if (!src || !safeRichSrc(src)) return;
+        quill.insertEmbed(range.index, 'videoFile', src.trim(), 'user');
+        quill.setSelection(range.index + 1, 0, 'silent');
+      });
+      toolbar.addHandler('table3x3', () => {
+        const range = quill.getSelection(true) || savedRangeRef.current || { index: Math.max(0, quill.getLength() - 1), length: 0 };
+        const table = '<table><thead><tr><th>ستون ۱</th><th>ستون ۲</th><th>ستون ۳</th></tr></thead><tbody><tr><td><br></td><td><br></td><td><br></td></tr><tr><td><br></td><td><br></td><td><br></td></tr></tbody></table><p><br></p>';
+        quill.clipboard.dangerouslyPasteHTML(range.index, table, 'user');
+      });
     };
-    quill.on('selection-change', rememberRange);
-    quill.on('text-change', (_delta, _old, source) => {
-      if (source === 'silent') return;
-      const safe = safeSemanticHtml(quill);
-      lastEmittedRef.current = safe;
-      onChangeRef.current(safe);
-    });
 
-    const toolbar = quill.getModule('toolbar') as any;
-    const history = quill.getModule('history') as any;
-    toolbar.addHandler('undo', () => history?.undo?.());
-    toolbar.addHandler('redo', () => history?.redo?.());
-    toolbar.addHandler('image', () => {
-      rememberRange(quill.getSelection(true));
-      setImagePickerOpen(true);
-    });
-    toolbar.addHandler('link', () => {
-      const range = quill.getSelection(true) || savedRangeRef.current;
-      if (!range) return;
-      const current = range.length ? String(quill.getFormat(range).link || '') : '';
-      const href = window.prompt('آدرس لینک را وارد کنید:', current);
-      if (href === null) return;
-      if (!href.trim()) {
-        quill.format('link', false, 'user');
-        return;
-      }
-      if (!safeRichHref(href)) {
-        window.alert('آدرس لینک معتبر نیست.');
-        return;
-      }
-      quill.setSelection(range.index, range.length, 'silent');
-      quill.format('link', href.trim(), 'user');
-    });
-    toolbar.addHandler('audioFile', () => {
-      const range = quill.getSelection(true) || savedRangeRef.current || { index: Math.max(0, quill.getLength() - 1), length: 0 };
-      const src = window.prompt('آدرس فایل صوتی را وارد کنید:');
-      if (!src || !safeRichSrc(src)) return;
-      quill.insertEmbed(range.index, 'audioFile', src.trim(), 'user');
-      quill.setSelection(range.index + 1, 0, 'silent');
-    });
-    toolbar.addHandler('videoFile', () => {
-      const range = quill.getSelection(true) || savedRangeRef.current || { index: Math.max(0, quill.getLength() - 1), length: 0 };
-      const src = window.prompt('آدرس فایل ویدئویی را وارد کنید:');
-      if (!src || !safeRichSrc(src)) return;
-      quill.insertEmbed(range.index, 'videoFile', src.trim(), 'user');
-      quill.setSelection(range.index + 1, 0, 'silent');
-    });
-    toolbar.addHandler('table3x3', () => {
-      const range = quill.getSelection(true) || savedRangeRef.current || { index: Math.max(0, quill.getLength() - 1), length: 0 };
-      const table = '<table><thead><tr><th>ستون ۱</th><th>ستون ۲</th><th>ستون ۳</th></tr></thead><tbody><tr><td><br></td><td><br></td><td><br></td></tr><tr><td><br></td><td><br></td><td><br></td></tr></tbody></table><p><br></p>';
-      quill.clipboard.dangerouslyPasteHTML(range.index, table, 'user');
+    void initialize().catch(error => {
+      console.error('Quill editor initialization failed:', error);
     });
 
     return () => {
-      quill.off('selection-change', rememberRange);
-      quillRef.current = null;
+      disposed = true;
+      if (instance && rememberRange) instance.off('selection-change', rememberRange as any);
+      if (instance && handleTextChange) instance.off('text-change', handleTextChange as any);
+      if (quillRef.current === instance) quillRef.current = null;
     };
-  }, []);
+  }, [placeholder, rows]);
 
   useEffect(() => {
     const quill = quillRef.current;

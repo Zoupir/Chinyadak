@@ -24,14 +24,21 @@ edit('src/components/cart/CheckoutView.tsx', source => {
 });
 
 edit('src/components/product/ProductDetailView.tsx', source => {
-  // Later historical product-detail repairs can reintroduce the old fixed-sale
-  // fallback. The purchase box must use the same effective price as cart/order.
+  // Later historical product-detail repairs can reintroduce fixed-sale fallbacks.
+  // Every product rendered here (main product, complements, mobile bar) must use
+  // the same canonical pricing resolver as cart and order creation.
   if (!source.includes("from '../../utils/pricing'")) {
     source = source.replace(
       "import { checkProductFitment, formatToman, getGradeInfo } from '../../utils/formatters';",
-      "import { checkProductFitment, formatToman, getGradeInfo } from '../../utils/formatters';\nimport { getProductDiscountInfo } from '../../utils/pricing';"
+      "import { checkProductFitment, formatToman, getGradeInfo } from '../../utils/formatters';\nimport { getEffectiveProductPrice, getProductDiscountInfo } from '../../utils/pricing';"
+    );
+  } else {
+    source = source.replace(
+      "import { getProductDiscountInfo } from '../../utils/pricing';",
+      "import { getEffectiveProductPrice, getProductDiscountInfo } from '../../utils/pricing';"
     );
   }
+
   source = source.replace(
     '  const hasDiscount = product.discountPrice && product.discountPrice < product.price;',
     '  const discount = getProductDiscountInfo(product);\n  const hasDiscount = discount.active;\n  const effectivePrice = discount.effectivePrice;'
@@ -42,10 +49,20 @@ edit('src/components/product/ProductDetailView.tsx', source => {
       '  const discount = getProductDiscountInfo(product);\n  const effectivePrice = discount.effectivePrice;'
     );
   }
-  source = source.replace(/Number\(product\.discountPrice \|\| product\.price\)/g, 'Number(effectivePrice)');
-  source = source.replace(/formatToman\(product\.discountPrice \|\| product\.price\)/g, 'formatToman(effectivePrice)');
-  if (/product\.discountPrice\s*\|\|\s*product\.price/.test(source)) {
-    throw new Error('v30.10.1 product detail still bypasses effectivePrice');
+
+  // Main product can use the already-computed value.
+  source = source.replace(/Number\(product\.discountPrice\s*\|\|\s*product\.price\)/g, 'Number(effectivePrice)');
+  source = source.replace(/formatToman\(product\.discountPrice\s*\|\|\s*product\.price\)/g, 'formatToman(effectivePrice)');
+
+  // Complement/cross-sell or future local product aliases must never bypass the
+  // canonical resolver either.
+  source = source.replace(
+    /([A-Za-z_$][\w$]*)\.discountPrice\s*\|\|\s*\1\.price/g,
+    (_match, variable) => `getEffectiveProductPrice(${variable})`
+  );
+
+  if (/discountPrice\s*\|\|\s*[^;\n)]+/.test(source)) {
+    throw new Error('v30.10.1 ProductDetailView still contains a direct legacy price fallback');
   }
   return source;
 });

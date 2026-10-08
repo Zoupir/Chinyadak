@@ -50,7 +50,7 @@
     "tsx": "^4.21.0",
     "soap": "^1.6.0",
     "multer": "^2.4.0",
-    "sharp": "^0.34.4"
+    "sharp": "^0.35.5"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",

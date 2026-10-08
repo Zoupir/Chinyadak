@@ -14,10 +14,11 @@ const has = (file, marker) => {
 
 run('scripts/prepare-v30102.mjs');
 run('scripts/run-v30103-cms-editor.mjs');
+run('scripts/repair-v30103-generated-source.mjs');
 
 const checks = [
   ['src/types/index.ts', 'cmsRevision?: number;'],
-  ['src/context/StoreContext.tsx', 'discardSectionPreview'],
+  ['src/context/StoreContext.tsx', 'const discardSectionPreview ='],
   ['src/context/StoreContext.tsx', 'const addProduct = async'],
   ['src/context/StoreContext.tsx', 'const updateArticle = async'],
   ['src/context/StoreContext.tsx', 'const updatePage = (updatedPage: SitePage): Promise<boolean>'],
@@ -27,8 +28,8 @@ const checks = [
   ['src/components/common/LiveSectionModal.tsx', 'useDialogFocusTrap'],
   ['src/components/admin/AdminPagesTab.tsx', 'handleDropSection'],
   ['src/components/admin/AdminPagesTab.tsx', '<LiveSectionModal'],
-  ['src/components/admin/AdminArticlesTab.tsx', 'isArticleSaving'],
-  ['src/components/admin/AdminView.tsx', 'isProductSaving'],
+  ['src/components/admin/AdminArticlesTab.tsx', 'closeArticleEditor'],
+  ['src/components/admin/AdminView.tsx', 'closeProductEditor'],
   ['src/hooks/useEditorGuard.ts', 'useUnsavedChangesGuard']
 ];
 

@@ -51,6 +51,10 @@ const v3070Checks = [
   ['src/components/product/ProductDetailView.tsx', 'const gradeInfo = getGradeInfo(product.grade);']
 ];
 
+const v3071Checks = [
+  ['src/components/common/RichTextComposer.tsx', 'data-rich-direct-upload="1"']
+];
+
 const hasChecks = checks => checks.every(([path, marker]) => {
   try { return fs.readFileSync(path, 'utf8').includes(marker); }
   catch { return false; }
@@ -62,11 +66,12 @@ const run = script => {
   if (result.status !== 0) process.exit(result.status || 1);
 };
 
-if (hasChecks(v3052Checks) && hasChecks(v3053Checks) && hasChecks(v3060Checks) && hasChecks(v3070Checks)) {
+if (hasChecks(v3052Checks) && hasChecks(v3053Checks) && hasChecks(v3060Checks) && hasChecks(v3070Checks) && hasChecks(v3071Checks)) {
   run('scripts/repair-v3052-footer.mjs');
   run('scripts/repair-v3060-admin.mjs');
   run('scripts/repair-v3070-product-detail.mjs');
-  console.log('Source preparation already at v30.7.0; verified.');
+  run('scripts/repair-v3071-rich-media-upload-ui.mjs');
+  console.log('Source preparation already at v30.7.1; verified.');
   process.exit(0);
 }
 
@@ -100,4 +105,7 @@ if (!hasChecks(v3070Checks)) {
   run('scripts/repair-v3070-product-detail.mjs');
 }
 if (!hasChecks(v3070Checks)) throw new Error('Source preparation did not reach v30.7.0 commerce/CMS markers.');
-console.log('Source preparation completed at v30.7.0.');
+
+run('scripts/repair-v3071-rich-media-upload-ui.mjs');
+if (!hasChecks(v3071Checks)) throw new Error('Source preparation did not reach v30.7.1 rich-media upload UI marker.');
+console.log('Source preparation completed at v30.7.1.');

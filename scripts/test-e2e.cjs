@@ -93,11 +93,42 @@ const assertNoHorizontalOverflow = async (page, label) => {
     await page.setViewportSize({ width: 360, height: 800 });
     await assertNoHorizontalOverflow(page, '360px home');
 
+    const adminPassword = String(process.env.ADMIN_BOOTSTRAP_PASSWORD || '');
+    if (adminPassword) {
+      const adminUser = String(process.env.ADMIN_BOOTSTRAP_USER || 'admin');
+      const login = await context.request.post(base + '/api/auth/admin/login', {
+        data: { username: adminUser, password: adminPassword },
+        headers: { origin: base, 'sec-fetch-site': 'same-origin' }
+      });
+      assert.equal(login.status(), 200, `Admin E2E login failed: ${login.status()} ${await login.text()}`);
+
+      await page.setViewportSize({ width: 1280, height: 900 });
+      await page.goto(base + `/admin/product-edit/${encodeURIComponent(product.id)}`, { waitUntil: 'domcontentloaded' });
+      const productEditor = page.locator('[data-product-editor-page="1"]');
+      await productEditor.waitFor({ state: 'visible', timeout: 15000 });
+      assert.equal(await page.locator('[data-product-editor-loading="1"]').count(), 0, 'Standalone product editor remained on loading/error shell.');
+
+      const stableEditor = page.locator('[data-stable-rich-editor="30.10.8"]').first();
+      await stableEditor.waitFor({ state: 'visible', timeout: 10000 });
+      const surface = stableEditor.locator('.stable-rich-editor__surface');
+      await surface.click();
+      await surface.fill('متن آزمایشی ویرایشگر');
+      await page.keyboard.press('Control+A');
+      await stableEditor.getByRole('button', { name: 'پررنگ' }).click();
+      const color = stableEditor.locator('input[type="color"]').first();
+      await color.fill('#d11a2a');
+      const editorHtml = await surface.evaluate(node => node.innerHTML);
+      assert.match(editorHtml, /(font-weight|<b\b|<strong\b)/i, 'Replacement editor did not apply bold formatting.');
+      assert.match(editorHtml, /(color\s*:|color=)/i, 'Replacement editor did not apply text color.');
+      assert.ok(await stableEditor.getByRole('button', { name: 'راست‌چین' }).count(), 'Replacement editor alignment toolbar missing.');
+      assert.ok(await stableEditor.getByLabel('اندازه متن').count(), 'Replacement editor font-size control missing.');
+    }
+
     if (pageErrors.length) {
       throw new Error('Browser page errors: ' + pageErrors.map(error => error.stack || error.message || String(error)).join('\n---\n'));
     }
 
-    console.log('Stage 8 real browser E2E passed: SSR/hydration, keyboard search, product/category/article routes, RTL responsiveness and mobile menu Escape behavior.');
+    console.log('Real browser E2E passed: storefront routes, responsive menus, standalone product editor and stable rich-text formatting.');
   } finally {
     await context.close();
     await browser.close();

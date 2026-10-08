@@ -30,9 +30,15 @@ const run = async () => {
   assert.match(sanitized, /<strong>متن تست وسط‌چین<\/strong>/, 'Inline formatting was lost during sanitization.');
 
   const composerSource = fs.readFileSync('src/components/common/RichTextComposer.tsx', 'utf8');
-  assert.match(composerSource, /data-rich-composer-version="30\.9\.1"/, 'Stable editor toolbar patch is missing.');
-  assert.match(composerSource, /onPointerDown=\{event => \{[\s\S]*onClick\(\)/, 'Toolbar does not execute on first pointer press.');
-  assert.match(composerSource, /internalEmissionRef\.current === incomingHtml/, 'Controlled editor echo guard is missing.');
+  if (/data-stable-rich-editor="30\.10\.8"/.test(composerSource)) {
+    assert.match(composerSource, /savedRangeRef/, 'Replacement editor does not preserve the browser selection.');
+    assert.match(composerSource, /document\.execCommand\('styleWithCSS'/, 'Replacement editor does not use CSS-backed formatting.');
+    assert.match(composerSource, /onPaste=\{onPaste\}/, 'Replacement editor does not sanitize pasted content.');
+  } else {
+    assert.match(composerSource, /data-rich-composer-version="30\.9\.1"/, 'Stable editor toolbar patch is missing.');
+    assert.match(composerSource, /onPointerDown=\{event => \{[\s\S]*onClick\(\)/, 'Toolbar does not execute on first pointer press.');
+    assert.match(composerSource, /internalEmissionRef\.current === incomingHtml/, 'Controlled editor echo guard is missing.');
+  }
 
   const pageSource = fs.readFileSync('src/components/page/PageView.tsx', 'utf8');
   assert.match(pageSource, /<RichTextContent content=\{section\.content\}/, 'CMS page section still escapes rich editor HTML.');
@@ -96,7 +102,7 @@ const run = async () => {
     body: JSON.stringify({ footerCopyrightText: oldCopyright })
   });
 
-  console.log('v30.9.1 rich editor persistence/rendering regression passed.');
+  console.log('Rich editor persistence/rendering regression passed for legacy or replacement editor.');
 };
 
 run().catch(error => {

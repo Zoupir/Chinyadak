@@ -5,7 +5,8 @@ import { execFileSync } from 'node:child_process';
 const fail = message => { throw new Error(`release audit: ${message}`); };
 const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
 
-if (pkg.version !== '30.10.7') fail(`expected 30.10.7, got ${pkg.version}`);
+const versionMatch = String(pkg.version || '').match(/^30\.10\.(\d+)$/);
+if (!versionMatch || Number(versionMatch[1]) < 7) fail(`expected 30.10.7+, got ${pkg.version}`);
 if (pkg.devDependencies?.autoprefixer) fail('unused autoprefixer dependency remains');
 if (!/^\^?2\.4\./.test(String(pkg.dependencies?.multer || ''))) fail('multer is not on the 2.4.x release line');
 if (!/^\^?0\.35\.5/.test(String(pkg.dependencies?.sharp || ''))) fail('sharp is not on the patched 0.35.5+ release line');
@@ -32,6 +33,14 @@ const sourceContracts = [
 for (const [file, marker] of sourceContracts) {
   const text = fs.readFileSync(file, 'utf8');
   if (!text.includes(marker)) fail(`${file} lost contract ${marker}`);
+}
+
+if (Number(versionMatch[1]) >= 8) {
+  const composer = fs.readFileSync('src/components/common/RichTextComposer.tsx', 'utf8');
+  const admin = fs.readFileSync('src/components/admin/AdminView.tsx', 'utf8');
+  if (!composer.includes('data-stable-rich-editor="30.10.8"')) fail('30.10.8 replacement WYSIWYG is missing');
+  if (composer.includes('@tiptap/')) fail('Tiptap leaked back into the replacement editor');
+  if (!admin.includes('data-v30108-product-loader')) fail('standalone product direct loader is missing');
 }
 
 if (fs.existsSync('dist/assets')) {

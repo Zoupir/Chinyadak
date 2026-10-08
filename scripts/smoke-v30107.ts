@@ -7,8 +7,8 @@ import { pool } from '../src/server/db';
 const base = String(process.env.TEST_BASE_URL || 'http://127.0.0.1:3000').replace(/\/$/, '');
 const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
 
-assert.equal(pkg.version, '30.10.7');
-assert.equal(pkg.scripts?.['prepare:source'], 'node scripts/prepare-v30107.mjs');
+assert.match(String(pkg.version || ''), /^30\.10\.(?:[7-9]|[1-9]\d+)$/);
+assert.match(String(pkg.scripts?.['prepare:source'] || ''), /^node scripts\/prepare-v3010[7-9]\.mjs$/);
 assert.equal(pkg.devDependencies?.autoprefixer, undefined);
 assert.match(String(pkg.dependencies?.multer || ''), /2\.4/);
 assert.match(String(pkg.overrides?.protobufjs || ''), /7\.6\.5/);
@@ -70,7 +70,7 @@ const run = async () => {
   assert.match(cache, /max-age=31536000/);
   assert.match(cache, /immutable/);
 
-  console.log('v30.10.7 stage 8 final release smoke passed.');
+  console.log(`v${pkg.version} cumulative release smoke passed.`);
 };
 
 run().catch(error => {

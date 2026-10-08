@@ -64,4 +64,18 @@ edit('src/server/routes/catalog.ts', source => {
   return source;
 });
 
+edit('src/server/routes/vehicles.ts', source => {
+  if (!source.includes('type DbExecutor')) {
+    source = source.replace(
+      "  type CanonicalModelRow\n} from '../data-integrity';",
+      "  type CanonicalModelRow,\n  type DbExecutor\n} from '../data-integrity';"
+    );
+  }
+  source = source.replace(
+    'const ensureActiveBrand = async (brandId: string, tx = pool): Promise<boolean> => {',
+    'const ensureActiveBrand = async (brandId: string, tx: DbExecutor = pool): Promise<boolean> => {'
+  );
+  return source;
+});
+
 console.log('v30.10.2 data-integrity wiring:', changed.length ? changed.join(', ') : 'already satisfied');

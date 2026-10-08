@@ -46,10 +46,15 @@ const run = async () => {
   const uploadForm = new FormData();
   uploadForm.append('image', new Blob([Uint8Array.from(png)], { type: 'image/png' }), 'عکس استعلام تست ۱۴۰۵.png');
   const uploadResponse = await request('/api/engagement/part-request-image', { method: 'POST', body: uploadForm }, 201);
-  const upload = await uploadResponse.json() as { url: string; originalName: string };
-  assert(upload.url.startsWith('/uploads/part-requests/'), 'Part-request image was not stored in its isolated folder.');
+  const upload = await uploadResponse.json() as { url: string; originalName: string; private?: boolean };
+  assert(upload.url.startsWith('/api/engagement/part-request-files/'), 'Part-request image was not moved behind the private attachment endpoint.');
+  assert.equal(upload.private, true, 'Part-request upload did not declare private storage.');
   assert.equal(upload.originalName, 'عکس استعلام تست ۱۴۰۵.png', 'Persian request image name was corrupted.');
-  await request(upload.url);
+
+  const anonymousAttachment = await fetch(base + upload.url);
+  assert.ok([401, 403].includes(anonymousAttachment.status), 'Private inquiry attachment was readable without admin authentication.');
+  const protectedAttachment = await request(upload.url, { headers: { Cookie: adminCookie } }, 200);
+  assert.equal(protectedAttachment.headers.get('cache-control'), 'private, no-store', 'Private inquiry attachment is cacheable by shared caches.');
 
   const suffix = String(Date.now()).slice(-7);
   const phone = `0912${suffix}`.slice(0, 11);
@@ -70,16 +75,16 @@ const run = async () => {
     })
   }, 201);
   assert(submitted.data.request.id, 'Part request insert returned no id.');
-  assert.equal(submitted.data.request.imageUrl, upload.url, 'Part request did not retain uploaded image URL.');
+  assert.equal(submitted.data.request.imageUrl, upload.url, 'Part request did not retain private uploaded image URL.');
 
   const adminData = await json<{ partRequests: any[] }>('/api/engagement/admin', {
     headers: { Cookie: adminCookie }
   });
   const visible = adminData.data.partRequests.find(item => item.id === submitted.data.request.id);
   assert(visible, 'New public part request is not visible to admin API.');
-  assert.equal(visible.imageUrl, upload.url, 'Admin API did not return the request attachment.');
+  assert.equal(visible.imageUrl, upload.url, 'Admin API did not return the private request attachment URL.');
 
-  console.log('v30.8.2 regression smoke passed.');
+  console.log('v30.8.2 regression smoke passed with private attachment storage.');
 };
 
 run().catch(error => {

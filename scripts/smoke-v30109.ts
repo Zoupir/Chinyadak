@@ -26,6 +26,7 @@ const publicStore = source('src/server/ssr-store-context.tsx');
 assert.match(publicStore, /data-v30109-public-admin-session/);
 assert.match(publicStore, /data-v30109-live-edit-session/);
 assert.match(publicStore, /chinpart_live_edit_active/);
+assert.match(publicStore, /if \(next !== previous\)/, 'Live-edit hydration guard is missing.');
 assert.match(publicStore, /fetch\('\/api\/auth\/me'/);
 assert.match(publicStore, /const persistPublicPage = async/);
 assert.match(publicStore, /updateSection,/);

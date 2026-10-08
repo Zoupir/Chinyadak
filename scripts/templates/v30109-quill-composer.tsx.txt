@@ -1,0 +1,272 @@
+import React, { useEffect, useRef, useState } from 'react';
+import Quill from 'quill';
+import 'quill/dist/quill.snow.css';
+import { sanitizeRichHtml, markdownToSafeHtml, safeRichHref, safeRichSrc } from '../../utils/richText';
+import { MediaPickerModal } from './MediaPickerModal';
+import './RichTextEditor.css';
+import './RichTextEditorEnhancements.css';
+
+interface RichTextComposerProps {
+  value: string;
+  onChange: (val: string) => void;
+  placeholder: string;
+  rows: number;
+}
+
+type QuillRange = { index: number; length: number };
+
+const FONT_SIZES = ['12px','14px','16px','18px','20px','24px','28px','32px','40px'];
+const FONT_VALUES = ['vazirmatn','tahoma','arial','serif','monospace'];
+const COLOR_VALUES = ['#111827','#374151','#6b7280','#dc2626','#e63236','#f59e0b','#16a34a','#0284c7','#2563eb','#7c3aed','#ffffff'];
+
+const registerStyleFormats = () => {
+  const AlignStyle = Quill.import('attributors/style/align') as any;
+  const BackgroundStyle = Quill.import('attributors/style/background') as any;
+  const ColorStyle = Quill.import('attributors/style/color') as any;
+  const DirectionStyle = Quill.import('attributors/style/direction') as any;
+  const FontStyle = Quill.import('attributors/style/font') as any;
+  const SizeStyle = Quill.import('attributors/style/size') as any;
+  FontStyle.whitelist = FONT_VALUES;
+  SizeStyle.whitelist = FONT_SIZES;
+  Quill.register(AlignStyle, true);
+  Quill.register(BackgroundStyle, true);
+  Quill.register(ColorStyle, true);
+  Quill.register(DirectionStyle, true);
+  Quill.register(FontStyle, true);
+  Quill.register(SizeStyle, true);
+
+  const BlockEmbed = Quill.import('blots/block/embed') as any;
+  class AudioFileBlot extends BlockEmbed {
+    static blotName = 'audioFile';
+    static tagName = 'audio';
+    static create(value: string) {
+      const node = super.create() as HTMLElement;
+      node.setAttribute('src', value);
+      node.setAttribute('controls', '');
+      node.setAttribute('preload', 'metadata');
+      return node;
+    }
+    static value(node: HTMLElement) { return node.getAttribute('src') || ''; }
+  }
+  class VideoFileBlot extends BlockEmbed {
+    static blotName = 'videoFile';
+    static tagName = 'video';
+    static create(value: string) {
+      const node = super.create() as HTMLElement;
+      node.setAttribute('src', value);
+      node.setAttribute('controls', '');
+      node.setAttribute('preload', 'metadata');
+      node.setAttribute('playsinline', '');
+      return node;
+    }
+    static value(node: HTMLElement) { return node.getAttribute('src') || ''; }
+  }
+  Quill.register(AudioFileBlot, true);
+  Quill.register(VideoFileBlot, true);
+};
+
+let registered = false;
+const ensureRegistered = () => {
+  if (registered) return;
+  registerStyleFormats();
+  registered = true;
+};
+
+const safeSemanticHtml = (quill: Quill): string => {
+  const length = Math.max(0, quill.getLength() - 1);
+  const html = length > 0 ? quill.getSemanticHTML(0, length) : '';
+  return sanitizeRichHtml(html);
+};
+
+export const RichTextComposer: React.FC<RichTextComposerProps> = ({ value, onChange, placeholder, rows }) => {
+  const toolbarRef = useRef<HTMLDivElement>(null);
+  const editorRef = useRef<HTMLDivElement>(null);
+  const quillRef = useRef<Quill | null>(null);
+  const onChangeRef = useRef(onChange);
+  const lastEmittedRef = useRef('');
+  const savedRangeRef = useRef<QuillRange | null>(null);
+  const [imagePickerOpen, setImagePickerOpen] = useState(false);
+
+  onChangeRef.current = onChange;
+
+  useEffect(() => {
+    ensureRegistered();
+    if (!toolbarRef.current || !editorRef.current || quillRef.current) return;
+
+    const quill = new Quill(editorRef.current, {
+      theme: 'snow',
+      placeholder,
+      formats: [
+        'header','font','size','bold','italic','underline','strike','color','background',
+        'script','blockquote','code-block','list','indent','align','direction','link','image',
+        'audioFile','videoFile'
+      ],
+      modules: {
+        toolbar: { container: toolbarRef.current },
+        history: { delay: 700, maxStack: 150, userOnly: true }
+      }
+    });
+    quillRef.current = quill;
+    quill.root.setAttribute('dir', 'rtl');
+    quill.root.setAttribute('lang', 'fa');
+    quill.root.dataset.quillStableEditor = '30.10.9';
+    quill.root.style.minHeight = `${Math.max(180, rows * 28)}px`;
+
+    const initial = markdownToSafeHtml(value || '');
+    if (initial) quill.clipboard.dangerouslyPasteHTML(0, initial, 'silent');
+    lastEmittedRef.current = safeSemanticHtml(quill);
+
+    const rememberRange = (range: QuillRange | null) => {
+      if (range) savedRangeRef.current = { index: range.index, length: range.length };
+    };
+    quill.on('selection-change', rememberRange);
+    quill.on('text-change', (_delta, _old, source) => {
+      if (source === 'silent') return;
+      const safe = safeSemanticHtml(quill);
+      lastEmittedRef.current = safe;
+      onChangeRef.current(safe);
+    });
+
+    const toolbar = quill.getModule('toolbar') as any;
+    toolbar.addHandler('undo', () => quill.history.undo());
+    toolbar.addHandler('redo', () => quill.history.redo());
+    toolbar.addHandler('image', () => {
+      rememberRange(quill.getSelection(true));
+      setImagePickerOpen(true);
+    });
+    toolbar.addHandler('link', () => {
+      const range = quill.getSelection(true) || savedRangeRef.current;
+      if (!range) return;
+      const current = range.length ? String(quill.getFormat(range).link || '') : '';
+      const href = window.prompt('آدرس لینک را وارد کنید:', current);
+      if (href === null) return;
+      if (!href.trim()) {
+        quill.format('link', false, 'user');
+        return;
+      }
+      if (!safeRichHref(href)) {
+        window.alert('آدرس لینک معتبر نیست.');
+        return;
+      }
+      quill.setSelection(range.index, range.length, 'silent');
+      quill.format('link', href.trim(), 'user');
+    });
+    toolbar.addHandler('audioFile', () => {
+      const range = quill.getSelection(true) || savedRangeRef.current || { index: Math.max(0, quill.getLength() - 1), length: 0 };
+      const src = window.prompt('آدرس فایل صوتی را وارد کنید:');
+      if (!src || !safeRichSrc(src)) return;
+      quill.insertEmbed(range.index, 'audioFile', src.trim(), 'user');
+      quill.setSelection(range.index + 1, 0, 'silent');
+    });
+    toolbar.addHandler('videoFile', () => {
+      const range = quill.getSelection(true) || savedRangeRef.current || { index: Math.max(0, quill.getLength() - 1), length: 0 };
+      const src = window.prompt('آدرس فایل ویدئویی را وارد کنید:');
+      if (!src || !safeRichSrc(src)) return;
+      quill.insertEmbed(range.index, 'videoFile', src.trim(), 'user');
+      quill.setSelection(range.index + 1, 0, 'silent');
+    });
+    toolbar.addHandler('table3x3', () => {
+      const range = quill.getSelection(true) || savedRangeRef.current || { index: Math.max(0, quill.getLength() - 1), length: 0 };
+      const table = '<table><thead><tr><th>ستون ۱</th><th>ستون ۲</th><th>ستون ۳</th></tr></thead><tbody><tr><td><br></td><td><br></td><td><br></td></tr><tr><td><br></td><td><br></td><td><br></td></tr></tbody></table><p><br></p>';
+      quill.clipboard.dangerouslyPasteHTML(range.index, table, 'user');
+    });
+
+    return () => {
+      quill.off('selection-change', rememberRange);
+      quillRef.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
+    const quill = quillRef.current;
+    if (!quill) return;
+    const incoming = markdownToSafeHtml(value || '');
+    if (incoming === lastEmittedRef.current) return;
+    const current = safeSemanticHtml(quill);
+    if (incoming === current) {
+      lastEmittedRef.current = incoming;
+      return;
+    }
+    const range = quill.getSelection();
+    quill.setContents([], 'silent');
+    if (incoming) quill.clipboard.dangerouslyPasteHTML(0, incoming, 'silent');
+    lastEmittedRef.current = safeSemanticHtml(quill);
+    if (range) {
+      const max = Math.max(0, quill.getLength() - 1);
+      quill.setSelection(Math.min(range.index, max), Math.min(range.length, Math.max(0, max - range.index)), 'silent');
+    }
+  }, [value]);
+
+  const insertImage = (url: string, item?: { seo?: { alt?: string; title?: string } }) => {
+    const quill = quillRef.current;
+    if (!quill || !safeRichSrc(url)) return;
+    const range = savedRangeRef.current || quill.getSelection(true) || { index: Math.max(0, quill.getLength() - 1), length: 0 };
+    quill.insertEmbed(range.index, 'image', url, 'user');
+    window.requestAnimationFrame(() => {
+      const images = Array.from(quill.root.querySelectorAll<HTMLImageElement>(`img[src="${CSS.escape(url)}"]`));
+      const image = images[images.length - 1];
+      if (image) {
+        if (item?.seo?.alt) image.alt = item.seo.alt;
+        if (item?.seo?.title) image.title = item.seo.title;
+      }
+      quill.setSelection(range.index + 1, 0, 'silent');
+      const safe = safeSemanticHtml(quill);
+      lastEmittedRef.current = safe;
+      onChangeRef.current(safe);
+    });
+    setImagePickerOpen(false);
+  };
+
+  return (
+    <div className="quill-rich-editor" data-quill-rich-editor="30.10.9" dir="rtl">
+      <div ref={toolbarRef} className="quill-rich-toolbar" role="toolbar" aria-label="ابزارهای ویرایش متن">
+        <span className="ql-formats">
+          <button className="ql-undo" type="button" aria-label="واگرد">↶</button>
+          <button className="ql-redo" type="button" aria-label="ازنو">↷</button>
+        </span>
+        <span className="ql-formats">
+          <select className="ql-header" defaultValue="" aria-label="نوع متن">
+            <option value="">پاراگراف</option><option value="2">تیتر ۲</option><option value="3">تیتر ۳</option><option value="4">تیتر ۴</option>
+          </select>
+          <select className="ql-font" defaultValue="vazirmatn" aria-label="فونت">
+            <option value="vazirmatn">وزیرمتن</option><option value="tahoma">Tahoma</option><option value="arial">Arial</option><option value="serif">Serif</option><option value="monospace">Monospace</option>
+          </select>
+          <select className="ql-size" defaultValue="16px" aria-label="اندازه متن">
+            {FONT_SIZES.map(size => <option key={size} value={size}>{size.replace('px','')}</option>)}
+          </select>
+        </span>
+        <span className="ql-formats">
+          <button className="ql-bold" type="button" aria-label="پررنگ" />
+          <button className="ql-italic" type="button" aria-label="کج" />
+          <button className="ql-underline" type="button" aria-label="زیرخط" />
+          <button className="ql-strike" type="button" aria-label="خط‌خورده" />
+        </span>
+        <span className="ql-formats">
+          <select className="ql-color" aria-label="رنگ متن">{COLOR_VALUES.map(color => <option key={color} value={color} />)}</select>
+          <select className="ql-background" aria-label="رنگ پس‌زمینه متن"><option value="" />{COLOR_VALUES.map(color => <option key={color} value={color} />)}</select>
+        </span>
+        <span className="ql-formats">
+          <select className="ql-align" defaultValue="right" aria-label="تراز متن">
+            <option value="right">راست</option><option value="center">وسط</option><option value="left">چپ</option><option value="justify">دوطرفه</option>
+          </select>
+          <button className="ql-direction" value="rtl" type="button" aria-label="راست‌به‌چپ" />
+        </span>
+        <span className="ql-formats">
+          <button className="ql-list" value="ordered" type="button" aria-label="لیست شماره‌دار" />
+          <button className="ql-list" value="bullet" type="button" aria-label="لیست نشانه‌دار" />
+          <button className="ql-blockquote" type="button" aria-label="نقل قول" />
+          <button className="ql-clean" type="button" aria-label="پاک کردن استایل" />
+        </span>
+        <span className="ql-formats">
+          <button className="ql-link" type="button" aria-label="لینک" />
+          <button className="ql-image" type="button" aria-label="تصویر" />
+          <button className="ql-audioFile" type="button" aria-label="صوت">A</button>
+          <button className="ql-videoFile" type="button" aria-label="ویدئو">V</button>
+          <button className="ql-table3x3" type="button" aria-label="جدول ۳ در ۳">▦</button>
+        </span>
+      </div>
+      <div ref={editorRef} className="quill-rich-surface" />
+      <MediaPickerModal isOpen={imagePickerOpen} onClose={() => setImagePickerOpen(false)} onSelect={insertImage} title="درج تصویر در متن" />
+    </div>
+  );
+};

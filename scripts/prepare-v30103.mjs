@@ -13,7 +13,7 @@ const has = (file, marker) => {
 };
 
 run('scripts/prepare-v30102.mjs');
-run('scripts/apply-v30103-cms-editor.mjs');
+run('scripts/run-v30103-cms-editor.mjs');
 
 const checks = [
   ['src/types/index.ts', 'cmsRevision?: number;'],

@@ -78,4 +78,12 @@ edit('src/server/routes/vehicles.ts', source => {
   return source;
 });
 
+edit('scripts/smoke-test.ts', source => {
+  source = source.replace(
+    '  const selection = catalog.data.products.slice(0, 2).map(item => item.id);',
+    `  const stage3ReferencedProductIds = new Set(catalog.data.products.flatMap((item: any) => [\n    ...(Array.isArray(item.complementPartIds) ? item.complementPartIds : []),\n    ...(Array.isArray(item.relatedPartIds) ? item.relatedPartIds : [])\n  ].map(String)));\n  const selection = catalog.data.products.filter(item => !stage3ReferencedProductIds.has(String(item.id))).slice(0, 2).map(item => item.id);\n  assert.equal(selection.length, 2, 'Bulk smoke needs two products that are not referenced by other active products.');`
+  );
+  return source;
+});
+
 console.log('v30.10.2 data-integrity wiring:', changed.length ? changed.join(', ') : 'already satisfied');

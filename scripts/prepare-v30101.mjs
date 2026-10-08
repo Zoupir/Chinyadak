@@ -7,8 +7,22 @@ const run = script => {
   if (result.status !== 0) process.exit(result.status || 1);
 };
 
+const has = (file, marker) => {
+  try { return fs.readFileSync(file, 'utf8').includes(marker); }
+  catch { return false; }
+};
+
 run('scripts/prepare-v30100.mjs');
-run('scripts/apply-v30101-commerce-consistency.mjs');
+
+const stage2AlreadyApplied =
+  has('src/components/cart/CheckoutView.tsx', "'/api/orders/checkout-options'") &&
+  has('src/server/routes/orders.ts', "ordersRouter.get('/checkout-options'") &&
+  has('src/server/routes/orders.ts', 'reserveOrderInventory(connection, orderId, { persistent: true })') &&
+  has('db/schema.sql', 'inventory_state VARCHAR(20)') &&
+  has('scripts/init-db.ts', "ensureColumn('orders', 'inventory_state'");
+
+if (!stage2AlreadyApplied) run('scripts/apply-v30101-commerce-consistency.mjs');
+else console.log('v30.10.1 commerce consistency already satisfied; skipped destructive transforms.');
 run('scripts/repair-v30101-generated-source.mjs');
 
 const checks = [
@@ -25,11 +39,7 @@ const checks = [
   ['scripts/init-db.ts', "ensureColumn('orders', 'inventory_state'"]
 ];
 
-const missing = checks.filter(([file, marker]) => {
-  try { return !fs.readFileSync(file, 'utf8').includes(marker); }
-  catch { return true; }
-});
-
+const missing = checks.filter(([file, marker]) => !has(file, marker));
 if (missing.length) {
   throw new Error('v30.10.1 preparation incomplete: ' + missing.map(([file, marker]) => `${file} :: ${marker}`).join(' | '));
 }

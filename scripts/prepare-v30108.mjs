@@ -15,6 +15,7 @@ run('scripts/prepare-v30107.mjs');
 run('scripts/repair-v30108-hotfix-transform.mjs');
 run('scripts/repair-v30108-wysiwyg-template.mjs');
 run('scripts/repair-v30108-selectall.mjs');
+run('scripts/repair-v30108-fragment-styles.mjs');
 run('scripts/apply-v30108-editor-hotfix.mjs');
 
 const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
@@ -26,6 +27,8 @@ const checks = [
   ['src/components/common/RichTextComposer.tsx', 'const applyInlineStyle ='],
   ['src/components/common/RichTextComposer.tsx', "applyInlineStyle({ fontWeight: '700' })"],
   ['src/components/common/RichTextComposer.tsx', 'range.selectNodeContents(root);'],
+  ['src/components/common/RichTextComposer.tsx', 'const fragment = range.extractContents();'],
+  ['src/components/common/RichTextComposer.tsx', 'element.style.setProperty(propertyNames[key]'],
   ['src/components/common/RichTextComposer.tsx', 'onPaste={onPaste}'],
   ['src/utils/richText.ts', 'font-family:'],
   ['src/utils/richText.ts', 'line-height:'],

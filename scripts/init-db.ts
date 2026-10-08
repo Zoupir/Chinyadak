@@ -13,6 +13,85 @@ for (const key of required) {
   }
 }
 
+const SYSTEM_PART_REQUEST_PAGE = {
+  id: 'page-part-request',
+  slug: 'part-request',
+  title: 'استعلام قطعه',
+  description: 'فرم تخصصی استعلام، تامین و پیگیری قطعات مورد نیاز مشتریان',
+  isSystem: true,
+  updatedAt: new Date().toLocaleDateString('fa-IR'),
+  sections: [
+    {
+      id: 'part-request-hero',
+      sectionKey: 'request-hero',
+      title: 'استعلام و تامین قطعه خودرو',
+      subtitle: 'مشخصات خودرو و قطعه را ارسال کنید تا واحد تامین، موجودی، قیمت و زمان تحویل را بررسی کند.',
+      badge: 'استعلام تخصصی قطعات',
+      isVisible: true,
+      order: 1,
+      widthPercent: 100,
+      tabletWidthPercent: 100,
+      mobileWidthPercent: 100
+    },
+    {
+      id: 'part-request-form',
+      sectionKey: 'request-form',
+      title: 'فرم درخواست استعلام',
+      isVisible: true,
+      order: 2,
+      widthPercent: 100,
+      tabletWidthPercent: 100,
+      mobileWidthPercent: 100,
+      formConfig: {
+        schema: 'part-request',
+        submitText: 'ارسال درخواست استعلام به واحد تامین',
+        submittingText: 'در حال ثبت درخواست...',
+        successTitle: 'درخواست استعلام شما با موفقیت ثبت شد',
+        successMessage: 'درخواست شما در سیستم ثبت شد و واحد تامین آن را بررسی می‌کند. نتیجه از طریق تماس یا پیامک اطلاع داده خواهد شد.',
+        errorMessage: 'ثبت درخواست انجام نشد. موارد مشخص‌شده را بررسی و دوباره تلاش کنید.',
+        contactPhone: '',
+        maxImageMb: 5,
+        allowImages: true,
+        fields: [
+          { key: 'carBrand', type: 'select', label: 'برند خودرو', placeholder: 'برند خودرو را انتخاب کنید', visible: true, required: false, width: 'third', order: 1 },
+          { key: 'carModel', type: 'text', label: 'مدل دقیق خودرو', placeholder: 'مثال: KMC J7، تیگو ۸ پرو، لاماری', visible: true, required: false, width: 'third', order: 2 },
+          { key: 'year', type: 'text', label: 'سال ساخت خودرو', placeholder: 'مثال: ۱۴۰۲ یا 2023', visible: true, required: false, width: 'third', order: 3 },
+          { key: 'partName', type: 'text', label: 'نام قطعه مورد نظر یا شرح نیاز', placeholder: 'نام یا شرح قطعه را وارد کنید', visible: true, required: true, width: 'full', order: 4 },
+          { key: 'oemNumber', type: 'text', label: 'شماره فنی / OEM', placeholder: 'شماره فنی در صورت وجود', visible: true, required: false, width: 'half', order: 5 },
+          { key: 'vin', type: 'text', label: 'شماره شاسی VIN', placeholder: 'شماره شاسی در صورت وجود', visible: true, required: false, width: 'half', order: 6 },
+          { key: 'image', type: 'file', label: 'تصویر قطعه، قطعه معیوب یا کارت خودرو', placeholder: 'برای انتخاب و آپلود تصویر کلیک کنید', visible: true, required: false, width: 'full', order: 7, helpText: 'JPG، PNG، WEBP یا GIF' },
+          { key: 'fullName', type: 'text', label: 'نام و نام خانوادگی متقاضی', placeholder: 'نام کامل', visible: true, required: true, width: 'half', order: 8 },
+          { key: 'phoneNumber', type: 'tel', label: 'شماره تلفن همراه', placeholder: '۰۹۱۲۱۲۳۴۵۶۷', visible: true, required: true, width: 'half', order: 9, helpText: 'اعداد فارسی و انگلیسی هر دو پذیرفته می‌شوند.' },
+          { key: 'notes', type: 'textarea', label: 'توضیحات تکمیلی', placeholder: 'هر توضیحی که به بررسی دقیق‌تر کمک می‌کند', visible: true, required: false, width: 'full', order: 10 }
+        ]
+      }
+    },
+    {
+      id: 'part-request-info',
+      sectionKey: 'request-info',
+      title: 'روند بررسی استعلام',
+      subtitle: 'درخواست در پنل کارشناسان ثبت می‌شود و نتیجه پس از بررسی تامین اعلام خواهد شد.',
+      isVisible: true,
+      order: 3,
+      items: [
+        { id: 'request-info-1', title: 'ثبت در سیستم', content: 'درخواست شما با شناسه مستقل در مرکز استعلام ذخیره می‌شود.', isVisible: true, order: 1 },
+        { id: 'request-info-2', title: 'بررسی فنی و تامین', content: 'شماره فنی، خودرو، موجودی و شرایط تامین بررسی می‌شود.', isVisible: true, order: 2 },
+        { id: 'request-info-3', title: 'اعلام نتیجه', content: 'قیمت و زمان تقریبی تامین توسط کارشناس اعلام می‌شود.', isVisible: true, order: 3 }
+      ]
+    },
+    {
+      id: 'part-request-contact',
+      sectionKey: 'request-contact',
+      title: 'نیاز به استعلام تلفنی فوری دارید؟',
+      subtitle: 'می‌توانید مستقیماً با واحد تامین تماس بگیرید.',
+      buttonText: 'تماس با واحد تامین',
+      buttonLink: '',
+      isVisible: true,
+      order: 4
+    }
+  ]
+};
+
 const main = async () => {
   const schemaPath = path.resolve(process.cwd(), 'db', 'schema.sql');
   const schema = await fs.readFile(schemaPath, 'utf8');
@@ -96,6 +175,19 @@ const main = async () => {
 
     await connection.query(
       `ALTER TABLE products MODIFY data_json JSON NOT NULL`
+    );
+
+    // Guarantee that the form is manageable from the CMS even on older or fresh
+    // installations. INSERT IGNORE is intentional: existing admin edits are sacred.
+    await connection.execute(
+      `INSERT IGNORE INTO site_pages (id, slug, title, is_system, data_json)
+       VALUES (?, ?, ?, 1, ?)`,
+      [
+        SYSTEM_PART_REQUEST_PAGE.id,
+        SYSTEM_PART_REQUEST_PAGE.slug,
+        SYSTEM_PART_REQUEST_PAGE.title,
+        JSON.stringify(SYSTEM_PART_REQUEST_PAGE)
+      ]
     );
 
     // Upgrade only the untouched legacy starter settings. Any edited store settings

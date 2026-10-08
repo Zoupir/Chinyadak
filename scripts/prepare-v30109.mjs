@@ -14,6 +14,7 @@ const has = (file, marker) => {
 const checks = [
   ['src/components/common/RichTextComposer.tsx', 'data-quill-rich-editor="30.10.9"'],
   ['src/components/common/RichTextComposer.tsx', "from 'quill'"],
+  ['src/components/common/RichTextComposer.tsx', "import './quill-vendor.css'"],
   ['src/components/common/RichTextComposer.tsx', 'getSemanticHTML'],
   ['src/components/admin/AdminView.tsx', 'data-view-product-button="1"'],
   ['src/components/admin/AdminView.tsx', 'fixed inset-x-0 top-16 bottom-0'],
@@ -38,6 +39,16 @@ if (!isPrepared()) {
   console.log('Source preparation already at v30.10.9; legacy editor transforms skipped.');
 }
 run('scripts/repair-v30109-e2e.mjs');
+
+// Do not let the Node SSR bundle retain a runtime import of
+// node_modules/quill/dist/quill.snow.css. Build tools already handle local CSS
+// imports safely, so copy the exact pinned Quill theme into a local generated
+// stylesheet before every typecheck/build invocation.
+const quillCssSource = 'node_modules/quill/dist/quill.snow.css';
+const quillCssTarget = 'src/components/common/quill-vendor.css';
+if (!fs.existsSync(quillCssSource)) throw new Error('Quill Snow CSS is missing from node_modules; run npm install first.');
+fs.copyFileSync(quillCssSource, quillCssTarget);
+if (!fs.readFileSync(quillCssTarget, 'utf8').includes('.ql-container')) throw new Error('Vendored Quill stylesheet is incomplete.');
 
 const missing = checks.filter(([file, marker]) => !has(file, marker));
 if (missing.length) throw new Error('v30.10.9 preparation incomplete: ' + missing.map(([file, marker]) => `${file} :: ${marker}`).join(' | '));

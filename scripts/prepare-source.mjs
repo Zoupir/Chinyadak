@@ -86,6 +86,7 @@ if (hasChecks(v3052Checks) && hasChecks(v3053Checks) && hasChecks(v3060Checks) &
   run('scripts/repair-v3071-rich-media-upload-ui.mjs');
   run('scripts/apply-v3080-cart-navigation.mjs');
   run('scripts/apply-v3080-product-media-sections.mjs');
+  run('scripts/repair-v3080-rich-product-media.mjs');
   console.log('Source preparation already at v30.8.0; verified.');
   process.exit(0);
 }
@@ -126,5 +127,6 @@ if (!hasChecks(v3071Checks)) throw new Error('Source preparation did not reach v
 
 run('scripts/apply-v3080-cart-navigation.mjs');
 run('scripts/apply-v3080-product-media-sections.mjs');
+run('scripts/repair-v3080-rich-product-media.mjs');
 if (!hasChecks(v3080Checks)) throw new Error('Source preparation did not reach v30.8.0 cart/product/media/section markers.');
 console.log('Source preparation completed at v30.8.0.');

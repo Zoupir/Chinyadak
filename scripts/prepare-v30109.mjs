@@ -13,7 +13,7 @@ const has = (file, marker) => {
 
 const checks = [
   ['src/components/common/RichTextComposer.tsx', 'data-quill-rich-editor="30.10.9"'],
-  ['src/components/common/RichTextComposer.tsx', "from 'quill'"],
+  ['src/components/common/RichTextComposer.tsx', "await import('quill')"],
   ['src/components/common/RichTextComposer.tsx', "import './quill-vendor.css'"],
   ['src/components/common/RichTextComposer.tsx', 'getSemanticHTML'],
   ['src/components/admin/AdminView.tsx', 'data-view-product-button="1"'],

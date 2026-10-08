@@ -63,9 +63,15 @@ const v3080Checks = [
   ['src/components/admin/AdminMediaLibrary.tsx', 'آپلود تصویر / صدا / ویدئو'],
   ['src/server/routes/media.ts', "mediaType: 'image' | 'audio' | 'video';"],
   ['src/server/routes/cms.ts', "cmsRouter.put('/pages/:id/sections/:sectionId'"],
-  ['src/context/StoreContext.tsx', '/sections/${encodeURIComponent(updatedSection.id)}'],
   ['src/App.tsx', "route.view === 'cart'"],
   ['src/utils/navigation.ts', "if (view === 'cart') return '/cart';"]
+];
+
+const v3081Checks = [
+  ['src/components/layout/Header.tsx', 'onClick={onOpenCartDrawer} className="marketplace-ref-cart"'],
+  ['src/context/StoreContext.tsx', 'v30.8.1 stable full-page section persistence'],
+  ['src/components/common/LiveSectionModal.tsx', 'v30.8.1: visual sections may intentionally have no title'],
+  ['src/components/admin/AdminView.tsx', "onNavigate?.('admin', 'products');"]
 ];
 
 const hasChecks = checks => checks.every(([path, marker]) => {
@@ -87,7 +93,9 @@ if (hasChecks(v3052Checks) && hasChecks(v3053Checks) && hasChecks(v3060Checks) &
   run('scripts/apply-v3080-cart-navigation.mjs');
   run('scripts/apply-v3080-product-media-sections.mjs');
   run('scripts/repair-v3080-rich-product-media.mjs');
-  console.log('Source preparation already at v30.8.0; verified.');
+  run('scripts/apply-v3081-stability-fixes.mjs');
+  if (!hasChecks(v3081Checks)) throw new Error('Source preparation did not reach v30.8.1 stability markers.');
+  console.log('Source preparation already at v30.8.1; verified.');
   process.exit(0);
 }
 
@@ -129,4 +137,7 @@ run('scripts/apply-v3080-cart-navigation.mjs');
 run('scripts/apply-v3080-product-media-sections.mjs');
 run('scripts/repair-v3080-rich-product-media.mjs');
 if (!hasChecks(v3080Checks)) throw new Error('Source preparation did not reach v30.8.0 cart/product/media/section markers.');
-console.log('Source preparation completed at v30.8.0.');
+
+run('scripts/apply-v3081-stability-fixes.mjs');
+if (!hasChecks(v3081Checks)) throw new Error('Source preparation did not reach v30.8.1 stability markers.');
+console.log('Source preparation completed at v30.8.1.');

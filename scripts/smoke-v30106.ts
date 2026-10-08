@@ -20,6 +20,8 @@ assert.match(source('src/components/search/SearchAutocomplete.tsx'), /role="list
 assert.match(source('src/components/layout/Header.tsx'), /aria-modal="true"/);
 assert.match(source('src/components/layout/Header.tsx'), /aria-controls="marketplace-category-mega"/);
 assert.match(source('src/components/layout/Header.tsx'), /event\.key !== 'Escape'/);
+assert.doesNotMatch(source('src/components/layout/Header.tsx'), /id="classic-category-mega" role="menu" aria-label="دسته‌بندی قطعات"\s+id="classic-category-mega"/);
+assert.doesNotMatch(source('src/components/layout/Header.tsx'), /id="classic-brands-menu" role="menu" aria-label="برندهای خودرو"\s+id="classic-brands-menu"/);
 assert.match(source('src/components/product/ProductCard.tsx'), /decoding="async"/);
 assert.match(source('server.ts'), /max-age=31536000, immutable/);
 assert.match(source('src/index.css'), /prefers-reduced-motion: reduce/);
@@ -27,13 +29,18 @@ assert.match(source('src/index.css'), /focus-visible/);
 assert.doesNotMatch(source('index.html'), /fonts\.googleapis\.com\/css2/);
 assert.doesNotMatch(source('index.html'), /"@type": "AutoPartsStore"/);
 assert.match(source('src/utils/siteFont.ts'), /media = 'print'/);
+for (const file of ['src/components/home/HomeView.tsx', 'src/components/page/PageView.tsx']) {
+  assert.match(source(file), /lazy\(\(\) => import\('\.\.\/common\/LiveSectionModal'\)/);
+  assert.doesNotMatch(source(file), /import \{ LiveSectionModal \} from/);
+  assert.match(source(file), /<Suspense fallback=\{null\}>/);
+}
 
 const distAssets = path.resolve('dist/assets');
 assert.ok(fs.existsSync(distAssets), 'dist/assets is missing; production build must run before v30.10.6 smoke.');
 const publicEntry = path.join(distAssets, 'public-hydrate.js');
 assert.ok(fs.existsSync(publicEntry), 'route-split public-hydrate.js entry is missing.');
 const publicEntryBytes = fs.statSync(publicEntry).size;
-assert.ok(publicEntryBytes < 1_500_000, `public hydration entry is still too large: ${publicEntryBytes} bytes`);
+assert.ok(publicEntryBytes < 600_000, `public hydration entry is still too large: ${publicEntryBytes} bytes`);
 const publicEntryText = fs.readFileSync(publicEntry, 'utf8');
 assert.doesNotMatch(publicEntryText, /ProseMirror|RichTextComposer|AdminView/, 'admin/editor code leaked into public hydration entry.');
 
@@ -41,6 +48,12 @@ const publicChunkDir = path.join(distAssets, 'public-chunks');
 assert.ok(fs.existsSync(publicChunkDir), 'public route chunk directory was not generated.');
 const publicChunks = fs.readdirSync(publicChunkDir).filter(name => name.endsWith('.js'));
 assert.ok(publicChunks.length >= 4, `expected route-level public chunks, got ${publicChunks.length}`);
+for (const prefix of ['HomeView-', 'PageView-']) {
+  const routeChunk = publicChunks.find(name => name.startsWith(prefix));
+  assert.ok(routeChunk, `${prefix} public route chunk is missing.`);
+  const routeChunkText = fs.readFileSync(path.join(publicChunkDir, routeChunk!), 'utf8');
+  assert.doesNotMatch(routeChunkText, /ProseMirror|RichTextComposer/, `${prefix} eagerly includes the rich editor runtime.`);
+}
 
 const viteAppEntries = fs.readdirSync(distAssets)
   .filter(name => /^App-.*\.js$/.test(name))

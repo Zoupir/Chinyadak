@@ -12,10 +12,6 @@ const has = (file, marker) => {
   catch { return false; }
 };
 
-run('scripts/prepare-v30102.mjs');
-run('scripts/run-v30103-cms-editor.mjs');
-run('scripts/repair-v30103-generated-source.mjs');
-
 const checks = [
   ['src/types/index.ts', 'cmsRevision?: number;'],
   ['src/context/StoreContext.tsx', 'const discardSectionPreview ='],
@@ -32,6 +28,20 @@ const checks = [
   ['src/components/admin/AdminView.tsx', 'closeProductEditor'],
   ['src/hooks/useEditorGuard.ts', 'useUnsavedChangesGuard']
 ];
+
+const isPrepared = () => checks.every(([file, marker]) => has(file, marker));
+
+// Stage 4 changes some function signatures that legacy source migrations use as
+// anchors. Once stage 4 is present, rerunning those older transforms is both
+// unnecessary and unsafe. Build/lint may call prepare:source repeatedly, so
+// treat a fully prepared workspace as immutable and verify it instead.
+if (!isPrepared()) {
+  run('scripts/prepare-v30102.mjs');
+  run('scripts/run-v30103-cms-editor.mjs');
+  run('scripts/repair-v30103-generated-source.mjs');
+} else {
+  console.log('Source preparation already at v30.10.3; verified and skipped legacy transforms.');
+}
 
 const missing = checks.filter(([file, marker]) => !has(file, marker));
 if (missing.length) {

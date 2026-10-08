@@ -3,9 +3,11 @@ import fs from 'node:fs';
 const file = 'scripts/templates/v30108-rich-text-composer.tsx.txt';
 let source = fs.readFileSync(file, 'utf8');
 
-const start = source.indexOf('  const applyInlineStyle = (styles: Partial<CSSStyleDeclaration>) => {');
+const applyCssStart = source.indexOf('  const applyCssStyles = (element: HTMLElement, styles: Partial<CSSStyleDeclaration>) => {');
+const applyInlineStart = source.indexOf('  const applyInlineStyle = (styles: Partial<CSSStyleDeclaration>) => {');
+const start = applyCssStart >= 0 ? applyCssStart : applyInlineStart;
 const end = source.indexOf('\n\n  const exec = (command: string, commandValue?: string) => {', start);
-if (start < 0 || end < 0) throw new Error('v30.10.8 applyInlineStyle block not found.');
+if (start < 0 || end < 0) throw new Error('v30.10.8 formatting helper block not found.');
 
 const replacement = `  const applyCssStyles = (element: HTMLElement, styles: Partial<CSSStyleDeclaration>) => {
     const propertyNames: Record<string, string> = {
@@ -81,9 +83,11 @@ const replacement = `  const applyCssStyles = (element: HTMLElement, styles: Par
 
 source = source.slice(0, start) + replacement + source.slice(end);
 
+const occurrences = (source.match(/const applyCssStyles =/g) || []).length;
+if (occurrences !== 1) throw new Error(`v30.10.8 expected one applyCssStyles helper, found ${occurrences}.`);
 if (!source.includes("element.style.setProperty(propertyNames[key]")) throw new Error('v30.10.8 important inline style writer missing.');
 if (!source.includes('const fragment = range.extractContents();')) throw new Error('v30.10.8 valid fragment styling missing.');
 if (source.includes('range.surroundContents(wrapper)')) throw new Error('v30.10.8 invalid block wrapper algorithm still present.');
 
 fs.writeFileSync(file, source);
-console.log('v30.10.8 WYSIWYG formatting now styles valid selected fragments with explicit priority.');
+console.log('v30.10.8 WYSIWYG formatting repair is idempotent and styles valid selected fragments with explicit priority.');

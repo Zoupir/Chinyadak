@@ -23,4 +23,10 @@ edit('src/components/common/MediaPickerModal.tsx',source=>{
  return source;
 });
 
+edit('src/server/public-storefront-react.tsx',source=>{
+ if(!source.includes("import { CartView } from '../components/cart/CartView';")) source=source.replace("import { PageView } from '../components/page/PageView';","import { PageView } from '../components/page/PageView';\nimport { CartView } from '../components/cart/CartView';");
+ if(!source.includes("if (route.view === 'cart')")) source=source.replace("  if (route.view === 'product' && route.param) {","  if (route.view === 'cart') {\n    return <CartView onNavigate={onNavigate} />;\n  }\n  if (route.view === 'product' && route.param) {");
+ return source;
+});
+
 console.log('v30.8.0 rich product/media repair:',changed.length?changed.join(', '):'already satisfied');

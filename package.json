@@ -4,7 +4,7 @@
   "version": "30.8.2",
   "type": "module",
   "scripts": {
-    "prepare:source": "node scripts/prepare-source.mjs && node scripts/apply-v3082-admin-requests-richtext.mjs",
+    "prepare:source": "node scripts/prepare-source.mjs && node scripts/apply-v3082-admin-requests-richtext.mjs && node scripts/repair-v3082-generated-source.mjs",
     "dev": "npm run prepare:source && tsx server.ts",
     "build": "npm run prepare:source && vite build && node scripts/build-server.mjs",
     "start": "NODE_ENV=production node server.js",

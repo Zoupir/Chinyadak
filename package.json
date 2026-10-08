@@ -1,7 +1,7 @@
 {
   "name": "chinpart",
   "private": true,
-  "version": "30.7.1",
+  "version": "30.8.0",
   "type": "module",
   "scripts": {
     "prepare:source": "node scripts/prepare-source.mjs",

@@ -158,13 +158,41 @@ const selectEditorText = async (editor, needle) => {
       await quillFrame.locator('.ql-align.ql-picker .ql-picker-item[data-value="center"]').click();
       html = await editor.evaluate(node => node.innerHTML);
       assert.match(html, /text-align:\s*center/i, 'Quill alignment was not applied in one toolbar action.');
+
+      // Most important production regression: live editing is enabled in admin,
+      // survives document navigation to the storefront, and Save persists the
+      // changed homepage section through the real CMS endpoint.
+      await page.evaluate(() => window.sessionStorage.setItem('chinpart_live_edit_active', '1'));
+      await page.goto(base + '/', { waitUntil: 'domcontentloaded' });
+      await waitForHydration(page);
+      const editArticles = page.getByRole('button', { name: /ویرایش بخش مقالات/ });
+      await editArticles.waitFor({ state: 'visible', timeout: 15000 });
+      await editArticles.click();
+
+      const liveDialog = page.locator('aside[role="dialog"]').last();
+      await liveDialog.waitFor({ state: 'visible', timeout: 10000 });
+      const titleInput = liveDialog.locator('label').filter({ hasText: /^عنوان/ }).first().locator('input');
+      await titleInput.waitFor({ state: 'visible', timeout: 5000 });
+      const liveTitle = `تست ذخیره زنده ${Date.now()}`;
+      await titleInput.fill(liveTitle);
+      const liveSave = liveDialog.locator('[data-live-section-save="1"]');
+      await liveSave.waitFor({ state: 'visible', timeout: 5000 });
+      await liveSave.click();
+      await liveDialog.waitFor({ state: 'detached', timeout: 15000 });
+
+      const cmsAfterResponse = await context.request.get(base + '/api/cms/bundle');
+      assert.equal(cmsAfterResponse.status(), 200, `CMS bundle after live save failed: ${cmsAfterResponse.status()}`);
+      const cmsAfter = await cmsAfterResponse.json();
+      const homePage = (cmsAfter.pages || []).find(item => item.slug === 'home');
+      const articlesSection = (homePage?.sections || []).find(item => item.id === 'sec-articles' || item.sectionKey === 'articles');
+      assert.equal(articlesSection?.title, liveTitle, 'Homepage live editor Save did not persist the section title.');
     }
 
     if (pageErrors.length) {
       throw new Error('Browser page errors: ' + pageErrors.map(error => error.stack || error.message || String(error)).join('\n---\n'));
     }
 
-    console.log('Real browser E2E passed: storefront routes, responsive menus, top-aligned product editor and Quill partial-selection formatting.');
+    console.log('Real browser E2E passed: storefront routes, responsive menus, top-aligned product editor, Quill partial-selection formatting, and persisted homepage live Save.');
   } finally {
     await context.close();
     await browser.close();

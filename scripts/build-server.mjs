@@ -34,9 +34,16 @@ await esbuild.build({
   platform: 'browser',
   format: 'esm',
   target: ['es2022'],
-  outfile: 'dist/assets/public-hydrate.js',
+  outdir: 'dist/assets',
+  entryNames: 'public-hydrate',
+  chunkNames: 'public-chunks/[name]-[hash]',
+  assetNames: 'public-chunks/[name]-[hash]',
+  splitting: true,
   minify: true,
   sourcemap: false,
   logLevel: 'info',
-  plugins: [storeContextAlias]
+  plugins: [storeContextAlias],
+  define: {
+    'process.env.NODE_ENV': '"production"'
+  }
 });

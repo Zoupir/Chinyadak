@@ -10,11 +10,13 @@ edit('src/components/product/ProductDetailView.tsx',source=>{
 });
 
 edit('src/components/admin/AdminMediaLibrary.tsx',source=>{
- source=source.replace('<img src={selected.url} alt={seoForm.alt} className="max-w-full max-h-[78vh] object-contain" />',`{selected.mediaType === 'video' ? <video src={selected.url} controls preload="metadata" className="max-w-full max-h-[78vh]" /> : selected.mediaType === 'audio' ? <div className="w-full max-w-xl rounded-2xl bg-white p-6 shadow-sm"><FileAudio className="mx-auto mb-5 h-16 w-16 text-blue-500" /><audio src={selected.url} controls preload="metadata" className="w-full" /></div> : <img src={selected.url} alt={seoForm.alt} className="max-w-full max-h-[78vh] object-contain" />}`);
+ if(source.includes('data-media-preview-v3080="1"')) return source;
+ source=source.replace('<div className="bg-neutral-100 min-h-[420px] grid place-items-center p-4">\n              <img src={selected.url} alt={seoForm.alt} className="max-w-full max-h-[78vh] object-contain" />\n            </div>',`<div className="bg-neutral-100 min-h-[420px] grid place-items-center p-4" data-media-preview-v3080="1">\n              {selected.mediaType === 'video' ? <video src={selected.url} controls preload="metadata" className="max-w-full max-h-[78vh]" /> : selected.mediaType === 'audio' ? <div className="w-full max-w-xl rounded-2xl bg-white p-6 shadow-sm"><FileAudio className="mx-auto mb-5 h-16 w-16 text-blue-500" /><audio src={selected.url} controls preload="metadata" className="w-full" /></div> : <img src={selected.url} alt={seoForm.alt} className="max-w-full max-h-[78vh] object-contain" />}\n            </div>`);
  return source;
 });
 
 edit('src/components/common/MediaPickerModal.tsx',source=>{
+ if(source.includes('const imageItems = items.filter')) return source;
  const before=`  const visible = useMemo(() => {\n    const q = query.trim().toLowerCase();\n    if (!q) return items;\n    return items.filter(item =>`;
  const after=`  const visible = useMemo(() => {\n    const imageItems = items.filter(item => !item.mediaType || item.mediaType === 'image');\n    const q = query.trim().toLowerCase();\n    if (!q) return imageItems;\n    return imageItems.filter(item =>`;
  if(source.includes(before)) source=source.replace(before,after);

@@ -14,10 +14,12 @@ const has = (file, marker) => {
 run('scripts/prepare-v30105.mjs');
 run('scripts/repair-v30106-transform.mjs');
 run('scripts/apply-v30106-performance.mjs');
+run('scripts/repair-v30106-generated.mjs');
 
 const checks = [
   ['src/App.tsx', "const AdminView = lazy(() => import('./components/admin/AdminView')"],
   ['src/App.tsx', 'ensureSiteFontLoaded(settings.fontFamily'],
+  ['src/App.tsx', 'Suspense'],
   ['src/components/search/SearchAutocomplete.tsx', 'role="combobox"'],
   ['src/components/layout/Header.tsx', 'marketplace-category-mega'],
   ['src/components/layout/Header.tsx', 'aria-modal="true"'],

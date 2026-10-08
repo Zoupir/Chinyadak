@@ -11,75 +11,90 @@ type ReferenceQuery = {
   sql: string;
 };
 
+/**
+ * JSON/text columns in production can legitimately carry different utf8mb4
+ * collations after years of migrations (for example utf8mb4_bin on JSON and
+ * utf8mb4_uca1400_ai_ci on MariaDB text). Reference detection is an exact URL
+ * lookup, so byte-wise comparison is the correct operation and avoids collation
+ * coercion differences between MySQL and MariaDB.
+ */
 const referenceQueries: ReferenceQuery[] = [
   {
     source: 'product',
     sql: `SELECT id, name_fa AS label FROM products
-          WHERE LOCATE(?, CONCAT_WS(' ', CAST(data_json AS CHAR), CAST(images_json AS CHAR), COALESCE(short_description,''), COALESCE(description,''))) > 0
-             OR LOCATE(?, CONCAT_WS(' ', CAST(data_json AS CHAR), CAST(images_json AS CHAR), COALESCE(short_description,''), COALESCE(description,''))) > 0
+          WHERE LOCATE(CAST(? AS BINARY), CAST(CONCAT_WS(' ', CAST(data_json AS CHAR), CAST(images_json AS CHAR), COALESCE(short_description,''), COALESCE(description,'')) AS BINARY)) > 0
+             OR LOCATE(CAST(? AS BINARY), CAST(CONCAT_WS(' ', CAST(data_json AS CHAR), CAST(images_json AS CHAR), COALESCE(short_description,''), COALESCE(description,'')) AS BINARY)) > 0
           LIMIT 25`
   },
   {
     source: 'article',
     sql: `SELECT id, title AS label FROM articles
-          WHERE LOCATE(?, CAST(data_json AS CHAR)) > 0 OR LOCATE(?, CAST(data_json AS CHAR)) > 0
+          WHERE LOCATE(CAST(? AS BINARY), CAST(data_json AS BINARY)) > 0
+             OR LOCATE(CAST(? AS BINARY), CAST(data_json AS BINARY)) > 0
           LIMIT 25`
   },
   {
     source: 'page',
     sql: `SELECT id, title AS label FROM site_pages
-          WHERE LOCATE(?, CAST(data_json AS CHAR)) > 0 OR LOCATE(?, CAST(data_json AS CHAR)) > 0
+          WHERE LOCATE(CAST(? AS BINARY), CAST(data_json AS BINARY)) > 0
+             OR LOCATE(CAST(? AS BINARY), CAST(data_json AS BINARY)) > 0
           LIMIT 25`
   },
   {
     source: 'category',
     sql: `SELECT id, name_fa AS label FROM categories
-          WHERE LOCATE(?, CONCAT_WS(' ', CAST(data_json AS CHAR), COALESCE(description,''))) > 0
-             OR LOCATE(?, CONCAT_WS(' ', CAST(data_json AS CHAR), COALESCE(description,''))) > 0
+          WHERE LOCATE(CAST(? AS BINARY), CAST(CONCAT_WS(' ', CAST(data_json AS CHAR), COALESCE(description,'')) AS BINARY)) > 0
+             OR LOCATE(CAST(? AS BINARY), CAST(CONCAT_WS(' ', CAST(data_json AS CHAR), COALESCE(description,'')) AS BINARY)) > 0
           LIMIT 25`
   },
   {
     source: 'vehicle-brand',
     sql: `SELECT id, name_fa AS label FROM vehicle_brands
-          WHERE LOCATE(?, CAST(data_json AS CHAR)) > 0 OR LOCATE(?, CAST(data_json AS CHAR)) > 0
+          WHERE LOCATE(CAST(? AS BINARY), CAST(data_json AS BINARY)) > 0
+             OR LOCATE(CAST(? AS BINARY), CAST(data_json AS BINARY)) > 0
           LIMIT 25`
   },
   {
     source: 'vehicle-model',
     sql: `SELECT id, name_fa AS label FROM vehicle_models
-          WHERE LOCATE(?, CAST(data_json AS CHAR)) > 0 OR LOCATE(?, CAST(data_json AS CHAR)) > 0
+          WHERE LOCATE(CAST(? AS BINARY), CAST(data_json AS BINARY)) > 0
+             OR LOCATE(CAST(? AS BINARY), CAST(data_json AS BINARY)) > 0
           LIMIT 25`
   },
   {
     source: 'part-brand',
     sql: `SELECT id, name_fa AS label FROM part_brands
-          WHERE LOCATE(?, CAST(data_json AS CHAR)) > 0 OR LOCATE(?, CAST(data_json AS CHAR)) > 0
+          WHERE LOCATE(CAST(? AS BINARY), CAST(data_json AS BINARY)) > 0
+             OR LOCATE(CAST(? AS BINARY), CAST(data_json AS BINARY)) > 0
           LIMIT 25`
   },
   {
     source: 'article-category',
     sql: `SELECT id, name AS label FROM article_categories
-          WHERE LOCATE(?, CAST(data_json AS CHAR)) > 0 OR LOCATE(?, CAST(data_json AS CHAR)) > 0
+          WHERE LOCATE(CAST(? AS BINARY), CAST(data_json AS BINARY)) > 0
+             OR LOCATE(CAST(? AS BINARY), CAST(data_json AS BINARY)) > 0
           LIMIT 25`
   },
   {
     source: 'slider',
     sql: `SELECT id, id AS label FROM sliders
-          WHERE LOCATE(?, CAST(data_json AS CHAR)) > 0 OR LOCATE(?, CAST(data_json AS CHAR)) > 0
+          WHERE LOCATE(CAST(? AS BINARY), CAST(data_json AS BINARY)) > 0
+             OR LOCATE(CAST(? AS BINARY), CAST(data_json AS BINARY)) > 0
           LIMIT 25`
   },
   {
     source: 'setting',
     sql: `SELECT setting_key AS id, setting_key AS label FROM app_settings
-          WHERE LOCATE(?, CAST(setting_value AS CHAR)) > 0 OR LOCATE(?, CAST(setting_value AS CHAR)) > 0
+          WHERE LOCATE(CAST(? AS BINARY), CAST(setting_value AS BINARY)) > 0
+             OR LOCATE(CAST(? AS BINARY), CAST(setting_value AS BINARY)) > 0
           LIMIT 25`
   },
   {
     source: 'seo-meta',
     sql: `SELECT CONCAT(entity_type, ':', entity_id) AS id, COALESCE(seo_title, CONCAT(entity_type, ':', entity_id)) AS label
           FROM seo_meta
-          WHERE LOCATE(?, CONCAT_WS(' ', COALESCE(og_image_url,''), COALESCE(twitter_image_url,''), COALESCE(canonical_url,''), CAST(analysis_json AS CHAR))) > 0
-             OR LOCATE(?, CONCAT_WS(' ', COALESCE(og_image_url,''), COALESCE(twitter_image_url,''), COALESCE(canonical_url,''), CAST(analysis_json AS CHAR))) > 0
+          WHERE LOCATE(CAST(? AS BINARY), CAST(CONCAT_WS(' ', COALESCE(og_image_url,''), COALESCE(twitter_image_url,''), COALESCE(canonical_url,''), CAST(analysis_json AS CHAR)) AS BINARY)) > 0
+             OR LOCATE(CAST(? AS BINARY), CAST(CONCAT_WS(' ', COALESCE(og_image_url,''), COALESCE(twitter_image_url,''), COALESCE(canonical_url,''), CAST(analysis_json AS CHAR)) AS BINARY)) > 0
           LIMIT 25`
   }
 ];

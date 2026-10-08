@@ -47,7 +47,8 @@ const v3070Checks = [
   ['src/components/vehicle/CarModelView.tsx', '--car-mobile-cols'],
   ['src/components/common/RichTextComposer.tsx', 'colorSelectionRef'],
   ['src/server/routes/orders.ts', "ordersRouter.post('/coupon/validate'"],
-  ['src/components/cart/CheckoutView.tsx', 'appliedCouponCode']
+  ['src/components/cart/CheckoutView.tsx', 'appliedCouponCode'],
+  ['src/components/product/ProductDetailView.tsx', 'const gradeInfo = getGradeInfo(product.grade);']
 ];
 
 const hasChecks = checks => checks.every(([path, marker]) => {
@@ -64,6 +65,7 @@ const run = script => {
 if (hasChecks(v3052Checks) && hasChecks(v3053Checks) && hasChecks(v3060Checks) && hasChecks(v3070Checks)) {
   run('scripts/repair-v3052-footer.mjs');
   run('scripts/repair-v3060-admin.mjs');
+  run('scripts/repair-v3070-product-detail.mjs');
   console.log('Source preparation already at v30.7.0; verified.');
   process.exit(0);
 }
@@ -95,6 +97,7 @@ if (!hasChecks(v3070Checks)) {
   run('scripts/apply-v3070-commerce.mjs');
   run('scripts/apply-v3070-storefront-cms.mjs');
   run('scripts/apply-v3070-checkout.mjs');
+  run('scripts/repair-v3070-product-detail.mjs');
 }
 if (!hasChecks(v3070Checks)) throw new Error('Source preparation did not reach v30.7.0 commerce/CMS markers.');
 console.log('Source preparation completed at v30.7.0.');

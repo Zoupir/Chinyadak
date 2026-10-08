@@ -30,12 +30,12 @@ assert.match(publicStore, /updateSection,/);
 assert.match(publicStore, /previewSection,/);
 assert.doesNotMatch(publicStore, /updateSection: noop/);
 
-const fullStore = source('src/context/StoreContext.tsx');
-assert.match(fullStore, /data-v30109-live-edit-session/);
-assert.match(fullStore, /chinpart_live_edit_active/);
+const pagesAdmin = source('src/components/admin/AdminPagesTab.tsx');
+assert.match(pagesAdmin, /data-v30109-admin-live-edit-session/);
+assert.match(pagesAdmin, /sessionStorage\.setItem\('chinpart_live_edit_active'/);
 
 const pkg = JSON.parse(source('package.json'));
 assert.equal(pkg.version, '30.10.9');
 assert.equal(pkg.dependencies?.quill, '2.0.2');
 
-console.log('v30.10.9 product editor, Quill selection and persistent live-save smoke passed.');
+console.log('v30.10.9 product editor, Quill selection and admin-to-store live-save smoke passed.');

@@ -1,7 +1,7 @@
 {
   "name": "chinpart",
   "private": true,
-  "version": "30.6.0",
+  "version": "30.7.0",
   "type": "module",
   "scripts": {
     "prepare:source": "node scripts/prepare-source.mjs",
@@ -15,8 +15,7 @@
     "payments:release-expired": "tsx scripts/release-expired-reservations.ts",
     "test:smoke": "tsx scripts/smoke-test.ts",
     "db:wait": "tsx scripts/wait-for-db.ts",
-    "seo:worker": "tsx scripts/seo-worker.ts",
-    "seo:audit": "tsx -e \"import('./src/server/seo/platform.ts').then(async m=>{await m.runFullSeoAudit();process.exit(0)})\"",
+    "seo:worker": "tsx -e \"import('./src/server/seo/platform.ts').then(async m=>{await m.runFullSeoAudit();process.exit(0)})\"",
     "seo:graph": "tsx -e \"import('./src/server/seo/platform.ts').then(async m=>{await m.rebuildSeoKnowledgeGraph();process.exit(0)})\"",
     "db:seed-real-defaults": "tsx scripts/seed-real-defaults.ts"
   },

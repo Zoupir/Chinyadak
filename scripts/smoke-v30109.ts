@@ -4,7 +4,9 @@ import fs from 'node:fs';
 const source = (file: string) => fs.readFileSync(file, 'utf8');
 
 const composer = source('src/components/common/RichTextComposer.tsx');
-assert.match(composer, /from 'quill'/);
+assert.match(composer, /await import\('quill'\)/);
+assert.doesNotMatch(composer, /^import Quill from 'quill';/m);
+assert.match(composer, /import '\.\/quill-vendor\.css'/);
 assert.match(composer, /data-quill-rich-editor="30\.10\.9"/);
 assert.match(composer, /getSemanticHTML/);
 assert.match(composer, /attributors\/style\/align/);
@@ -38,4 +40,4 @@ const pkg = JSON.parse(source('package.json'));
 assert.equal(pkg.version, '30.10.9');
 assert.equal(pkg.dependencies?.quill, '2.0.2');
 
-console.log('v30.10.9 product editor, Quill selection and admin-to-store live-save smoke passed.');
+console.log('v30.10.9 product editor, SSR-safe Quill selection and admin-to-store live-save smoke passed.');

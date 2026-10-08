@@ -55,6 +55,19 @@ const v3071Checks = [
   ['src/components/common/RichTextComposer.tsx', 'data-rich-direct-upload="1"']
 ];
 
+const v3080Checks = [
+  ['src/components/cart/CartView.tsx', 'data-dedicated-cart-page="1"'],
+  ['src/components/common/StoreLink.tsx', 'buildRoutePath'],
+  ['src/components/admin/AdminProductContentFields.tsx', 'data-product-service-content-editor="1"'],
+  ['src/components/product/ProductDiscountCountdown.tsx', 'data-product-discount-countdown="1"'],
+  ['src/components/admin/AdminMediaLibrary.tsx', 'آپلود تصویر / صدا / ویدئو'],
+  ['src/server/routes/media.ts', "mediaType: 'image' | 'audio' | 'video';"],
+  ['src/server/routes/cms.ts', "cmsRouter.put('/pages/:id/sections/:sectionId'"],
+  ['src/context/StoreContext.tsx', '/sections/${encodeURIComponent(updatedSection.id)}'],
+  ['src/App.tsx', "route.view === 'cart'"],
+  ['src/utils/navigation.ts', "if (view === 'cart') return '/cart';"]
+];
+
 const hasChecks = checks => checks.every(([path, marker]) => {
   try { return fs.readFileSync(path, 'utf8').includes(marker); }
   catch { return false; }
@@ -66,12 +79,14 @@ const run = script => {
   if (result.status !== 0) process.exit(result.status || 1);
 };
 
-if (hasChecks(v3052Checks) && hasChecks(v3053Checks) && hasChecks(v3060Checks) && hasChecks(v3070Checks) && hasChecks(v3071Checks)) {
+if (hasChecks(v3052Checks) && hasChecks(v3053Checks) && hasChecks(v3060Checks) && hasChecks(v3070Checks) && hasChecks(v3071Checks) && hasChecks(v3080Checks)) {
   run('scripts/repair-v3052-footer.mjs');
   run('scripts/repair-v3060-admin.mjs');
   run('scripts/repair-v3070-product-detail.mjs');
   run('scripts/repair-v3071-rich-media-upload-ui.mjs');
-  console.log('Source preparation already at v30.7.1; verified.');
+  run('scripts/apply-v3080-cart-navigation.mjs');
+  run('scripts/apply-v3080-product-media-sections.mjs');
+  console.log('Source preparation already at v30.8.0; verified.');
   process.exit(0);
 }
 
@@ -108,4 +123,8 @@ if (!hasChecks(v3070Checks)) throw new Error('Source preparation did not reach v
 
 run('scripts/repair-v3071-rich-media-upload-ui.mjs');
 if (!hasChecks(v3071Checks)) throw new Error('Source preparation did not reach v30.7.1 rich-media upload UI marker.');
-console.log('Source preparation completed at v30.7.1.');
+
+run('scripts/apply-v3080-cart-navigation.mjs');
+run('scripts/apply-v3080-product-media-sections.mjs');
+if (!hasChecks(v3080Checks)) throw new Error('Source preparation did not reach v30.8.0 cart/product/media/section markers.');
+console.log('Source preparation completed at v30.8.0.');

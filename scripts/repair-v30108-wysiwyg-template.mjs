@@ -51,6 +51,12 @@ source = source
   .replace(`setTextColor(event.currentTarget.value); exec('foreColor', event.currentTarget.value);`, `setTextColor(event.currentTarget.value); applyInlineStyle({ color: event.currentTarget.value });`)
   .replace(`setHighlightColor(event.currentTarget.value); exec('hiliteColor', event.currentTarget.value);`, `setHighlightColor(event.currentTarget.value); applyInlineStyle({ backgroundColor: event.currentTarget.value });`);
 
+const toolPointerNeedle = '    onMouseDown={event => event.preventDefault()}';
+const toolPointerReplacement = '    onPointerDown={event => event.preventDefault()}\n    onMouseDown={event => event.preventDefault()}';
+if (source.includes(toolPointerNeedle) && !source.includes('onPointerDown={event => event.preventDefault()}')) {
+  source = source.replace(toolPointerNeedle, toolPointerReplacement);
+}
+
 const toolbarNeedle = '<div className="rich-text-toolbar" role="toolbar" aria-label="ابزارهای قالب‌بندی متن">';
 const toolbarReplacement = '<div className="rich-text-toolbar" role="toolbar" aria-label="ابزارهای قالب‌بندی متن" onPointerDownCapture={saveSelection}>';
 if (source.includes(toolbarNeedle)) source = source.replace(toolbarNeedle, toolbarReplacement);
@@ -59,12 +65,13 @@ if (!source.includes('const applyInlineStyle =')) throw new Error('v30.10.8 dete
 if (!source.includes('const lastNonCollapsedRangeRef =')) throw new Error('v30.10.8 non-collapsed selection memory missing.');
 if (!source.includes('restoreSelection(true)')) throw new Error('v30.10.8 inline formatting does not prefer selected text.');
 if (!source.includes('onPointerDownCapture={saveSelection}')) throw new Error('v30.10.8 toolbar selection capture missing.');
+if (!source.includes('onPointerDown={event => event.preventDefault()}')) throw new Error('v30.10.8 toolbar buttons can still collapse editor selection.');
 if (!source.includes("applyInlineStyle({ fontWeight: '700' })")) throw new Error('v30.10.8 bold range style wiring missing.');
 if (!source.includes('applyInlineStyle({ color: event.currentTarget.value })')) throw new Error('v30.10.8 color range style wiring missing.');
 
 if (source !== before) {
   fs.writeFileSync(file, source);
-  console.log('v30.10.8 WYSIWYG template upgraded with persistent Range selection styling.');
+  console.log('v30.10.8 WYSIWYG template upgraded with pointer-safe persistent Range styling.');
 } else {
-  console.log('v30.10.8 WYSIWYG template persistent Range styling already active.');
+  console.log('v30.10.8 WYSIWYG template pointer-safe Range styling already active.');
 }

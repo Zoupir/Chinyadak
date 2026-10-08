@@ -9,6 +9,7 @@ const run = script => {
 
 run('scripts/prepare-v30100.mjs');
 run('scripts/apply-v30101-commerce-consistency.mjs');
+run('scripts/repair-v30101-generated-source.mjs');
 
 const checks = [
   ['src/server/checkout-options.ts', 'loadCheckoutConfiguration'],

@@ -29,7 +29,12 @@ if (!source.includes('data-v30109-live-edit-session')) {
   const setIsLiveEditActive = (nextValue: boolean | ((previous: boolean) => boolean)) => {
     setLiveEditActiveState(previous => {
       const next = typeof nextValue === 'function' ? nextValue(previous) : nextValue;
-      try { window.sessionStorage.setItem('chinpart_live_edit_active', next ? '1' : '0'); } catch {}
+      // A child may defensively call setIsLiveEditActive(false) during its first
+      // hydrated render. Do not let a false -> false no-op erase the explicit
+      // sessionStorage request before the provider restoration effect reads it.
+      if (next !== previous) {
+        try { window.sessionStorage.setItem('chinpart_live_edit_active', next ? '1' : '0'); } catch {}
+      }
       return next;
     });
   };
@@ -52,6 +57,7 @@ const remaining = [...source.matchAll(declarationPattern)].length;
 if (remaining !== 1) throw new Error(`v30.10.9 expected one adminAuth state declaration, found ${remaining}`);
 if (!source.includes('const persistPublicPage = async')) throw new Error('v30.10.9 public CMS persistence missing after generated repair.');
 if (!source.includes('data-v30109-live-edit-session')) throw new Error('v30.10.9 SSR live-edit session persistence missing.');
+if (!source.includes('if (next !== previous)')) throw new Error('v30.10.9 live-edit restoration guard missing.');
 
 // The full admin StoreContext keeps its normal React state. The Admin Pages
 // toggle writes the requested live-edit mode to sessionStorage explicitly, and

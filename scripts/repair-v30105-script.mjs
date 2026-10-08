@@ -18,17 +18,23 @@ if (source !== before) {
   console.log('v30.10.5 transform template literals already safe.');
 }
 
-// Stage-5 server source uses a regex literal. Patch the semantic token directly
-// rather than relying on escaping details inside the transform's string literal.
+// Historical preparation can render the Express regex with different escaping.
+// Replace the route declaration by meaning rather than by escaped source text.
 const serverFile = 'server.ts';
 const serverBefore = fs.readFileSync(serverFile, 'utf8');
-const serverAfter = serverBefore.replace(
-  'sitemap-(products|articles|categories|pages|brands|models)',
-  'sitemap-(static|products|articles|categories|pages|brands|models)'
+const lines = serverBefore.split('\n');
+const routeIndex = lines.findIndex(line =>
+  line.includes('app.get(') && line.includes('sitemap-') && line.includes('.xml') && line.includes('req, res, next')
 );
+if (routeIndex >= 0) {
+  lines[routeIndex] = "app.get(/^\\/sitemap-(static|products|articles|categories|pages|brands|models)-(\\d+)\\.xml$/, async (req, res, next) => {";
+}
+const serverAfter = lines.join('\n');
 if (serverAfter !== serverBefore) {
   fs.writeFileSync(serverFile, serverAfter);
   console.log('v30.10.5 sitemap route matcher normalized.');
-} else {
+} else if (serverAfter.includes('sitemap-(static|products|articles|categories|pages|brands|models)')) {
   console.log('v30.10.5 sitemap route matcher already normalized.');
+} else {
+  throw new Error('v30.10.5 sitemap route declaration not found before SEO transform.');
 }

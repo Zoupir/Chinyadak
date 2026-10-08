@@ -13,7 +13,7 @@
     "lint": "npm run prepare:source && tsc --noEmit",
     "db:seed": "tsx scripts/seed-catalog.ts",
     "payments:release-expired": "tsx scripts/release-expired-reservations.ts",
-    "test:smoke": "tsx scripts/smoke-test.ts",
+    "test:smoke": "tsx scripts/smoke-test.ts && tsx scripts/smoke-v3082.ts",
     "db:wait": "tsx scripts/wait-for-db.ts",
     "seo:worker": "tsx -e \"import('./src/server/seo/platform.ts').then(async m=>{await m.runFullSeoAudit();process.exit(0)})\"",
     "seo:graph": "tsx -e \"import('./src/server/seo/platform.ts').then(async m=>{await m.rebuildSeoKnowledgeGraph();process.exit(0)})\"",

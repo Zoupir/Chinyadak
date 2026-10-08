@@ -8,11 +8,16 @@ let source = fs.readFileSync(sourcePath, 'utf8');
 
 // The stage patch intentionally emits SQL template literals into cms.ts. Those
 // literals live inside a generator template literal, so escape their delimiters
-// before Node parses the generator itself. Keeping this repair isolated makes
-// the prepared output unchanged while avoiding fragile manual rewrites.
+// before Node parses the generator itself. The repaired generator is written
+// back into the prepared workspace so TypeScript can also parse every script.
 const escapeGeneratedSqlTemplate = (label, sqlStart, sqlEnd) => {
   const start = source.indexOf(sqlStart);
-  if (start < 0) throw new Error(`v30.10.3 runner could not find ${label} SQL start`);
+  if (start < 0) {
+    // Already repaired on an earlier prepare:source pass.
+    const escapedStart = sqlStart.replace('`', '\\`');
+    if (source.includes(escapedStart)) return;
+    throw new Error(`v30.10.3 runner could not find ${label} SQL start`);
+  }
   const end = source.indexOf(sqlEnd, start + sqlStart.length);
   if (end < 0) throw new Error(`v30.10.3 runner could not find ${label} SQL end`);
   const segmentEnd = end + sqlEnd.length;
@@ -32,6 +37,7 @@ escapeGeneratedSqlTemplate(
   '           VALUES (?, ?, ?, ?, ?)`'
 );
 
+fs.writeFileSync(sourcePath, source);
 const tempPath = path.join(os.tmpdir(), `apply-v30103-cms-editor-${process.pid}.mjs`);
 fs.writeFileSync(tempPath, source);
 try {

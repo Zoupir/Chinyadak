@@ -37,6 +37,19 @@ const v3060Checks = [
   ['server.ts', "app.use('/api/rich-media', richMediaRouter)"]
 ];
 
+const v3070Checks = [
+  ['src/types/index.ts', 'export interface ProductLabelDefinition {'],
+  ['src/utils/pricing.ts', 'export const getEffectiveProductPrice'],
+  ['src/components/admin/AdminCommerceSettings.tsx', 'مدیریت لیبل‌ها و کدهای تخفیف'],
+  ['src/components/product/ProductLabelBadges.tsx', 'resolveProductLabels'],
+  ['src/components/common/LiveSectionModal.tsx', 'دسته‌بندی‌های محصولات این سکشن'],
+  ['src/components/home/MarketplaceRtlHome.tsx', "source === 'partBrands'"],
+  ['src/components/vehicle/CarModelView.tsx', '--car-mobile-cols'],
+  ['src/components/common/RichTextComposer.tsx', 'colorSelectionRef'],
+  ['src/server/routes/orders.ts', "ordersRouter.post('/coupon/validate'"],
+  ['src/components/cart/CheckoutView.tsx', 'appliedCouponCode']
+];
+
 const hasChecks = checks => checks.every(([path, marker]) => {
   try { return fs.readFileSync(path, 'utf8').includes(marker); }
   catch { return false; }
@@ -48,10 +61,10 @@ const run = script => {
   if (result.status !== 0) process.exit(result.status || 1);
 };
 
-if (hasChecks(v3052Checks) && hasChecks(v3053Checks) && hasChecks(v3060Checks)) {
+if (hasChecks(v3052Checks) && hasChecks(v3053Checks) && hasChecks(v3060Checks) && hasChecks(v3070Checks)) {
   run('scripts/repair-v3052-footer.mjs');
   run('scripts/repair-v3060-admin.mjs');
-  console.log('Source preparation already at v30.6.0; verified.');
+  console.log('Source preparation already at v30.7.0; verified.');
   process.exit(0);
 }
 
@@ -77,4 +90,11 @@ if (!hasChecks(v3053Checks)) throw new Error('Source preparation did not reach v
 if (!hasChecks(v3060Checks)) run('scripts/apply-v3060-part-brands-media.mjs');
 run('scripts/repair-v3060-admin.mjs');
 if (!hasChecks(v3060Checks)) throw new Error('Source preparation did not reach v30.6.0 part-brand/media markers.');
-console.log('Source preparation completed at v30.6.0.');
+
+if (!hasChecks(v3070Checks)) {
+  run('scripts/apply-v3070-commerce.mjs');
+  run('scripts/apply-v3070-storefront-cms.mjs');
+  run('scripts/apply-v3070-checkout.mjs');
+}
+if (!hasChecks(v3070Checks)) throw new Error('Source preparation did not reach v30.7.0 commerce/CMS markers.');
+console.log('Source preparation completed at v30.7.0.');

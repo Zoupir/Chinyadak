@@ -12,6 +12,7 @@ const has = (file, marker) => {
 };
 
 run('scripts/prepare-v30105.mjs');
+run('scripts/repair-v30106-transform.mjs');
 run('scripts/apply-v30106-performance.mjs');
 
 const checks = [

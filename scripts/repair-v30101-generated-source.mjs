@@ -23,4 +23,33 @@ edit('src/components/cart/CheckoutView.tsx', source => {
   return source;
 });
 
+edit('scripts/smoke-test.ts', source => {
+  // The original broad smoke assumed Saman was usable even when CI had no
+  // gateway credentials. Stage 2 intentionally rejects unavailable methods.
+  // Enable COD through the same admin CMS contract before exercising orders.
+  source = source.replace(
+    "  const product = catalog.data.products.find(item => Number(item.stock || 0) > 0) || catalog.data.products[0];",
+    "  const product = [...catalog.data.products].sort((a, b) => Number(b.stock || 0) - Number(a.stock || 0))[0];"
+  );
+
+  if (!source.includes('stage2CheckoutBaseline')) {
+    const marker = '  // Order creation is recalculated by the server and must be trackable only with phone + order number.\n';
+    if (!source.includes(marker)) throw new Error('v30.10.1 legacy smoke order marker missing');
+    const prelude = `  // Stage 2: payment methods shown/accepted by checkout are server-authoritative.\n  const stage2CheckoutBaseline = await json<{ paymentGateways: any[] }>('/api/cms/bundle');\n  const stage2Cod = { id: 'cod-stage2', provider: 'cod', title: 'پرداخت در محل', isActive: true };\n  await json('/api/cms/payment-gateways', {\n    method: 'PUT',\n    headers: cookieHeaders(adminCookie),\n    body: JSON.stringify({\n      gateways: [...stage2CheckoutBaseline.data.paymentGateways.filter(g => g.provider !== 'cod'), stage2Cod]\n    })\n  });\n  const stage2Options = await json<{ paymentMethods: Array<{ id: string; available: boolean }> }>('/api/orders/checkout-options');\n  assert.equal(stage2Options.data.paymentMethods.find(item => item.id === 'cod')?.available, true,\n    'COD enabled in admin was not exposed by the authoritative checkout options endpoint.');\n\n`;
+    source = source.replace(marker, prelude + marker);
+  }
+
+  // There are two historical Saman order fixtures in this smoke. They are not
+  // gateway-integration tests; use the explicitly enabled COD path instead.
+  source = source.replace(/paymentMethodId: 'saman'/g, "paymentMethodId: 'cod'");
+
+  if (!source.includes('Stage 2 additional COD fixture must release its reservation')) {
+    const needle = `      assert.equal(Number(additional.data.order.shippingFee), expectedFee);`;
+    if (!source.includes(needle)) throw new Error('v30.10.1 additional checkout smoke marker missing');
+    source = source.replace(needle, `${needle}\n      // Stage 2 additional COD fixture must release its reservation immediately.\n      await json('/api/orders/' + additional.data.order.id + '/status', {\n        method: 'PATCH', headers: cookieHeaders(adminCookie), body: JSON.stringify({ status: 'cancelled' })\n      });`);
+  }
+
+  return source;
+});
+
 console.log('v30.10.1 generated-source repair:', changed.length ? changed.join(', ') : 'already satisfied');

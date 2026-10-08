@@ -34,16 +34,9 @@ edit('src/components/page/PageView.tsx', source => {
     /<p className="([^"]*?)whitespace-pre-line([^"]*?)">\{item\.content\}<\/p>/g,
     (_m, a, b) => `<RichTextContent content={item.content} className="${`${a}${b}`.replace(/\s+/g, ' ').trim()}" />`
   );
-
   source = source.replace(
     /<div className="([^"]*?)whitespace-pre-line([^"]*?)">\s*\{section\.content\}\s*<\/div>/g,
     (_m, a, b) => `<RichTextContent content={section.content} className="${`${a}${b}`.replace(/\s+/g, ' ').trim()}" />`
-  );
-
-  // Handle the compact one-line variants too.
-  source = source.replace(
-    /<p className="([^"]*)">\{item\.content\}<\/p>/g,
-    (m, classes) => m.includes('RichTextContent') ? m : `<RichTextContent content={item.content} className="${classes}" />`
   );
 
   if (!source.includes('<RichTextContent content={section.content}') || !source.includes('<RichTextContent content={item.content}')) {
@@ -52,28 +45,38 @@ edit('src/components/page/PageView.tsx', source => {
   return source;
 });
 
-// Footer copyright must remain block rich text. The former inline mode stripped
-// every paragraph tag and therefore stripped paragraph alignment as well.
+// v30.5.2 already upgraded the generated footer to a block RichTextContent
+// renderer with independent position/text-alignment controls. Keep that richer
+// structure, mark it as the v30.9.1 contract, and only fall back to converting
+// legacy inline/plain variants when an older installation reaches this patch.
 edit('src/components/layout/Footer.tsx', source => {
+  // Legacy helper fallback.
   source = source.replace(
-    /const renderCopyright = \(text: string\) => <RichTextContent content=\{text\}[^;]*;/,
-    `const renderCopyright = (text: string) => <RichTextContent content={text} className="footer-rich-copyright" />;`
+    /const renderCopyright = \(text: string\) => <RichTextContent content=\{text\}\s+inline[^;]*;/,
+    `const renderCopyright = (text: string) => <RichTextContent content={text} className="footer-copyright-rich" />;`
   );
 
+  // Current generated footer: preserve media/icon/position controls and add a
+  // marker to every copyright rich-text container.
+  source = source.replace(
+    /<div className="marketplace-ref-footer-copyright"(?![^>]*data-footer-rich-text)([^>]*)>/g,
+    `<div className="marketplace-ref-footer-copyright" data-footer-rich-text="30.9.1"$1>`
+  );
+
+  // Very old marketplace fallback.
   source = source.replace(
     /<span className="marketplace-ref-footer-copyright">\{renderCopyright\(([\s\S]*?)\)\}<\/span>/g,
     (_match, expression) => `<div className="marketplace-ref-footer-copyright" data-footer-rich-text="30.9.1">{renderCopyright(${expression})}</div>`
   );
 
-  // Classic layout used a plain React text node, so all HTML appeared as text
-  // or lost formatting. Replace only the copyright paragraph.
+  // Very old classic fallback where the copyright was rendered as plain text.
   source = source.replace(
     /<p>\s*\{settings\.footerCopyrightText \|\|[\s\S]*?\}\s*<\/p>/g,
     `<div className="min-w-0 flex-1" data-footer-rich-text="30.9.1">\n            {renderCopyright(settings.footerCopyrightText || \`© \${new Date().toLocaleDateString('fa-IR')} \${settings.siteTitle || 'فروشگاه'}. تمامی حقوق محفوظ است.\`)}\n          </div>`
   );
 
   if (!source.includes('data-footer-rich-text="30.9.1"')) {
-    throw new Error('v30.9.1 footer rich rendering patch incomplete');
+    throw new Error('v30.9.1 footer rich rendering marker missing');
   }
   if (/renderCopyright = .*\binline\b/.test(source)) {
     throw new Error('v30.9.1 footer still flattens rich text');
@@ -81,20 +84,13 @@ edit('src/components/layout/Footer.tsx', source => {
   return source;
 });
 
-// Remove footer CSS that forcibly overrides authored alignment. Footer-level
-// alignment remains the default, but a paragraph formatted in the editor wins.
+// The generated v30.5.2 footer has a text-alignment selector that deliberately
+// uses !important. v30.9.1 makes authored paragraph alignment inline-important,
+// which correctly outranks that stylesheet rule. Do not delete the footer-level
+// default; just record the new cascade contract and normalize rich block width.
 edit('src/index.css', source => {
-  source = source.replace(
-    /(\.marketplace-ref-footer-copyright\s*\{[^}]*?)\s*text-align:\s*center\s*!important;([^}]*\})/g,
-    '$1$2'
-  );
-  source = source.replace(
-    /(html\[data-layout="atelier-rtl"\]\s+\.marketplace-ref-footer-copyright\s*\{[^}]*?)\s*text-align:\s*center\s*;([^}]*\})/g,
-    '$1$2'
-  );
-
   if (!source.includes('/* v30.9.1 footer rich alignment */')) {
-    source += `\n\n/* v30.9.1 footer rich alignment */\n:is(html[data-layout="marketplace-rtl"], html[data-layout="atelier-rtl"]) .marketplace-ref-footer[data-bottom-align="right"] .marketplace-ref-footer-copyright { text-align: right; }\n:is(html[data-layout="marketplace-rtl"], html[data-layout="atelier-rtl"]) .marketplace-ref-footer[data-bottom-align="center"] .marketplace-ref-footer-copyright { text-align: center; }\n:is(html[data-layout="marketplace-rtl"], html[data-layout="atelier-rtl"]) .marketplace-ref-footer[data-bottom-align="left"] .marketplace-ref-footer-copyright { text-align: left; }\n.marketplace-ref-footer-copyright .footer-rich-copyright { width: 100%; }\n.marketplace-ref-footer-copyright .footer-rich-copyright > :first-child { margin-top: 0; }\n.marketplace-ref-footer-copyright .footer-rich-copyright > :last-child { margin-bottom: 0; }\n`;
+    source += `\n\n/* v30.9.1 footer rich alignment */\n.marketplace-ref-footer-copyright .footer-copyright-rich,\n.marketplace-ref-footer-copyright .footer-rich-copyright { max-width: 100%; }\n.marketplace-ref-footer-copyright .footer-copyright-rich > :first-child,\n.marketplace-ref-footer-copyright .footer-rich-copyright > :first-child { margin-top: 0; }\n.marketplace-ref-footer-copyright .footer-copyright-rich > :last-child,\n.marketplace-ref-footer-copyright .footer-rich-copyright > :last-child { margin-bottom: 0; }\n`;
   }
   return source;
 });

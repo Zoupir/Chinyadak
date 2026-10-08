@@ -23,6 +23,33 @@ edit('src/components/cart/CheckoutView.tsx', source => {
   return source;
 });
 
+edit('src/components/product/ProductDetailView.tsx', source => {
+  // Later historical product-detail repairs can reintroduce the old fixed-sale
+  // fallback. The purchase box must use the same effective price as cart/order.
+  if (!source.includes("from '../../utils/pricing'")) {
+    source = source.replace(
+      "import { checkProductFitment, formatToman, getGradeInfo } from '../../utils/formatters';",
+      "import { checkProductFitment, formatToman, getGradeInfo } from '../../utils/formatters';\nimport { getProductDiscountInfo } from '../../utils/pricing';"
+    );
+  }
+  source = source.replace(
+    '  const hasDiscount = product.discountPrice && product.discountPrice < product.price;',
+    '  const discount = getProductDiscountInfo(product);\n  const hasDiscount = discount.active;\n  const effectivePrice = discount.effectivePrice;'
+  );
+  if (source.includes('const discount = getProductDiscountInfo(product);') && !source.includes('const effectivePrice = discount.effectivePrice;')) {
+    source = source.replace(
+      '  const discount = getProductDiscountInfo(product);',
+      '  const discount = getProductDiscountInfo(product);\n  const effectivePrice = discount.effectivePrice;'
+    );
+  }
+  source = source.replace(/Number\(product\.discountPrice \|\| product\.price\)/g, 'Number(effectivePrice)');
+  source = source.replace(/formatToman\(product\.discountPrice \|\| product\.price\)/g, 'formatToman(effectivePrice)');
+  if (/product\.discountPrice\s*\|\|\s*product\.price/.test(source)) {
+    throw new Error('v30.10.1 product detail still bypasses effectivePrice');
+  }
+  return source;
+});
+
 edit('scripts/smoke-test.ts', source => {
   // The original broad smoke assumed Saman was usable even when CI had no
   // gateway credentials. Stage 2 intentionally rejects unavailable methods.

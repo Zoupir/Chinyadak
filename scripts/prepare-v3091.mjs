@@ -7,19 +7,21 @@ const run = script => {
   if (result.status !== 0) process.exit(result.status || 1);
 };
 
-// First guarantee the complete v30.9.0 contract, then apply the focused rich
-// editor/rendering fix. Both scripts are idempotent and safe across lint/build.
+// Build the known-good v30.9.0 generated source first, then apply the editor
+// integration and storefront rendering fixes as two narrow, idempotent stages.
 run('scripts/prepare-v3090.mjs');
-run('scripts/apply-v3091-editor-reliability.mjs');
+run('scripts/apply-v3091-editor-core.mjs');
+run('scripts/apply-v3091-rich-rendering.mjs');
 
 const checks = [
   ['src/components/common/RichTextComposer.tsx', 'data-rich-composer-version="30.9.1"'],
   ['src/components/common/RichTextComposer.tsx', 'internalEmissionRef.current === incomingHtml'],
+  ['src/components/common/RichTextComposer.tsx', 'runWithSavedSelection'],
   ['src/utils/richText.ts', "text-align:' + align[1].toLowerCase() + '!important'"],
   ['src/components/page/PageView.tsx', '<RichTextContent content={section.content}'],
   ['src/components/page/PageView.tsx', '<RichTextContent content={item.content}'],
   ['src/components/layout/Footer.tsx', 'data-footer-rich-text="30.9.1"'],
-  ['src/index.css', 'data-bottom-align="right"] .marketplace-ref-footer-copyright'],
+  ['src/index.css', '/* v30.9.1 footer rich alignment */'],
   ['src/components/admin/AdminFooterTab.tsx', 'const handleSaveAll = async () =>']
 ];
 

@@ -1,0 +1,271 @@
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import {
+  Check, Copy, FileAudio, FileImage, FileVideo, Folder, FolderOpen, Grid3X3,
+  List, Loader2, RefreshCw, Search, Trash2, Upload, X
+} from 'lucide-react';
+import {
+  deleteMediaItem,
+  getMediaReferences,
+  listMediaLibrary,
+  MediaKind,
+  MediaLibraryItem,
+  MediaReference,
+  MediaUploadError,
+  updateMediaSeo,
+  uploadImage,
+  uploadRichMedia
+} from '../../api/media';
+
+const PAGE_SIZE = 80;
+const formatBytes = (bytes:number) => bytes < 1024 ? `${bytes} B`
+  : bytes < 1024 * 1024 ? `${(bytes / 1024).toFixed(1)} KB`
+  : `${(bytes / 1024 / 1024).toFixed(2)} MB`;
+const MONTH_LABELS: Record<string,string> = {
+  '01':'ژانویه','02':'فوریه','03':'مارس','04':'آوریل','05':'مه','06':'ژوئن',
+  '07':'ژوئیه','08':'اوت','09':'سپتامبر','10':'اکتبر','11':'نوامبر','12':'دسامبر'
+};
+const kindLabel: Record<MediaKind,string> = { image:'تصویر', audio:'صوت', video:'ویدئو' };
+
+const MediaThumb: React.FC<{ item: MediaLibraryItem; large?: boolean }> = ({ item, large }) => {
+  if (item.kind === 'image') {
+    const srcSet = (item.variants || []).map(variant => `${variant.url} ${variant.width}w`).join(', ');
+    return <img src={large ? item.url : (item.thumbnailUrl || item.url)} srcSet={srcSet || undefined} sizes={large ? '80vw' : '180px'} alt={item.seo?.alt || item.filename} className="w-full h-full object-contain" loading="lazy" />;
+  }
+  if (item.kind === 'audio') return large
+    ? <audio controls preload="metadata" src={item.url} className="w-full" />
+    : <FileAudio className="w-10 h-10 text-indigo-500" />;
+  return large
+    ? <video controls preload="metadata" src={item.url} className="max-w-full max-h-[72vh]" />
+    : <FileVideo className="w-10 h-10 text-violet-500" />;
+};
+
+export const AdminMediaLibrary: React.FC = () => {
+  const [items, setItems] = useState<MediaLibraryItem[]>([]);
+  const [categories, setCategories] = useState<string[]>([]);
+  const [years, setYears] = useState<string[]>([]);
+  const [months, setMonths] = useState<string[]>([]);
+  const [counts, setCounts] = useState<Record<MediaKind,number>>({ image:0, audio:0, video:0 });
+  const [category, setCategory] = useState('all');
+  const [year, setYear] = useState('all');
+  const [month, setMonth] = useState('all');
+  const [kind, setKind] = useState<'all'|MediaKind>('all');
+  const [query, setQuery] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [view, setView] = useState<'grid'|'list'>('grid');
+  const [total, setTotal] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
+  const [nextOffset, setNextOffset] = useState<number | null>(null);
+  const [notice, setNotice] = useState('');
+  const [checkedPaths, setCheckedPaths] = useState<string[]>([]);
+  const [selected, setSelected] = useState<MediaLibraryItem | null>(null);
+  const [references, setReferences] = useState<MediaReference[]>([]);
+  const [referencesLoading, setReferencesLoading] = useState(false);
+  const [copied, setCopied] = useState('');
+  const [seoForm, setSeoForm] = useState({ alt:'', title:'', caption:'', description:'' });
+  const [savingSeo, setSavingSeo] = useState(false);
+  const imageRef = useRef<HTMLInputElement>(null);
+  const richRef = useRef<HTMLInputElement>(null);
+
+  const load = async (append = false, force = false) => {
+    append ? setLoadingMore(true) : setBusy(true);
+    try {
+      const offset = append ? (nextOffset || items.length) : 0;
+      const result = await listMediaLibrary({
+        q: query.trim() || undefined,
+        category,
+        year,
+        month,
+        kind: kind === 'all' ? undefined : kind,
+        limit: PAGE_SIZE,
+        offset,
+        refresh: force
+      });
+      setItems(current => append ? [...current, ...(result.items || [])] : (result.items || []));
+      setCategories(result.categories || []);
+      setYears(result.years || []);
+      setMonths(result.months || []);
+      setCounts(result.counts || { image:0, audio:0, video:0 });
+      setTotal(result.total || 0);
+      setHasMore(Boolean(result.hasMore));
+      setNextOffset(result.nextOffset ?? null);
+      if (!append) setCheckedPaths([]);
+    } catch (error) {
+      setNotice(error instanceof Error ? `دریافت رسانه‌ها ناموفق بود: ${error.message}` : 'دریافت رسانه‌ها ناموفق بود.');
+    } finally {
+      setBusy(false);
+      setLoadingMore(false);
+    }
+  };
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => void load(false), 250);
+    return () => window.clearTimeout(timer);
+  }, [category, year, month, kind, query]);
+
+  useEffect(() => {
+    if (!selected) return;
+    setSeoForm({
+      alt: selected.seo?.alt || '', title: selected.seo?.title || '',
+      caption: selected.seo?.caption || '', description: selected.seo?.description || ''
+    });
+    setReferences([]);
+    setReferencesLoading(true);
+    void getMediaReferences(selected.relativePath)
+      .then(result => setReferences(result.references || []))
+      .catch(() => setReferences([]))
+      .finally(() => setReferencesLoading(false));
+  }, [selected?.relativePath]);
+
+  const uploadImages = async (files: FileList | File[]) => {
+    const list = Array.from(files); if (!list.length) return;
+    setUploading(true); setNotice('');
+    try {
+      const uploadCategory = category === 'all' ? 'general' : category;
+      for (const file of list) await uploadImage(file, uploadCategory);
+      setNotice(`${list.length.toLocaleString('fa-IR')} تصویر بارگذاری شد.`);
+      await load(false, true);
+    } catch (error) {
+      setNotice(error instanceof MediaUploadError ? `آپلود ناموفق: ${error.code}` : 'آپلود تصویر ناموفق بود.');
+    } finally {
+      setUploading(false); if (imageRef.current) imageRef.current.value = '';
+    }
+  };
+
+  const uploadRich = async (files: FileList | File[]) => {
+    const list = Array.from(files); if (!list.length) return;
+    setUploading(true); setNotice('');
+    try {
+      const uploadCategory = category === 'all' ? 'editor-media' : category;
+      for (const file of list) {
+        const mediaKind: 'audio'|'video' = file.type.startsWith('audio/') ? 'audio' : 'video';
+        await uploadRichMedia(file, mediaKind, uploadCategory);
+      }
+      setNotice(`${list.length.toLocaleString('fa-IR')} فایل صوتی/ویدئویی بارگذاری شد.`);
+      await load(false, true);
+    } catch (error) {
+      setNotice(error instanceof MediaUploadError ? `آپلود ناموفق: ${error.code}` : 'آپلود رسانه ناموفق بود.');
+    } finally {
+      setUploading(false); if (richRef.current) richRef.current.value = '';
+    }
+  };
+
+  const describeReferences = (refs: MediaReference[]) => refs.slice(0, 5)
+    .map(ref => ref.label || `${ref.source}:${ref.id}`).join('، ');
+
+  const remove = async (item: MediaLibraryItem) => {
+    if (!window.confirm(`رسانه «${item.filename}» حذف شود؟`)) return;
+    try {
+      await deleteMediaItem(item.relativePath);
+      setSelected(null);
+      setNotice('رسانه حذف شد.');
+      await load(false, true);
+    } catch (error) {
+      if (error instanceof MediaUploadError && error.code === 'MEDIA_FILE_IN_USE') {
+        const refs = error.details?.references || [];
+        setReferences(refs);
+        setNotice(`حذف انجام نشد؛ این رسانه هنوز استفاده می‌شود${refs.length ? `: ${describeReferences(refs)}` : '.'}`);
+      } else setNotice('حذف رسانه ناموفق بود.');
+    }
+  };
+
+  const removeSelected = async () => {
+    if (!checkedPaths.length || !window.confirm(`حذف ${checkedPaths.length} رسانه انتخاب‌شده؟`)) return;
+    const protectedPaths:string[] = []; let removed = 0; let failed = 0;
+    for (const relativePath of checkedPaths) {
+      try { await deleteMediaItem(relativePath); removed += 1; }
+      catch (error) {
+        if (error instanceof MediaUploadError && error.code === 'MEDIA_FILE_IN_USE') protectedPaths.push(relativePath);
+        else failed += 1;
+      }
+    }
+    setCheckedPaths(protectedPaths);
+    setNotice(`${removed} حذف شد؛ ${protectedPaths.length} مورد به‌دلیل استفاده در سایت محافظت شد؛ ${failed} خطای دیگر.`);
+    await load(false, true);
+  };
+
+  const saveSeo = async () => {
+    if (!selected) return;
+    setSavingSeo(true);
+    try {
+      const seo = await updateMediaSeo(selected.relativePath, seoForm);
+      const updated = { ...selected, seo };
+      setSelected(updated);
+      setItems(current => current.map(item => item.relativePath === updated.relativePath ? updated : item));
+      setNotice('اطلاعات رسانه ذخیره شد.');
+    } finally { setSavingSeo(false); }
+  };
+
+  const copy = async (value:string) => {
+    await navigator.clipboard?.writeText(value); setCopied(value);
+    window.setTimeout(() => setCopied(''), 1200);
+  };
+  const chooseFolder = (cat:string, selectedYear='all', selectedMonth='all') => {
+    setCategory(cat); setYear(selectedYear); setMonth(selectedMonth);
+  };
+  const selectedAllVisible = items.length > 0 && items.every(item => checkedPaths.includes(item.relativePath));
+
+  return (
+    <div className="bg-white rounded-3xl border border-neutral-200 shadow-xs overflow-hidden min-h-[720px]">
+      <div className="p-5 border-b border-neutral-100 flex flex-col xl:flex-row xl:items-center justify-between gap-4">
+        <div>
+          <h2 className="text-lg font-black flex items-center gap-2"><FileImage className="w-5 h-5 text-blue-600" /> مدیریت رسانه</h2>
+          <p className="text-xs text-neutral-500 mt-1">تصویر، صوت و ویدئو با صفحه‌بندی، بررسی محل استفاده، سئوی رسانه و نسخه‌های WebP واکنش‌گرا.</p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="relative min-w-[230px] flex-1 xl:flex-none">
+            <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
+            <input value={query} onChange={e => setQuery(e.target.value)} className="w-full h-10 pr-10 pl-3 border rounded-xl text-xs" placeholder="جستجوی نام، ALT، عنوان یا توضیح..." />
+          </div>
+          <button type="button" onClick={() => void load(false, true)} className="h-10 px-3 border rounded-xl bg-neutral-50"><RefreshCw className={`w-4 h-4 ${busy ? 'animate-spin' : ''}`} /></button>
+          <div className="flex rounded-xl border overflow-hidden"><button onClick={() => setView('grid')} className={`h-10 px-3 ${view === 'grid' ? 'bg-neutral-900 text-white' : ''}`}><Grid3X3 className="w-4 h-4" /></button><button onClick={() => setView('list')} className={`h-10 px-3 ${view === 'list' ? 'bg-neutral-900 text-white' : ''}`}><List className="w-4 h-4" /></button></div>
+          <input ref={imageRef} type="file" accept="image/*" multiple className="hidden" onChange={e => e.target.files && void uploadImages(e.target.files)} />
+          <input ref={richRef} type="file" accept="audio/*,video/*" multiple className="hidden" onChange={e => e.target.files && void uploadRich(e.target.files)} />
+          <button type="button" disabled={uploading} onClick={() => imageRef.current?.click()} className="h-10 px-4 rounded-xl bg-blue-600 text-white text-xs font-black inline-flex items-center gap-2 disabled:opacity-50"><Upload className="w-4 h-4" /> تصویر</button>
+          <button type="button" disabled={uploading} onClick={() => richRef.current?.click()} className="h-10 px-4 rounded-xl bg-violet-600 text-white text-xs font-black inline-flex items-center gap-2 disabled:opacity-50"><Upload className="w-4 h-4" /> صوت/ویدئو</button>
+        </div>
+      </div>
+
+      <div className="border-b px-5 py-3 flex flex-wrap gap-2 items-center text-[10px]">
+        {(['all','image','audio','video'] as const).map(value => <button key={value} onClick={() => setKind(value)} className={`px-3 py-2 rounded-lg border ${kind === value ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white'}`}>{value === 'all' ? `همه (${counts.image + counts.audio + counts.video})` : `${kindLabel[value]} (${counts[value]})`}</button>)}
+        <span className="mr-auto text-neutral-400">{total.toLocaleString('fa-IR')} نتیجه</span>
+      </div>
+      {notice && <div className="mx-5 mt-3 p-3 rounded-xl bg-neutral-100 text-xs">{notice}</div>}
+
+      <div className="grid grid-cols-1 lg:grid-cols-[220px_minmax(0,1fr)] min-h-[620px]">
+        <aside className="border-l bg-neutral-50 p-3 max-lg:hidden">
+          <strong className="text-[11px]">پوشه‌ها</strong>
+          <button onClick={() => chooseFolder('all')} className={`mt-2 w-full p-2 rounded-lg text-right text-[10px] font-bold flex gap-2 ${category === 'all' ? 'bg-blue-600 text-white' : 'hover:bg-white'}`}><FolderOpen className="w-4 h-4" /> همه</button>
+          <div className="mt-2 space-y-1">{categories.map(cat => <div key={cat}>
+            <button onClick={() => chooseFolder(cat)} className={`w-full p-2 rounded-lg text-right text-[10px] font-bold flex gap-2 ${category === cat && year === 'all' ? 'bg-white text-blue-700' : ''}`}><Folder className="w-4 h-4" /> {cat}</button>
+            {category === cat && <div className="mr-5 border-r pr-2">{years.map(y => <div key={y}><button onClick={() => chooseFolder(cat,y)} className={`w-full p-1.5 text-right text-[9px] ${year === y && month === 'all' ? 'text-blue-700 font-bold' : ''}`}>{y}</button>{year === y && <div className="mr-3">{months.map(m => <button key={m} onClick={() => chooseFolder(cat,y,m)} className={`block w-full p-1.5 text-right text-[9px] rounded ${month === m ? 'bg-blue-600 text-white' : ''}`}>{MONTH_LABELS[m] || m}</button>)}</div>}</div>)}</div>}
+          </div>)}</div>
+        </aside>
+
+        <main className="p-4 sm:p-5 min-w-0">
+          <div className="flex flex-wrap gap-3 items-center mb-4 text-xs"><label><input type="checkbox" checked={selectedAllVisible} onChange={e => setCheckedPaths(e.target.checked ? items.map(item => item.relativePath) : [])} /> انتخاب صفحه فعلی</label><button disabled={!checkedPaths.length} onClick={() => void removeSelected()} className="px-3 py-2 rounded-lg bg-red-50 text-red-700 disabled:opacity-40">حذف {checkedPaths.length} مورد</button></div>
+          {busy ? <div className="py-20 text-center"><Loader2 className="w-8 h-8 animate-spin mx-auto" /></div> : view === 'grid' ? (
+            <div className="media-compact-grid">{items.map(item => <div key={item.relativePath} className="relative"><input type="checkbox" aria-label={`انتخاب ${item.filename}`} checked={checkedPaths.includes(item.relativePath)} onChange={() => setCheckedPaths(current => current.includes(item.relativePath) ? current.filter(path => path !== item.relativePath) : [...current,item.relativePath])} className="absolute top-2 right-2 z-10" /><button onClick={() => setSelected(item)} className="w-full rounded-2xl border overflow-hidden bg-neutral-50 text-right"><div className="aspect-square bg-white grid place-items-center overflow-hidden p-2"><MediaThumb item={item} /></div><div className="p-2.5"><strong className="block text-[9px] truncate">{item.seo?.title || item.filename}</strong><span className="text-[8px] text-neutral-400">{kindLabel[item.kind]} • {formatBytes(item.size)}</span></div></button></div>)}</div>
+          ) : (
+            <div className="border rounded-2xl overflow-hidden">{items.map(item => <div key={item.relativePath} className="p-3 border-b flex items-center gap-3"><input type="checkbox" checked={checkedPaths.includes(item.relativePath)} onChange={() => setCheckedPaths(current => current.includes(item.relativePath) ? current.filter(path => path !== item.relativePath) : [...current,item.relativePath])} /><div className="w-12 h-12 border rounded-lg grid place-items-center overflow-hidden"><MediaThumb item={item} /></div><div className="min-w-0 flex-1"><strong className="block text-xs truncate">{item.seo?.title || item.filename}</strong><span className="text-[9px] text-neutral-400">{item.relativePath}</span></div><span className="text-[9px]">{kindLabel[item.kind]}</span><button onClick={() => setSelected(item)} className="px-3 py-2 rounded-lg bg-neutral-900 text-white text-[9px]">جزئیات</button></div>)}</div>
+          )}
+          {!items.length && !busy && <div className="py-20 text-center text-neutral-400">رسانه‌ای پیدا نشد.</div>}
+          {hasMore && <button disabled={loadingMore} onClick={() => void load(true)} className="mt-5 w-full py-3 rounded-xl border bg-neutral-50 text-xs font-black">{loadingMore ? 'در حال دریافت…' : `نمایش موارد بیشتر (${Math.max(0,total-items.length).toLocaleString('fa-IR')} باقی‌مانده)`}</button>}
+        </main>
+      </div>
+
+      {selected && <div className="fixed inset-0 z-[99990] bg-black/60 p-2 sm:p-4 flex items-center justify-center" onClick={() => setSelected(null)}><div role="dialog" aria-modal="true" className="w-full max-w-5xl max-h-[94dvh] bg-white rounded-2xl overflow-hidden shadow-2xl grid md:grid-cols-[1.1fr_.9fr]" onClick={e => e.stopPropagation()}>
+        <div className="bg-neutral-100 min-h-[280px] grid place-items-center p-4"><MediaThumb item={selected} large /></div>
+        <div className="p-5 space-y-4 overflow-y-auto max-h-[94dvh]">
+          <div className="flex justify-between"><div><h3 className="font-black text-sm">جزئیات رسانه</h3><span className="text-[9px] text-neutral-400">{kindLabel[selected.kind]} • {selected.category}/{selected.year}/{selected.month}</span></div><button onClick={() => setSelected(null)} className="w-8 h-8 rounded-full bg-neutral-100 grid place-items-center"><X className="w-4 h-4" /></button></div>
+          <div className="grid grid-cols-2 gap-2 text-[9px]"><div className="p-2 rounded-xl bg-neutral-50"><span>نام فایل</span><strong className="block break-all">{selected.filename}</strong></div><div className="p-2 rounded-xl bg-neutral-50"><span>حجم</span><strong className="block">{formatBytes(selected.size)}</strong></div>{selected.kind === 'image' && <><div className="p-2 rounded-xl bg-neutral-50"><span>ابعاد</span><strong className="block">{selected.width && selected.height ? `${selected.width}×${selected.height}` : '—'}</strong></div><div className="p-2 rounded-xl bg-neutral-50"><span>نسخه WebP</span><strong className="block">{(selected.variants || []).length.toLocaleString('fa-IR')}</strong></div></>}</div>
+          <div className="flex gap-2"><input readOnly value={selected.url} dir="ltr" className="min-w-0 flex-1 p-2 border rounded-xl text-[9px]" /><button onClick={() => copy(selected.url)} className="w-10 border rounded-xl grid place-items-center">{copied === selected.url ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}</button></div>
+          <div className={`p-3 rounded-xl text-[10px] ${references.length ? 'bg-amber-50 text-amber-800' : 'bg-emerald-50 text-emerald-800'}`}>{referencesLoading ? 'در حال بررسی محل استفاده…' : references.length ? `این رسانه در ${references.length.toLocaleString('fa-IR')} بخش استفاده می‌شود: ${describeReferences(references)}` : 'هیچ ارجاع فعالی به این رسانه پیدا نشد.'}</div>
+          <div className="p-4 rounded-2xl border space-y-3">{selected.kind === 'image' && <label className="block text-[10px] font-bold">ALT<input value={seoForm.alt} onChange={e => setSeoForm({...seoForm,alt:e.target.value})} className="w-full mt-1 p-2.5 border rounded-xl text-xs font-normal" /></label>}<label className="block text-[10px] font-bold">عنوان<input value={seoForm.title} onChange={e => setSeoForm({...seoForm,title:e.target.value})} className="w-full mt-1 p-2.5 border rounded-xl text-xs font-normal" /></label><label className="block text-[10px] font-bold">توضیح کوتاه<textarea rows={2} value={seoForm.caption} onChange={e => setSeoForm({...seoForm,caption:e.target.value})} className="w-full mt-1 p-2.5 border rounded-xl text-xs font-normal" /></label><label className="block text-[10px] font-bold">توضیح کامل<textarea rows={3} value={seoForm.description} onChange={e => setSeoForm({...seoForm,description:e.target.value})} className="w-full mt-1 p-2.5 border rounded-xl text-xs font-normal" /></label><button disabled={savingSeo} onClick={() => void saveSeo()} className="w-full py-2.5 bg-emerald-600 text-white rounded-xl text-xs font-black disabled:opacity-50">{savingSeo ? 'در حال ذخیره…' : 'ذخیره اطلاعات رسانه'}</button></div>
+          <button disabled={references.length > 0} onClick={() => void remove(selected)} className="w-full py-2.5 rounded-xl bg-red-50 text-red-700 text-xs font-black disabled:opacity-40 inline-flex gap-2 justify-center"><Trash2 className="w-4 h-4" /> {references.length ? 'این رسانه در سایت استفاده می‌شود' : 'حذف فایل از هاست'}</button>
+        </div>
+      </div></div>}
+    </div>
+  );
+};

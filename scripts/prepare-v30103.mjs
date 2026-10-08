@@ -15,16 +15,20 @@ const has = (file, marker) => {
 const checks = [
   ['src/types/index.ts', 'cmsRevision?: number;'],
   ['src/context/StoreContext.tsx', 'const discardSectionPreview ='],
-  ['src/context/StoreContext.tsx', 'const addProduct = async'],
-  ['src/context/StoreContext.tsx', 'const updateArticle = async'],
+  ['src/context/StoreContext.tsx', 'updateProduct: (updated: Product) => Promise<Product | null>;'],
+  ['src/context/StoreContext.tsx', 'updateArticle: (art: Article) => Promise<Article | null>;'],
   ['src/context/StoreContext.tsx', 'const updatePage = (updatedPage: SitePage): Promise<boolean>'],
   ['src/server/routes/cms.ts', 'CMS_PAGE_REVISION_CONFLICT'],
   ['src/server/routes/cms.ts', 'normalizePageForSave'],
   ['src/components/common/LiveSectionModal.tsx', "mode?: 'edit' | 'create'"],
   ['src/components/common/LiveSectionModal.tsx', 'useDialogFocusTrap'],
+  ['src/components/common/LiveSectionModal.tsx', "mode === 'create'"],
+  ['src/components/common/LiveSectionModal.tsx', 'onClick={save} disabled={isSaving}'],
   ['src/components/admin/AdminPagesTab.tsx', 'handleDropSection'],
+  ['src/components/admin/AdminPagesTab.tsx', 'const [movedSection] = sorted.splice(index, 1);'],
   ['src/components/admin/AdminPagesTab.tsx', '<LiveSectionModal'],
   ['src/components/admin/AdminArticlesTab.tsx', 'closeArticleEditor'],
+  ['src/components/admin/AdminArticlesTab.tsx', '/admin/article-edit/'],
   ['src/components/admin/AdminView.tsx', 'closeProductEditor'],
   ['src/hooks/useEditorGuard.ts', 'useUnsavedChangesGuard']
 ];
@@ -39,6 +43,7 @@ if (!isPrepared()) {
   run('scripts/prepare-v30102.mjs');
   run('scripts/run-v30103-cms-editor.mjs');
   run('scripts/repair-v30103-generated-source.mjs');
+  run('scripts/repair-v30103-final.mjs');
 } else {
   console.log('Source preparation already at v30.10.3; verified and skipped legacy transforms.');
 }

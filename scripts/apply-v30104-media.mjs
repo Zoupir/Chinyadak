@@ -49,6 +49,13 @@ edit('src/server/media-library.ts', source => source.replace(
   '    const widths: number[] = VARIANT_WIDTHS.filter(width => !originalWidth || width <= originalWidth);\n    if (!widths.length && originalWidth) widths.push(Math.max(1, Math.min(320, originalWidth)));'
 ));
 
+// Node's Buffer is typed over ArrayBufferLike in TS 7, while BlobPart requires
+// an ArrayBuffer-backed view. Copy to a fresh Uint8Array for the multipart smoke.
+edit('scripts/smoke-v30104.ts', source => source
+  .replace("new Blob([imageBuffer], { type: 'image/png' })", "new Blob([Uint8Array.from(imageBuffer)], { type: 'image/png' })")
+  .replace("new Blob([audioBytes], { type: 'audio/mpeg' })", "new Blob([Uint8Array.from(audioBytes)], { type: 'audio/mpeg' })")
+);
+
 const required = [
   ['src/server/routes/media.ts', "kindRaw"],
   ['src/server/routes/media.ts', "MEDIA_FILE_IN_USE"],
@@ -60,7 +67,8 @@ const required = [
   ['src/components/admin/AdminMediaLibrary.tsx', 'uploadRichMedia'],
   ['src/components/common/MediaPickerModal.tsx', "kind: 'image'"],
   ['server.ts', "app.use('/api/rich-media', richMediaRouter);"],
-  ['src/server/media-library.ts', 'generateResponsiveImageVariants']
+  ['src/server/media-library.ts', 'generateResponsiveImageVariants'],
+  ['scripts/smoke-v30104.ts', 'Uint8Array.from(imageBuffer)']
 ];
 for (const [file, marker] of required) {
   if (!fs.readFileSync(file, 'utf8').includes(marker)) {

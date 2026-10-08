@@ -38,7 +38,15 @@ for (const [file, marker] of sourceContracts) {
 if (Number(versionMatch[1]) >= 8) {
   const composer = fs.readFileSync('src/components/common/RichTextComposer.tsx', 'utf8');
   const admin = fs.readFileSync('src/components/admin/AdminView.tsx', 'utf8');
-  if (!composer.includes('data-stable-rich-editor="30.10.8"')) fail('30.10.8 replacement WYSIWYG is missing');
+  if (Number(versionMatch[1]) >= 9) {
+    if (!composer.includes('data-quill-rich-editor="30.10.9"')) fail('30.10.9 Quill editor is missing');
+    if (!composer.includes("from 'quill'")) fail('30.10.9 editor is not backed by Quill');
+    if (composer.includes('document.execCommand')) fail('deprecated execCommand editor leaked into 30.10.9');
+    if (!pkg.dependencies?.quill) fail('Quill dependency missing from 30.10.9 release');
+    if (!admin.includes('data-view-product-button="1"')) fail('standalone product storefront preview button missing');
+  } else if (!composer.includes('data-stable-rich-editor="30.10.8"')) {
+    fail('30.10.8 replacement WYSIWYG is missing');
+  }
   if (composer.includes('@tiptap/')) fail('Tiptap leaked back into the replacement editor');
   if (!admin.includes('data-v30108-product-loader')) fail('standalone product direct loader is missing');
 }

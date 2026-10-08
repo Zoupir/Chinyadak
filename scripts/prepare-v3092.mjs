@@ -8,6 +8,7 @@ const run = script => {
 };
 
 run('scripts/prepare-v3091.mjs');
+run('scripts/normalize-v3092-pre.mjs');
 run('scripts/apply-v3092-editor-pages-live-save.mjs');
 
 const checks = [

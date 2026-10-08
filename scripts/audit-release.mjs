@@ -8,6 +8,7 @@ const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
 if (pkg.version !== '30.10.7') fail(`expected 30.10.7, got ${pkg.version}`);
 if (pkg.devDependencies?.autoprefixer) fail('unused autoprefixer dependency remains');
 if (!/^\^?2\.4\./.test(String(pkg.dependencies?.multer || ''))) fail('multer is not on the 2.4.x release line');
+if (!/^\^?0\.35\.5/.test(String(pkg.dependencies?.sharp || ''))) fail('sharp is not on the patched 0.35.5+ release line');
 if (!/^\^?7\.6\.5/.test(String(pkg.overrides?.protobufjs || ''))) fail('protobufjs override is not >=7.6.5');
 if (!/^\^?8\.20\.1/.test(String(pkg.overrides?.ws || ''))) fail('ws override is not >=8.20.1');
 

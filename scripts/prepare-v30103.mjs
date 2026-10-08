@@ -17,6 +17,8 @@ const checks = [
   ['src/context/StoreContext.tsx', 'const discardSectionPreview ='],
   ['src/context/StoreContext.tsx', 'updateProduct: (updated: Product) => Promise<Product | null>;'],
   ['src/context/StoreContext.tsx', 'updateArticle: (art: Article) => Promise<Article | null>;'],
+  ['src/context/StoreContext.tsx', 'data-v30103-product-save'],
+  ['src/context/StoreContext.tsx', 'discountPrice: 0'],
   ['src/context/StoreContext.tsx', 'const updatePage = (updatedPage: SitePage): Promise<boolean>'],
   ['src/server/routes/cms.ts', 'CMS_PAGE_REVISION_CONFLICT'],
   ['src/server/routes/cms.ts', 'normalizePageForSave'],
@@ -44,6 +46,7 @@ if (!isPrepared()) {
   run('scripts/run-v30103-cms-editor.mjs');
   run('scripts/repair-v30103-generated-source.mjs');
   run('scripts/repair-v30103-final.mjs');
+  run('scripts/repair-v30103-product-save.mjs');
 } else {
   console.log('Source preparation already at v30.10.3; verified and skipped legacy transforms.');
 }

@@ -22,14 +22,20 @@ assert.doesNotMatch(live, /عنوان سکشن الزامی است/);
 
 const publicStore = source('src/server/ssr-store-context.tsx');
 assert.match(publicStore, /data-v30109-public-admin-session/);
+assert.match(publicStore, /data-v30109-live-edit-session/);
+assert.match(publicStore, /chinpart_live_edit_active/);
 assert.match(publicStore, /fetch\('\/api\/auth\/me'/);
 assert.match(publicStore, /const persistPublicPage = async/);
 assert.match(publicStore, /updateSection,/);
 assert.match(publicStore, /previewSection,/);
 assert.doesNotMatch(publicStore, /updateSection: noop/);
 
+const fullStore = source('src/context/StoreContext.tsx');
+assert.match(fullStore, /data-v30109-live-edit-session/);
+assert.match(fullStore, /chinpart_live_edit_active/);
+
 const pkg = JSON.parse(source('package.json'));
 assert.equal(pkg.version, '30.10.9');
-assert.ok(pkg.dependencies?.quill);
+assert.equal(pkg.dependencies?.quill, '2.0.2');
 
-console.log('v30.10.9 product editor, Quill selection and live-save smoke passed.');
+console.log('v30.10.9 product editor, Quill selection and persistent live-save smoke passed.');

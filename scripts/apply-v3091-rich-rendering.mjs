@@ -13,7 +13,14 @@ const edit = (path, transform) => {
 // Sanitized author alignment is part of the content contract. It needs
 // priority over global RTL/theme text-align declarations.
 edit('src/utils/richText.ts', source => {
-  if (source.includes("text-align:' + align[1].toLowerCase() + '!important'")) return source;
+  // Current sanitizer (v30.10.x) already preserves authored alignment with
+  // !important via styleValue(). Treat that as satisfying the historical
+  // v30.9.1 contract instead of forcing the old align[1] implementation.
+  if (
+    source.includes("safe.push('text-align:' + align + '!important')") ||
+    source.includes("text-align:' + align[1].toLowerCase() + '!important'")
+  ) return source;
+
   const next = source.replace(
     /if \(align\) safe\.push\('text-align:' \+ align\[1\]\.toLowerCase\(\)\);/,
     "if (align) safe.push('text-align:' + align[1].toLowerCase() + '!important');"

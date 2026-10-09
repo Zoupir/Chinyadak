@@ -57,36 +57,57 @@ const waitForHydration = async page => {
     return pagesMenu;
   };
 
+  const selectHomePageBuilderTab = async () => {
+    const title = String(homePage.title || '').trim();
+    const buttons = page.locator('button');
+    const count = await buttons.count();
+    let selected = false;
+
+    for (let index = 0; index < count; index += 1) {
+      const button = buttons.nth(index);
+      if (!(await button.isVisible().catch(() => false))) continue;
+      const isHomeTab = await button.evaluate((element, expectedTitle) => {
+        const spans = Array.from(element.querySelectorAll('span')).map(span => (span.textContent || '').trim());
+        return spans.includes(expectedTitle) && spans.some(text => text.includes('سکشن'));
+      }, title).catch(() => false);
+      if (!isHomeTab) continue;
+      await button.click();
+      selected = true;
+      break;
+    }
+
+    if (!selected) {
+      console.error('Page-builder buttons:', await page.locator('button').allInnerTexts());
+      throw new Error(`Could not locate the page-builder tab for CMS home page ${homePage.id} (${title}).`);
+    }
+
+    // This chip is rendered from selectedPage.slug, so it is a functional proof
+    // that the page-builder state really points at home rather than about/contact.
+    await page.getByText('slug: /home', { exact: true }).waitFor({ state: 'visible', timeout: 8000 });
+  };
+
   const enterLiveHome = async () => {
     const pagesMenu = await ensureAdminDashboard();
     await pagesMenu.click();
 
-    const liveToggle = page.getByRole('button', { name: /ویرایش زنده در سایت/ }).first();
-    await liveToggle.waitFor({ state: 'visible', timeout: 10000 });
-    await liveToggle.click();
+    await selectHomePageBuilderTab();
+
+    const inactiveToggle = page.getByRole('button', { name: /فعال‌سازی ویرایش زنده در سایت/ }).first();
+    const activeToggle = page.getByRole('button', { name: /حالت ویرایش زنده در سایت: فعال/ }).first();
+    if (!(await activeToggle.isVisible().catch(() => false))) {
+      await inactiveToggle.waitFor({ state: 'visible', timeout: 10000 });
+      await inactiveToggle.click();
+      await activeToggle.waitFor({ state: 'visible', timeout: 5000 });
+    }
+
+    // Use the selected page's own preview action. The global admin-shell button
+    // «مشاهده فروشگاه» is deliberately excluded because it masked a wrong page
+    // selection in the previous regression runs.
+    const viewSelectedPage = page.getByRole('button', { name: /^مشاهده در سایت$/ }).first();
+    await viewSelectedPage.waitFor({ state: 'visible', timeout: 10000 });
+    await viewSelectedPage.click();
 
     const section = page.locator('[data-section-key="featured-categories"]');
-
-    // Some prepared page-builder variants navigate to the storefront as part of
-    // enabling live edit. Wait for that transition before looking for any explicit
-    // storefront-exit button; an immediate visibility probe races React navigation.
-    try {
-      await section.waitFor({ state: 'visible', timeout: 8000 });
-      return section;
-    } catch {
-      // Older variants only toggle StoreProvider state and require an explicit
-      // «مشاهده فروشگاه / مشاهده در سایت» action from the admin shell.
-    }
-
-    const exitToStore = page.getByRole('button', { name: /مشاهده فروشگاه|مشاهده در سایت/ }).first();
-    try {
-      await exitToStore.waitFor({ state: 'visible', timeout: 8000 });
-    } catch (error) {
-      console.error('Buttons after enabling live edit:', await page.locator('button').allInnerTexts());
-      console.error('Body after enabling live edit:', (await page.locator('body').innerText()).slice(0, 5000));
-      throw error;
-    }
-    await exitToStore.click();
     await section.waitFor({ state: 'visible', timeout: 15000 });
     return section;
   };

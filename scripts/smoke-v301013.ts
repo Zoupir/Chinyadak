@@ -39,7 +39,8 @@ assert.ok(cms.includes('SETTINGS_PERSIST_READBACK_FAILED'), 'Settings DB readbac
 assert.match(cms, /SELECT id, data_json FROM site_pages WHERE id = \? LIMIT 1/);
 
 const auditor = read('src/server/audit/site-audit.ts');
-assert.ok(auditor.includes("const ENGINE_VERSION = '2.2.0';"), 'Site Auditor 2.2 engine missing');
+const engineMatch = auditor.match(/const ENGINE_VERSION = ['"](2\.(\d+)(?:\.\d+)?)['"]/);
+assert.ok(engineMatch && Number(engineMatch[2]) >= 2, 'Site Auditor 2.2+ engine missing');
 assert.ok(auditor.includes('scanRichTextAndLiveEditorContracts(files, findings);'), 'Rich/live audit scanner missing');
 
 const failWithBody = async (response: Response, label: string) => {

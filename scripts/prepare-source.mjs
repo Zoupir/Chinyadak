@@ -16,7 +16,7 @@ const v3052Checks = [
 ];
 
 const v3053Checks = [
-  ['src/components/common/RichTextEditor.tsx', 'data-rich-editor-version="30.5.3"'],
+  ['src/components/common/RichTextEditor.tsx', 'RICH-TEXT-CANONICAL-HTML-v301015'],
   ['src/components/common/RichTextComposer.tsx', "name: 'richAudio'"],
   ['src/utils/richText.ts', "'IMG', 'AUDIO', 'VIDEO'"],
   ['src/components/common/RichTextEditorEnhancements.css', 'v30.5.3 — rich editor source/media and bold-color fidelity']

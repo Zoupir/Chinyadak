@@ -160,10 +160,10 @@ if (await patchFile('src/components/common/LiveSectionModal.tsx', source => {
 
 if (await patchFile('src/components/page/PageView.tsx', source => {
   const file = 'src/components/page/PageView.tsx';
-  source = insertAfter(
+  source = insertBefore(
     source,
-    "import { LiveSectionModal } from '../common/LiveSectionModal';\n",
-    "import { ExtensionSlot } from '../../extensions/ExtensionSlot';\nimport { ExtensionSectionQuickAdd } from '../../extensions/ExtensionSectionQuickAdd';\nimport type { ExtensionSectionDefinition } from '../../extensions/runtime';\n",
+    "const LiveSectionModal = lazy(() => import('../common/LiveSectionModal')",
+    "import { ExtensionSlot } from '../../extensions/ExtensionSlot';\nimport { ExtensionSectionQuickAdd } from '../../extensions/ExtensionSectionQuickAdd';\nimport type { ExtensionSectionDefinition } from '../../extensions/runtime';\n\n",
     "../../extensions/ExtensionSectionQuickAdd",
     file
   );

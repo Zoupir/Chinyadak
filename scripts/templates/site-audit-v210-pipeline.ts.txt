@@ -26,6 +26,70 @@ function readPipelineTrace(): any | null {
   }
 }
 
+function sha256AuditFile(file: string) {
+  try {
+    return createHash('sha256').update(fs.readFileSync(file)).digest('hex');
+  } catch {
+    return null;
+  }
+}
+
+function scanProductionBundleIntegrity(trace: any | null, findings: AuditFinding[]) {
+  const expectedServer = String(trace?.production?.serverBundleSha256 || '');
+  const expectedIndex = String(trace?.production?.distIndexSha256 || '');
+  if (!expectedServer || !expectedIndex) {
+    add(findings, {
+      id: 'production-bundle-trace-missing',
+      title: 'اثر انگشت Production Bundle در دسترس نیست',
+      category: 'pipeline',
+      severity: 'warning',
+      status: 'unknown',
+      summary: 'Pipeline trace پیدا شد اما hash نهایی server.js یا dist/index.html در آن ثبت نشده است.',
+      evidence: [trace ? 'AUDIT_PIPELINE_TRACE.json found without production hashes' : 'AUDIT_PIPELINE_TRACE.json not available'],
+      recommendation: 'Build باید از scripts/build-server.mjs فعلی عبور کند و trace را داخل dist بسته‌بندی کند.'
+    });
+    return false;
+  }
+
+  const actualServer = sha256AuditFile(path.join(ROOT, 'server.js'));
+  const actualIndex = sha256AuditFile(path.join(ROOT, 'dist/index.html'));
+  if (!actualServer || !actualIndex) {
+    add(findings, {
+      id: 'production-bundle-files-missing',
+      title: 'فایل‌های Production Bundle برای تأیید کامل نیستند',
+      category: 'runtime',
+      severity: 'error',
+      status: 'partial',
+      summary: 'Auditor نتوانست server.js یا dist/index.html واقعی runtime را برای تطبیق hash بخواند.',
+      evidence: [
+        `server.js: ${actualServer ? 'readable' : 'missing/unreadable'}`,
+        `dist/index.html: ${actualIndex ? 'readable' : 'missing/unreadable'}`
+      ],
+      recommendation: 'ساختار deployment و فایل‌های bundle روی سرور بررسی شود.'
+    });
+    return false;
+  }
+
+  const mismatches: string[] = [];
+  if (actualServer !== expectedServer) mismatches.push(`server.js expected=${expectedServer} actual=${actualServer}`);
+  if (actualIndex !== expectedIndex) mismatches.push(`dist/index.html expected=${expectedIndex} actual=${actualIndex}`);
+  if (mismatches.length) {
+    add(findings, {
+      id: 'production-bundle-hash-mismatch',
+      title: 'Production Bundle با artifact تست‌شده CI یکسان نیست',
+      category: 'runtime',
+      severity: 'error',
+      status: 'conflict',
+      summary: 'حداقل یکی از فایل‌های اصلی runtime hash متفاوتی از artifact تولیدشده در CI دارد.',
+      evidence: mismatches,
+      likelyCause: 'deployment ناقص، تغییر دستی پس از build، یا جابه‌جایی bundle نامرتبط با commit جاری.',
+      recommendation: 'نسخه فعلی از immutable artifact همان commit دوباره deploy شود و تغییر دستی روی server.js/dist انجام نشود.'
+    });
+    return false;
+  }
+  return true;
+}
+
 function collectReachablePipelineScripts(files: string[]) {
   const byRel = new Map(files.map(file => [relative(file), file]));
   const packageText = readUtf8(path.join(ROOT, 'package.json')) || '';

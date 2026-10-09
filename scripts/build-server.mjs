@@ -1,4 +1,5 @@
 import esbuild from 'esbuild';
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -49,8 +50,16 @@ await esbuild.build({
   }
 });
 
+const fileSha256 = file => crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex');
 const pipelineTrace = path.join(projectRoot, 'AUDIT_PIPELINE_TRACE.json');
 if (fs.existsSync(pipelineTrace)) {
+  const manifest = JSON.parse(fs.readFileSync(pipelineTrace, 'utf8'));
+  manifest.production = {
+    generatedAt: new Date().toISOString(),
+    serverBundleSha256: fileSha256(path.join(projectRoot, 'server.js')),
+    distIndexSha256: fileSha256(path.join(projectRoot, 'dist/index.html'))
+  };
+  fs.writeFileSync(pipelineTrace, JSON.stringify(manifest, null, 2) + '\n', 'utf8');
   fs.copyFileSync(pipelineTrace, path.join(projectRoot, 'dist/AUDIT_PIPELINE_TRACE.json'));
-  console.log('Copied AUDIT_PIPELINE_TRACE.json into production dist.');
+  console.log('Recorded production bundle hashes and copied AUDIT_PIPELINE_TRACE.json into dist.');
 }

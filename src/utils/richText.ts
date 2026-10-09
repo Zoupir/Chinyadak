@@ -42,8 +42,10 @@ const styleValue = (style: string, property: string): string => {
   return '';
 };
 
-// Compatibility sentinel for the historical v30.5.1 source migrator.
+// Compatibility sentinel for the historical v30.5.1/v30.5.2 source migrators.
 //   if (['SPAN', 'A', 'STRONG', 'B', 'EM', 'I', 'U', 'S', 'DEL'].includes(tagName)) {
+//   const value = input.trim().replace(/\s*!important\s*$/i, '');
+//   if (safeTextColor) safe.push('color:' + safeTextColor + '!important');
 // RICH-TEXT-STYLE-FIDELITY-v301015
 // RICH-TEXT-ROUNDTRIP-v301018
 const safeStyleFor = (tagName: string, rawAttrs: string): string => {

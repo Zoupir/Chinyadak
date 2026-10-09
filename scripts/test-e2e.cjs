@@ -102,7 +102,17 @@ const assertNoHorizontalOverflow = async (page, label) => {
       });
       assert.equal(login.status(), 200, `Admin E2E login failed: ${login.status()} ${await login.text()}`);
 
+      // Extension manager must be reachable from the normal admin sidebar; no manual URL entry.
       await page.setViewportSize({ width: 1280, height: 900 });
+      await page.goto(base + '/admin', { waitUntil: 'domcontentloaded' });
+      const extensionMenu = page.getByRole('button', { name: /افزونه‌ها و قالب‌های نصبی/ });
+      await extensionMenu.waitFor({ state: 'visible', timeout: 15000 });
+      await extensionMenu.click();
+      await page.getByRole('heading', { name: 'افزونه‌ها و قالب‌های نصبی' }).waitFor({ state: 'visible', timeout: 10000 });
+      assert.ok(await page.getByRole('button', { name: 'افزونه‌ها' }).count(), 'Integrated plugin tab is missing.');
+      assert.ok(await page.getByRole('button', { name: 'قالب‌ها' }).count(), 'Integrated theme tab is missing.');
+      assert.ok(await page.locator('input[type="file"][accept*="zip"]').count(), 'Integrated ZIP installer input is missing.');
+
       await page.goto(base + `/admin/product-edit/${encodeURIComponent(product.id)}`, { waitUntil: 'domcontentloaded' });
       const productEditor = page.locator('[data-product-editor-page="1"]');
       await productEditor.waitFor({ state: 'visible', timeout: 15000 });
@@ -149,7 +159,7 @@ const assertNoHorizontalOverflow = async (page, label) => {
       throw new Error('Browser page errors: ' + pageErrors.map(error => error.stack || error.message || String(error)).join('\n---\n'));
     }
 
-    console.log('Real browser E2E passed: storefront routes, responsive menus, standalone product editor, Persian caret/backspace and rich-text formatting.');
+    console.log('Real browser E2E passed: storefront routes, responsive menus, integrated extension manager, standalone product editor, Persian caret/backspace and rich-text formatting.');
   } finally {
     await context.close();
     await browser.close();

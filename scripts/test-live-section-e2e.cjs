@@ -4,6 +4,9 @@ const { chromium } = require('playwright');
 const base = String(process.env.TEST_BASE_URL || 'http://127.0.0.1:3000').replace(/\/$/, '');
 const adminUser = String(process.env.ADMIN_BOOTSTRAP_USER || 'admin');
 const adminPassword = String(process.env.ADMIN_BOOTSTRAP_PASSWORD || '');
+const findFeaturedCategoriesSection = sections => (sections || []).find(
+  section => section?.sectionKey === 'featured-categories' || section?.id === 'sec-categories'
+);
 
 const waitForHydration = async page => {
   await page.waitForFunction(() => document.documentElement.dataset.contentRendering === 'server-hydrated', null, { timeout: 15000 });
@@ -22,6 +25,7 @@ const waitForHydration = async page => {
   const bootstrapCms = await bootstrapCmsResponse.json();
   const homePage = (bootstrapCms.pages || []).find(item => item?.slug === 'home');
   assert.ok(homePage?.id, 'Live section E2E requires the home CMS page.');
+  assert.ok(findFeaturedCategoriesSection(homePage.sections), 'Live section E2E requires the legacy or current categories CMS section.');
 
   const browser = await chromium.launch({ args: ['--no-sandbox'] });
   const context = await browser.newContext({ viewport: { width: 1280, height: 900 }, locale: 'fa-IR' });
@@ -104,11 +108,6 @@ const waitForHydration = async page => {
     const modal = page.locator('[data-live-section-modal="1"]');
     await section.waitFor({ state: 'visible', timeout: 10000 });
 
-    // The public storefront can become interactive before its CMS-backed pages
-    // array has finished hydrating. The real handler intentionally resolves the
-    // clicked sectionKey back to the authored CMS section before opening the
-    // modal. Retry the same user click briefly instead of testing an artificial
-    // race between SSR paint and CMS hydration.
     const deadline = Date.now() + 12000;
     let attempts = 0;
     while (Date.now() < deadline) {
@@ -120,9 +119,9 @@ const waitForHydration = async page => {
 
     const cmsResponse = await context.request.get(base + '/api/cms/bundle');
     const cms = cmsResponse.ok() ? await cmsResponse.json() : null;
-    const liveSection = cms?.pages?.find(item => item?.slug === 'home')?.sections?.find(item => item?.sectionKey === 'featured-categories');
+    const liveSection = findFeaturedCategoriesSection(cms?.pages?.find(item => item?.slug === 'home')?.sections);
     console.error('Live section modal did not open after attempts:', attempts);
-    console.error('CMS featured-categories section at failure:', liveSection || null);
+    console.error('CMS featured-categories/legacy section at failure:', liveSection || null);
     console.error('Live toolbar visible:', await page.locator('.marketplace-live-edit-toolbar').isVisible().catch(() => false));
     throw new Error('featured-categories live editor did not open after CMS hydration retry window');
   };
@@ -156,8 +155,8 @@ const waitForHydration = async page => {
     assert.equal(savedCmsResponse.status(), 200, `CMS readback failed: ${savedCmsResponse.status()}`);
     const savedCms = await savedCmsResponse.json();
     const savedHome = (savedCms.pages || []).find(item => item?.slug === 'home');
-    const savedSection = savedHome?.sections?.find(section => section?.sectionKey === 'featured-categories');
-    assert.ok(savedSection, 'saved featured-categories section missing from CMS readback');
+    const savedSection = findFeaturedCategoriesSection(savedHome?.sections);
+    assert.ok(savedSection, 'saved featured-categories/legacy section missing from CMS readback');
     assert.equal(Number(savedSection.contentSourceLimit), 2, 'DB readback lost contentSourceLimit=2');
     assert.equal(Number(savedSection.maxItems), 2, 'DB readback lost maxItems=2');
     assert.equal(Number(savedSection.desktopColumns), 6, 'DB readback lost desktopColumns=6');

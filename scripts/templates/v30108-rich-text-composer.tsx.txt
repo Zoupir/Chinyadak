@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   AlignCenter, AlignJustify, AlignLeft, AlignRight, Bold, Eraser, Highlighter,
   ImagePlus, Italic, Link as LinkIcon, List, ListOrdered, Music2, Palette, Quote,
@@ -48,8 +48,14 @@ const ToolButton: React.FC<ToolButtonProps> = ({ title, onClick, active, disable
     aria-label={title}
     aria-pressed={active}
     disabled={disabled}
+    onPointerDown={event => {
+      event.preventDefault();
+      if (event.button === 0) onClick();
+    }}
     onMouseDown={event => event.preventDefault()}
-    onClick={onClick}
+    onClick={event => {
+      if (event.detail === 0) onClick();
+    }}
     className={'rich-text-tool' + (active ? ' is-active' : '')}
   >
     {children}
@@ -59,29 +65,14 @@ const ToolButton: React.FC<ToolButtonProps> = ({ title, onClick, active, disable
 const closestBlock = (node: Node | null, root: HTMLElement | null): HTMLElement | null => {
   let current: Node | null = node;
   while (current && current !== root) {
-    if (current instanceof HTMLElement && /^(P|H2|H3|H4|BLOCKQUOTE|LI|DIV)$/.test(current.tagName)) return current;
+    if (current instanceof HTMLElement && /^(P|H2|H3|H4|BLOCKQUOTE|LI|DIV|TD|TH)$/.test(current.tagName)) return current;
     current = current.parentNode;
   }
   return root;
 };
 
-const convertFontTags = (root: HTMLElement, forcedSize?: string, forcedFamily?: string) => {
-  root.querySelectorAll('font').forEach(font => {
-    const span = document.createElement('span');
-    const color = font.getAttribute('color');
-    const face = font.getAttribute('face');
-    const size = font.getAttribute('size');
-    if (color) span.style.color = color;
-    if (forcedFamily || face) span.style.fontFamily = forcedFamily || face || '';
-    if (forcedSize || size) span.style.fontSize = forcedSize || '16px';
-    span.innerHTML = font.innerHTML;
-    font.replaceWith(span);
-  });
-};
-
 const normalizedEditorHtml = (root: HTMLElement): string => {
   const clone = root.cloneNode(true) as HTMLElement;
-  convertFontTags(clone);
   clone.querySelectorAll('[data-editor-placeholder]').forEach(node => node.removeAttribute('data-editor-placeholder'));
   return clone.innerHTML;
 };
@@ -89,6 +80,7 @@ const normalizedEditorHtml = (root: HTMLElement): string => {
 export const RichTextComposer: React.FC<RichTextComposerProps> = ({ value, onChange, placeholder, rows }) => {
   const surfaceRef = useRef<HTMLDivElement>(null);
   const savedRangeRef = useRef<Range | null>(null);
+  const lastNonCollapsedRangeRef = useRef<Range | null>(null);
   const onChangeRef = useRef(onChange);
   const lastEmittedRef = useRef(markdownToSafeHtml(value || ''));
   const [selectionRevision, setSelectionRevision] = useState(0);
@@ -122,24 +114,100 @@ export const RichTextComposer: React.FC<RichTextComposerProps> = ({ value, onCha
     if (!root || !selection?.rangeCount) return;
     const range = selection.getRangeAt(0);
     if (!root.contains(range.commonAncestorContainer)) return;
-    savedRangeRef.current = range.cloneRange();
+    const snapshot = range.cloneRange();
+    savedRangeRef.current = snapshot;
+    if (!snapshot.collapsed) lastNonCollapsedRangeRef.current = snapshot.cloneRange();
     setSelectionRevision(revision => revision + 1);
   };
 
-  const restoreSelection = () => {
+  const restoreSelection = (preferNonCollapsed = false) => {
     const root = surfaceRef.current;
     if (!root) return false;
+    const saved = savedRangeRef.current;
+    const preferred = preferNonCollapsed && (!saved || saved.collapsed)
+      ? lastNonCollapsedRangeRef.current
+      : saved;
+    if (!preferred) return false;
     root.focus({ preventScroll: true });
-    const range = savedRangeRef.current;
     const selection = window.getSelection();
-    if (!range || !selection) return false;
+    if (!selection) return false;
     try {
       selection.removeAllRanges();
-      selection.addRange(range);
+      selection.addRange(preferred.cloneRange());
       return true;
     } catch {
       return false;
     }
+  };
+
+  const applyCssStyles = (element: HTMLElement, styles: Partial<CSSStyleDeclaration>) => {
+    const propertyNames: Record<string, string> = {
+      fontWeight: 'font-weight',
+      fontStyle: 'font-style',
+      textDecoration: 'text-decoration',
+      color: 'color',
+      backgroundColor: 'background-color',
+      fontSize: 'font-size',
+      fontFamily: 'font-family'
+    };
+    for (const [key, rawValue] of Object.entries(styles)) {
+      const value = String(rawValue || '').trim();
+      if (!value) continue;
+      element.style.setProperty(propertyNames[key] || key.replace(/[A-Z]/g, letter => '-' + letter.toLowerCase()), value, 'important');
+    }
+  };
+
+  const applyInlineStyle = (styles: Partial<CSSStyleDeclaration>) => {
+    const root = surfaceRef.current;
+    if (!root || !restoreSelection(true)) return;
+    const selection = window.getSelection();
+    if (!selection?.rangeCount) return;
+    const range = selection.getRangeAt(0);
+    if (!root.contains(range.commonAncestorContainer)) return;
+
+    if (range.collapsed) {
+      const span = document.createElement('span');
+      applyCssStyles(span, styles);
+      span.appendChild(document.createTextNode('\u200b'));
+      range.insertNode(span);
+      const next = document.createRange();
+      next.setStart(span.firstChild || span, 1);
+      next.collapse(true);
+      selection.removeAllRanges();
+      selection.addRange(next);
+      savedRangeRef.current = next.cloneRange();
+      emit();
+      return;
+    }
+
+    const fragment = range.extractContents();
+    const nodes = Array.from(fragment.childNodes);
+    if (!nodes.length) return;
+    for (const node of nodes) {
+      if (node instanceof HTMLElement) {
+        applyCssStyles(node, styles);
+      } else if (node.nodeType === Node.TEXT_NODE && node.textContent) {
+        const span = document.createElement('span');
+        applyCssStyles(span, styles);
+        span.textContent = node.textContent;
+        fragment.replaceChild(span, node);
+        const index = nodes.indexOf(node);
+        nodes[index] = span;
+      }
+    }
+
+    range.insertNode(fragment);
+    const first = nodes[0];
+    const last = nodes[nodes.length - 1];
+    const next = document.createRange();
+    next.setStartBefore(first);
+    next.setEndAfter(last);
+    selection.removeAllRanges();
+    selection.addRange(next);
+    savedRangeRef.current = next.cloneRange();
+    lastNonCollapsedRangeRef.current = next.cloneRange();
+    setSelectionRevision(revision => revision + 1);
+    emit();
   };
 
   const exec = (command: string, commandValue?: string) => {
@@ -152,37 +220,24 @@ export const RichTextComposer: React.FC<RichTextComposerProps> = ({ value, onCha
 
   const execFontSize = (size: string) => {
     if (!size) return;
-    restoreSelection();
-    document.execCommand('styleWithCSS', false, 'false');
-    document.execCommand('fontSize', false, '7');
-    const root = surfaceRef.current;
-    if (root) convertFontTags(root, size);
-    document.execCommand('styleWithCSS', false, 'true');
     setFontSize(size);
-    saveSelection();
-    emit();
+    applyInlineStyle({ fontSize: size });
   };
 
   const execFontFamily = (family: string) => {
     if (!family) return;
-    restoreSelection();
-    document.execCommand('styleWithCSS', false, 'false');
-    document.execCommand('fontName', false, family);
-    const root = surfaceRef.current;
-    if (root) convertFontTags(root, undefined, family);
-    document.execCommand('styleWithCSS', false, 'true');
     setFontFamily(family);
-    saveSelection();
-    emit();
+    applyInlineStyle({ fontFamily: family });
   };
 
-  const applyBlockStyle = (property: 'lineHeight', value: string) => {
-    restoreSelection();
+  const applyBlockStyle = (property: 'lineHeight', nextValue: string) => {
+    if (!nextValue) return;
+    restoreSelection(true);
     const selection = window.getSelection();
     const root = surfaceRef.current;
     const block = closestBlock(selection?.anchorNode || null, root);
-    if (block && block !== root) block.style[property] = value;
-    setLineHeight(value);
+    if (block && block !== root) block.style[property] = nextValue;
+    setLineHeight(nextValue);
     emit();
   };
 
@@ -198,13 +253,9 @@ export const RichTextComposer: React.FC<RichTextComposerProps> = ({ value, onCha
     if (!root) return;
     const incoming = markdownToSafeHtml(value || '');
     const current = sanitizeRichHtml(normalizedEditorHtml(root));
-    if (incoming !== current && incoming !== lastEmittedRef.current) {
-      root.innerHTML = incoming;
-      lastEmittedRef.current = incoming;
-    } else if (!root.innerHTML && incoming) {
-      root.innerHTML = incoming;
-      lastEmittedRef.current = incoming;
-    }
+    if (incoming === lastEmittedRef.current || incoming === current) return;
+    root.innerHTML = incoming;
+    lastEmittedRef.current = incoming;
   }, [value]);
 
   useEffect(() => {
@@ -232,11 +283,9 @@ export const RichTextComposer: React.FC<RichTextComposerProps> = ({ value, onCha
 
   const openLink = () => {
     saveSelection();
-    let existing = '';
     const selection = window.getSelection();
     const node = selection?.anchorNode instanceof Element ? selection.anchorNode : selection?.anchorNode?.parentElement;
-    existing = node?.closest('a')?.getAttribute('href') || '';
-    setLinkUrl(existing);
+    setLinkUrl(node?.closest('a')?.getAttribute('href') || '');
     setLinkError('');
     setLinkDialogOpen(true);
     setUrlMediaType(null);
@@ -281,30 +330,27 @@ export const RichTextComposer: React.FC<RichTextComposerProps> = ({ value, onCha
         `<${rowIndex === 0 ? 'th' : 'td'}>${rowIndex === 0 ? `ستون ${colIndex + 1}` : '&nbsp;'}</${rowIndex === 0 ? 'th' : 'td'}>`
       ).join('') + '</tr>'
     ).join('');
-    insertHtml(`<table><thead>${rowsHtml.slice(0, rowsHtml.indexOf('</tr>') + 5)}</thead><tbody>${rowsHtml.slice(rowsHtml.indexOf('</tr>') + 5)}</tbody></table><p><br></p>`);
+    const firstRowEnd = rowsHtml.indexOf('</tr>') + 5;
+    insertHtml(`<table><thead>${rowsHtml.slice(0, firstRowEnd)}</thead><tbody>${rowsHtml.slice(firstRowEnd)}</tbody></table><p><br></p>`);
   };
 
-  const blockFormat = (value: string) => {
-    restoreSelection();
-    document.execCommand('formatBlock', false, value === 'paragraph' ? 'p' : value);
+  const blockFormat = (nextValue: string) => {
+    restoreSelection(true);
+    document.execCommand('formatBlock', false, nextValue === 'paragraph' ? 'p' : nextValue);
     saveSelection();
     emit();
   };
 
   const onPaste = (event: React.ClipboardEvent<HTMLDivElement>) => {
     event.preventDefault();
-    const clipboard = event.clipboardData;
-    const html = clipboard.getData('text/html');
+    const html = event.clipboardData.getData('text/html');
     if (html) insertHtml(sanitizeRichHtml(html));
-    else {
-      const text = clipboard.getData('text/plain');
-      insertHtml(escapeRichText(text).replace(/\r?\n/g, '<br>'));
-    }
+    else insertHtml(escapeRichText(event.clipboardData.getData('text/plain')).replace(/\r?\n/g, '<br>'));
   };
 
   return (
     <div className="rich-text-editor__frame stable-rich-editor" data-stable-rich-editor="30.10.8">
-      <div className="rich-text-toolbar" role="toolbar" aria-label="ابزارهای قالب‌بندی متن">
+      <div className="rich-text-toolbar" role="toolbar" aria-label="ابزارهای قالب‌بندی متن" onPointerDownCapture={saveSelection}>
         <div className="rich-text-toolbar__group">
           <ToolButton title="واگرد" onClick={() => exec('undo')}><Undo2 aria-hidden="true" /></ToolButton>
           <ToolButton title="ازنو" onClick={() => exec('redo')}><Redo2 aria-hidden="true" /></ToolButton>
@@ -334,12 +380,12 @@ export const RichTextComposer: React.FC<RichTextComposerProps> = ({ value, onCha
         <span className="rich-text-toolbar__separator" />
 
         <div className="rich-text-toolbar__group">
-          <ToolButton title="پررنگ" active={commandActive('bold')} onClick={() => exec('bold')}><Bold aria-hidden="true" /></ToolButton>
-          <ToolButton title="کج" active={commandActive('italic')} onClick={() => exec('italic')}><Italic aria-hidden="true" /></ToolButton>
-          <ToolButton title="زیرخط" active={commandActive('underline')} onClick={() => exec('underline')}><Underline aria-hidden="true" /></ToolButton>
-          <ToolButton title="خط‌خورده" active={commandActive('strikeThrough')} onClick={() => exec('strikeThrough')}><Strikethrough aria-hidden="true" /></ToolButton>
-          <label className="rich-text-color-picker" title="رنگ متن"><Palette aria-hidden="true" style={{ color: textColor }} /><input type="color" value={textColor} aria-label="رنگ متن" onChange={event => { setTextColor(event.currentTarget.value); exec('foreColor', event.currentTarget.value); }} /></label>
-          <label className="rich-text-color-picker" title="رنگ پس‌زمینه متن"><Highlighter aria-hidden="true" style={{ color: highlightColor }} /><input type="color" value={highlightColor} aria-label="رنگ پس‌زمینه متن" onChange={event => { setHighlightColor(event.currentTarget.value); exec('hiliteColor', event.currentTarget.value); }} /></label>
+          <ToolButton title="پررنگ" active={commandActive('bold')} onClick={() => applyInlineStyle({ fontWeight: '700' })}><Bold aria-hidden="true" /></ToolButton>
+          <ToolButton title="کج" active={commandActive('italic')} onClick={() => applyInlineStyle({ fontStyle: 'italic' })}><Italic aria-hidden="true" /></ToolButton>
+          <ToolButton title="زیرخط" active={commandActive('underline')} onClick={() => applyInlineStyle({ textDecoration: 'underline' })}><Underline aria-hidden="true" /></ToolButton>
+          <ToolButton title="خط‌خورده" active={commandActive('strikeThrough')} onClick={() => applyInlineStyle({ textDecoration: 'line-through' })}><Strikethrough aria-hidden="true" /></ToolButton>
+          <label className="rich-text-color-picker" title="رنگ متن"><Palette aria-hidden="true" style={{ color: textColor }} /><input type="color" value={textColor} aria-label="رنگ متن" onChange={event => { setTextColor(event.currentTarget.value); applyInlineStyle({ color: event.currentTarget.value }); }} /></label>
+          <label className="rich-text-color-picker" title="رنگ پس‌زمینه متن"><Highlighter aria-hidden="true" style={{ color: highlightColor }} /><input type="color" value={highlightColor} aria-label="رنگ پس‌زمینه متن" onChange={event => { setHighlightColor(event.currentTarget.value); applyInlineStyle({ backgroundColor: event.currentTarget.value }); }} /></label>
           <ToolButton title="پاک‌کردن قالب‌بندی" onClick={() => { exec('removeFormat'); blockFormat('paragraph'); }}><Eraser aria-hidden="true" /></ToolButton>
         </div>
         <span className="rich-text-toolbar__separator" />
@@ -403,6 +449,22 @@ export const RichTextComposer: React.FC<RichTextComposerProps> = ({ value, onCha
           spellCheck
           onInput={emit}
           onBlur={() => { saveSelection(); emit(); }}
+          onKeyDown={event => {
+            if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'a') {
+              const root = surfaceRef.current;
+              const selection = window.getSelection();
+              if (root && selection) {
+                event.preventDefault();
+                const range = document.createRange();
+                range.selectNodeContents(root);
+                selection.removeAllRanges();
+                selection.addRange(range);
+                savedRangeRef.current = range.cloneRange();
+                lastNonCollapsedRangeRef.current = range.cloneRange();
+                setSelectionRevision(revision => revision + 1);
+              }
+            }
+          }}
           onKeyUp={saveSelection}
           onMouseUp={saveSelection}
           onPaste={onPaste}

@@ -14,6 +14,13 @@ source = source.replace(
   "onClick={() => { if (item.id) onNavigate('product', item.id); }}"
 );
 
+source = source.replace(
+  /if \(seen\.has\(product\.id\)\) return false;\s*seen\.add\(product\.id\);/g,
+  `const productKey = product.id || product.sku || product.partNumber || product.oemNumber || '';
+        if (!productKey || seen.has(productKey)) return false;
+        seen.add(productKey);`
+);
+
 if (source !== before) {
   fs.writeFileSync(path, source, 'utf8');
   console.log('v30.10.18 MarketplaceRtlHome optional-id type repair applied.');

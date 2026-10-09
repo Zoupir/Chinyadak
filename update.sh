@@ -7,8 +7,7 @@ APP_USER="${USER:-geelgoco}"
 BRANCH="marketplace-rtl-phase1"
 NODE_BIN="/opt/alt/alt-nodejs22/root/usr/bin"
 DEPLOY_TAG="marketplace-rtl-phase1-builds"
-DEPLOY_ASSET="chinyadak-build.tar.gz"
-DEPLOY_URL="https://github.com/Zoupir/Chinyadak/releases/download/${DEPLOY_TAG}/${DEPLOY_ASSET}"
+DEPLOY_ASSET_PREFIX="chinyadak-build"
 HEALTH_URL="https://yadak.store/api/health"
 SKIP_PULL="${YADAK_SKIP_PULL:-0}"
 APP_PRESTOPPED="${YADAK_APP_PRESTOPPED:-0}"
@@ -137,6 +136,8 @@ else
   git pull --ff-only origin "$BRANCH"
 fi
 HEAD_SHA="$(git rev-parse HEAD)"
+DEPLOY_ASSET="${DEPLOY_ASSET_PREFIX}-${HEAD_SHA}.tar.gz"
+DEPLOY_URL="https://github.com/Zoupir/Chinyadak/releases/download/${DEPLOY_TAG}/${DEPLOY_ASSET}"
 PKG_SIG="$(normalized_package_signature_from_file package.json)"
 SIG_FILE="tmp/.package-signature-v2"
 LAST_SIG=""
@@ -223,7 +224,7 @@ for attempt in {1..24}; do
 
   if curl -fsSL --retry 2 --retry-delay 2 --connect-timeout 10 --max-time 120 \
     -H 'Cache-Control: no-cache' \
-    "${DEPLOY_URL}?commit=${HEAD_SHA}&attempt=${attempt}" \
+    "${DEPLOY_URL}?attempt=${attempt}" \
     -o "$BUNDLE"; then
     if tar -xzf "$BUNDLE" -C "$STAGE" >/dev/null 2>&1; then
       BUNDLE_SHA=""
@@ -243,6 +244,7 @@ done
 
 if [[ "$READY" != "1" ]]; then
   echo "ERROR: no tested CI production bundle was available for commit $HEAD_SHA."
+  echo "Expected immutable asset: $DEPLOY_ASSET"
   echo "The currently running site was left untouched."
   exit 1
 fi

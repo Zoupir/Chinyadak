@@ -114,11 +114,15 @@ const assertNoHorizontalOverflow = async (page, label) => {
 
       // Install the real first-party auditor ZIP through the same extension API used by production.
       execFileSync(process.execPath, ['scripts/build-site-auditor.mjs'], { cwd: process.cwd(), stdio: 'pipe' });
-      const auditorZip = fs.readFileSync('tmp/site-auditor-1.0.0.zip');
+      const auditorManifest = JSON.parse(fs.readFileSync('extensions/site-auditor/plugin.json', 'utf8'));
+      const auditorVersion = String(auditorManifest.version || '').trim();
+      assert.match(auditorVersion, /^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/, 'Site Auditor manifest version is invalid.');
+      const auditorZipName = `site-auditor-${auditorVersion}.zip`;
+      const auditorZip = fs.readFileSync(`tmp/${auditorZipName}`);
       const installAuditor = await context.request.post(base + '/api/extensions/install', {
         multipart: {
           kind: 'plugin',
-          file: { name: 'site-auditor-1.0.0.zip', mimeType: 'application/zip', buffer: auditorZip }
+          file: { name: auditorZipName, mimeType: 'application/zip', buffer: auditorZip }
         },
         headers: { origin: base, 'sec-fetch-site': 'same-origin' }
       });

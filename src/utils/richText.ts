@@ -2,7 +2,7 @@ const allowedTags = new Set([
   'P', 'BR', 'STRONG', 'B', 'EM', 'I', 'U', 'S', 'DEL',
   'H2', 'H3', 'H4', 'UL', 'OL', 'LI', 'BLOCKQUOTE',
   'A', 'CODE', 'PRE', 'TABLE', 'TBODY', 'THEAD', 'TR',
-  'TD', 'TH', 'SPAN', 'HR', 'IMG', 'AUDIO', 'VIDEO'
+  'TD', 'TH', 'SPAN', 'DIV', 'HR', 'IMG', 'AUDIO', 'VIDEO'
 ]);
 
 export const escapeRichText = (value: string): string => value
@@ -19,7 +19,7 @@ export const safeRichSrc = (src: string): boolean =>
   /^(https?:\/\/|\/)/i.test(src.trim());
 
 const safeColor = (input: string): string | null => {
-  const value = input.trim().replace(/\s*!important\s*$/i, '');
+  const value = String(input || '').trim().replace(/\s*!important\s*$/i, '');
   if (/^#[0-9a-f]{3,8}$/i.test(value)) return value.toLowerCase();
   if (/^(?:rgb|rgba|hsl|hsla)\(\s*[\d.%\s,+-]+\)$/i.test(value)) return value;
   if (/^(?:black|white|red|green|blue|orange|purple|gray|grey|navy|teal|maroon|olive|silver|lime|aqua|fuchsia|yellow|transparent|currentcolor)$/i.test(value)) {
@@ -28,42 +28,78 @@ const safeColor = (input: string): string | null => {
   return null;
 };
 
+const stripStylePriority = (value: string): string =>
+  String(value || '').trim().replace(/\s*!important\s*$/i, '').trim();
+
+const styleValue = (style: string, property: string): string => {
+  for (const declaration of String(style || '').split(';')) {
+    const colon = declaration.indexOf(':');
+    if (colon < 0) continue;
+    const key = declaration.slice(0, colon).trim().toLowerCase();
+    if (key !== property.toLowerCase()) continue;
+    return stripStylePriority(declaration.slice(colon + 1));
+  }
+  return '';
+};
+
+// RICH-TEXT-STYLE-FIDELITY-v301015
+// RICH-TEXT-ROUNDTRIP-v301018
 const safeStyleFor = (tagName: string, rawAttrs: string): string => {
   const styleMatch = rawAttrs.match(/\bstyle\s*=\s*(["'])(.*?)\1/i);
   if (!styleMatch) return '';
   const style = styleMatch[2];
   const safe: string[] = [];
 
-  if (['P', 'H2', 'H3', 'H4', 'BLOCKQUOTE'].includes(tagName)) {
-    const align = style.match(/(?:^|;)\s*text-align\s*:\s*(left|right|center|justify)\s*(?:;|$)/i);
-    if (align) safe.push('text-align:' + align[1].toLowerCase());
+  const blockStyleTags = ['P', 'H2', 'H3', 'H4', 'BLOCKQUOTE', 'DIV', 'LI', 'UL', 'OL', 'TD', 'TH'];
+  const textStyleTags = [
+    'P', 'H2', 'H3', 'H4', 'BLOCKQUOTE', 'SPAN', 'A', 'STRONG', 'B', 'EM', 'I', 'U', 'S', 'DEL',
+    'DIV', 'LI', 'UL', 'OL', 'TD', 'TH', 'CODE'
+  ];
+
+  if (blockStyleTags.includes(tagName)) {
+    const align = styleValue(style, 'text-align').toLowerCase();
+    if (/^(left|right|center|justify)$/.test(align)) safe.push('text-align:' + align + '!important');
+
+    const lineHeight = styleValue(style, 'line-height').toLowerCase();
+    if (/^(?:normal|[1-3](?:\.\d{1,2})?)$/.test(lineHeight)) {
+      safe.push('line-height:' + lineHeight + '!important');
+    }
   }
 
-  if (['P', 'H2', 'H3', 'H4', 'BLOCKQUOTE', 'SPAN', 'A', 'STRONG', 'B', 'EM', 'I', 'U', 'S', 'DEL'].includes(tagName)) {
-    const color = style.match(/(?:^|;)\s*color\s*:\s*([^;]+)/i);
-    const background = style.match(/(?:^|;)\s*background-color\s*:\s*([^;]+)/i);
-    const fontSize = style.match(/(?:^|;)\s*font-size\s*:\s*([^;]+)/i);
-    const fontWeight = style.match(/(?:^|;)\s*font-weight\s*:\s*(normal|bold|[1-9]00)\s*(?:;|$)/i);
-    const fontStyle = style.match(/(?:^|;)\s*font-style\s*:\s*(normal|italic)\s*(?:;|$)/i);
-    const decoration = style.match(/(?:^|;)\s*text-decoration(?:-line)?\s*:\s*(none|underline|line-through|underline\s+line-through|line-through\s+underline)\s*(?:;|$)/i);
-    const safeTextColor = color && safeColor(color[1]);
-    const safeBackground = background && safeColor(background[1]);
-    if (safeTextColor) safe.push('color:' + safeTextColor + '!important');
-    if (safeBackground) safe.push('background-color:' + safeBackground);
-    if (fontSize && /^(?:[6-9]|[1-8]\d|9[0-6])(?:px|pt|rem|em|%)$/i.test(fontSize[1].trim())) {
-      safe.push('font-size:' + fontSize[1].trim().toLowerCase());
+  if (textStyleTags.includes(tagName)) {
+    const textColor = safeColor(styleValue(style, 'color'));
+    const background = safeColor(styleValue(style, 'background-color'));
+    const fontSize = styleValue(style, 'font-size').toLowerCase();
+    const fontWeight = styleValue(style, 'font-weight').toLowerCase();
+    const fontStyle = styleValue(style, 'font-style').toLowerCase();
+    const decoration = styleValue(style, 'text-decoration').toLowerCase().replace(/\s+/g, ' ');
+    const decorationLine = styleValue(style, 'text-decoration-line').toLowerCase().replace(/\s+/g, ' ');
+    const rawFamily = styleValue(style, 'font-family').replace(/[\"']/g, '').trim();
+
+    if (textColor) safe.push('color:' + textColor + '!important');
+    if (background) safe.push('background-color:' + background + '!important');
+    if (/^(?:[6-9]|[1-8]\d|9[0-6])(?:px|pt|rem|em|%)$/i.test(fontSize)) {
+      safe.push('font-size:' + fontSize + '!important');
     }
-    if (fontWeight) safe.push('font-weight:' + fontWeight[1].toLowerCase());
-    if (fontStyle) safe.push('font-style:' + fontStyle[1].toLowerCase());
-    if (decoration) safe.push('text-decoration:' + decoration[1].toLowerCase().replace(/\s+/g, ' '));
+    if (/^(?:normal|bold|[1-9]00)$/.test(fontWeight)) safe.push('font-weight:' + fontWeight + '!important');
+    if (/^(?:normal|italic)$/.test(fontStyle)) safe.push('font-style:' + fontStyle + '!important');
+    const normalizedDecoration = decoration || decorationLine;
+    if (/^(?:none|underline|line-through|underline line-through|line-through underline)$/.test(normalizedDecoration)) {
+      safe.push('text-decoration:' + normalizedDecoration + '!important');
+    }
+    if (/^(?:Vazirmatn|Tahoma|Arial|sans-serif|serif|monospace)(?:\s*,\s*(?:Vazirmatn|Tahoma|Arial|sans-serif|serif|monospace))*$/i.test(rawFamily)) {
+      safe.push('font-family:' + rawFamily + '!important');
+    }
   }
 
   return safe.length ? ' style="' + escapeRichText(safe.join(';')) + '"' : '';
 };
 
 const safeAttr = (rawAttrs: string, name: string): string => {
-  const match = rawAttrs.match(new RegExp('\\b' + name + '\\s*=\\s*(["\\\'])(.*?)\\1', 'i'));
-  return match?.[2] || '';
+  const quoted = rawAttrs.match(new RegExp('\\b' + name + '\\s*=\\s*(["\\\'])(.*?)\\1', 'i'));
+  if (quoted?.[2]) return quoted[2];
+  const bare = rawAttrs.match(new RegExp('\\b' + name + '\\s*=\\s*([^\\s>]+)', 'i'));
+  return bare?.[1] || '';
 };
 
 export const sanitizeRichHtml = (value: string): string => {
@@ -126,7 +162,7 @@ export const sanitizeRichHtml = (value: string): string => {
 
 export const markdownToSafeHtml = (value: string): string => {
   const source = String(value || '');
-  if (/<\/?(p|br|strong|b|em|i|u|s|del|h[1-6]|ul|ol|li|blockquote|a|code|pre|table|thead|tbody|tr|td|th|span|hr|img|audio|video)\b/i.test(source)) {
+  if (/<\/?(p|br|strong|b|em|i|u|s|del|h[1-6]|ul|ol|li|blockquote|a|code|pre|table|thead|tbody|tr|td|th|span|div|hr|img|audio|video)\b/i.test(source)) {
     return sanitizeRichHtml(source);
   }
 
@@ -175,3 +211,6 @@ export const markdownToSafeHtml = (value: string): string => {
   flush();
   return sanitizeRichHtml(out.join(''));
 };
+
+export const normalizeRichTextForPersistence = (value: string): string =>
+  markdownToSafeHtml(String(value || ''));

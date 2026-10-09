@@ -74,11 +74,30 @@ import fs from 'node:fs';
     marketplace = marketplace.replace(anchor, injection);
   }
 
+  const legacyMarker = 'MARKETPLACE-LEGACY-SECTION-BRIDGE-v301017';
+  if (!marketplace.includes(legacyMarker)) {
+    const sectionConfigLine = `  const sectionConfig = (key: string) => homeSections.find(section => section.sectionKey === key);`;
+    if (!marketplace.includes(sectionConfigLine)) throw new Error('v30.10.17 marketplace sectionConfig target missing');
+    marketplace = marketplace.replace(
+      sectionConfigLine,
+      `  // ${legacyMarker}\n  const legacySectionIdByKey: Record<string, string> = {\n    hero: 'sec-hero',\n    'featured-categories': 'sec-categories',\n    manufacturers: 'sec-brands',\n    testimonials: 'sec-trust',\n    articles: 'sec-articles'\n  };\n  const sectionConfig = (key: string) => homeSections.find(\n    section => section.sectionKey === key || section.id === legacySectionIdByKey[key]\n  );`
+    );
+
+    const heroLookup = `    const section = homeSections.find(item => item.sectionKey === 'hero');`;
+    if (marketplace.includes(heroLookup)) marketplace = marketplace.replace(heroLookup, `    const section = sectionConfig('hero');`);
+
+    const liveLookup = `    const section = homeSections.find(item => item.sectionKey === sectionKey);`;
+    if (!marketplace.includes(liveLookup)) throw new Error('v30.10.17 marketplace live section lookup target missing');
+    marketplace = marketplace.replace(liveLookup, `    const section = sectionConfig(sectionKey);`);
+  }
+
   if (!marketplace.includes(marketplaceMarker) ||
-      !marketplace.includes('const isLiveEditActive = contextLiveEditActive || navigationLiveEditRequested;')) {
-    throw new Error('v30.10.17 marketplace first-render live-edit handoff incomplete');
+      !marketplace.includes('const isLiveEditActive = contextLiveEditActive || navigationLiveEditRequested;') ||
+      !marketplace.includes(legacyMarker) ||
+      !marketplace.includes('const section = sectionConfig(sectionKey);')) {
+    throw new Error('v30.10.17 marketplace live-edit compatibility bridge incomplete');
   }
   fs.writeFileSync(marketplaceFile, marketplace, 'utf8');
 }
 
-console.log('v30.10.17 browser contract: responsive controls observable and live-edit handoff is consumed on the marketplace first render.');
+console.log('v30.10.17 browser contract: responsive controls observable, live-edit handoff survives navigation, and legacy home sections remain editable.');

@@ -6,7 +6,7 @@ import { runSiteAudit } from '../src/server/audit/site-audit.ts';
 const report = runSiteAudit();
 assert.equal(typeof report.generatedAt, 'string');
 assert.equal(typeof report.coreVersion, 'string');
-assert.equal(report.engineVersion, '2.2.0');
+assert.equal(report.engineVersion, '2.3.0');
 assert.ok(Array.isArray(report.findings));
 assert.equal(report.summary.total, report.findings.length);
 assert.equal(report.coverage.pipelineTraceAvailable, true);
@@ -48,9 +48,14 @@ for (const id of fixedContractIds) {
   assert.equal(
     report.findings.some(finding => finding.id === id),
     false,
-    `Fixed rich/live contract regressed: ${id}`
+    `Prepared rich/live contract regressed: ${id}`
   );
 }
+assert.equal(
+  report.findings.some(finding => String(finding.id).startsWith('schema-drift:mobileFooterColumns:')),
+  false,
+  'mobileFooterColumns editor/renderer contract regressed'
+);
 assert.equal(report.findings.some(finding => finding.id === 'production-bundle-hash-mismatch'), false);
 
 const tracePath = path.join(process.cwd(), 'AUDIT_PIPELINE_TRACE.json');
@@ -65,6 +70,12 @@ assert.ok(trace.prepared.apiCalls.length > 0);
 assert.ok(Array.isArray(trace.prepared?.configRefs));
 assert.ok(trace.prepared.configRefs.length > 0);
 assert.ok(Array.isArray(trace.confirmedOverwrites));
+assert.equal(trace.prepared?.contracts?.richTextPageRenderer, true);
+assert.equal(trace.prepared?.contracts?.richTextCssParity, true);
+assert.equal(trace.prepared?.contracts?.richTextRuntimeProbe, true);
+assert.equal(trace.prepared?.contracts?.liveEditorSynchronousSnapshot, true);
+assert.equal(trace.prepared?.contracts?.liveEditorPersistenceRoundtrip, true);
+assert.equal(trace.prepared?.contracts?.footerMobileColumnsContract, true);
 assert.match(String(trace.production?.serverBundleSha256 || ''), /^[0-9a-f]{64}$/);
 assert.match(String(trace.production?.distIndexSha256 || ''), /^[0-9a-f]{64}$/);
 
@@ -75,13 +86,20 @@ assert.ok(fs.existsSync(path.join(pluginRoot, 'assets/auditor.css')));
 const manifest = JSON.parse(fs.readFileSync(path.join(pluginRoot, 'plugin.json'), 'utf8'));
 assert.equal(manifest.id, 'site-auditor');
 assert.equal(manifest.type, 'plugin');
-assert.equal(manifest.version, '2.2.0');
-assert.equal(manifest.requiresCore, '>=30.10.13');
+assert.equal(manifest.version, '2.3.0');
+assert.equal(manifest.requiresCore, '>=30.10.14');
 assert.equal(manifest.clientEntry, 'client/index.js');
+
+const client = fs.readFileSync(path.join(pluginRoot, 'client/index.js'), 'utf8');
+assert.ok(client.includes("const AUDITOR_VERSION = '2.3.0';"));
+assert.ok(client.includes('probeRenderedPage'));
+assert.ok(client.includes("root.childElementCount > 0"));
+assert.ok(client.includes("window.__YADAK_SITE_AUDIT_REPORT__ = report"));
+assert.equal(client.includes("auditorVersion: '2.0.0'"), false);
 
 const builder = fs.readFileSync(path.join(process.cwd(), 'scripts/build-site-auditor.mjs'), 'utf8');
 assert.ok(builder.includes("const manifestPath = path.join(source, 'plugin.json');"));
 assert.ok(builder.includes('tmp/site-auditor-${version}.zip'));
 assert.equal(builder.includes("tmp/site-auditor-1.0.0.zip"), false);
 
-console.log(`Site Auditor 2.2 smoke passed with ${report.findings.length} findings, ${report.coverage.pipelineStages} traced stages, ${report.coverage.confirmedOverwrites} confirmed overwrites, rich/live contracts healthy, production bundle verified.`);
+console.log(`Site Auditor 2.3 smoke passed with ${report.findings.length} findings, ${report.coverage.pipelineStages} traced stages, ${report.coverage.confirmedOverwrites} confirmed overwrites, prepared runtime contracts healthy, production bundle verified.`);

@@ -1,7 +1,7 @@
 {
   "name": "chinpart",
   "private": true,
-  "version": "30.10.9",
+  "version": "30.10.10",
   "type": "module",
   "scripts": {
     "prepare:source": "node scripts/prepare-v30108.mjs && node scripts/prepare-extension-platform.mjs",
@@ -13,7 +13,7 @@
     "lint": "npm run prepare:source && tsc --noEmit",
     "db:seed": "tsx scripts/seed-catalog.ts",
     "payments:release-expired": "tsx scripts/release-expired-reservations.ts",
-    "test:smoke": "tsx scripts/smoke-test.ts && tsx scripts/smoke-v3082.ts && tsx scripts/smoke-v3090.ts && tsx scripts/smoke-v3091.ts && tsx scripts/smoke-v3092.ts && tsx scripts/smoke-v30100.ts && tsx scripts/smoke-v30101.ts && tsx scripts/smoke-v30102.ts && tsx scripts/smoke-v30103.ts && tsx scripts/smoke-v30104.ts && tsx scripts/smoke-v30105.ts && tsx scripts/smoke-v30106.ts && tsx scripts/smoke-v30107.ts && tsx scripts/smoke-v30108.ts && tsx scripts/smoke-extensions.ts",
+    "test:smoke": "tsx scripts/smoke-test.ts && tsx scripts/smoke-v3082.ts && tsx scripts/smoke-v3090.ts && tsx scripts/smoke-v3091.ts && tsx scripts/smoke-v3092.ts && tsx scripts/smoke-v30100.ts && tsx scripts/smoke-v30101.ts && tsx scripts/smoke-v30102.ts && tsx scripts/smoke-v30103.ts && tsx scripts/smoke-v30104.ts && tsx scripts/smoke-v30105.ts && tsx scripts/smoke-v30106.ts && tsx scripts/smoke-v30107.ts && tsx scripts/smoke-v30108.ts && tsx scripts/smoke-extensions.ts && tsx scripts/smoke-site-auditor.ts",
     "test:e2e": "node scripts/test-e2e.cjs",
     "audit:prod": "npm audit --omit=dev --audit-level=high",
     "db:wait": "tsx scripts/wait-for-db.ts",

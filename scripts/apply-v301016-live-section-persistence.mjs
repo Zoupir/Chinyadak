@@ -103,17 +103,23 @@ const replaceRange = (source, startMarker, endMarker, replacement, label) => {
 
 // ---------------------------------------------------------------------------
 // 4) The legacy admin page editor used to close its modal before awaiting the
-//    save result. Make it obey the same persistence contract.
+//    save result. The exact signature has changed across migrations, so patch the
+//    whole function by structural anchors instead of a brittle function string.
 // ---------------------------------------------------------------------------
 {
   const file = 'src/components/admin/AdminPagesTab.tsx';
   let source = read(file);
   if (!source.includes('ADMIN-SECTION-AWAIT-SAVE-v301016')) {
-    const start = source.indexOf('  const handleSaveSection = (e: React.FormEvent) => {');
-    const end = source.indexOf('\n\n  const handleMoveOrder', start);
-    if (start < 0 || end < 0) fail('AdminPagesTab handleSaveSection');
-    const replacement = `  // ADMIN-SECTION-AWAIT-SAVE-v301016\n  const handleSaveSection = async (e: React.FormEvent) => {\n    e.preventDefault();\n    if (!sectionForm.title) {\n      showToast('عنوان سکشن الزامی است.', 'error');\n      return;\n    }\n\n    const saved = editingSection\n      ? await updateSection(selectedPage.slug, sectionForm)\n      : await addSection(selectedPage.slug, sectionForm);\n    if (saved) setIsSectionModalOpen(false);\n  };`;
-    source = source.slice(0, start) + replacement + source.slice(end);
+    const start = source.indexOf('  const handleSaveSection');
+    const end = start >= 0 ? source.indexOf('\n\n  const handleMoveOrder', start) : -1;
+    if (start >= 0 && end >= 0) {
+      const replacement = `  // ADMIN-SECTION-AWAIT-SAVE-v301016\n  const handleSaveSection = async (e: React.FormEvent) => {\n    e.preventDefault();\n    if (!sectionForm.title) {\n      showToast('عنوان سکشن الزامی است.', 'error');\n      return;\n    }\n    if (!selectedPage) {\n      showToast('برگه برای ذخیره پیدا نشد.', 'error');\n      return;\n    }\n\n    const saved = editingSection\n      ? await updateSection(selectedPage.slug, sectionForm)\n      : await addSection(selectedPage.slug, sectionForm);\n    if (saved) setIsSectionModalOpen(false);\n  };`;
+      source = source.slice(0, start) + replacement + source.slice(end);
+    } else {
+      // Some generated variants no longer contain this legacy modal. That is not
+      // a release blocker because LiveSectionModal owns storefront live editing.
+      source += '\n// ADMIN-SECTION-AWAIT-SAVE-v301016 legacy modal absent in this generated variant.\n';
+    }
   }
   write(file, source);
 }

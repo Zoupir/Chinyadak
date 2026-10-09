@@ -20,8 +20,14 @@ const fail = label => { throw new Error(`v30.10.15 marker missing: ${label}`); }
   String(value || '').trim().replace(/\\s*!important\\s*$/i, '').trim();
 
 const styleValue = (style: string, property: string): string => {
-  const match = style.match(new RegExp('(?:^|;)\\\\s*' + property + '\\s*:\\s*([^;]+)', 'i'));
-  return match ? stripStylePriority(match[1]) : '';
+  for (const declaration of String(style || '').split(';')) {
+    const colon = declaration.indexOf(':');
+    if (colon < 0) continue;
+    const key = declaration.slice(0, colon).trim().toLowerCase();
+    if (key !== property.toLowerCase()) continue;
+    return stripStylePriority(declaration.slice(colon + 1));
+  }
+  return '';
 };
 
 // RICH-TEXT-STYLE-FIDELITY-v301015
@@ -93,7 +99,7 @@ const safeStyleFor = (tagName: string, rawAttrs: string): string => {
   );
   source = source.replace(
     "import { sanitizeRichHtml } from '../../utils/richText';",
-    "import { markdownToSafeHtml, sanitizeRichHtml } from '../../utils/richText';"
+    "import { markdownToSafeHtml } from '../../utils/richText';"
   );
 
   if (!source.includes('const normalizedLegacyValueRef = useRef')) {
@@ -127,7 +133,7 @@ const safeStyleFor = (tagName: string, rawAttrs: string): string => {
   let source = read(file);
   const marker = '/* STOREFRONT-RICH-TEXT-FIDELITY-v301015 */';
   if (!source.includes(marker)) {
-    source += `\n\n${marker}\n.rich-text-content a[href] {\n  color: #c2410c !important;\n  text-decoration: underline !important;\n  text-decoration-color: currentColor !important;\n  text-underline-offset: 2px;\n}\n.rich-text-content strong,\n.rich-text-content b {\n  font-weight: 700 !important;\n}\n.rich-text-content [style*="color:"] {\n  color: revert-layer;\n}\n`;
+    source += `\n\n${marker}\n.rich-text-content a[href] {\n  color: #c2410c !important;\n  text-decoration: underline !important;\n  text-decoration-color: currentColor !important;\n  text-underline-offset: 2px;\n}\n.rich-text-content strong,\n.rich-text-content b {\n  font-weight: 700 !important;\n}\n`;
   }
   write(file, source);
 }

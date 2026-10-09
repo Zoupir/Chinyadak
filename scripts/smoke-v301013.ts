@@ -42,6 +42,12 @@ const auditor = read('src/server/audit/site-audit.ts');
 assert.ok(auditor.includes("const ENGINE_VERSION = '2.2.0';"), 'Site Auditor 2.2 engine missing');
 assert.ok(auditor.includes('scanRichTextAndLiveEditorContracts(files, findings);'), 'Rich/live audit scanner missing');
 
+const failWithBody = async (response: Response, label: string) => {
+  if (response.ok) return;
+  const body = await response.text();
+  assert.fail(`${label}: ${response.status} ${body}`);
+};
+
 // Exercise the real production API/DB round-trip when the smoke suite runs against the CI server.
 const base = String(process.env.TEST_BASE_URL || '').replace(/\/$/, '');
 const adminPassword = String(process.env.ADMIN_BOOTSTRAP_PASSWORD || '');
@@ -60,13 +66,14 @@ if (base && adminPassword) {
     },
     body: JSON.stringify({ username: adminUser, password: adminPassword })
   });
-  assert.equal(login.status, 200, `v30.10.13 admin login failed: ${login.status} ${await login.text()}`);
+  await failWithBody(login, 'v30.10.13 admin login failed');
+  assert.equal(login.status, 200, 'v30.10.13 admin login returned unexpected success status');
   const setCookie = login.headers.get('set-cookie') || '';
   const cookie = setCookie.split(';')[0];
   assert.ok(cookie.includes('='), 'v30.10.13 admin session cookie missing');
 
   const bundleBeforeResponse = await fetch(base + '/api/cms/bundle', { headers: { cookie } });
-  assert.equal(bundleBeforeResponse.status, 200, 'v30.10.13 CMS bundle preflight failed');
+  await failWithBody(bundleBeforeResponse, 'v30.10.13 CMS bundle preflight failed');
   const bundleBefore = await bundleBeforeResponse.json() as any;
   const page = (bundleBefore.pages || []).find((item: any) => item?.id && Array.isArray(item?.sections) && item.sections.length);
   assert.ok(page, 'v30.10.13 requires one persisted page with a section');
@@ -88,7 +95,7 @@ if (base && adminPassword) {
       headers: { 'content-type': 'application/json', cookie, origin: base, 'sec-fetch-site': 'same-origin' },
       body: JSON.stringify(changedPage)
     });
-    assert.equal(save.status, 200, `v30.10.13 page save failed: ${save.status} ${await save.text()}`);
+    await failWithBody(save, 'v30.10.13 page save failed');
     const savedPayload = await save.json() as any;
     latestRevision = Number(savedPayload.page?.cmsRevision ?? latestRevision);
     const savedSection = savedPayload.page?.sections?.find((section: any) => section.id === target.id);
@@ -96,7 +103,7 @@ if (base && adminPassword) {
     assert.equal(Number(savedSection?.widthPercent), probeWidth, 'Page PUT response did not read back persisted layout width');
 
     const verifyResponse = await fetch(base + '/api/cms/bundle', { headers: { cookie }, cache: 'no-store' });
-    assert.equal(verifyResponse.status, 200, 'v30.10.13 CMS bundle verification failed');
+    await failWithBody(verifyResponse, 'v30.10.13 CMS bundle verification failed');
     const verify = await verifyResponse.json() as any;
     const verifiedPage = (verify.pages || []).find((item: any) => item.id === page.id);
     latestRevision = Number(verifiedPage?.cmsRevision ?? latestRevision);
@@ -110,7 +117,8 @@ if (base && adminPassword) {
       headers: { 'content-type': 'application/json', cookie, origin: base, 'sec-fetch-site': 'same-origin' },
       body: JSON.stringify(restorePayload)
     });
-    assert.equal(restore.status, 200, `v30.10.13 page restore failed: ${restore.status} ${await restore.text()}`);
+    await failWithBody(restore, 'v30.10.13 page restore failed');
+    assert.equal(restore.status, 200, 'v30.10.13 page restore returned unexpected success status');
   }
 }
 

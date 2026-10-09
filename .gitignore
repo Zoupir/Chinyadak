@@ -9,3 +9,4 @@ coverage/
 uploads/
 private-uploads/
 var/extensions/
+AUDIT_PIPELINE_TRACE.json

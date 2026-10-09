@@ -35,6 +35,12 @@ assert.match(publicStore, /updateSection,/);
 assert.match(publicStore, /previewSection,/);
 assert.doesNotMatch(publicStore, /updateSection: noop/);
 
+const marketplace = source('src/components/home/MarketplaceRtlHome.tsx');
+assert.match(marketplace, /data-v30109-marketplace-section-map/);
+assert.match(marketplace, /articles:\s*'sec-articles'/);
+assert.match(marketplace, /sectionKey \? sectionForKey\(sectionKey\) : undefined/);
+assert.doesNotMatch(marketplace, /homeSections\.find\(item => item\.sectionKey === sectionKey\)/);
+
 const pagesAdmin = source('src/components/admin/AdminPagesTab.tsx');
 assert.match(pagesAdmin, /data-v30109-admin-live-edit-session/);
 assert.match(pagesAdmin, /sessionStorage\.setItem\('chinpart_live_edit_active'/);

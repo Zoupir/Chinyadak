@@ -21,10 +21,13 @@ import { engagementRouter } from './src/server/routes/engagement';
 import { bulkRouter } from './src/server/routes/bulk';
 import { seoRouter } from './src/server/routes/seo';
 import { supportRouter } from './src/server/routes/support';
+import { extensionsRouter } from './src/server/routes/extensions';
 import { uploadDirectory } from './src/server/media';
 import { checkDatabase } from './src/server/db';
 import { config } from './src/server/config';
+import { getOptionalSession } from './src/server/auth';
 import { recordFailedApiResponse, recordSupportEvent } from './src/server/support-diagnostics';
+import { renderExtensionsAdminPage } from './src/server/extensions/admin-page';
 import { renderStorefrontDocument } from './src/server/storefront-html';
 import { isPrivateStorefrontPath, normalizePublicStorefrontDocument } from './src/server/storefront-normal';
 import {
@@ -116,6 +119,16 @@ app.get(/^\/([a-f0-9]{16,64})\.txt$/i, async (req, res, next) => {
 
 app.use(seoRedirectMiddleware);
 
+app.get('/admin/extensions-manager', (req, res) => {
+  const session = getOptionalSession(req);
+  if (!session || session.role !== 'admin') {
+    res.redirect('/admin');
+    return;
+  }
+  res.setHeader('Cache-Control', 'private, no-store');
+  res.type('html').send(renderExtensionsAdminPage());
+});
+
 app.use('/api/health', healthRouter);
 
 const apiLimiter = rateLimit({
@@ -144,6 +157,7 @@ app.use('/api/engagement', engagementRouter);
 app.use('/api/seo', seoRouter);
 app.use('/api/bulk', bulkRouter);
 app.use('/api/support', supportRouter);
+app.use('/api/extensions', extensionsRouter);
 
 const aiLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,

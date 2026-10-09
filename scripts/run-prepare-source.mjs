@@ -13,7 +13,7 @@ import {
   snapshotTrackedFiles
 } from './pipeline-trace-lib.mjs';
 import { buildPreparedApiInventory, buildPreparedConfigInventory } from './prepared-audit-inventory.mjs';
-import { detectConfirmedOverwrites } from './pipeline-overwrite-analysis.mjs';
+import { analyzePipelineReverts } from './pipeline-overwrite-analysis.mjs';
 
 const root = process.cwd();
 const commit = getGitCommit(root);
@@ -65,7 +65,7 @@ for (const item of topLevelScripts) {
 const prepared = snapshotTrackedFiles(root);
 const sourceDelta = diffSnapshots(baseline, prepared);
 const stages = readTraceRecords(traceFile);
-const confirmedOverwrites = detectConfirmedOverwrites(stages);
+const { confirmedOverwrites, normalizationReverts } = analyzePipelineReverts(stages);
 const changedStageCount = stages.filter(stage => stage.kind === 'stage' && stage.changes?.length).length;
 const changedFiles = [...new Set(stages.flatMap(stage => (stage.changes || []).map(change => change.file)))];
 const preparedRoutes = buildPreparedRouteInventory(root);
@@ -88,6 +88,7 @@ const manifest = {
   sourceDelta,
   stages,
   confirmedOverwrites,
+  normalizationReverts,
   summary: {
     executedStages: stages.filter(stage => stage.kind === 'stage').length,
     changedStages: changedStageCount,
@@ -96,7 +97,8 @@ const manifest = {
     preparedRoutes: preparedRoutes.length,
     preparedApiCalls: preparedApiCalls.length,
     preparedConfigRefs: preparedConfigRefs.length,
-    confirmedOverwrites: confirmedOverwrites.length
+    confirmedOverwrites: confirmedOverwrites.length,
+    intentionalNormalizations: normalizationReverts.length
   }
 };
 
@@ -115,6 +117,6 @@ if (keepExisting) {
   console.log('Pipeline trace: preserved earlier canonical→prepared trace for this commit.');
 } else {
   fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + '\n', 'utf8');
-  console.log(`Pipeline trace: ${manifest.summary.executedStages} stages, ${manifest.summary.changedFiles} changed files, ${manifest.summary.confirmedOverwrites} exact-revert conflicts; prepared inventory routes=${preparedRoutes.length}, apiCalls=${preparedApiCalls.length}, configRefs=${preparedConfigRefs.length}.`);
+  console.log(`Pipeline trace: ${manifest.summary.executedStages} stages, ${manifest.summary.changedFiles} changed files, ${manifest.summary.confirmedOverwrites} confirmed conflicts, ${manifest.summary.intentionalNormalizations} intentional normalization reverts; prepared inventory routes=${preparedRoutes.length}, apiCalls=${preparedApiCalls.length}, configRefs=${preparedConfigRefs.length}.`);
 }
 try { fs.rmSync(traceFile, { force: true }); } catch {}

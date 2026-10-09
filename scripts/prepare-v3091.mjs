@@ -17,7 +17,7 @@ const checks = [
   ['src/components/common/RichTextComposer.tsx', 'data-rich-composer-version="30.9.1"'],
   ['src/components/common/RichTextComposer.tsx', 'internalEmissionRef.current === incomingHtml'],
   ['src/components/common/RichTextComposer.tsx', 'runWithSavedSelection'],
-  ['src/utils/richText.ts', "text-align:' + align[1].toLowerCase() + '!important'"],
+  ['src/utils/richText.ts', "safe.push('text-align:' + align + '!important')"],
   ['src/components/page/PageView.tsx', '<RichTextContent content={section.content}'],
   ['src/components/page/PageView.tsx', '<RichTextContent content={item.content}'],
   ['src/components/layout/Footer.tsx', 'data-footer-rich-text="30.9.1"'],

@@ -20,22 +20,40 @@ export const ExtensionSlot: React.FC<ExtensionSlotProps> = ({
   useEffect(() => {
     const container = ref.current;
     if (!container) return;
-    container.replaceChildren();
+    let disposed = false;
+    let generation = 0;
 
-    const api = window.YadakExtensions;
-    if (!api) return;
+    const render = () => {
+      if (disposed) return;
+      const api = window.YadakExtensions;
+      if (!api) return;
+      const currentGeneration = ++generation;
+      container.replaceChildren();
+      void api.runHook(name, {
+        ...payloadRef.current,
+        slot: name,
+        container
+      }).catch(error => {
+        if (!disposed && currentGeneration === generation) {
+          console.error(`Extension hook failed: ${name}`, error);
+        }
+      });
+    };
 
-    let cancelled = false;
-    void api.runHook(name, {
-      ...payloadRef.current,
-      slot: name,
-      container
-    }).catch(error => {
-      if (!cancelled) console.error(`Extension hook failed: ${name}`, error);
-    });
+    const onHooksChanged = (event: Event) => {
+      const detail = (event as CustomEvent<{ name?: string }>).detail;
+      if (!detail?.name || detail.name === name) render();
+    };
+
+    render();
+    window.addEventListener('yadak:extensions-ready', render);
+    window.addEventListener('yadak:extension-hooks-changed', onHooksChanged);
 
     return () => {
-      cancelled = true;
+      disposed = true;
+      generation += 1;
+      window.removeEventListener('yadak:extensions-ready', render);
+      window.removeEventListener('yadak:extension-hooks-changed', onHooksChanged);
       container.replaceChildren();
     };
   }, [name, payloadKey]);

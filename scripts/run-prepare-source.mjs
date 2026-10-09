@@ -32,7 +32,7 @@ const topLevelScripts = [
   { script: 'scripts/prepare-v30108.mjs', kind: 'orchestrator' },
   { script: 'scripts/prepare-extension-platform.mjs', kind: 'stage' },
   { script: 'scripts/apply-site-auditor-v210.mjs', kind: 'stage' },
-  { script: 'scripts/apply-v301013-richtext-live-editor-v2.mjs', kind: 'stage' }
+  { script: 'scripts/apply-v301013-richtext-live-editor-v3.mjs', kind: 'stage' }
 ];
 
 for (const item of topLevelScripts) {
@@ -77,15 +77,8 @@ const manifest = {
   generatedAt: new Date().toISOString(),
   commit,
   baselineKind: 'git-checkout-before-prepare',
-  canonical: {
-    fileHashes: hashMap(baseline)
-  },
-  prepared: {
-    fileHashes: hashMap(prepared),
-    routes: preparedRoutes,
-    apiCalls: preparedApiCalls,
-    configRefs: preparedConfigRefs
-  },
+  canonical: { fileHashes: hashMap(baseline) },
+  prepared: { fileHashes: hashMap(prepared), routes: preparedRoutes, apiCalls: preparedApiCalls, configRefs: preparedConfigRefs },
   sourceDelta,
   stages,
   confirmedOverwrites,
@@ -106,12 +99,7 @@ const manifest = {
 let keepExisting = false;
 try {
   const existing = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
-  if (
-    existing?.commit && existing.commit === commit &&
-    Number(existing?.summary?.sourceDeltaFiles || 0) > Number(manifest.summary.sourceDeltaFiles || 0)
-  ) {
-    keepExisting = true;
-  }
+  if (existing?.commit && existing.commit === commit && Number(existing?.summary?.sourceDeltaFiles || 0) > Number(manifest.summary.sourceDeltaFiles || 0)) keepExisting = true;
 } catch {}
 
 if (keepExisting) {

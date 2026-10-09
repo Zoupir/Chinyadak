@@ -25,6 +25,28 @@ const assertNoHorizontalOverflow = async (page, label) => {
   assert.ok(metrics.bodyWidth <= metrics.viewport + 1, `${label}: body horizontal overflow ${metrics.bodyWidth} > ${metrics.viewport}`);
 };
 
+const selectEditorText = async (editor, needle) => {
+  await editor.evaluate((root, target) => {
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    let node;
+    while ((node = walker.nextNode())) {
+      const text = node.nodeValue || '';
+      const index = text.indexOf(target);
+      if (index < 0) continue;
+      const range = document.createRange();
+      range.setStart(node, index);
+      range.setEnd(node, index + target.length);
+      const selection = window.getSelection();
+      selection.removeAllRanges();
+      selection.addRange(range);
+      root.focus();
+      document.dispatchEvent(new Event('selectionchange'));
+      return;
+    }
+    throw new Error(`Could not select editor text: ${target}`);
+  }, needle);
+};
+
 (async () => {
   const catalog = await apiJson('/api/catalog/products');
   const categoriesPayload = await apiJson('/api/catalog/categories');
@@ -107,28 +129,70 @@ const assertNoHorizontalOverflow = async (page, label) => {
       const productEditor = page.locator('[data-product-editor-page="1"]');
       await productEditor.waitFor({ state: 'visible', timeout: 15000 });
       assert.equal(await page.locator('[data-product-editor-loading="1"]').count(), 0, 'Standalone product editor remained on loading/error shell.');
+      const box = await productEditor.boundingBox();
+      assert.ok(box && box.y <= 70, `Standalone product editor starts too far below the admin bar: y=${box?.y}`);
+      const viewProductButton = productEditor.locator('[data-view-product-button="1"]');
+      await viewProductButton.waitFor({ state: 'visible', timeout: 5000 });
+      assert.match(await viewProductButton.innerText(), /مشاهده محصول/);
 
-      const stableEditor = page.locator('[data-stable-rich-editor="30.10.8"]').first();
-      await stableEditor.waitFor({ state: 'visible', timeout: 10000 });
-      const surface = stableEditor.locator('.stable-rich-editor__surface');
-      await surface.click();
-      await surface.fill('متن آزمایشی ویرایشگر');
-      await page.keyboard.press('Control+A');
-      await stableEditor.getByRole('button', { name: 'پررنگ' }).click();
-      const color = stableEditor.locator('input[type="color"]').first();
-      await color.fill('#d11a2a');
-      const editorHtml = await surface.evaluate(node => node.innerHTML);
-      assert.match(editorHtml, /(font-weight|<b\b|<strong\b)/i, 'Replacement editor did not apply bold formatting.');
-      assert.match(editorHtml, /(color\s*:|color=)/i, 'Replacement editor did not apply text color.');
-      assert.ok(await stableEditor.getByRole('button', { name: 'راست‌چین' }).count(), 'Replacement editor alignment toolbar missing.');
-      assert.ok(await stableEditor.getByLabel('اندازه متن').count(), 'Replacement editor font-size control missing.');
+      const quillFrame = page.locator('[data-quill-rich-editor="30.10.9"]').first();
+      await quillFrame.waitFor({ state: 'visible', timeout: 10000 });
+      const editor = quillFrame.locator('.ql-editor');
+      await editor.fill('کلمه اول کلمه دوم برای تست ویرایشگر');
+
+      await selectEditorText(editor, 'کلمه دوم');
+      await quillFrame.locator('button.ql-bold').click();
+      let html = await editor.evaluate(node => node.innerHTML);
+      assert.match(html, /<strong>کلمه دوم<\/strong>/i, 'Quill lost the partial selection when Bold was clicked.');
+
+      await selectEditorText(editor, 'کلمه اول');
+      const colorPicker = quillFrame.locator('.ql-color.ql-picker .ql-picker-label').first();
+      await colorPicker.click();
+      await quillFrame.locator('.ql-color.ql-picker .ql-picker-item[data-value="#dc2626"]').click();
+      html = await editor.evaluate(node => node.innerHTML);
+      assert.match(html, /color:\s*(?:rgb\(220,\s*38,\s*38\)|#dc2626)/i, 'Quill lost the partial selection when text color was chosen.');
+
+      await selectEditorText(editor, 'برای تست');
+      const alignPicker = quillFrame.locator('.ql-align.ql-picker .ql-picker-label').first();
+      await alignPicker.click();
+      await quillFrame.locator('.ql-align.ql-picker .ql-picker-item[data-value="center"]').click();
+      html = await editor.evaluate(node => node.innerHTML);
+      assert.match(html, /text-align:\s*center/i, 'Quill alignment was not applied in one toolbar action.');
+
+      // Most important production regression: live editing is enabled in admin,
+      // survives document navigation to the storefront, and Save persists the
+      // changed homepage section through the real CMS endpoint.
+      await page.evaluate(() => window.sessionStorage.setItem('chinpart_live_edit_active', '1'));
+      await page.goto(base + '/', { waitUntil: 'domcontentloaded' });
+      await waitForHydration(page);
+      const editArticles = page.getByRole('button', { name: /ویرایش بخش مقالات/ });
+      await editArticles.waitFor({ state: 'visible', timeout: 15000 });
+      await editArticles.click();
+
+      const liveDialog = page.locator('aside[role="dialog"]').last();
+      await liveDialog.waitFor({ state: 'visible', timeout: 10000 });
+      const titleInput = liveDialog.locator('label').filter({ hasText: /^عنوان/ }).first().locator('input');
+      await titleInput.waitFor({ state: 'visible', timeout: 5000 });
+      const liveTitle = `تست ذخیره زنده ${Date.now()}`;
+      await titleInput.fill(liveTitle);
+      const liveSave = liveDialog.locator('[data-live-section-save="1"]');
+      await liveSave.waitFor({ state: 'visible', timeout: 5000 });
+      await liveSave.click();
+      await liveDialog.waitFor({ state: 'detached', timeout: 15000 });
+
+      const cmsAfterResponse = await context.request.get(base + '/api/cms/bundle');
+      assert.equal(cmsAfterResponse.status(), 200, `CMS bundle after live save failed: ${cmsAfterResponse.status()}`);
+      const cmsAfter = await cmsAfterResponse.json();
+      const homePage = (cmsAfter.pages || []).find(item => item.slug === 'home');
+      const articlesSection = (homePage?.sections || []).find(item => item.id === 'sec-articles' || item.sectionKey === 'articles');
+      assert.equal(articlesSection?.title, liveTitle, 'Homepage live editor Save did not persist the section title.');
     }
 
     if (pageErrors.length) {
       throw new Error('Browser page errors: ' + pageErrors.map(error => error.stack || error.message || String(error)).join('\n---\n'));
     }
 
-    console.log('Real browser E2E passed: storefront routes, responsive menus, standalone product editor and stable rich-text formatting.');
+    console.log('Real browser E2E passed: storefront routes, responsive menus, top-aligned product editor, Quill partial-selection formatting, and persisted homepage live Save.');
   } finally {
     await context.close();
     await browser.close();

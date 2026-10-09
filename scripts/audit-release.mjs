@@ -38,7 +38,17 @@ for (const [file, marker] of sourceContracts) {
 if (Number(versionMatch[1]) >= 8) {
   const composer = fs.readFileSync('src/components/common/RichTextComposer.tsx', 'utf8');
   const admin = fs.readFileSync('src/components/admin/AdminView.tsx', 'utf8');
-  if (!composer.includes('data-stable-rich-editor="30.10.8"')) fail('30.10.8 replacement WYSIWYG is missing');
+  if (Number(versionMatch[1]) >= 9) {
+    if (!composer.includes('data-quill-rich-editor="30.10.9"')) fail('30.10.9 Quill editor is missing');
+    if (!composer.includes("await import('quill')")) fail('30.10.9 Quill runtime is not browser-deferred');
+    if (/^import Quill from 'quill';/m.test(composer)) fail('Quill has a top-level SSR-unsafe runtime import');
+    if (!composer.includes("import './quill-vendor.css'")) fail('Quill theme is not loaded through the local vendored stylesheet');
+    if (composer.includes('document.execCommand')) fail('deprecated execCommand editor leaked into 30.10.9');
+    if (pkg.dependencies?.quill !== '2.0.2') fail('Quill dependency must be pinned to 2.0.2 in 30.10.9');
+    if (!admin.includes('data-view-product-button="1"')) fail('standalone product storefront preview button missing');
+  } else if (!composer.includes('data-stable-rich-editor="30.10.8"')) {
+    fail('30.10.8 replacement WYSIWYG is missing');
+  }
   if (composer.includes('@tiptap/')) fail('Tiptap leaked back into the replacement editor');
   if (!admin.includes('data-v30108-product-loader')) fail('standalone product direct loader is missing');
 }

@@ -8,10 +8,20 @@ const source = (file: string) => fs.readFileSync(file, 'utf8');
 assert.match(source('src/components/admin/AdminView.tsx'), /data-v30108-product-loader/);
 assert.match(source('src/components/admin/AdminView.tsx'), /fetch\('\/api\/catalog\/products\/' \+ encodeURIComponent\(targetId\)/);
 assert.match(source('src/components/admin/AdminView.tsx'), /data-product-editor-loading="1"/);
-assert.match(source('src/components/common/RichTextComposer.tsx'), /data-stable-rich-editor="30\.10\.8"/);
-assert.match(source('src/components/common/RichTextComposer.tsx'), /document\.execCommand\('styleWithCSS'/);
-assert.match(source('src/components/common/RichTextComposer.tsx'), /onPaste=\{onPaste\}/);
-assert.doesNotMatch(source('src/components/common/RichTextComposer.tsx'), /@tiptap\//);
+const composer = source('src/components/common/RichTextComposer.tsx');
+const legacyStableEditor = /data-stable-rich-editor="30\.10\.8"/.test(composer);
+const quillEditor = /data-quill-rich-editor="30\.10\.9"/.test(composer);
+assert.ok(legacyStableEditor || quillEditor, 'Expected the 30.10.8 replacement editor or its 30.10.9 Quill successor.');
+if (legacyStableEditor) {
+  assert.match(composer, /document\.execCommand\('styleWithCSS'/);
+  assert.match(composer, /onPaste=\{onPaste\}/);
+} else {
+  assert.match(composer, /await import\('quill'\)/);
+  assert.doesNotMatch(composer, /^import Quill from 'quill';/m);
+  assert.match(composer, /getSemanticHTML/);
+  assert.doesNotMatch(composer, /document\.execCommand/);
+}
+assert.doesNotMatch(composer, /@tiptap\//);
 
 const styled = sanitizeRichHtml('<p style="color:#ff0000;background-color:#fff3bf;font-size:24px;font-weight:bold;font-style:italic;text-decoration:underline;text-align:center;font-family:Vazirmatn;line-height:2">متن تست</p>');
 for (const marker of [
@@ -40,7 +50,7 @@ const run = async () => {
   const direct = await json<{ product: any }>('/api/catalog/products/' + encodeURIComponent(id));
   assert.equal(String(direct.product.id), id, 'Direct product endpoint did not return requested product.');
   assert.ok(direct.product.nameFa, 'Direct product payload is incomplete.');
-  console.log('v30.10.8 product-editor + stable WYSIWYG smoke passed.');
+  console.log('v30.10.8 product-editor regression passed with current rich editor implementation.');
 };
 
 run().catch(error => {

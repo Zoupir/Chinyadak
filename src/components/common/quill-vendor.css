@@ -1,0 +1,7 @@
+/*
+ * v30.10.9 generated dependency stylesheet target.
+ * prepare-v30109.mjs replaces this placeholder with Quill 2.0.2's bundled
+ * Snow theme CSS from node_modules before typecheck/build. Keeping the import
+ * local prevents the Node SSR bundle from trying to import a package .css file
+ * at runtime.
+ */

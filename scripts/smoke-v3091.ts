@@ -30,7 +30,13 @@ const run = async () => {
   assert.match(sanitized, /<strong>متن تست وسط‌چین<\/strong>/, 'Inline formatting was lost during sanitization.');
 
   const composerSource = fs.readFileSync('src/components/common/RichTextComposer.tsx', 'utf8');
-  if (/data-stable-rich-editor="30\.10\.8"/.test(composerSource)) {
+  if (/data-quill-rich-editor="30\.10\.9"/.test(composerSource)) {
+    assert.match(composerSource, /await import\('quill'\)/, 'Quill successor is not deferred to the browser.');
+    assert.match(composerSource, /attributors\/style\/align/, 'Quill alignment style attributor is missing.');
+    assert.match(composerSource, /attributors\/style\/color/, 'Quill color style attributor is missing.');
+    assert.match(composerSource, /getSemanticHTML/, 'Quill successor does not emit semantic HTML.');
+    assert.doesNotMatch(composerSource, /document\.execCommand/, 'Deprecated execCommand editor leaked into Quill successor.');
+  } else if (/data-stable-rich-editor="30\.10\.8"/.test(composerSource)) {
     assert.match(composerSource, /savedRangeRef/, 'Replacement editor does not preserve the browser selection.');
     assert.match(composerSource, /document\.execCommand\('styleWithCSS'/, 'Replacement editor does not use CSS-backed formatting.');
     assert.match(composerSource, /onPaste=\{onPaste\}/, 'Replacement editor does not sanitize pasted content.');
@@ -102,7 +108,7 @@ const run = async () => {
     body: JSON.stringify({ footerCopyrightText: oldCopyright })
   });
 
-  console.log('Rich editor persistence/rendering regression passed for legacy or replacement editor.');
+  console.log('Rich editor persistence/rendering regression passed for legacy, stable replacement, or Quill successor editor.');
 };
 
 run().catch(error => {

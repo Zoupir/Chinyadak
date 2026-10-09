@@ -1,7 +1,7 @@
-import React, { Suspense, lazy, useEffect, useState } from 'react';
+import React, { Suspense, lazy, useEffect, useRef, useState } from 'react';
 import { Code2, Edit3, Eye } from 'lucide-react';
 import { RichTextContent } from './RichTextContent';
-import { sanitizeRichHtml } from '../../utils/richText';
+import { markdownToSafeHtml } from '../../utils/richText';
 import './RichTextEditor.css';
 
 interface RichTextEditorProps {
@@ -28,14 +28,23 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
   helperText
 }) => {
   const [activeTab, setActiveTab] = useState<EditorTab>('write');
-  const [sourceDraft, setSourceDraft] = useState(value || '');
+  const [sourceDraft, setSourceDraft] = useState(() => markdownToSafeHtml(value || ''));
+  const normalizedLegacyValueRef = useRef<string>('');
 
+  // RICH-TEXT-CANONICAL-HTML-v301015
+  // RICH-TEXT-ROUNDTRIP-v301018
   useEffect(() => {
-    if (activeTab !== 'source') setSourceDraft(value || '');
-  }, [value, activeTab]);
+    const raw = String(value || '');
+    const normalized = markdownToSafeHtml(raw);
+    if (activeTab !== 'source') setSourceDraft(normalized);
+    if (raw && normalized !== raw && normalizedLegacyValueRef.current !== raw) {
+      normalizedLegacyValueRef.current = raw;
+      onChange(normalized);
+    }
+  }, [value, activeTab, onChange]);
 
   const commitSource = () => {
-    const safe = sanitizeRichHtml(sourceDraft || '');
+    const safe = markdownToSafeHtml(sourceDraft || '');
     setSourceDraft(safe);
     if (safe !== value) onChange(safe);
     return safe;
@@ -44,12 +53,12 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
   const switchTab = (tab: EditorTab) => {
     if (tab === activeTab) return;
     if (activeTab === 'source') commitSource();
-    if (tab === 'source') setSourceDraft(value || '');
+    if (tab === 'source') setSourceDraft(markdownToSafeHtml(value || ''));
     setActiveTab(tab);
   };
 
   return (
-    <section className="rich-text-editor" dir="rtl" data-rich-editor-version="30.5.3">
+    <section className="rich-text-editor" dir="rtl" data-rich-editor-version="30.10.18">
       <header className="rich-text-editor__header">
         <label className="rich-text-editor__label">{label}</label>
         <div className="rich-text-editor__tabs" role="tablist" aria-label="حالت ویرایش متن">

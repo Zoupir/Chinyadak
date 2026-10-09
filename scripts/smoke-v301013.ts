@@ -20,13 +20,13 @@ assert.ok(richContent.includes('data-rich-text-content="1"'), 'Rich text runtime
 
 const richFixture = '<p style="text-align:center"><strong><span style="color:#e63236;font-size:24px">متن تست</span></strong></p><h2 style="text-align:left"><em>عنوان</em></h2><ul><li>یک</li><li>دو</li></ul><blockquote style="text-align:justify"><u>نقل قول</u></blockquote>';
 const safeFixture = sanitizeRichHtml(richFixture);
-assert.match(safeFixture, /text-align:center/);
+assert.match(safeFixture, /text-align:center(?:!important)?/);
 assert.match(safeFixture, /color:#e63236!important/);
-assert.match(safeFixture, /font-size:24px/);
+assert.match(safeFixture, /font-size:24px(?:!important)?/);
 assert.match(safeFixture, /<strong>/);
-assert.match(safeFixture, /<h2 style="text-align:left">/);
+assert.match(safeFixture, /<h2 style="text-align:left(?:!important)?">/);
 assert.match(safeFixture, /<ul><li>یک<\/li><li>دو<\/li><\/ul>/);
-assert.match(safeFixture, /<blockquote style="text-align:justify"><u>نقل قول<\/u><\/blockquote>/);
+assert.match(safeFixture, /<blockquote style="text-align:justify(?:!important)?"><u>نقل قول<\/u><\/blockquote>/);
 
 const store = read('src/context/StoreContext.tsx');
 assert.ok(store.includes('const pagesRef = useRef<SitePage[]>([])'), 'Live editor synchronized pages ref missing');

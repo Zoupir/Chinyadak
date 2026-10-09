@@ -110,6 +110,7 @@ export const requireAdmin = (
   });
 };
 
+
 interface AdminPermissionRow extends RowDataPacket {
   role: string;
   permissions_json: string | object | null;

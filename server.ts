@@ -22,6 +22,7 @@ import { bulkRouter } from './src/server/routes/bulk';
 import { seoRouter } from './src/server/routes/seo';
 import { supportRouter } from './src/server/routes/support';
 import { extensionsRouter } from './src/server/routes/extensions';
+import { auditRouter } from './src/server/routes/audit';
 import { uploadDirectory } from './src/server/media';
 import { checkDatabase } from './src/server/db';
 import { config } from './src/server/config';
@@ -158,6 +159,7 @@ app.use('/api/seo', seoRouter);
 app.use('/api/bulk', bulkRouter);
 app.use('/api/support', supportRouter);
 app.use('/api/extensions', extensionsRouter);
+app.use('/api/audit', auditRouter);
 
 const aiLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,

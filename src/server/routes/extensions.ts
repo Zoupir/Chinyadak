@@ -50,7 +50,8 @@ extensionsRouter.get('/public', async (_req, res, next) => {
 extensionsRouter.get('/assets/:kind/:id/*', async (req, res) => {
   try {
     const kind = kindFrom(req.params.kind);
-    const relativePath = String(req.params[0] || '');
+    const wildcardParams = req.params as Record<string, string | undefined>;
+    const relativePath = String(wildcardParams['0'] || '');
     const assetPath = await resolveExtensionAsset(kind, String(req.params.id), relativePath);
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.sendFile(path.resolve(assetPath));

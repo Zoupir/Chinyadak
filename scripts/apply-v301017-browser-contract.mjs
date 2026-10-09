@@ -31,38 +31,48 @@ import fs from 'node:fs';
 
 // ---------------------------------------------------------------------------
 // Live-edit mode must survive the admin -> storefront navigation boundary.
-// The admin session itself is HttpOnly/server-backed, but this UI-only mode was
-// previously a volatile React boolean. A remount/navigation therefore reset it
-// to false even though the administrator remained authenticated. Persist only
-// this non-sensitive boolean in sessionStorage and clear it on admin logout.
+// Do not rewrite the StoreContext state declaration: historical migrations can
+// legitimately change its exact source shape before this stage. Instead use a
+// one-shot navigation handoff. The visual builder records a non-sensitive
+// pending flag synchronously before navigation; a remounted StoreProvider
+// consumes it once and restores the existing setter. In a pure SPA transition
+// the React setter already stays true and the timeout removes the unused flag.
 // ---------------------------------------------------------------------------
 {
-  const file = 'src/context/StoreContext.tsx';
-  let source = fs.readFileSync(file, 'utf8');
-  const marker = 'LIVE-EDIT-NAVIGATION-PERSISTENCE-v301017';
+  const builderFile = 'src/components/admin/AdminVisualPageBuilder.tsx';
+  let builder = fs.readFileSync(builderFile, 'utf8');
+  const builderMarker = 'LIVE-EDIT-NAVIGATION-HANDOFF-v301017';
 
-  if (!source.includes(marker)) {
-    const statePattern = /\s*const\s*\[\s*isLiveEditActive\s*,\s*setIsLiveEditActive\s*\]\s*=\s*useState(?:<boolean>)?\s*\(\s*false\s*\)\s*;/;
-    const match = source.match(statePattern);
-    if (!match) throw new Error('v30.10.17 live-edit state declaration target missing');
-
-    const to = `\n  // ${marker}\n  const LIVE_EDIT_SESSION_KEY = 'yadak-live-edit-active';\n  const [isLiveEditActive, setIsLiveEditActiveState] = useState<boolean>(false);\n\n  useEffect(() => {\n    if (typeof window === 'undefined') return;\n    try {\n      if (window.sessionStorage.getItem(LIVE_EDIT_SESSION_KEY) === '1') {\n        setIsLiveEditActiveState(true);\n      }\n    } catch {\n      // sessionStorage can be unavailable in hardened/private browser modes.\n    }\n  }, []);\n\n  const setIsLiveEditActive = (active: boolean) => {\n    setIsLiveEditActiveState(active);\n    if (typeof window === 'undefined') return;\n    try {\n      if (active) window.sessionStorage.setItem(LIVE_EDIT_SESSION_KEY, '1');\n      else window.sessionStorage.removeItem(LIVE_EDIT_SESSION_KEY);\n    } catch {\n      // React state remains authoritative when browser storage is unavailable.\n    }\n  };`;
-    source = source.replace(statePattern, to);
-
-    const logoutStart = source.indexOf('  const adminLogout = async () => {');
-    if (logoutStart < 0) throw new Error('v30.10.17 admin logout target missing');
-    const authReset = source.indexOf('    setAdminAuth({', logoutStart);
-    if (authReset < 0) throw new Error('v30.10.17 admin auth reset target missing');
-    source = source.slice(0, authReset) + '    setIsLiveEditActive(false);\n' + source.slice(authReset);
+  if (!builder.includes(builderMarker)) {
+    const target = `          onClick={() => {\n            setIsLiveEditActive(true);`;
+    if (!builder.includes(target)) throw new Error('v30.10.17 visual-builder live navigation target missing');
+    builder = builder.replace(
+      target,
+      `          onClick={() => {\n            // ${builderMarker}\n            try {\n              window.sessionStorage.setItem('yadak-live-edit-pending', '1');\n              window.setTimeout(() => window.sessionStorage.removeItem('yadak-live-edit-pending'), 2000);\n            } catch {\n              // The ordinary React state path still works when storage is unavailable.\n            }\n            setIsLiveEditActive(true);`
+    );
   }
 
-  if (!source.includes(marker) ||
-      !source.includes("sessionStorage.setItem(LIVE_EDIT_SESSION_KEY, '1')") ||
-      !source.includes('setIsLiveEditActive(false);')) {
-    throw new Error('v30.10.17 live-edit navigation persistence incomplete');
+  if (!builder.includes(builderMarker) || !builder.includes("sessionStorage.setItem('yadak-live-edit-pending', '1')")) {
+    throw new Error('v30.10.17 visual-builder live navigation handoff incomplete');
+  }
+  fs.writeFileSync(builderFile, builder, 'utf8');
+
+  const storeFile = 'src/context/StoreContext.tsx';
+  let store = fs.readFileSync(storeFile, 'utf8');
+  const storeMarker = 'LIVE-EDIT-NAVIGATION-RECOVERY-v301017';
+
+  if (!store.includes(storeMarker)) {
+    const anchor = '  const adminLogout = async () => {';
+    const at = store.indexOf(anchor);
+    if (at < 0) throw new Error('v30.10.17 admin logout anchor missing for live-edit recovery');
+    const recovery = `  // ${storeMarker}\n  useEffect(() => {\n    if (typeof window === 'undefined') return;\n    try {\n      if (window.sessionStorage.getItem('yadak-live-edit-pending') === '1') {\n        window.sessionStorage.removeItem('yadak-live-edit-pending');\n        setIsLiveEditActive(true);\n      }\n    } catch {\n      // Ignore storage errors; normal in-memory state remains available.\n    }\n  }, []);\n\n`;
+    store = store.slice(0, at) + recovery + store.slice(at);
   }
 
-  fs.writeFileSync(file, source, 'utf8');
+  if (!store.includes(storeMarker) || !store.includes("sessionStorage.getItem('yadak-live-edit-pending') === '1'")) {
+    throw new Error('v30.10.17 live-edit navigation recovery incomplete');
+  }
+  fs.writeFileSync(storeFile, store, 'utf8');
 }
 
-console.log('v30.10.17 browser contract: responsive controls observable and live-edit mode persists across storefront navigation.');
+console.log('v30.10.17 browser contract: responsive controls observable and live-edit navigation survives SPA/remount boundaries.');

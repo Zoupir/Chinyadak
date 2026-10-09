@@ -1,4 +1,5 @@
 import esbuild from 'esbuild';
+import fs from 'node:fs';
 import path from 'node:path';
 
 const projectRoot = process.cwd();
@@ -47,3 +48,9 @@ await esbuild.build({
     'process.env.NODE_ENV': '"production"'
   }
 });
+
+const pipelineTrace = path.join(projectRoot, 'AUDIT_PIPELINE_TRACE.json');
+if (fs.existsSync(pipelineTrace)) {
+  fs.copyFileSync(pipelineTrace, path.join(projectRoot, 'dist/AUDIT_PIPELINE_TRACE.json'));
+  console.log('Copied AUDIT_PIPELINE_TRACE.json into production dist.');
+}

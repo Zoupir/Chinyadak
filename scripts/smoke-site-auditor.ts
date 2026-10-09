@@ -11,7 +11,11 @@ assert.ok(Array.isArray(report.findings));
 assert.equal(report.summary.total, report.findings.length);
 assert.equal(report.coverage.pipelineTraceAvailable, true);
 assert.equal(report.coverage.productionBundleVerified, true);
+assert.equal(report.coverage.analysisSource, 'prepared-trace');
 assert.ok(report.coverage.preparedRouteInventory > 0);
+assert.ok(report.coverage.preparedApiCalls > 0);
+assert.ok(report.coverage.preparedConfigRefs > 0);
+assert.ok(report.coverage.canonicalToPreparedFiles >= 0);
 assert.ok(report.coverage.pipelineStages >= 0);
 assert.ok(report.coverage.confirmedOverwrites >= 0);
 for (const finding of report.findings) {
@@ -41,6 +45,10 @@ assert.equal(trace.schemaVersion, 1);
 assert.ok(Array.isArray(trace.stages));
 assert.ok(Array.isArray(trace.prepared?.routes));
 assert.ok(trace.prepared.routes.length > 0);
+assert.ok(Array.isArray(trace.prepared?.apiCalls));
+assert.ok(trace.prepared.apiCalls.length > 0);
+assert.ok(Array.isArray(trace.prepared?.configRefs));
+assert.ok(trace.prepared.configRefs.length > 0);
 assert.ok(Array.isArray(trace.confirmedOverwrites));
 assert.match(String(trace.production?.serverBundleSha256 || ''), /^[0-9a-f]{64}$/);
 assert.match(String(trace.production?.distIndexSha256 || ''), /^[0-9a-f]{64}$/);
@@ -53,4 +61,4 @@ const manifest = JSON.parse(fs.readFileSync(path.join(pluginRoot, 'plugin.json')
 assert.equal(manifest.id, 'site-auditor');
 assert.equal(manifest.type, 'plugin');
 assert.equal(manifest.clientEntry, 'client/index.js');
-console.log(`Site Auditor smoke passed with ${report.findings.length} findings, ${report.coverage.pipelineStages} traced stages, ${report.coverage.confirmedOverwrites} confirmed overwrites, production bundle verified.`);
+console.log(`Site Auditor smoke passed with ${report.findings.length} findings, ${report.coverage.pipelineStages} traced stages, ${report.coverage.confirmedOverwrites} confirmed overwrites, prepared inventories active, production bundle verified.`);

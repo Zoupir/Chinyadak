@@ -23,6 +23,27 @@ const manifestPath = path.join(root, TRACE_MANIFEST);
 fs.mkdirSync(traceDir, { recursive: true });
 try { fs.rmSync(traceFile, { force: true }); } catch {}
 
+const readPreparedText = rel => {
+  try { return fs.readFileSync(path.join(root, rel), 'utf8'); } catch { return ''; }
+};
+
+const buildPreparedContracts = () => {
+  const pageView = readPreparedText('src/components/page/PageView.tsx');
+  const richCss = readPreparedText('src/components/common/RichTextEditor.css');
+  const richContent = readPreparedText('src/components/common/RichTextContent.tsx');
+  const store = readPreparedText('src/context/StoreContext.tsx');
+  const cms = readPreparedText('src/server/routes/cms.ts');
+  const footer = readPreparedText('src/components/layout/Footer.tsx');
+  return {
+    richTextPageRenderer: pageView.includes('<RichTextContent content={section.content}'),
+    richTextCssParity: richCss.includes('STOREFRONT-RICH-TEXT-PARITY-v301013'),
+    richTextRuntimeProbe: richContent.includes('data-rich-text-content="1"'),
+    liveEditorSynchronousSnapshot: store.includes('pagesRef.current.find(item => item.slug === pageSlug)'),
+    liveEditorPersistenceRoundtrip: store.includes('PAGE_PERSISTENCE_MISMATCH') && cms.includes('PAGE_PERSIST_READBACK_FAILED'),
+    footerMobileColumnsContract: footer.includes('settings.mobileFooterColumns || settings.footerGridColumnsMobile || 2')
+  };
+};
+
 const baseline = snapshotTrackedFiles(root);
 const hookUrl = pathToFileURL(path.join(root, 'scripts/pipeline-trace-hook.mjs')).href;
 const existingNodeOptions = String(process.env.NODE_OPTIONS || '').trim();
@@ -34,7 +55,8 @@ const topLevelScripts = [
   { script: 'scripts/prepare-site-auditor-v210-idempotent.mjs', kind: 'stage' },
   { script: 'scripts/prepare-v301013-cms-adapter.mjs', kind: 'stage' },
   { script: 'scripts/apply-v301013-richtext-live-editor-v3.mjs', kind: 'stage' },
-  { script: 'scripts/repair-v301013-discard-preview.mjs', kind: 'stage' }
+  { script: 'scripts/repair-v301013-discard-preview.mjs', kind: 'stage' },
+  { script: 'scripts/apply-v301014-auditor-contracts.mjs', kind: 'stage' }
 ];
 
 for (const item of topLevelScripts) {
@@ -74,13 +96,14 @@ const changedFiles = [...new Set(stages.flatMap(stage => (stage.changes || []).m
 const preparedRoutes = buildPreparedRouteInventory(root);
 const preparedApiCalls = buildPreparedApiInventory(root);
 const preparedConfigRefs = buildPreparedConfigInventory(root);
+const preparedContracts = buildPreparedContracts();
 const manifest = {
   schemaVersion: 1,
   generatedAt: new Date().toISOString(),
   commit,
   baselineKind: 'git-checkout-before-prepare',
   canonical: { fileHashes: hashMap(baseline) },
-  prepared: { fileHashes: hashMap(prepared), routes: preparedRoutes, apiCalls: preparedApiCalls, configRefs: preparedConfigRefs },
+  prepared: { fileHashes: hashMap(prepared), routes: preparedRoutes, apiCalls: preparedApiCalls, configRefs: preparedConfigRefs, contracts: preparedContracts },
   sourceDelta,
   stages,
   confirmedOverwrites,
@@ -93,6 +116,8 @@ const manifest = {
     preparedRoutes: preparedRoutes.length,
     preparedApiCalls: preparedApiCalls.length,
     preparedConfigRefs: preparedConfigRefs.length,
+    preparedRuntimeContracts: Object.keys(preparedContracts).length,
+    healthyPreparedRuntimeContracts: Object.values(preparedContracts).filter(Boolean).length,
     confirmedOverwrites: confirmedOverwrites.length,
     intentionalNormalizations: normalizationReverts.length
   }
@@ -108,6 +133,6 @@ if (keepExisting) {
   console.log('Pipeline trace: preserved earlier canonical→prepared trace for this commit.');
 } else {
   fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + '\n', 'utf8');
-  console.log(`Pipeline trace: ${manifest.summary.executedStages} stages, ${manifest.summary.changedFiles} changed files, ${manifest.summary.confirmedOverwrites} confirmed conflicts, ${manifest.summary.intentionalNormalizations} intentional normalization reverts; prepared inventory routes=${preparedRoutes.length}, apiCalls=${preparedApiCalls.length}, configRefs=${preparedConfigRefs.length}.`);
+  console.log(`Pipeline trace: ${manifest.summary.executedStages} stages, ${manifest.summary.changedFiles} changed files, ${manifest.summary.confirmedOverwrites} confirmed conflicts, ${manifest.summary.intentionalNormalizations} intentional normalization reverts; prepared inventory routes=${preparedRoutes.length}, apiCalls=${preparedApiCalls.length}, configRefs=${preparedConfigRefs.length}, contracts=${manifest.summary.healthyPreparedRuntimeContracts}/${manifest.summary.preparedRuntimeContracts}.`);
 }
 try { fs.rmSync(traceFile, { force: true }); } catch {}

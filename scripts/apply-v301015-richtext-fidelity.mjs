@@ -12,9 +12,13 @@ const fail = label => { throw new Error(`v30.10.15 marker missing: ${label}`); }
 {
   const file = 'src/utils/richText.ts';
   let source = read(file);
-  const start = source.indexOf('const safeStyleFor = (tagName: string, rawAttrs: string): string => {');
-  const end = source.indexOf('\n\nconst safeAttr =', start);
-  if (start < 0 || end < 0) fail('richText safeStyleFor block');
+  const safeStyleStart = source.indexOf('const safeStyleFor = (tagName: string, rawAttrs: string): string => {');
+  const existingHelperStart = source.indexOf('const stripStylePriority = (value: string): string =>');
+  const start = existingHelperStart >= 0 && existingHelperStart < safeStyleStart
+    ? existingHelperStart
+    : safeStyleStart;
+  const end = source.indexOf('\n\nconst safeAttr =', safeStyleStart >= 0 ? safeStyleStart : start);
+  if (start < 0 || safeStyleStart < 0 || end < 0) fail('richText safeStyleFor block');
 
   const replacement = `const stripStylePriority = (value: string): string =>
   String(value || '').trim().replace(/\\s*!important\\s*$/i, '').trim();
@@ -84,6 +88,8 @@ const safeStyleFor = (tagName: string, rawAttrs: string): string => {
 
   source = source.slice(0, start) + replacement + source.slice(end);
   if (!source.includes('RICH-TEXT-STYLE-FIDELITY-v301015')) fail('sanitizer fidelity marker');
+  if ((source.match(/const stripStylePriority =/g) || []).length !== 1) fail('single stripStylePriority helper');
+  if ((source.match(/const styleValue =/g) || []).length !== 1) fail('single styleValue helper');
   write(file, source);
 }
 

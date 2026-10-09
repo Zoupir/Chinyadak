@@ -30,7 +30,7 @@ if (await patchFile('src/components/admin/AdminView.tsx', source => {
   source = insertAfter(
     source,
     "import { AdminDashboardPro } from './AdminDashboardPro';\n",
-    "import { AdminExtensionManager } from './AdminExtensionManager';\nimport { AdminExtensionPageHost } from './AdminExtensionPageHost';\nimport { ExtensionSlot } from '../../extensions/ExtensionSlot';\n",
+    "import { AdminExtensionManager } from './AdminExtensionManager';\nimport { AdminExtensionPageHost } from './AdminExtensionPageHost';\n",
     "import { AdminExtensionManager } from './AdminExtensionManager';",
     file
   );
@@ -70,14 +70,6 @@ if (await patchFile('src/components/admin/AdminView.tsx', source => {
       "!['overview','analytics','sandbox','extensions'].includes(activeTab) && !activeTab.startsWith('extension:') && <AdminBulkActions section={activeTab} />"
     );
   }
-
-  source = insertBefore(
-    source,
-    "          {/* TAB 1: OVERVIEW */}\n",
-    "          <ExtensionSlot name=\"admin.content.before\" payload={{ activeTab }} payloadKey={activeTab} className=\"contents\" />\n\n",
-    'name="admin.content.before"',
-    file
-  );
 
   source = insertBefore(
     source,

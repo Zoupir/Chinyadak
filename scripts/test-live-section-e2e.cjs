@@ -59,18 +59,12 @@ const waitForHydration = async page => {
 
   const selectHomePageBuilderTab = async () => {
     const title = String(homePage.title || '').trim();
-
-    // Production Page Builder 3.0 uses a compact page picker. Prefer a native
-    // combobox when present because its option value/text is deterministic.
     const comboboxes = page.getByRole('combobox');
     const comboCount = await comboboxes.count();
     for (let index = 0; index < comboCount; index += 1) {
       const combo = comboboxes.nth(index);
       if (!(await combo.isVisible().catch(() => false))) continue;
-      const options = await combo.locator('option').evaluateAll(nodes => nodes.map(node => ({
-        value: node.value,
-        text: (node.textContent || '').trim()
-      })));
+      const options = await combo.locator('option').evaluateAll(nodes => nodes.map(node => ({ value: node.value, text: (node.textContent || '').trim() })));
       const match = options.find(option => option.value === homePage.id || option.value === 'home' || option.text === title || option.text.includes(title));
       if (match) {
         await combo.selectOption(match.value);
@@ -79,14 +73,10 @@ const waitForHydration = async page => {
       }
     }
 
-    // The current production skin exposes a trigger labelled «برگه». Open it,
-    // then choose the actual CMS home page by title/id rather than relying on
-    // the canonical pre-build tab markup.
     const pagePickerTrigger = page.getByRole('button', { name: /^برگه$/ }).first();
     if (await pagePickerTrigger.isVisible().catch(() => false)) {
       await pagePickerTrigger.click();
       await page.waitForTimeout(150);
-
       const candidates = page.locator('[role="option"], [role="menuitem"], [role="menuitemradio"], [role="menuitemcheckbox"], button, [data-page-id]');
       const candidateCount = await candidates.count();
       for (let index = 0; index < candidateCount; index += 1) {
@@ -104,7 +94,6 @@ const waitForHydration = async page => {
       }
     }
 
-    // Last compatible path: older builds expose the page as a direct button.
     const direct = page.getByRole('button', { name: title, exact: false });
     const directCount = await direct.count();
     for (let index = 0; index < directCount; index += 1) {
@@ -115,10 +104,7 @@ const waitForHydration = async page => {
       return;
     }
 
-    console.error('Page-builder comboboxes:', await page.locator('select').evaluateAll(nodes => nodes.map(node => ({
-      value: node.value,
-      html: node.outerHTML.slice(0, 1200)
-    }))));
+    console.error('Page-builder comboboxes:', await page.locator('select').evaluateAll(nodes => nodes.map(node => ({ value: node.value, html: node.outerHTML.slice(0, 1200) }))));
     console.error('Page-builder buttons:', await page.locator('button').allInnerTexts());
     console.error('Page-builder body:', (await page.locator('body').innerText()).slice(0, 6000));
     throw new Error(`Could not select CMS home page ${homePage.id} (${title}) in the production page builder.`);
@@ -134,11 +120,12 @@ const waitForHydration = async page => {
     if (!(await activeToggle.isVisible().catch(() => false))) {
       await inactiveToggle.waitFor({ state: 'visible', timeout: 10000 });
       await inactiveToggle.click();
+      await activeToggle.waitFor({ state: 'visible', timeout: 5000 }).catch(() => {});
     }
 
-    const section = page.locator('[data-section-key="featured-categories"]');
-    if (await section.isVisible().catch(() => false)) return section;
-
+    // Page Builder 3.0 renders section previews inside /admin with the same
+    // data-section-key attributes. Never treat that admin preview as the live
+    // storefront; leave admin first so MarketplaceRtlHome owns the click.
     const viewSelectedPage = page.getByRole('button', { name: /^مشاهده در سایت$/ }).first();
     if (await viewSelectedPage.isVisible().catch(() => false)) {
       await viewSelectedPage.click();
@@ -148,12 +135,22 @@ const waitForHydration = async page => {
       await viewStore.click();
     }
 
-    await section.waitFor({ state: 'visible', timeout: 15000 });
+    const liveRoot = page.locator('.marketplace-rtl-home.is-live-editing');
+    try {
+      await liveRoot.waitFor({ state: 'visible', timeout: 10000 });
+    } catch (error) {
+      console.error('Storefront root class:', await page.locator('.marketplace-rtl-home').getAttribute('class').catch(() => null));
+      console.error('Storefront body:', (await page.locator('body').innerText()).slice(0, 5000));
+      throw error;
+    }
+
+    const section = liveRoot.locator('[data-section-key="featured-categories"]');
+    await section.waitFor({ state: 'visible', timeout: 10000 });
     return section;
   };
 
   const openFeaturedCategoriesEditor = async () => {
-    const section = page.locator('[data-section-key="featured-categories"]');
+    const section = page.locator('.marketplace-rtl-home.is-live-editing [data-section-key="featured-categories"]');
     await section.waitFor({ state: 'visible', timeout: 10000 });
     await section.click({ position: { x: 24, y: 24 } });
     const modal = page.locator('[data-live-section-modal="1"]');
@@ -188,11 +185,7 @@ const waitForHydration = async page => {
     let renderedSection = page.locator('[data-section-key="featured-categories"]');
     await renderedSection.waitFor({ state: 'visible', timeout: 10000 });
     assert.equal(await renderedSection.evaluate(element => element.style.width), '73%', 'live preview did not consume widthPercent=73');
-    assert.equal(
-      (await renderedSection.evaluate(element => element.style.getPropertyValue('--builder-cols'))).trim(),
-      '6',
-      'live preview did not consume desktopColumns=6'
-    );
+    assert.equal((await renderedSection.evaluate(element => element.style.getPropertyValue('--builder-cols'))).trim(), '6', 'live preview did not consume desktopColumns=6');
     assert.equal(await renderedSection.locator('.marketplace-round-list > button').count(), 2, 'live preview did not consume contentSourceLimit=2');
 
     const savedCmsResponse = await context.request.get(base + '/api/cms/bundle');
@@ -211,11 +204,7 @@ const waitForHydration = async page => {
     renderedSection = page.locator('[data-section-key="featured-categories"]');
     await renderedSection.waitFor({ state: 'visible', timeout: 10000 });
     assert.equal(await renderedSection.evaluate(element => element.style.width), '73%', 'public reload lost widthPercent=73');
-    assert.equal(
-      (await renderedSection.evaluate(element => element.style.getPropertyValue('--builder-cols'))).trim(),
-      '6',
-      'public reload lost desktopColumns=6'
-    );
+    assert.equal((await renderedSection.evaluate(element => element.style.getPropertyValue('--builder-cols'))).trim(), '6', 'public reload lost desktopColumns=6');
     assert.equal(await renderedSection.locator('.marketplace-round-list > button').count(), 2, 'public reload lost contentSourceLimit=2');
 
     await enterLiveHome();
@@ -227,9 +216,7 @@ const waitForHydration = async page => {
     await page.keyboard.press('Escape');
     await modal.waitFor({ state: 'detached', timeout: 5000 });
 
-    if (pageErrors.length) {
-      throw new Error('Live section browser errors: ' + pageErrors.map(error => error.stack || error.message || String(error)).join('\n---\n'));
-    }
+    if (pageErrors.length) throw new Error('Live section browser errors: ' + pageErrors.map(error => error.stack || error.message || String(error)).join('\n---\n'));
 
     console.log('Live section E2E passed: modal edit -> live renderer -> DB readback -> public reload -> admin reload preserved exact section configuration.');
   } finally {

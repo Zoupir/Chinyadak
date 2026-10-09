@@ -1,8 +1,29 @@
 type HookHandler<T = unknown> = (payload: T) => unknown | Promise<unknown>;
 
+export interface ExtensionAdminMenuItem {
+  id: string;
+  label: string;
+  order?: number;
+  capability?: string;
+  render?: (container: HTMLElement, context?: Record<string, unknown>) => void | (() => void) | Promise<void | (() => void)>;
+}
+
+export interface ExtensionSectionDefinition {
+  id: string;
+  label: string;
+  description?: string;
+  category?: string;
+  icon?: string;
+  defaultConfig?: Record<string, unknown>;
+}
+
 export interface YadakExtensionApi {
   registerHook: (name: string, handler: HookHandler) => () => void;
   runHook: <T = unknown>(name: string, payload: T) => Promise<unknown[]>;
+  registerAdminMenu: (item: ExtensionAdminMenuItem) => () => void;
+  getAdminMenus: () => ExtensionAdminMenuItem[];
+  registerSection: (definition: ExtensionSectionDefinition) => () => void;
+  getSections: () => ExtensionSectionDefinition[];
   getLoadedExtensions: () => string[];
 }
 
@@ -14,6 +35,12 @@ declare global {
 
 const hooks = new Map<string, Set<HookHandler>>();
 const loaded = new Set<string>();
+const adminMenus = new Map<string, ExtensionAdminMenuItem>();
+const sections = new Map<string, ExtensionSectionDefinition>();
+
+const emit = (name: string, detail?: unknown) => {
+  window.dispatchEvent(new CustomEvent(name, { detail }));
+};
 
 const api: YadakExtensionApi = {
   registerHook(name, handler) {
@@ -22,11 +49,60 @@ const api: YadakExtensionApi = {
     const handlers = hooks.get(key) || new Set<HookHandler>();
     handlers.add(handler);
     hooks.set(key, handlers);
-    return () => handlers.delete(handler);
+    emit('yadak:extension-hooks-changed', { name: key });
+    return () => {
+      handlers.delete(handler);
+      if (!handlers.size) hooks.delete(key);
+      emit('yadak:extension-hooks-changed', { name: key });
+    };
   },
   async runHook(name, payload) {
     const handlers = Array.from(hooks.get(String(name || '').trim()) || []);
-    return Promise.all(handlers.map(handler => Promise.resolve(handler(payload))));
+    const results: unknown[] = [];
+    for (const handler of handlers) {
+      try {
+        results.push(await Promise.resolve(handler(payload)));
+      } catch (error) {
+        console.error(`Extension hook handler failed: ${name}`, error);
+        results.push(undefined);
+      }
+    }
+    return results;
+  },
+  registerAdminMenu(item) {
+    const id = String(item?.id || '').trim();
+    const label = String(item?.label || '').trim();
+    if (!id || !label || !/^[a-z0-9][a-z0-9._-]{1,79}$/i.test(id)) throw new Error('EXTENSION_ADMIN_MENU_INVALID');
+    const normalized: ExtensionAdminMenuItem = {
+      ...item,
+      id,
+      label,
+      order: Number.isFinite(Number(item.order)) ? Number(item.order) : 100
+    };
+    adminMenus.set(id, normalized);
+    emit('yadak:extension-admin-menu-changed', { id });
+    return () => {
+      adminMenus.delete(id);
+      emit('yadak:extension-admin-menu-changed', { id });
+    };
+  },
+  getAdminMenus() {
+    return Array.from(adminMenus.values()).sort((a, b) => Number(a.order || 100) - Number(b.order || 100));
+  },
+  registerSection(definition) {
+    const id = String(definition?.id || '').trim();
+    const label = String(definition?.label || '').trim();
+    if (!id || !label || !/^[a-z0-9][a-z0-9._-]{1,79}$/i.test(id)) throw new Error('EXTENSION_SECTION_INVALID');
+    const normalized = { ...definition, id, label };
+    sections.set(id, normalized);
+    emit('yadak:extension-sections-changed', { id });
+    return () => {
+      sections.delete(id);
+      emit('yadak:extension-sections-changed', { id });
+    };
+  },
+  getSections() {
+    return Array.from(sections.values());
   },
   getLoadedExtensions() {
     return Array.from(loaded);
@@ -110,4 +186,11 @@ export const loadRuntimeExtensions = async (): Promise<void> => {
     await activateClient('plugin', plugin);
     loaded.add(`plugin:${plugin.id}`);
   }
+
+  emit('yadak:extensions-ready', {
+    loaded: api.getLoadedExtensions(),
+    adminMenus: api.getAdminMenus(),
+    sections: api.getSections()
+  });
+  await api.runHook('app.ready', { path: window.location.pathname });
 };

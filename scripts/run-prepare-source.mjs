@@ -6,7 +6,6 @@ import {
   TRACE_MANIFEST,
   appendTraceRecord,
   buildPreparedRouteInventory,
-  detectConfirmedOverwrites,
   diffSnapshots,
   getGitCommit,
   hashMap,
@@ -14,6 +13,7 @@ import {
   snapshotTrackedFiles
 } from './pipeline-trace-lib.mjs';
 import { buildPreparedApiInventory, buildPreparedConfigInventory } from './prepared-audit-inventory.mjs';
+import { detectConfirmedOverwrites } from './pipeline-overwrite-analysis.mjs';
 
 const root = process.cwd();
 const commit = getGitCommit(root);
@@ -115,6 +115,6 @@ if (keepExisting) {
   console.log('Pipeline trace: preserved earlier canonical→prepared trace for this commit.');
 } else {
   fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + '\n', 'utf8');
-  console.log(`Pipeline trace: ${manifest.summary.executedStages} stages, ${manifest.summary.changedFiles} changed files, ${manifest.summary.confirmedOverwrites} confirmed overwrites; prepared inventory routes=${preparedRoutes.length}, apiCalls=${preparedApiCalls.length}, configRefs=${preparedConfigRefs.length}.`);
+  console.log(`Pipeline trace: ${manifest.summary.executedStages} stages, ${manifest.summary.changedFiles} changed files, ${manifest.summary.confirmedOverwrites} exact-revert conflicts; prepared inventory routes=${preparedRoutes.length}, apiCalls=${preparedApiCalls.length}, configRefs=${preparedConfigRefs.length}.`);
 }
 try { fs.rmSync(traceFile, { force: true }); } catch {}

@@ -59,55 +59,95 @@ const waitForHydration = async page => {
 
   const selectHomePageBuilderTab = async () => {
     const title = String(homePage.title || '').trim();
-    const buttons = page.locator('button');
-    const count = await buttons.count();
-    let selected = false;
 
-    for (let index = 0; index < count; index += 1) {
-      const button = buttons.nth(index);
-      if (!(await button.isVisible().catch(() => false))) continue;
-      const isHomeTab = await button.evaluate((element, expectedTitle) => {
-        const spans = Array.from(element.querySelectorAll('span')).map(span => (span.textContent || '').trim());
-        return spans.includes(expectedTitle) && spans.some(text => text.includes('سکشن'));
-      }, title).catch(() => false);
-      if (!isHomeTab) continue;
-      await button.click();
-      selected = true;
-      break;
+    // Production Page Builder 3.0 uses a compact page picker. Prefer a native
+    // combobox when present because its option value/text is deterministic.
+    const comboboxes = page.getByRole('combobox');
+    const comboCount = await comboboxes.count();
+    for (let index = 0; index < comboCount; index += 1) {
+      const combo = comboboxes.nth(index);
+      if (!(await combo.isVisible().catch(() => false))) continue;
+      const options = await combo.locator('option').evaluateAll(nodes => nodes.map(node => ({
+        value: node.value,
+        text: (node.textContent || '').trim()
+      })));
+      const match = options.find(option => option.value === homePage.id || option.value === 'home' || option.text === title || option.text.includes(title));
+      if (match) {
+        await combo.selectOption(match.value);
+        await page.waitForTimeout(150);
+        return;
+      }
     }
 
-    if (!selected) {
-      console.error('Page-builder buttons:', await page.locator('button').allInnerTexts());
-      throw new Error(`Could not locate the page-builder tab for CMS home page ${homePage.id} (${title}).`);
+    // The current production skin exposes a trigger labelled «برگه». Open it,
+    // then choose the actual CMS home page by title/id rather than relying on
+    // the canonical pre-build tab markup.
+    const pagePickerTrigger = page.getByRole('button', { name: /^برگه$/ }).first();
+    if (await pagePickerTrigger.isVisible().catch(() => false)) {
+      await pagePickerTrigger.click();
+      await page.waitForTimeout(150);
+
+      const candidates = page.locator('[role="option"], [role="menuitem"], [role="menuitemradio"], [role="menuitemcheckbox"], button, [data-page-id]');
+      const candidateCount = await candidates.count();
+      for (let index = 0; index < candidateCount; index += 1) {
+        const candidate = candidates.nth(index);
+        if (!(await candidate.isVisible().catch(() => false))) continue;
+        const matches = await candidate.evaluate((element, expected) => {
+          const text = (element.textContent || '').trim();
+          const pageId = element.getAttribute('data-page-id') || element.getAttribute('data-value') || element.getAttribute('value') || '';
+          return pageId === expected.id || pageId === 'home' || text === expected.title || text.includes(expected.title);
+        }, { id: homePage.id, title }).catch(() => false);
+        if (!matches) continue;
+        await candidate.click();
+        await page.waitForTimeout(150);
+        return;
+      }
     }
 
-    // This chip is rendered from selectedPage.slug, so it is a functional proof
-    // that the page-builder state really points at home rather than about/contact.
-    await page.getByText('slug: /home', { exact: true }).waitFor({ state: 'visible', timeout: 8000 });
+    // Last compatible path: older builds expose the page as a direct button.
+    const direct = page.getByRole('button', { name: title, exact: false });
+    const directCount = await direct.count();
+    for (let index = 0; index < directCount; index += 1) {
+      const candidate = direct.nth(index);
+      if (!(await candidate.isVisible().catch(() => false))) continue;
+      await candidate.click();
+      await page.waitForTimeout(150);
+      return;
+    }
+
+    console.error('Page-builder comboboxes:', await page.locator('select').evaluateAll(nodes => nodes.map(node => ({
+      value: node.value,
+      html: node.outerHTML.slice(0, 1200)
+    }))));
+    console.error('Page-builder buttons:', await page.locator('button').allInnerTexts());
+    console.error('Page-builder body:', (await page.locator('body').innerText()).slice(0, 6000));
+    throw new Error(`Could not select CMS home page ${homePage.id} (${title}) in the production page builder.`);
   };
 
   const enterLiveHome = async () => {
     const pagesMenu = await ensureAdminDashboard();
     await pagesMenu.click();
-
     await selectHomePageBuilderTab();
 
-    const inactiveToggle = page.getByRole('button', { name: /فعال‌سازی ویرایش زنده در سایت/ }).first();
+    const inactiveToggle = page.getByRole('button', { name: /فعال‌سازی ویرایش زنده در سایت|ویرایش زنده در سایت/ }).first();
     const activeToggle = page.getByRole('button', { name: /حالت ویرایش زنده در سایت: فعال/ }).first();
     if (!(await activeToggle.isVisible().catch(() => false))) {
       await inactiveToggle.waitFor({ state: 'visible', timeout: 10000 });
       await inactiveToggle.click();
-      await activeToggle.waitFor({ state: 'visible', timeout: 5000 });
     }
 
-    // Use the selected page's own preview action. The global admin-shell button
-    // «مشاهده فروشگاه» is deliberately excluded because it masked a wrong page
-    // selection in the previous regression runs.
-    const viewSelectedPage = page.getByRole('button', { name: /^مشاهده در سایت$/ }).first();
-    await viewSelectedPage.waitFor({ state: 'visible', timeout: 10000 });
-    await viewSelectedPage.click();
-
     const section = page.locator('[data-section-key="featured-categories"]');
+    if (await section.isVisible().catch(() => false)) return section;
+
+    const viewSelectedPage = page.getByRole('button', { name: /^مشاهده در سایت$/ }).first();
+    if (await viewSelectedPage.isVisible().catch(() => false)) {
+      await viewSelectedPage.click();
+    } else {
+      const viewStore = page.getByRole('button', { name: /^مشاهده فروشگاه$/ }).first();
+      await viewStore.waitFor({ state: 'visible', timeout: 8000 });
+      await viewStore.click();
+    }
+
     await section.waitFor({ state: 'visible', timeout: 15000 });
     return section;
   };

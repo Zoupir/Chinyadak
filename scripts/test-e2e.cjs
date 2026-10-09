@@ -111,15 +111,36 @@ const assertNoHorizontalOverflow = async (page, label) => {
       const stableEditor = page.locator('[data-stable-rich-editor="30.10.8"]').first();
       await stableEditor.waitFor({ state: 'visible', timeout: 10000 });
       const surface = stableEditor.locator('.stable-rich-editor__surface');
-      await surface.click();
-      await surface.fill('متن آزمایشی ویرایشگر');
+      assert.equal(await surface.getAttribute('dir'), 'rtl', 'Persian editor surface is not RTL.');
+
+      // Cursor/backspace regression: editing must stay inside the contentEditable surface
+      // without React resetting innerHTML and moving the caret to the beginning.
+      await surface.fill('سلام دنیا');
+      await surface.press('End');
+      await surface.press('Backspace');
+      assert.equal((await surface.innerText()).trim(), 'سلام دنی', 'Backspace/caret behavior is broken in Persian text.');
+      await surface.type('ا');
+      assert.equal((await surface.innerText()).trim(), 'سلام دنیا', 'Persian typing order/caret restoration is broken.');
+
+      // Selection must survive toolbar focus changes and formatting must target the selection.
       await page.keyboard.press('Control+A');
       await stableEditor.getByRole('button', { name: 'پررنگ' }).click();
       const color = stableEditor.locator('input[type="color"]').first();
       await color.fill('#d11a2a');
-      const editorHtml = await surface.evaluate(node => node.innerHTML);
-      assert.match(editorHtml, /(font-weight|<b\b|<strong\b)/i, 'Replacement editor did not apply bold formatting.');
-      assert.match(editorHtml, /(color\s*:|color=)/i, 'Replacement editor did not apply text color.');
+      let editorHtml = await surface.evaluate(node => node.innerHTML);
+      assert.match(editorHtml, /(font-weight\s*:\s*700|<b\b|<strong\b)/i, 'Replacement editor did not apply bold formatting to selected text.');
+      assert.match(editorHtml, /color\s*:\s*(?:rgb\(209,\s*26,\s*42\)|#d11a2a)/i, 'Replacement editor did not apply selected text color.');
+
+      // Headings and alignment were previously visible controls that did not reliably apply.
+      await page.keyboard.press('Control+A');
+      await stableEditor.getByLabel('نوع پاراگراف').selectOption('h2');
+      editorHtml = await surface.evaluate(node => node.innerHTML);
+      assert.match(editorHtml, /<h2\b/i, 'Heading control did not convert the selected paragraph to H2.');
+      await page.keyboard.press('Control+A');
+      await stableEditor.getByRole('button', { name: 'وسط‌چین' }).click();
+      editorHtml = await surface.evaluate(node => node.innerHTML);
+      assert.match(editorHtml, /text-align\s*:\s*center/i, 'Alignment control did not apply center alignment.');
+
       assert.ok(await stableEditor.getByRole('button', { name: 'راست‌چین' }).count(), 'Replacement editor alignment toolbar missing.');
       assert.ok(await stableEditor.getByLabel('اندازه متن').count(), 'Replacement editor font-size control missing.');
     }
@@ -128,7 +149,7 @@ const assertNoHorizontalOverflow = async (page, label) => {
       throw new Error('Browser page errors: ' + pageErrors.map(error => error.stack || error.message || String(error)).join('\n---\n'));
     }
 
-    console.log('Real browser E2E passed: storefront routes, responsive menus, standalone product editor and stable rich-text formatting.');
+    console.log('Real browser E2E passed: storefront routes, responsive menus, standalone product editor, Persian caret/backspace and rich-text formatting.');
   } finally {
     await context.close();
     await browser.close();

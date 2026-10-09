@@ -123,22 +123,34 @@ const waitForHydration = async page => {
       await activeToggle.waitFor({ state: 'visible', timeout: 5000 }).catch(() => {});
     }
 
-    // Page Builder 3.0 renders section previews inside /admin with the same
-    // data-section-key attributes. Never treat that admin preview as the live
-    // storefront; leave admin first so MarketplaceRtlHome owns the click.
-    const viewSelectedPage = page.getByRole('button', { name: /^مشاهده در سایت$/ }).first();
-    if (await viewSelectedPage.isVisible().catch(() => false)) {
-      await viewSelectedPage.click();
-    } else {
-      const viewStore = page.getByRole('button', { name: /^مشاهده فروشگاه$/ }).first();
-      await viewStore.waitFor({ state: 'visible', timeout: 8000 });
-      await viewStore.click();
+    // Use title attributes as stable functional hooks. The visible labels are
+    // responsive and can be hidden from the accessible name in the production
+    // admin shell even though the controls themselves remain clickable.
+    const viewSelectedPage = page.locator('button[title="مشاهده ظاهر زنده برگه در فروشگاه"]').first();
+    const viewStore = page.locator('button[title="مشاهده ظاهر فروشگاه"]').first();
+    try {
+      if (await viewSelectedPage.isVisible().catch(() => false)) {
+        await viewSelectedPage.click();
+      } else {
+        await viewStore.waitFor({ state: 'visible', timeout: 8000 });
+        await viewStore.click();
+      }
+    } catch (error) {
+      console.error('URL before storefront navigation:', page.url());
+      console.error('Visible titled controls:', await page.locator('button[title]').evaluateAll(nodes => nodes.filter(node => {
+        const style = getComputedStyle(node);
+        const rect = node.getBoundingClientRect();
+        return style.visibility !== 'hidden' && style.display !== 'none' && rect.width > 0 && rect.height > 0;
+      }).map(node => ({ title: node.getAttribute('title'), text: (node.textContent || '').trim() }))));
+      console.error('Admin body before storefront navigation:', (await page.locator('body').innerText()).slice(0, 5000));
+      throw error;
     }
 
     const liveRoot = page.locator('.marketplace-rtl-home.is-live-editing');
     try {
       await liveRoot.waitFor({ state: 'visible', timeout: 10000 });
     } catch (error) {
+      console.error('URL after storefront navigation:', page.url());
       console.error('Storefront root class:', await page.locator('.marketplace-rtl-home').getAttribute('class').catch(() => null));
       console.error('Storefront body:', (await page.locator('body').innerText()).slice(0, 5000));
       throw error;

@@ -32,10 +32,6 @@ const waitForHydration = async page => {
   const ensureAdminDashboard = async () => {
     await page.goto(base + '/admin', { waitUntil: 'domcontentloaded' });
 
-    // StoreProvider restores the HttpOnly admin session asynchronously. Give it a
-    // deterministic signal instead of assuming the first AdminView render is ready.
-    // The production navigation calls this module «صفحه‌ساز دیداری» while older
-    // builds called it «برگه‌ها و سکشن‌ها»; both labels point to the same tab.
     const pagesMenu = page.getByRole('button', { name: /صفحه‌ساز دیداری|برگه‌ها و سکشن‌ها/ }).first();
     const loginButton = page.getByRole('button', { name: /احراز هویت و ورود به کنترل پنل/ }).first();
 
@@ -61,48 +57,25 @@ const waitForHydration = async page => {
     return pagesMenu;
   };
 
-  const selectHomePageBuilderTab = async () => {
-    // The page-builder skin has changed a few times and the visible slug chip is
-    // not part of the functional contract. Select the CMS home tab by its actual
-    // title from /api/cms/bundle, then let the storefront assertion prove that the
-    // selected page really is home (featured-categories must exist there).
-    const title = String(homePage.title || 'صفحه اصلی').trim();
-    const candidates = page.locator('button').filter({ hasText: title });
-    const count = await candidates.count();
-    let clicked = false;
-
-    for (let index = 0; index < count; index += 1) {
-      const candidate = candidates.nth(index);
-      if (!(await candidate.isVisible().catch(() => false))) continue;
-      await candidate.click();
-      clicked = true;
-      break;
-    }
-
-    if (!clicked) {
-      // Some prepared page-builder variants already pin page-home as the selected
-      // page and do not expose a dedicated tab label. Do not fail on presentation;
-      // the subsequent storefront section assertion is the authoritative check.
-      console.log('Home page tab label was not exposed; continuing with the current page-builder selection.');
-    }
-  };
-
   const enterLiveHome = async () => {
     const pagesMenu = await ensureAdminDashboard();
     await pagesMenu.click();
 
-    // Do not key this test to a decorative heading. The live-edit switch is the
-    // stable functional contract of the page-builder tab.
+    // Live edit is a StoreProvider state flag. Turn it on in the admin SPA, then
+    // leave the admin through the real storefront exit control so the same React
+    // provider instance carries that state into the homepage. The page-builder's
+    // own «مشاهده در سایت» button is conditional in some prepared variants, while
+    // the admin shell's «مشاهده فروشگاه» control is always present.
     const liveToggle = page.getByRole('button', { name: /ویرایش زنده در سایت/ }).first();
     await liveToggle.waitFor({ state: 'visible', timeout: 10000 });
-    await selectHomePageBuilderTab();
     await liveToggle.click();
 
-    const viewSite = page.getByRole('button', { name: /مشاهده در سایت/ }).first();
-    await viewSite.waitFor({ state: 'visible', timeout: 10000 });
-    await viewSite.click();
-
     const section = page.locator('[data-section-key="featured-categories"]');
+    if (await section.isVisible().catch(() => false)) return section;
+
+    const exitToStore = page.getByRole('button', { name: /مشاهده فروشگاه|مشاهده در سایت/ }).first();
+    await exitToStore.waitFor({ state: 'visible', timeout: 10000 });
+    await exitToStore.click();
     await section.waitFor({ state: 'visible', timeout: 15000 });
     return section;
   };

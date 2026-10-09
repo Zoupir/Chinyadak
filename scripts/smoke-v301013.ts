@@ -7,7 +7,7 @@ const read = (file: string) => fs.readFileSync(file, 'utf8');
 const pageView = read('src/components/page/PageView.tsx');
 assert.match(pageView, /import \{ RichTextContent \} from ['"]\.\.\/common\/RichTextContent['"]/);
 assert.ok(pageView.includes('<RichTextContent content={section.content}'), 'Page section rich text must use RichTextContent');
-assert.ok(!/\{section\.content\s*\}/.test(pageView), 'PageView must not render section.content as plain React text');
+assert.ok(!/<div[^>]*>\s*\{section\.content\}\s*<\/div>/.test(pageView), 'PageView must not render section.content as plain React text');
 
 const richCss = read('src/components/common/RichTextEditor.css');
 assert.ok(richCss.includes('STOREFRONT-RICH-TEXT-PARITY-v301013'), 'Storefront rich text parity CSS marker missing');
@@ -72,6 +72,7 @@ if (base && adminPassword) {
       ? { ...section, content: probeHtml, widthPercent: probeWidth }
       : section)
   };
+  let latestRevision = Number(originalPage.cmsRevision || 0);
 
   try {
     const save = await fetch(base + `/api/cms/pages/${encodeURIComponent(page.id)}`, {
@@ -81,6 +82,7 @@ if (base && adminPassword) {
     });
     assert.equal(save.status, 200, `v30.10.13 page save failed: ${save.status} ${await save.text()}`);
     const savedPayload = await save.json() as any;
+    latestRevision = Number(savedPayload.page?.cmsRevision ?? latestRevision);
     const savedSection = savedPayload.page?.sections?.find((section: any) => section.id === target.id);
     assert.equal(savedSection?.content, probeHtml, 'Page PUT response did not read back persisted rich text');
     assert.equal(Number(savedSection?.widthPercent), probeWidth, 'Page PUT response did not read back persisted layout width');
@@ -89,14 +91,16 @@ if (base && adminPassword) {
     assert.equal(verifyResponse.status, 200, 'v30.10.13 CMS bundle verification failed');
     const verify = await verifyResponse.json() as any;
     const verifiedPage = (verify.pages || []).find((item: any) => item.id === page.id);
+    latestRevision = Number(verifiedPage?.cmsRevision ?? latestRevision);
     const verifiedSection = verifiedPage?.sections?.find((section: any) => section.id === target.id);
     assert.equal(verifiedSection?.content, probeHtml, 'Rich text did not survive DB reload');
     assert.equal(Number(verifiedSection?.widthPercent), probeWidth, 'Live-editor layout width did not survive DB reload');
   } finally {
+    const restorePayload = { ...originalPage, cmsRevision: latestRevision };
     const restore = await fetch(base + `/api/cms/pages/${encodeURIComponent(originalPage.id)}`, {
       method: 'PUT',
       headers: { 'content-type': 'application/json', cookie, origin: base, 'sec-fetch-site': 'same-origin' },
-      body: JSON.stringify(originalPage)
+      body: JSON.stringify(restorePayload)
     });
     assert.equal(restore.status, 200, `v30.10.13 page restore failed: ${restore.status} ${await restore.text()}`);
   }

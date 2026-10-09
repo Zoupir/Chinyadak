@@ -1,10 +1,10 @@
 {
   "name": "chinpart",
   "private": true,
-  "version": "30.10.8",
+  "version": "30.10.9",
   "type": "module",
   "scripts": {
-    "prepare:source": "node scripts/prepare-v30108.mjs",
+    "prepare:source": "node scripts/prepare-v30108.mjs && node scripts/prepare-extension-platform.mjs",
     "dev": "npm run prepare:source && tsx server.ts",
     "build": "npm run prepare:source && vite build && node scripts/build-server.mjs",
     "start": "NODE_ENV=production node server.js",

@@ -6,8 +6,95 @@ import './rich-text-storefront.css';
 declare global {
   interface Window {
     __YADAK_WEBSITE_MODE__?: boolean;
+    __YADAK_SUPPORT_DIAGNOSTICS_INSTALLED__?: boolean;
   }
 }
+
+const installAdminSupportDiagnostics = () => {
+  if (!window.location.pathname.startsWith('/admin')) return;
+  if (window.__YADAK_SUPPORT_DIAGNOSTICS_INSTALLED__) return;
+  window.__YADAK_SUPPORT_DIAGNOSTICS_INSTALLED__ = true;
+
+  const originalFetch = window.fetch.bind(window);
+
+  const safePath = (value: unknown): string => {
+    try {
+      return new URL(String(value || ''), window.location.origin).pathname.slice(0, 500);
+    } catch {
+      return String(value || '').split('?')[0].slice(0, 500);
+    }
+  };
+
+  const report = (payload: Record<string, unknown>) => {
+    void originalFetch('/api/support/client-event', {
+      method: 'POST',
+      credentials: 'same-origin',
+      keepalive: true,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    }).catch(() => undefined);
+  };
+
+  window.addEventListener('error', event => {
+    report({
+      kind: 'client_error',
+      path: window.location.pathname,
+      message: event.message || 'Browser error'
+    });
+  });
+
+  window.addEventListener('unhandledrejection', event => {
+    const reason = event.reason instanceof Error
+      ? event.reason.message
+      : String(event.reason || 'Unhandled promise rejection');
+    report({
+      kind: 'client_rejection',
+      path: window.location.pathname,
+      message: reason
+    });
+  });
+
+  window.fetch = (async (...args: Parameters<typeof fetch>) => {
+    const [input, init] = args;
+    const rawUrl = typeof input === 'string'
+      ? input
+      : input instanceof URL
+        ? input.toString()
+        : input.url;
+    const path = safePath(rawUrl);
+    const method = String(init?.method || (input instanceof Request ? input.method : 'GET')).toUpperCase();
+    const shouldTrack = path.startsWith('/api/')
+      && !path.startsWith('/api/support/')
+      && !path.startsWith('/api/auth/');
+    const startedAt = performance.now();
+
+    try {
+      const response = await originalFetch(...args);
+      if (shouldTrack && !response.ok) {
+        report({
+          kind: 'client_fetch_error',
+          method,
+          path,
+          status: response.status,
+          durationMs: performance.now() - startedAt,
+          message: response.statusText || `HTTP ${response.status}`
+        });
+      }
+      return response;
+    } catch (error) {
+      if (shouldTrack) {
+        report({
+          kind: 'client_fetch_exception',
+          method,
+          path,
+          durationMs: performance.now() - startedAt,
+          message: error instanceof Error ? error.message : String(error)
+        });
+      }
+      throw error;
+    }
+  }) as typeof window.fetch;
+};
 
 const clearLegacyAppCaches = () => {
   if (!window.__YADAK_WEBSITE_MODE__) return;
@@ -59,6 +146,7 @@ const enhanceServerStorefront = (root: HTMLElement) => {
   });
 };
 
+installAdminSupportDiagnostics();
 clearLegacyAppCaches();
 
 const root = document.getElementById('root');

@@ -33,7 +33,8 @@ const topLevelScripts = [
   { script: 'scripts/prepare-extension-platform.mjs', kind: 'stage' },
   { script: 'scripts/apply-site-auditor-v210.mjs', kind: 'stage' },
   { script: 'scripts/prepare-v301013-cms-adapter.mjs', kind: 'stage' },
-  { script: 'scripts/apply-v301013-richtext-live-editor-v3.mjs', kind: 'stage' }
+  { script: 'scripts/apply-v301013-richtext-live-editor-v3.mjs', kind: 'stage' },
+  { script: 'scripts/repair-v301013-discard-preview.mjs', kind: 'stage' }
 ];
 
 for (const item of topLevelScripts) {

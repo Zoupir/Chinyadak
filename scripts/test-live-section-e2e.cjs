@@ -80,9 +80,6 @@ const waitForHydration = async page => {
   const enterLiveHome = async () => {
     const builder = await openVisualBuilder();
 
-    // In the production visual page builder this is not a toggle followed by a
-    // separate "view" action. The button itself enables live-edit state and
-    // navigates directly to the selected storefront page.
     const liveButton = builder.getByRole('button', { name: /^ویرایش زنده در سایت$/ }).first();
     await liveButton.waitFor({ state: 'visible', timeout: 5000 });
     await liveButton.click();
@@ -104,11 +101,30 @@ const waitForHydration = async page => {
 
   const openFeaturedCategoriesEditor = async () => {
     const section = page.locator('.marketplace-rtl-home.is-live-editing [data-section-key="featured-categories"]');
-    await section.waitFor({ state: 'visible', timeout: 10000 });
-    await section.click({ position: { x: 24, y: 24 } });
     const modal = page.locator('[data-live-section-modal="1"]');
-    await modal.waitFor({ state: 'visible', timeout: 10000 });
-    return modal;
+    await section.waitFor({ state: 'visible', timeout: 10000 });
+
+    // The public storefront can become interactive before its CMS-backed pages
+    // array has finished hydrating. The real handler intentionally resolves the
+    // clicked sectionKey back to the authored CMS section before opening the
+    // modal. Retry the same user click briefly instead of testing an artificial
+    // race between SSR paint and CMS hydration.
+    const deadline = Date.now() + 12000;
+    let attempts = 0;
+    while (Date.now() < deadline) {
+      attempts += 1;
+      await section.click({ position: { x: Math.min(60, Math.max(20, (await section.boundingBox())?.width / 3 || 24)), y: 28 } });
+      if (await modal.isVisible().catch(() => false)) return modal;
+      await page.waitForTimeout(350);
+    }
+
+    const cmsResponse = await context.request.get(base + '/api/cms/bundle');
+    const cms = cmsResponse.ok() ? await cmsResponse.json() : null;
+    const liveSection = cms?.pages?.find(item => item?.slug === 'home')?.sections?.find(item => item?.sectionKey === 'featured-categories');
+    console.error('Live section modal did not open after attempts:', attempts);
+    console.error('CMS featured-categories section at failure:', liveSection || null);
+    console.error('Live toolbar visible:', await page.locator('.marketplace-live-edit-toolbar').isVisible().catch(() => false));
+    throw new Error('featured-categories live editor did not open after CMS hydration retry window');
   };
 
   try {

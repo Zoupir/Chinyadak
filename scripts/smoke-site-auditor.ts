@@ -6,7 +6,7 @@ import { runSiteAudit } from '../src/server/audit/site-audit.ts';
 const report = runSiteAudit();
 assert.equal(typeof report.generatedAt, 'string');
 assert.equal(typeof report.coreVersion, 'string');
-assert.equal(report.engineVersion, '2.1.0');
+assert.equal(report.engineVersion, '2.2.0');
 assert.ok(Array.isArray(report.findings));
 assert.equal(report.summary.total, report.findings.length);
 assert.equal(report.coverage.pipelineTraceAvailable, true);
@@ -36,6 +36,21 @@ for (const prefix of falsePositiveIds) {
     `Known Site Auditor false-positive returned: ${prefix}`
   );
 }
+
+const fixedContractIds = [
+  'rich-text:page-section-rendered-as-plain-text',
+  'rich-text:storefront-css-parity-missing',
+  'rich-text:runtime-probe-marker-missing',
+  'live-editor:stale-page-snapshot',
+  'live-editor:persistence-roundtrip-unverified'
+];
+for (const id of fixedContractIds) {
+  assert.equal(
+    report.findings.some(finding => finding.id === id),
+    false,
+    `Fixed rich/live contract regressed: ${id}`
+  );
+}
 assert.equal(report.findings.some(finding => finding.id === 'production-bundle-hash-mismatch'), false);
 
 const tracePath = path.join(process.cwd(), 'AUDIT_PIPELINE_TRACE.json');
@@ -61,4 +76,4 @@ const manifest = JSON.parse(fs.readFileSync(path.join(pluginRoot, 'plugin.json')
 assert.equal(manifest.id, 'site-auditor');
 assert.equal(manifest.type, 'plugin');
 assert.equal(manifest.clientEntry, 'client/index.js');
-console.log(`Site Auditor smoke passed with ${report.findings.length} findings, ${report.coverage.pipelineStages} traced stages, ${report.coverage.confirmedOverwrites} confirmed overwrites, prepared inventories active, production bundle verified.`);
+console.log(`Site Auditor 2.2 smoke passed with ${report.findings.length} findings, ${report.coverage.pipelineStages} traced stages, ${report.coverage.confirmedOverwrites} confirmed overwrites, rich/live contracts healthy, production bundle verified.`);

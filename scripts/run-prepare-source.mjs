@@ -50,6 +50,7 @@ const buildPreparedContracts = () => {
     liveEditorImmediateFormSnapshot: liveModal.includes('LIVE-SECTION-FORM-SNAPSHOT-v301016'),
     authoredSectionConfigPreserved: store.includes('AUTHORED-SECTION-CONFIG-PRESERVED-v301017'),
     homeSectionRendererConsumesConfig: marketplaceHome.includes('SECTION-RENDER-CONTRACT-v301017') && marketplaceHome.includes('configuredFeaturedSlugs'),
+    liveEditorBrowserContract: liveModal.includes('data-section-field="desktopColumns"') && liveModal.includes('data-section-field="contentSourceLimit"'),
     footerMobileColumnsContract: footer.includes('settings.mobileFooterColumns || settings.footerGridColumnsMobile || 2')
   };
 };
@@ -69,7 +70,8 @@ const topLevelScripts = [
   { script: 'scripts/apply-v301014-auditor-contracts.mjs', kind: 'stage' },
   { script: 'scripts/apply-v301015-richtext-fidelity.mjs', kind: 'stage' },
   { script: 'scripts/apply-v301016-live-section-persistence.mjs', kind: 'stage' },
-  { script: 'scripts/apply-v301017-section-render-contract.mjs', kind: 'stage' }
+  { script: 'scripts/apply-v301017-section-render-contract.mjs', kind: 'stage' },
+  { script: 'scripts/apply-v301017-browser-contract.mjs', kind: 'stage' }
 ];
 
 for (const item of topLevelScripts) {

@@ -37,6 +37,7 @@ const buildPreparedContracts = () => {
   const cms = readPreparedText('src/server/routes/cms.ts');
   const footer = readPreparedText('src/components/layout/Footer.tsx');
   const liveModal = readPreparedText('src/components/common/LiveSectionModal.tsx');
+  const marketplaceHome = readPreparedText('src/components/home/MarketplaceRtlHome.tsx');
   return {
     richTextPageRenderer: pageView.includes('<RichTextContent content={section.content}'),
     richTextCssParity: richCss.includes('STOREFRONT-RICH-TEXT-PARITY-v301013'),
@@ -47,6 +48,8 @@ const buildPreparedContracts = () => {
     liveEditorPersistenceRoundtrip: store.includes('PAGE_PERSISTENCE_MISMATCH') && cms.includes('PAGE_PERSIST_READBACK_FAILED'),
     liveEditorAtomicSectionSave: store.includes('LIVE-SECTION-ATOMIC-SAVE-v301016') && cms.includes('LIVE-SECTION-ATOMIC-ENDPOINT-v301016'),
     liveEditorImmediateFormSnapshot: liveModal.includes('LIVE-SECTION-FORM-SNAPSHOT-v301016'),
+    authoredSectionConfigPreserved: store.includes('AUTHORED-SECTION-CONFIG-PRESERVED-v301017'),
+    homeSectionRendererConsumesConfig: marketplaceHome.includes('SECTION-RENDER-CONTRACT-v301017') && marketplaceHome.includes('configuredFeaturedSlugs'),
     footerMobileColumnsContract: footer.includes('settings.mobileFooterColumns || settings.footerGridColumnsMobile || 2')
   };
 };
@@ -65,7 +68,8 @@ const topLevelScripts = [
   { script: 'scripts/repair-v301013-discard-preview.mjs', kind: 'stage' },
   { script: 'scripts/apply-v301014-auditor-contracts.mjs', kind: 'stage' },
   { script: 'scripts/apply-v301015-richtext-fidelity.mjs', kind: 'stage' },
-  { script: 'scripts/apply-v301016-live-section-persistence.mjs', kind: 'stage' }
+  { script: 'scripts/apply-v301016-live-section-persistence.mjs', kind: 'stage' },
+  { script: 'scripts/apply-v301017-section-render-contract.mjs', kind: 'stage' }
 ];
 
 for (const item of topLevelScripts) {

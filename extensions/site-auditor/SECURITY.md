@@ -1,0 +1,1 @@
+The Site Auditor plugin is read-only. Source inspection is performed by a Core-owned admin endpoint. The plugin does not execute server-side extension code and does not mutate source files, database rows, settings, or deployment state.

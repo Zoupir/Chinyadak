@@ -43,13 +43,25 @@ const oldFontFamily = `  const execFontFamily = (family: string) => {\n    if (!
 const newFontFamily = `  const execFontFamily = (family: string) => {\n    if (!family) return;\n    setFontFamily(family);\n    applyInlineStyle({ fontFamily: family });\n  };`;
 if (source.includes(oldFontFamily)) source = source.replace(oldFontFamily, newFontFamily);
 
+if (!source.includes('const applyTextAlignment =')) {
+  const marker = `  const insertHtml = (html: string) => {`;
+  const index = source.indexOf(marker);
+  if (index < 0) throw new Error('v30.10.8 alignment helper insertion marker missing.');
+  const helper = `  const applyTextAlignment = (alignment: 'right' | 'center' | 'left' | 'justify') => {\n    const root = surfaceRef.current;\n    if (!root || !restoreSelection(true)) return;\n    const selection = window.getSelection();\n    if (!selection?.rangeCount) return;\n    const range = selection.getRangeAt(0);\n    if (!root.contains(range.commonAncestorContainer)) return;\n\n    const blocks = Array.from(\n      root.querySelectorAll<HTMLElement>('p,h2,h3,h4,blockquote,li,div,td,th')\n    ).filter(block => {\n      try { return range.intersectsNode(block); } catch { return false; }\n    });\n\n    if (!blocks.length) {\n      const block = closestBlock(selection.anchorNode, root);\n      if (block && block !== root) blocks.push(block);\n    }\n\n    blocks.forEach(block => block.style.setProperty('text-align', alignment, 'important'));\n    saveSelection();\n    emit();\n  };\n\n`;
+  source = source.slice(0, index) + helper + source.slice(index);
+}
+
 source = source
   .replace(`onClick={() => exec('bold')}`, `onClick={() => applyInlineStyle({ fontWeight: '700' })}`)
   .replace(`onClick={() => exec('italic')}`, `onClick={() => applyInlineStyle({ fontStyle: 'italic' })}`)
   .replace(`onClick={() => exec('underline')}`, `onClick={() => applyInlineStyle({ textDecoration: 'underline' })}`)
   .replace(`onClick={() => exec('strikeThrough')}`, `onClick={() => applyInlineStyle({ textDecoration: 'line-through' })}`)
   .replace(`setTextColor(event.currentTarget.value); exec('foreColor', event.currentTarget.value);`, `setTextColor(event.currentTarget.value); applyInlineStyle({ color: event.currentTarget.value });`)
-  .replace(`setHighlightColor(event.currentTarget.value); exec('hiliteColor', event.currentTarget.value);`, `setHighlightColor(event.currentTarget.value); applyInlineStyle({ backgroundColor: event.currentTarget.value });`);
+  .replace(`setHighlightColor(event.currentTarget.value); exec('hiliteColor', event.currentTarget.value);`, `setHighlightColor(event.currentTarget.value); applyInlineStyle({ backgroundColor: event.currentTarget.value });`)
+  .replace(`onClick={() => exec('justifyRight')}`, `onClick={() => applyTextAlignment('right')}`)
+  .replace(`onClick={() => exec('justifyCenter')}`, `onClick={() => applyTextAlignment('center')}`)
+  .replace(`onClick={() => exec('justifyLeft')}`, `onClick={() => applyTextAlignment('left')}`)
+  .replace(`onClick={() => exec('justifyFull')}`, `onClick={() => applyTextAlignment('justify')}`);
 
 const oldToolInteraction = `    onMouseDown={event => event.preventDefault()}\n    onClick={onClick}`;
 const pointerSafeToolInteraction = `    onPointerDown={event => {\n      event.preventDefault();\n      if (event.button === 0) onClick();\n    }}\n    onMouseDown={event => event.preventDefault()}\n    onClick={event => {\n      if (event.detail === 0) onClick();\n    }}`;
@@ -74,10 +86,12 @@ if (!source.includes('if (event.button === 0) onClick();')) throw new Error('v30
 if (!source.includes('if (event.detail === 0) onClick();')) throw new Error('v30.10.8 keyboard toolbar activation missing.');
 if (!source.includes("applyInlineStyle({ fontWeight: '700' })")) throw new Error('v30.10.8 bold range style wiring missing.');
 if (!source.includes('applyInlineStyle({ color: event.currentTarget.value })')) throw new Error('v30.10.8 color range style wiring missing.');
+if (!source.includes('const applyTextAlignment =')) throw new Error('v30.10.8 deterministic block alignment helper missing.');
+if (!source.includes("applyTextAlignment('center')")) throw new Error('v30.10.8 center alignment wiring missing.');
 
 if (source !== before) {
   fs.writeFileSync(file, source);
-  console.log('v30.10.8 WYSIWYG template upgraded with pre-focus toolbar execution and persistent Range styling.');
+  console.log('v30.10.8 WYSIWYG template upgraded with persistent Range styling and deterministic block alignment.');
 } else {
-  console.log('v30.10.8 WYSIWYG template pre-focus toolbar execution already active.');
+  console.log('v30.10.8 WYSIWYG template selection and alignment repairs already active.');
 }

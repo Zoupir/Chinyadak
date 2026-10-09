@@ -1,4 +1,6 @@
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const { execFileSync } = require('node:child_process');
 const { chromium } = require('playwright');
 
 const base = String(process.env.TEST_BASE_URL || 'http://127.0.0.1:3000').replace(/\/$/, '');
@@ -102,6 +104,30 @@ const assertNoHorizontalOverflow = async (page, label) => {
       });
       assert.equal(login.status(), 200, `Admin E2E login failed: ${login.status()} ${await login.text()}`);
 
+      // The core-owned source audit endpoint must be permission protected and return a structured report.
+      const auditResponse = await context.request.get(base + '/api/audit/site-audit');
+      assert.equal(auditResponse.status(), 200, `Site audit API failed: ${auditResponse.status()} ${await auditResponse.text()}`);
+      const auditReport = await auditResponse.json();
+      assert.ok(Number(auditReport.scannedFiles) > 0, 'Site audit did not scan source files.');
+      assert.ok(Number(auditReport.routeInventorySize) > 0, 'Site audit did not build a route inventory.');
+      assert.ok(Array.isArray(auditReport.findings), 'Site audit findings are not an array.');
+
+      // Install the real first-party auditor ZIP through the same extension API used by production.
+      execFileSync(process.execPath, ['scripts/build-site-auditor.mjs'], { cwd: process.cwd(), stdio: 'pipe' });
+      const auditorZip = fs.readFileSync('tmp/site-auditor-1.0.0.zip');
+      const installAuditor = await context.request.post(base + '/api/extensions/install', {
+        multipart: {
+          kind: 'plugin',
+          file: { name: 'site-auditor-1.0.0.zip', mimeType: 'application/zip', buffer: auditorZip }
+        },
+        headers: { origin: base, 'sec-fetch-site': 'same-origin' }
+      });
+      assert.equal(installAuditor.status(), 201, `Site Auditor install failed: ${installAuditor.status()} ${await installAuditor.text()}`);
+      const activateAuditor = await context.request.post(base + '/api/extensions/plugin/site-auditor/activate', {
+        headers: { origin: base, 'sec-fetch-site': 'same-origin' }
+      });
+      assert.equal(activateAuditor.status(), 200, `Site Auditor activation failed: ${activateAuditor.status()} ${await activateAuditor.text()}`);
+
       // Extension manager must be reachable from the normal admin sidebar; no manual URL entry.
       await page.setViewportSize({ width: 1280, height: 900 });
       await page.goto(base + '/admin', { waitUntil: 'domcontentloaded' });
@@ -113,6 +139,16 @@ const assertNoHorizontalOverflow = async (page, label) => {
       assert.ok(await page.getByRole('button', { name: 'قالب‌ها' }).count(), 'Integrated theme tab is missing.');
       assert.ok(await page.locator('input[type="file"][accept*="zip"]').count(), 'Integrated ZIP installer input is missing.');
 
+      // The installed plugin must register its own admin menu and render a real audit report.
+      await page.goto(base + '/admin', { waitUntil: 'domcontentloaded' });
+      const auditorMenu = page.getByRole('button', { name: /ممیزی و تشخیص تداخل/ });
+      await auditorMenu.waitFor({ state: 'visible', timeout: 15000 });
+      await auditorMenu.click();
+      await page.getByRole('heading', { name: 'ممیزی جامع سایت' }).waitFor({ state: 'visible', timeout: 15000 });
+      assert.ok(await page.getByText('کل موارد').count(), 'Auditor summary cards did not render.');
+      assert.ok(await page.getByRole('button', { name: 'خروجی JSON' }).count(), 'Auditor JSON export action is missing.');
+      assert.ok(await page.getByRole('button', { name: 'گزارش متنی' }).count(), 'Auditor text export action is missing.');
+
       await page.goto(base + `/admin/product-edit/${encodeURIComponent(product.id)}`, { waitUntil: 'domcontentloaded' });
       const productEditor = page.locator('[data-product-editor-page="1"]');
       await productEditor.waitFor({ state: 'visible', timeout: 15000 });
@@ -123,8 +159,6 @@ const assertNoHorizontalOverflow = async (page, label) => {
       const surface = stableEditor.locator('.stable-rich-editor__surface');
       assert.equal(await surface.getAttribute('dir'), 'rtl', 'Persian editor surface is not RTL.');
 
-      // Cursor/backspace regression: editing must stay inside the contentEditable surface
-      // without React resetting innerHTML and moving the caret to the beginning.
       await surface.fill('سلام دنیا');
       await surface.press('End');
       await surface.press('Backspace');
@@ -132,7 +166,6 @@ const assertNoHorizontalOverflow = async (page, label) => {
       await surface.type('ا');
       assert.equal((await surface.innerText()).trim(), 'سلام دنیا', 'Persian typing order/caret restoration is broken.');
 
-      // Selection must survive toolbar focus changes and formatting must target the selection.
       await page.keyboard.press('Control+A');
       await stableEditor.getByRole('button', { name: 'پررنگ' }).click();
       const color = stableEditor.locator('input[type="color"]').first();
@@ -141,7 +174,6 @@ const assertNoHorizontalOverflow = async (page, label) => {
       assert.match(editorHtml, /(font-weight\s*:\s*700|<b\b|<strong\b)/i, 'Replacement editor did not apply bold formatting to selected text.');
       assert.match(editorHtml, /color\s*:\s*(?:rgb\(209,\s*26,\s*42\)|#d11a2a)/i, 'Replacement editor did not apply selected text color.');
 
-      // Headings and alignment were previously visible controls that did not reliably apply.
       await page.keyboard.press('Control+A');
       await stableEditor.getByLabel('نوع پاراگراف').selectOption('h2');
       editorHtml = await surface.evaluate(node => node.innerHTML);
@@ -159,7 +191,7 @@ const assertNoHorizontalOverflow = async (page, label) => {
       throw new Error('Browser page errors: ' + pageErrors.map(error => error.stack || error.message || String(error)).join('\n---\n'));
     }
 
-    console.log('Real browser E2E passed: storefront routes, responsive menus, integrated extension manager, standalone product editor, Persian caret/backspace and rich-text formatting.');
+    console.log('Real browser E2E passed: storefront routes, responsive menus, extension manager, Site Auditor install/activation/report, product editor and Persian rich-text behavior.');
   } finally {
     await context.close();
     await browser.close();

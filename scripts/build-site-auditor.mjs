@@ -4,7 +4,13 @@ import zlib from 'node:zlib';
 
 const root = process.cwd();
 const source = path.join(root, 'extensions/site-auditor');
-const output = path.join(root, 'tmp/site-auditor-1.0.0.zip');
+const manifestPath = path.join(source, 'plugin.json');
+const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+const version = String(manifest.version || '').trim();
+if (!/^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/.test(version)) {
+  throw new Error(`Invalid Site Auditor manifest version: ${version || '(empty)'}`);
+}
+const output = path.join(root, `tmp/site-auditor-${version}.zip`);
 
 function crc32(buf) {
   let crc = ~0;

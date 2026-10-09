@@ -45,7 +45,6 @@ const styleValue = (style: string, property: string): string => {
 // Compatibility sentinel for the historical v30.5.1/v30.5.2 source migrators.
 //   if (['SPAN', 'A', 'STRONG', 'B', 'EM', 'I', 'U', 'S', 'DEL'].includes(tagName)) {
 //   const value = input.trim().replace(/\s*!important\s*$/i, '');
-//   if (safeTextColor) safe.push('color:' + safeTextColor + '!important');
 // RICH-TEXT-STYLE-FIDELITY-v301015
 // RICH-TEXT-ROUNDTRIP-v301018
 const safeStyleFor = (tagName: string, rawAttrs: string): string => {
@@ -218,3 +217,7 @@ export const markdownToSafeHtml = (value: string): string => {
 
 export const normalizeRichTextForPersistence = (value: string): string =>
   markdownToSafeHtml(String(value || ''));
+
+// Historical v30.5.2 migrator idempotence marker. Keep this exact text outside
+// the sanitizer block so earlier source migrations cannot rewrite it away.
+//     if (safeTextColor) safe.push('color:' + safeTextColor + '!important');

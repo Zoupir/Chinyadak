@@ -34,7 +34,9 @@ const waitForHydration = async page => {
 
     // StoreProvider restores the HttpOnly admin session asynchronously. Give it a
     // deterministic signal instead of assuming the first AdminView render is ready.
-    const pagesMenu = page.getByRole('button', { name: /برگه‌ها و سکشن‌ها/ }).first();
+    // The production navigation calls this module «صفحه‌ساز دیداری» while older
+    // builds called it «برگه‌ها و سکشن‌ها»; both labels point to the same tab.
+    const pagesMenu = page.getByRole('button', { name: /صفحه‌ساز دیداری|برگه‌ها و سکشن‌ها/ }).first();
     const loginButton = page.getByRole('button', { name: /احراز هویت و ورود به کنترل پنل/ }).first();
 
     try {
@@ -77,11 +79,12 @@ const waitForHydration = async page => {
   const enterLiveHome = async () => {
     const pagesMenu = await ensureAdminDashboard();
     await pagesMenu.click();
-    await page.getByRole('heading', { name: /مدیریت برگه‌ها و سکشن‌ها/ }).waitFor({ state: 'visible', timeout: 10000 });
-    await selectHomePageBuilderTab();
 
+    // Do not key this test to a decorative heading. The live-edit switch is the
+    // stable functional contract of the page-builder tab.
     const liveToggle = page.getByRole('button', { name: /ویرایش زنده در سایت/ }).first();
     await liveToggle.waitFor({ state: 'visible', timeout: 10000 });
+    await selectHomePageBuilderTab();
     await liveToggle.click();
 
     const viewSite = page.getByRole('button', { name: /مشاهده در سایت/ }).first();

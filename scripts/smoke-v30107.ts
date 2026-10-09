@@ -9,9 +9,24 @@ const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
 
 assert.match(String(pkg.version || ''), /^30\.10\.(?:[7-9]|[1-9]\d+)$/);
 const prepareSource = String(pkg.scripts?.['prepare:source'] || '');
-assert.match(prepareSource, /^node scripts\/prepare-v3010[7-9]\.mjs(?: && node scripts\/prepare-extension-platform\.mjs)?$/);
-if (prepareSource.includes('prepare-extension-platform.mjs')) {
+const legacyPrepare = /^node scripts\/prepare-v3010[7-9]\.mjs(?: && node scripts\/prepare-extension-platform\.mjs)?$/.test(prepareSource);
+const tracedPrepare = prepareSource === 'node scripts/run-prepare-source.mjs';
+assert.ok(legacyPrepare || tracedPrepare, `Unexpected prepare:source pipeline: ${prepareSource}`);
+if (legacyPrepare && prepareSource.includes('prepare-extension-platform.mjs')) {
   assert.ok(fs.existsSync('scripts/prepare-extension-platform.mjs'), 'Extension source preparation script is missing.');
+}
+if (tracedPrepare) {
+  for (const required of [
+    'scripts/run-prepare-source.mjs',
+    'scripts/pipeline-trace-hook.mjs',
+    'scripts/pipeline-trace-lib.mjs',
+    'scripts/prepared-audit-inventory.mjs',
+    'scripts/prepare-v30108.mjs',
+    'scripts/prepare-extension-platform.mjs',
+    'scripts/apply-site-auditor-v210.mjs'
+  ]) {
+    assert.ok(fs.existsSync(required), `Traced prepare pipeline dependency is missing: ${required}`);
+  }
 }
 assert.equal(pkg.devDependencies?.autoprefixer, undefined);
 assert.match(String(pkg.dependencies?.multer || ''), /2\.4/);

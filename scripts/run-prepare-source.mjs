@@ -50,7 +50,15 @@ const buildPreparedContracts = () => {
     liveEditorImmediateFormSnapshot: liveModal.includes('LIVE-SECTION-FORM-SNAPSHOT-v301016'),
     authoredSectionConfigPreserved: store.includes('AUTHORED-SECTION-CONFIG-PRESERVED-v301017'),
     homeSectionRendererConsumesConfig: marketplaceHome.includes('SECTION-RENDER-CONTRACT-v301017') && marketplaceHome.includes('configuredFeaturedSlugs'),
-    liveEditorBrowserContract: liveModal.includes('data-section-field="desktopColumns"') && liveModal.includes('data-section-field="contentSourceLimit"'),
+    liveEditorBrowserContract:
+      liveModal.includes('data-section-field="desktopColumns"') &&
+      liveModal.includes('data-section-field="contentSourceLimit"') &&
+      liveModal.includes('data-live-section-modal="1"') &&
+      liveModal.includes('data-live-section-save="1"'),
+    marketplaceOptionalIdentifierSafety:
+      !marketplaceHome.includes('seen.has(product.id)') &&
+      !marketplaceHome.includes('seen.add(product.id)') &&
+      !marketplaceHome.includes('selectedFeaturedSlugs.includes(category.slug)'),
     footerMobileColumnsContract: footer.includes('settings.mobileFooterColumns || settings.footerGridColumnsMobile || 2')
   };
 };
@@ -113,6 +121,11 @@ const preparedRoutes = buildPreparedRouteInventory(root);
 const preparedApiCalls = buildPreparedApiInventory(root);
 const preparedConfigRefs = buildPreparedConfigInventory(root);
 const preparedContracts = buildPreparedContracts();
+const unhealthyPreparedContracts = Object.entries(preparedContracts).filter(([, healthy]) => !healthy);
+if (unhealthyPreparedContracts.length) {
+  throw new Error(`Prepared runtime contracts failed: ${unhealthyPreparedContracts.map(([name]) => name).join(', ')}`);
+}
+
 const manifest = {
   schemaVersion: 1,
   generatedAt: new Date().toISOString(),

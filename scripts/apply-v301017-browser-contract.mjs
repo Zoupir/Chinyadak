@@ -31,12 +31,10 @@ import fs from 'node:fs';
 
 // ---------------------------------------------------------------------------
 // Live-edit mode must survive the admin -> storefront navigation boundary.
-// Do not rewrite the StoreContext state declaration: historical migrations can
-// legitimately change its exact source shape before this stage. Instead use a
-// one-shot navigation handoff. The visual builder records a non-sensitive
-// pending flag synchronously before navigation; a remounted StoreProvider
-// consumes it once and restores the existing setter. In a pure SPA transition
-// the React setter already stays true and the timeout removes the unused flag.
+// Use a one-shot session handoff. Marketplace consumes it during its FIRST
+// render, before passive effects can race with the route transition, then syncs
+// the normal StoreContext boolean. This avoids relying on historical source
+// shapes of the StoreContext state declaration.
 // ---------------------------------------------------------------------------
 {
   const builderFile = 'src/components/admin/AdminVisualPageBuilder.tsx';
@@ -48,7 +46,7 @@ import fs from 'node:fs';
     if (!setterPattern.test(builder)) throw new Error('v30.10.17 visual-builder live setter missing');
     builder = builder.replace(
       setterPattern,
-      `// ${builderMarker}\n            try {\n              window.sessionStorage.setItem('yadak-live-edit-pending', '1');\n              window.setTimeout(() => window.sessionStorage.removeItem('yadak-live-edit-pending'), 2000);\n            } catch {\n              // The ordinary React state path still works when storage is unavailable.\n            }\n            setIsLiveEditActive(true);`
+      `// ${builderMarker}\n            try {\n              window.sessionStorage.setItem('yadak-live-edit-pending', '1');\n            } catch {\n              // The ordinary React state path still works when storage is unavailable.\n            }\n            setIsLiveEditActive(true);`
     );
   }
 
@@ -57,23 +55,30 @@ import fs from 'node:fs';
   }
   fs.writeFileSync(builderFile, builder, 'utf8');
 
-  const storeFile = 'src/context/StoreContext.tsx';
-  let store = fs.readFileSync(storeFile, 'utf8');
-  const storeMarker = 'LIVE-EDIT-NAVIGATION-RECOVERY-v301017';
+  const marketplaceFile = 'src/components/home/MarketplaceRtlHome.tsx';
+  let marketplace = fs.readFileSync(marketplaceFile, 'utf8');
+  const marketplaceMarker = 'LIVE-EDIT-FIRST-RENDER-HANDOFF-v301017';
 
-  if (!store.includes(storeMarker)) {
-    const anchorPattern = /\n\s*const\s+adminLogout\s*=\s*async\s*\(\s*\)\s*=>\s*\{/;
-    const match = anchorPattern.exec(store);
-    if (!match) throw new Error('v30.10.17 admin logout anchor missing for live-edit recovery');
-    const at = match.index + 1;
-    const recovery = `  // ${storeMarker}\n  useEffect(() => {\n    if (typeof window === 'undefined') return;\n    try {\n      if (window.sessionStorage.getItem('yadak-live-edit-pending') === '1') {\n        window.sessionStorage.removeItem('yadak-live-edit-pending');\n        setIsLiveEditActive(true);\n      }\n    } catch {\n      // Ignore storage errors; normal in-memory state remains available.\n    }\n  }, []);\n\n`;
-    store = store.slice(0, at) + recovery + store.slice(at);
+  if (!marketplace.includes(marketplaceMarker)) {
+    const destructure = `    isLiveEditActive,\n    setIsLiveEditActive,`;
+    const destructurePrepared = `    isLiveEditActive: contextLiveEditActive,\n    setIsLiveEditActive,`;
+    if (marketplace.includes(destructure)) {
+      marketplace = marketplace.replace(destructure, destructurePrepared);
+    } else if (!marketplace.includes(destructurePrepared)) {
+      throw new Error('v30.10.17 marketplace live-edit destructure target missing');
+    }
+
+    const anchor = `  } = useStore();\n\n  const homeSections`;
+    if (!marketplace.includes(anchor)) throw new Error('v30.10.17 marketplace first-render anchor missing');
+    const injection = `  } = useStore();\n\n  // ${marketplaceMarker}\n  const [navigationLiveEditRequested] = useState<boolean>(() => {\n    if (typeof window === 'undefined') return false;\n    try {\n      return window.sessionStorage.getItem('yadak-live-edit-pending') === '1';\n    } catch {\n      return false;\n    }\n  });\n  const isLiveEditActive = contextLiveEditActive || navigationLiveEditRequested;\n\n  useEffect(() => {\n    if (!navigationLiveEditRequested) return;\n    try { window.sessionStorage.removeItem('yadak-live-edit-pending'); } catch {}\n    if (!contextLiveEditActive) setIsLiveEditActive(true);\n  }, [navigationLiveEditRequested, contextLiveEditActive, setIsLiveEditActive]);\n\n  const homeSections`;
+    marketplace = marketplace.replace(anchor, injection);
   }
 
-  if (!store.includes(storeMarker) || !store.includes("sessionStorage.getItem('yadak-live-edit-pending') === '1'")) {
-    throw new Error('v30.10.17 live-edit navigation recovery incomplete');
+  if (!marketplace.includes(marketplaceMarker) ||
+      !marketplace.includes('const isLiveEditActive = contextLiveEditActive || navigationLiveEditRequested;')) {
+    throw new Error('v30.10.17 marketplace first-render live-edit handoff incomplete');
   }
-  fs.writeFileSync(storeFile, store, 'utf8');
+  fs.writeFileSync(marketplaceFile, marketplace, 'utf8');
 }
 
-console.log('v30.10.17 browser contract: responsive controls observable and live-edit navigation survives SPA/remount boundaries.');
+console.log('v30.10.17 browser contract: responsive controls observable and live-edit handoff is consumed on the marketplace first render.');

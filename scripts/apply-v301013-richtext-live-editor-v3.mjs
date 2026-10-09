@@ -96,19 +96,20 @@ const replaceRange = (source, startMarker, endMarker, transform, label) => {
   write(file, source);
 }
 
-// Auditor contract rules.
+// Auditor contract rules. This stage owns the v2.2 baseline but must preserve newer
+// engine versions when prepare:source runs repeatedly in the same working tree.
 {
   const file = 'src/server/audit/site-audit.ts';
-  let source = read(file).replace("const ENGINE_VERSION = '2.1.0';", "const ENGINE_VERSION = '2.2.0';");
+  let source = read(file);
+  if (source.includes("const ENGINE_VERSION = '2.1.0';")) {
+    source = source.replace("const ENGINE_VERSION = '2.1.0';", "const ENGINE_VERSION = '2.2.0';");
+  }
   if (!source.includes('function scanRichTextAndLiveEditorContracts(')) {
     const helper = `\nfunction scanRichTextAndLiveEditorContracts(files: string[], findings: AuditFinding[]) {\n  const byRel = new Map(files.map(file => [relative(file), readUtf8(file) || '']));\n  const pageView = byRel.get('src/components/page/PageView.tsx') || '';\n  const richCss = readUtf8(path.join(ROOT, 'src/components/common/RichTextEditor.css')) || '';\n  const richContent = byRel.get('src/components/common/RichTextContent.tsx') || '';\n  const store = byRel.get('src/context/StoreContext.tsx') || '';\n  const cms = byRel.get('src/server/routes/cms.ts') || '';\n  if (/\\{section\\.content\\s*\\}/.test(pageView) && !pageView.includes('<RichTextContent content={section.content}')) add(findings,{id:'rich-text:page-section-rendered-as-plain-text',title:'Rich Text سکشن به‌صورت متن ساده Render می‌شود',category:'ui',severity:'error',status:'broken',summary:'HTML ادیتور در PageView به‌صورت متن ساده نمایش داده می‌شود.',evidence:['src/components/page/PageView.tsx'],recommendation:'از RichTextContent استفاده شود.'});\n  if (!richCss.includes('STOREFRONT-RICH-TEXT-PARITY-v301013')) add(findings,{id:'rich-text:storefront-css-parity-missing',title:'CSS خروجی Rich Text با ادیتور parity کامل ندارد',category:'ui',severity:'warning',status:'partial',summary:'heading/list/blockquote ممکن است در Storefront reset شوند.',evidence:['src/components/common/RichTextEditor.css'],recommendation:'قواعد .rich-text-content اضافه شوند.'});\n  if (!richContent.includes('data-rich-text-content=\"1\"')) add(findings,{id:'rich-text:runtime-probe-marker-missing',title:'Rich Text برای computed-style audit علامت‌گذاری نشده',category:'contract',severity:'warning',status:'partial',summary:'Auditor نمی‌تواند inline style را با computed style مقایسه کند.',evidence:['src/components/common/RichTextContent.tsx']});\n  if (!store.includes('pagesRef.current.find(item => item.slug === pageSlug)')) add(findings,{id:'live-editor:stale-page-snapshot',title:'Live Editor ممکن است snapshot قدیمی را ذخیره کند',category:'contract',severity:'error',status:'conflict',summary:'save path به state غیرهمگام React متکی است.',evidence:['src/context/StoreContext.tsx'],recommendation:'از snapshot همگام استفاده شود.'});\n  if (!store.includes('PAGE_PERSISTENCE_MISMATCH') || !cms.includes('PAGE_PERSIST_READBACK_FAILED')) add(findings,{id:'live-editor:persistence-roundtrip-unverified',title:'ذخیره Live Editor round-trip DB را تأیید نمی‌کند',category:'contract',severity:'error',status:'partial',summary:'پاسخ موفق PUT لزوماً برابر داده بعد از refresh نیست.',evidence:['src/context/StoreContext.tsx','src/server/routes/cms.ts'],recommendation:'write/readback DB و مقایسه payload فعال شود.'});\n}\n`;
     const anchor = '\nfunction summaryFor';
     if (!source.includes(anchor)) fail('auditor summary anchor');
     source = source.replace(anchor, helper + anchor);
   }
-  // v2.2 may already be present on an upgraded working tree. Repair the CSS probe
-  // to read the stylesheet directly because the generic source inventory intentionally
-  // contains JS/TS only and therefore cannot supply RichTextEditor.css through byRel.
   source = source.replace(
     "const richCss = byRel.get('src/components/common/RichTextEditor.css') || '';",
     "const richCss = readUtf8(path.join(ROOT, 'src/components/common/RichTextEditor.css')) || '';"
@@ -118,8 +119,9 @@ const replaceRange = (source, startMarker, endMarker, transform, label) => {
     if (!source.includes('  scanDuplicateServerRoutes(routes, findings);')) fail('auditor run anchor');
     source = source.replace('  scanDuplicateServerRoutes(routes, findings);', '  scanDuplicateServerRoutes(routes, findings);\n  scanRichTextAndLiveEditorContracts(files, findings);');
   }
-  if (!source.includes("const ENGINE_VERSION = '2.2.0';")) fail('auditor 2.2 version');
+  const engineMatch = source.match(/const ENGINE_VERSION = ['"](2\.(\d+)(?:\.\d+)?)['"]/);
+  if (!engineMatch || Number(engineMatch[2]) < 2) fail('auditor 2.2+ version');
   write(file, source);
 }
 
-console.log('v30.10.13 critical rich-text + live-editor persistence path and Site Auditor 2.2 applied.');
+console.log('v30.10.13 critical rich-text + live-editor persistence path and Site Auditor 2.2+ baseline applied.');

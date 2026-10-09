@@ -61,20 +61,31 @@ const waitForHydration = async page => {
     const pagesMenu = await ensureAdminDashboard();
     await pagesMenu.click();
 
-    // Live edit is a StoreProvider state flag. Turn it on in the admin SPA, then
-    // leave the admin through the real storefront exit control so the same React
-    // provider instance carries that state into the homepage. The page-builder's
-    // own «مشاهده در سایت» button is conditional in some prepared variants, while
-    // the admin shell's «مشاهده فروشگاه» control is always present.
     const liveToggle = page.getByRole('button', { name: /ویرایش زنده در سایت/ }).first();
     await liveToggle.waitFor({ state: 'visible', timeout: 10000 });
     await liveToggle.click();
 
     const section = page.locator('[data-section-key="featured-categories"]');
-    if (await section.isVisible().catch(() => false)) return section;
+
+    // Some prepared page-builder variants navigate to the storefront as part of
+    // enabling live edit. Wait for that transition before looking for any explicit
+    // storefront-exit button; an immediate visibility probe races React navigation.
+    try {
+      await section.waitFor({ state: 'visible', timeout: 8000 });
+      return section;
+    } catch {
+      // Older variants only toggle StoreProvider state and require an explicit
+      // «مشاهده فروشگاه / مشاهده در سایت» action from the admin shell.
+    }
 
     const exitToStore = page.getByRole('button', { name: /مشاهده فروشگاه|مشاهده در سایت/ }).first();
-    await exitToStore.waitFor({ state: 'visible', timeout: 10000 });
+    try {
+      await exitToStore.waitFor({ state: 'visible', timeout: 8000 });
+    } catch (error) {
+      console.error('Buttons after enabling live edit:', await page.locator('button').allInnerTexts());
+      console.error('Body after enabling live edit:', (await page.locator('body').innerText()).slice(0, 5000));
+      throw error;
+    }
     await exitToStore.click();
     await section.waitFor({ state: 'visible', timeout: 15000 });
     return section;

@@ -75,5 +75,13 @@ assert.ok(fs.existsSync(path.join(pluginRoot, 'assets/auditor.css')));
 const manifest = JSON.parse(fs.readFileSync(path.join(pluginRoot, 'plugin.json'), 'utf8'));
 assert.equal(manifest.id, 'site-auditor');
 assert.equal(manifest.type, 'plugin');
+assert.equal(manifest.version, '2.2.0');
+assert.equal(manifest.requiresCore, '>=30.10.13');
 assert.equal(manifest.clientEntry, 'client/index.js');
+
+const builder = fs.readFileSync(path.join(process.cwd(), 'scripts/build-site-auditor.mjs'), 'utf8');
+assert.ok(builder.includes("const manifestPath = path.join(source, 'plugin.json');"));
+assert.ok(builder.includes('tmp/site-auditor-${version}.zip'));
+assert.equal(builder.includes("tmp/site-auditor-1.0.0.zip"), false);
+
 console.log(`Site Auditor 2.2 smoke passed with ${report.findings.length} findings, ${report.coverage.pipelineStages} traced stages, ${report.coverage.confirmedOverwrites} confirmed overwrites, rich/live contracts healthy, production bundle verified.`);

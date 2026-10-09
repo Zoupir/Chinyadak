@@ -1,0 +1,136 @@
+function pipelineFamily(rel: string) {
+  const name = path.basename(rel);
+  if (name.startsWith('prepare-')) return 'prepare';
+  if (name.startsWith('apply-')) return 'apply';
+  if (name.startsWith('repair-')) return 'repair';
+  if (name.startsWith('normalize-')) return 'normalize';
+  if (name.startsWith('pre-') || name.startsWith('post-')) return 'migration';
+  return null;
+}
+
+function readPipelineTrace(): any | null {
+  const traceFile = path.join(ROOT, 'AUDIT_PIPELINE_TRACE.json');
+  try {
+    if (!fs.existsSync(traceFile)) return null;
+    const trace = JSON.parse(fs.readFileSync(traceFile, 'utf8'));
+    if (trace?.schemaVersion !== 1) return null;
+    const currentCommit = getCommit();
+    if (trace.commit && currentCommit && trace.commit !== currentCommit) return null;
+    return trace;
+  } catch {
+    return null;
+  }
+}
+
+function collectReachablePipelineScripts(files: string[]) {
+  const byRel = new Map(files.map(file => [relative(file), file]));
+  const packageText = readUtf8(path.join(ROOT, 'package.json')) || '';
+  const seeds = new Set<string>();
+  try {
+    const pkg = JSON.parse(packageText);
+    const command = String(pkg?.scripts?.['prepare:source'] || '');
+    for (const match of command.matchAll(/scripts\/[A-Za-z0-9_.-]+\.(?:mjs|js|cjs)/g)) seeds.add(match[0]);
+  } catch {}
+
+  const queue = [...seeds];
+  const reachable = new Set<string>();
+  while (queue.length) {
+    const script = queue.shift()!;
+    if (reachable.has(script)) continue;
+    reachable.add(script);
+    const absolute = byRel.get(script) || path.join(ROOT, script);
+    const text = readUtf8(absolute) || '';
+    for (const match of text.matchAll(/['"`](scripts\/[A-Za-z0-9_.-]+\.(?:mjs|js|cjs))['"`]/g)) {
+      if (!reachable.has(match[1])) queue.push(match[1]);
+    }
+  }
+  return reachable;
+}
+
+function scanPipelineTrace(trace: any, findings: AuditFinding[]) {
+  const stages = Array.isArray(trace?.stages) ? trace.stages.filter((stage: any) => stage?.kind === 'stage') : [];
+  const changedTargets = new Set<string>();
+  const scripts = new Set<string>();
+  for (const stage of stages) {
+    scripts.add(String(stage.script || 'unknown'));
+    for (const change of stage.changes || []) if (change?.file) changedTargets.add(String(change.file));
+  }
+
+  const overwrites = Array.isArray(trace?.confirmedOverwrites) ? trace.confirmedOverwrites : [];
+  let emitted = 0;
+  for (const item of overwrites) {
+    if (emitted >= 40) break;
+    emitted += 1;
+    const exact = item.type === 'exact-revert';
+    add(findings, {
+      id: `pipeline-overwrite:${item.type}:${item.file}:${item.introducedBy}:${item.overwrittenBy}`,
+      title: exact ? `بازگشت کامل تغییر قبلی در Pipeline: ${item.file}` : `Overwrite تأییدشده در Pipeline: ${item.file}`,
+      category: 'pipeline',
+      severity: 'warning',
+      status: 'conflict',
+      summary: exact
+        ? `مرحله ${item.overwrittenBy} فایل را دقیقاً به hash قبل از تغییر ${item.introducedBy} برگردانده است.`
+        : `مرحله ${item.overwrittenBy} خطی را که مرحله ${item.introducedBy} اضافه کرده بود حذف کرده است.`,
+      evidence: [
+        `introduced: ${item.introducedBy}`,
+        `overwritten: ${item.overwrittenBy}`,
+        `file: ${item.file}`,
+        ...(item.sample ? [`removed line: ${String(item.sample).slice(0, 300)}`] : []),
+        ...(item.lineHash ? [`line sha256: ${item.lineHash}`] : []),
+        ...(item.afterHash ? [`restored sha256: ${item.afterHash}`] : [])
+      ],
+      files: [item.file, item.introducedBy, item.overwrittenBy],
+      likelyCause: 'یک مرحله بعدی pipeline بخشی از خروجی مرحله قبلی را واقعاً حذف یا revert کرده است.',
+      recommendation: 'ترتیب یا مسئولیت این دو migration یکی شود؛ اگر overwrite عمدی است marker صریح و test regression برای خروجی نهایی اضافه شود.'
+    });
+  }
+
+  return { scripts: scripts.size, targets: changedTargets.size, stages: stages.length, overwrites: overwrites.length, traced: true };
+}
+
+function scanPipelineConflicts(files: string[], findings: AuditFinding[], trace: any | null) {
+  if (trace) return scanPipelineTrace(trace, findings);
+
+  const reachable = collectReachablePipelineScripts(files);
+  const targetMap = new Map<string, Array<{ script: string; family: string }>>();
+  const scriptSet = new Set<string>();
+  for (const rel of reachable) {
+    const family = pipelineFamily(rel);
+    if (!family) continue;
+    const text = readUtf8(path.join(ROOT, rel));
+    if (!text || !/(writeFile|copyFile|rename|replace\(|patch)/.test(text)) continue;
+    scriptSet.add(rel);
+    const literalRegex = /['"`]((?:src\/[^'"`\n]+|server\.ts|package\.json))['"`]/g;
+    let match: RegExpExecArray | null;
+    const targets = new Set<string>();
+    while ((match = literalRegex.exec(text)) && targets.size < 80) {
+      const target = match[1].replaceAll('\\', '/');
+      if (/\.(?:ts|tsx|js|jsx|json|mjs|cjs)$/.test(target)) targets.add(target);
+    }
+    for (const target of targets) {
+      const refs = targetMap.get(target) || [];
+      refs.push({ script: rel, family });
+      targetMap.set(target, refs);
+    }
+  }
+
+  let emitted = 0;
+  for (const [target, refs] of targetMap) {
+    const scripts = [...new Set(refs.map(ref => ref.script))];
+    if (scripts.length < 2 || emitted >= 20) continue;
+    emitted += 1;
+    add(findings, {
+      id: `pipeline-potential-overlap:${target}`,
+      title: `هم‌پوشانی بالقوه در Pipeline: ${target}`,
+      category: 'pipeline',
+      severity: 'warning',
+      status: 'unknown',
+      summary: `${scripts.length} مرحله reachable از prepare:source به این فایل اشاره می‌کنند، اما trace ساخت برای اثبات overwrite در دسترس نیست.`,
+      evidence: scripts,
+      files: [...scripts, target],
+      likelyCause: 'گزارش فعلی فقط از dependency graph زنجیره prepare استفاده کرده و overwrite را اثبات نکرده است.',
+      recommendation: 'Build را با AUDIT_PIPELINE_TRACE.json اجرا کنید؛ فقط diff واقعی باید به conflict ارتقا پیدا کند.'
+    });
+  }
+  return { scripts: scriptSet.size, targets: targetMap.size, stages: 0, overwrites: 0, traced: false };
+}

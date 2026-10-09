@@ -2,16 +2,17 @@ import fs from 'node:fs';
 
 const read = file => fs.readFileSync(file, 'utf8');
 const write = (file, content) => fs.writeFileSync(file, content, 'utf8');
-const fail = label => { throw new Error(`v30.10.15 marker missing: ${label}`); };
+const fail = label => { throw new Error(`v30.10.18 marker missing: ${label}`); };
 
-// 1) Make the sanitizer understand the exact CSS emitted by the WYSIWYG editor.
-// The editor deliberately writes !important so storefront/theme CSS cannot erase
-// authored styles. The old sanitizer accepted !important for colors only, which
-// meant alignment, font weight, font size, font family and line-height were
-// silently discarded before onChange fired.
+// Keep canonical and prepared source on the same Rich Text contract. This stage
+// runs during every build, so it must not re-introduce the older sanitizer.
 {
   const file = 'src/utils/richText.ts';
   let source = read(file);
+  source = source.replace(
+    "  'TD', 'TH', 'SPAN', 'HR', 'IMG', 'AUDIO', 'VIDEO'",
+    "  'TD', 'TH', 'SPAN', 'DIV', 'HR', 'IMG', 'AUDIO', 'VIDEO'"
+  );
   const safeStyleStart = source.indexOf('const safeStyleFor = (tagName: string, rawAttrs: string): string => {');
   const existingHelperStart = source.indexOf('const stripStylePriority = (value: string): string =>');
   const start = existingHelperStart >= 0 && existingHelperStart < safeStyleStart
@@ -35,6 +36,7 @@ const styleValue = (style: string, property: string): string => {
 };
 
 // RICH-TEXT-STYLE-FIDELITY-v301015
+// RICH-TEXT-ROUNDTRIP-v301018
 const safeStyleFor = (tagName: string, rawAttrs: string): string => {
   const styleMatch = rawAttrs.match(/\\bstyle\\s*=\\s*(["'])(.*?)\\1/i);
   if (!styleMatch) return '';
@@ -52,7 +54,7 @@ const safeStyleFor = (tagName: string, rawAttrs: string): string => {
     if (/^(left|right|center|justify)$/.test(align)) safe.push('text-align:' + align + '!important');
 
     const lineHeight = styleValue(style, 'line-height').toLowerCase();
-    if (/^(?:normal|1(?:\\.\\d{1,2})?|2(?:\\.\\d{1,2})?|3(?:\\.0{1,2})?)$/.test(lineHeight)) {
+    if (/^(?:normal|[1-3](?:\\.\\d{1,2})?)$/.test(lineHeight)) {
       safe.push('line-height:' + lineHeight + '!important');
     }
   }
@@ -78,7 +80,7 @@ const safeStyleFor = (tagName: string, rawAttrs: string): string => {
     if (/^(?:none|underline|line-through|underline line-through|line-through underline)$/.test(normalizedDecoration)) {
       safe.push('text-decoration:' + normalizedDecoration + '!important');
     }
-    if (/^(?:Vazirmatn|Tahoma|Arial|sans-serif|serif|monospace)$/i.test(rawFamily)) {
+    if (/^(?:Vazirmatn|Tahoma|Arial|sans-serif|serif|monospace)(?:\\s*,\\s*(?:Vazirmatn|Tahoma|Arial|sans-serif|serif|monospace))*$/i.test(rawFamily)) {
       safe.push('font-family:' + rawFamily + '!important');
     }
   }
@@ -88,14 +90,14 @@ const safeStyleFor = (tagName: string, rawAttrs: string): string => {
 
   source = source.slice(0, start) + replacement + source.slice(end);
   if (!source.includes('RICH-TEXT-STYLE-FIDELITY-v301015')) fail('sanitizer fidelity marker');
+  if (!source.includes('RICH-TEXT-ROUNDTRIP-v301018')) fail('sanitizer roundtrip marker');
   if ((source.match(/const stripStylePriority =/g) || []).length !== 1) fail('single stripStylePriority helper');
   if ((source.match(/const styleValue =/g) || []).length !== 1) fail('single styleValue helper');
   write(file, source);
 }
 
-// 2) Enforce one persistence format: safe HTML. Legacy Markdown remains readable,
-// but as soon as a RichTextEditor opens it is normalized into HTML in form state.
-// This makes Preview, HTML Source, Save and Storefront all operate on the same value.
+// Enforce one persistence format: safe canonical HTML. Legacy Markdown remains
+// readable but is normalized into HTML before Preview/Save/Storefront use it.
 {
   const file = 'src/components/common/RichTextEditor.tsx';
   let source = read(file);
@@ -109,15 +111,25 @@ const safeStyleFor = (tagName: string, rawAttrs: string): string => {
   );
 
   if (!source.includes('const normalizedLegacyValueRef = useRef')) {
-    const anchor = "  const [sourceDraft, setSourceDraft] = useState(value || '');";
-    if (!source.includes(anchor)) fail('RichTextEditor sourceDraft state');
-    source = source.replace(anchor, `${anchor}\n  const normalizedLegacyValueRef = useRef<string>('');`);
+    const plainAnchor = "  const [sourceDraft, setSourceDraft] = useState(value || '');";
+    const canonicalAnchor = "  const [sourceDraft, setSourceDraft] = useState(() => markdownToSafeHtml(value || ''));";
+    if (source.includes(plainAnchor)) source = source.replace(plainAnchor, `${canonicalAnchor}\n  const normalizedLegacyValueRef = useRef<string>('');`);
+    else if (source.includes(canonicalAnchor)) source = source.replace(canonicalAnchor, `${canonicalAnchor}\n  const normalizedLegacyValueRef = useRef<string>('');`);
+    else fail('RichTextEditor sourceDraft state');
+  } else {
+    source = source.replace(
+      "  const [sourceDraft, setSourceDraft] = useState(value || '');",
+      "  const [sourceDraft, setSourceDraft] = useState(() => markdownToSafeHtml(value || ''));"
+    );
   }
 
   const oldEffect = `  useEffect(() => {\n    if (activeTab !== 'source') setSourceDraft(value || '');\n  }, [value, activeTab]);`;
-  const newEffect = `  // RICH-TEXT-CANONICAL-HTML-v301015\n  useEffect(() => {\n    const raw = String(value || '');\n    const normalized = markdownToSafeHtml(raw);\n    if (activeTab !== 'source') setSourceDraft(normalized);\n    if (raw && normalized !== raw && normalizedLegacyValueRef.current !== raw) {\n      normalizedLegacyValueRef.current = raw;\n      onChange(normalized);\n    }\n  }, [value, activeTab, onChange]);`;
-  if (source.includes(oldEffect)) source = source.replace(oldEffect, newEffect);
-  else if (!source.includes('RICH-TEXT-CANONICAL-HTML-v301015')) fail('RichTextEditor normalization effect');
+  const canonicalEffect = `  // RICH-TEXT-CANONICAL-HTML-v301015\n  // RICH-TEXT-ROUNDTRIP-v301018\n  useEffect(() => {\n    const raw = String(value || '');\n    const normalized = markdownToSafeHtml(raw);\n    if (activeTab !== 'source') setSourceDraft(normalized);\n    if (raw && normalized !== raw && normalizedLegacyValueRef.current !== raw) {\n      normalizedLegacyValueRef.current = raw;\n      onChange(normalized);\n    }\n  }, [value, activeTab, onChange]);`;
+  if (source.includes(oldEffect)) {
+    source = source.replace(oldEffect, canonicalEffect);
+  } else if (source.includes('// RICH-TEXT-CANONICAL-HTML-v301015') && !source.includes('RICH-TEXT-ROUNDTRIP-v301018')) {
+    source = source.replace('// RICH-TEXT-CANONICAL-HTML-v301015', '// RICH-TEXT-CANONICAL-HTML-v301015\n  // RICH-TEXT-ROUNDTRIP-v301018');
+  }
 
   source = source.replace(
     "    const safe = sanitizeRichHtml(sourceDraft || '');",
@@ -127,12 +139,15 @@ const safeStyleFor = (tagName: string, rawAttrs: string): string => {
     "    if (tab === 'source') setSourceDraft(value || '');",
     "    if (tab === 'source') setSourceDraft(markdownToSafeHtml(value || ''));"
   );
+  source = source.replace(/data-rich-editor-version="[^"]+"/, 'data-rich-editor-version="30.10.18"');
 
   if (!source.includes('RICH-TEXT-CANONICAL-HTML-v301015')) fail('canonical HTML marker');
+  if (!source.includes('RICH-TEXT-ROUNDTRIP-v301018')) fail('editor roundtrip marker');
+  if (!source.includes('markdownToSafeHtml(sourceDraft')) fail('canonical source save');
   write(file, source);
 }
 
-// 3) Make default link/bold rendering immune to theme resets. Authored inline
+// Make default link/bold rendering immune to theme resets. Authored inline
 // colors remain stronger because inline !important wins over stylesheet rules.
 {
   const file = 'src/components/common/RichTextEditor.css';
@@ -144,4 +159,4 @@ const safeStyleFor = (tagName: string, rawAttrs: string): string => {
   write(file, source);
 }
 
-console.log('v30.10.15 rich-text canonical HTML + !important style fidelity applied.');
+console.log('v30.10.18 rich-text canonical HTML + styled roundtrip contract applied.');

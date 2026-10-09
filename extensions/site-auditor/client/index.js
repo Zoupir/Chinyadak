@@ -55,7 +55,7 @@ function downloadText(report) {
 
 async function collectBrowserSignals() {
   const state = window[STATE_KEY] || { errors: [], rejections: [], fetchFailures: [] };
-  const current = {
+  return {
     url: location.href,
     title: document.title,
     readyState: document.readyState,
@@ -71,7 +71,6 @@ async function collectBrowserSignals() {
     unhandledRejections: state.rejections.slice(-50),
     fetchFailures: state.fetchFailures.slice(-50)
   };
-  return current;
 }
 
 function browserFindings(signals) {
@@ -123,12 +122,13 @@ function render(target, report, loading = false, error = '') {
     return;
   }
   const s = report.summary;
-  const findings = [...(report.findings || [])].sort((a, b) => ({ critical: 0, error: 1, warning: 2, info: 3 }[a.severity] - ({ critical: 0, error: 1, warning: 2, info: 3 }[b.severity]));
+  const weight = { critical: 0, error: 1, warning: 2, info: 3 };
+  const findings = [...(report.findings || [])].sort((a, b) => (weight[a.severity] ?? 9) - (weight[b.severity] ?? 9));
   target.innerHTML = `
     <div class="ysa-toolbar">
       <div>
         <h2>ممیزی جامع سایت</h2>
-        <p>Core ${escapeHtml(report.coreVersion)} · ${escapeHtml(report.commit || 'commit نامشخص')}</p>
+        <p>Core ${escapeHtml(report.coreVersion)} · ${escapeHtml(report.commit || 'commit نامشخص')} · ${escapeHtml(report.scannedFiles || 0)} فایل · ${escapeHtml(report.routeInventorySize || 0)} Route</p>
       </div>
       <div class="ysa-actions">
         <button data-ysa-run>اجرای دوباره</button>
@@ -191,7 +191,6 @@ export function activate(api) {
   api.registerAdminMenu({
     id: 'site-auditor',
     label: 'ممیزی و تشخیص تداخل',
-    icon: 'activity',
     order: 930,
     render(container) {
       container.classList.add('ysa-root');

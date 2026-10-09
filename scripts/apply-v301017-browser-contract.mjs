@@ -44,11 +44,11 @@ import fs from 'node:fs';
   const builderMarker = 'LIVE-EDIT-NAVIGATION-HANDOFF-v301017';
 
   if (!builder.includes(builderMarker)) {
-    const target = `          onClick={() => {\n            setIsLiveEditActive(true);`;
-    if (!builder.includes(target)) throw new Error('v30.10.17 visual-builder live navigation target missing');
+    const setterPattern = /setIsLiveEditActive\s*\(\s*true\s*\)\s*;/;
+    if (!setterPattern.test(builder)) throw new Error('v30.10.17 visual-builder live setter missing');
     builder = builder.replace(
-      target,
-      `          onClick={() => {\n            // ${builderMarker}\n            try {\n              window.sessionStorage.setItem('yadak-live-edit-pending', '1');\n              window.setTimeout(() => window.sessionStorage.removeItem('yadak-live-edit-pending'), 2000);\n            } catch {\n              // The ordinary React state path still works when storage is unavailable.\n            }\n            setIsLiveEditActive(true);`
+      setterPattern,
+      `// ${builderMarker}\n            try {\n              window.sessionStorage.setItem('yadak-live-edit-pending', '1');\n              window.setTimeout(() => window.sessionStorage.removeItem('yadak-live-edit-pending'), 2000);\n            } catch {\n              // The ordinary React state path still works when storage is unavailable.\n            }\n            setIsLiveEditActive(true);`
     );
   }
 
@@ -62,9 +62,10 @@ import fs from 'node:fs';
   const storeMarker = 'LIVE-EDIT-NAVIGATION-RECOVERY-v301017';
 
   if (!store.includes(storeMarker)) {
-    const anchor = '  const adminLogout = async () => {';
-    const at = store.indexOf(anchor);
-    if (at < 0) throw new Error('v30.10.17 admin logout anchor missing for live-edit recovery');
+    const anchorPattern = /\n\s*const\s+adminLogout\s*=\s*async\s*\(\s*\)\s*=>\s*\{/;
+    const match = anchorPattern.exec(store);
+    if (!match) throw new Error('v30.10.17 admin logout anchor missing for live-edit recovery');
+    const at = match.index + 1;
     const recovery = `  // ${storeMarker}\n  useEffect(() => {\n    if (typeof window === 'undefined') return;\n    try {\n      if (window.sessionStorage.getItem('yadak-live-edit-pending') === '1') {\n        window.sessionStorage.removeItem('yadak-live-edit-pending');\n        setIsLiveEditActive(true);\n      }\n    } catch {\n      // Ignore storage errors; normal in-memory state remains available.\n    }\n  }, []);\n\n`;
     store = store.slice(0, at) + recovery + store.slice(at);
   }

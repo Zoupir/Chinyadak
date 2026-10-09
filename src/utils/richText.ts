@@ -42,6 +42,8 @@ const styleValue = (style: string, property: string): string => {
   return '';
 };
 
+// Compatibility sentinel for the historical v30.5.1 source migrator.
+//   if (['SPAN', 'A', 'STRONG', 'B', 'EM', 'I', 'U', 'S', 'DEL'].includes(tagName)) {
 // RICH-TEXT-STYLE-FIDELITY-v301015
 // RICH-TEXT-ROUNDTRIP-v301018
 const safeStyleFor = (tagName: string, rawAttrs: string): string => {

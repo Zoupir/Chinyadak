@@ -1,0 +1,1 @@
+Site Auditor helper scripts live in this directory. `smoke-site-auditor.ts` validates the read-only audit engine and installable plugin package. `build-site-auditor.mjs` builds a ZIP under `tmp/` for local/manual installation tests.

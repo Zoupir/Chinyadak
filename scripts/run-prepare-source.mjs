@@ -13,6 +13,7 @@ import {
   readTraceRecords,
   snapshotTrackedFiles
 } from './pipeline-trace-lib.mjs';
+import { buildPreparedApiInventory, buildPreparedConfigInventory } from './prepared-audit-inventory.mjs';
 
 const root = process.cwd();
 const commit = getGitCommit(root);
@@ -67,6 +68,9 @@ const stages = readTraceRecords(traceFile);
 const confirmedOverwrites = detectConfirmedOverwrites(stages);
 const changedStageCount = stages.filter(stage => stage.kind === 'stage' && stage.changes?.length).length;
 const changedFiles = [...new Set(stages.flatMap(stage => (stage.changes || []).map(change => change.file)))];
+const preparedRoutes = buildPreparedRouteInventory(root);
+const preparedApiCalls = buildPreparedApiInventory(root);
+const preparedConfigRefs = buildPreparedConfigInventory(root);
 const manifest = {
   schemaVersion: 1,
   generatedAt: new Date().toISOString(),
@@ -77,7 +81,9 @@ const manifest = {
   },
   prepared: {
     fileHashes: hashMap(prepared),
-    routes: buildPreparedRouteInventory(root)
+    routes: preparedRoutes,
+    apiCalls: preparedApiCalls,
+    configRefs: preparedConfigRefs
   },
   sourceDelta,
   stages,
@@ -87,6 +93,9 @@ const manifest = {
     changedStages: changedStageCount,
     changedFiles: changedFiles.length,
     sourceDeltaFiles: sourceDelta.length,
+    preparedRoutes: preparedRoutes.length,
+    preparedApiCalls: preparedApiCalls.length,
+    preparedConfigRefs: preparedConfigRefs.length,
     confirmedOverwrites: confirmedOverwrites.length
   }
 };
@@ -106,6 +115,6 @@ if (keepExisting) {
   console.log('Pipeline trace: preserved earlier canonical→prepared trace for this commit.');
 } else {
   fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + '\n', 'utf8');
-  console.log(`Pipeline trace: ${manifest.summary.executedStages} stages, ${manifest.summary.changedFiles} changed files, ${manifest.summary.confirmedOverwrites} confirmed overwrites.`);
+  console.log(`Pipeline trace: ${manifest.summary.executedStages} stages, ${manifest.summary.changedFiles} changed files, ${manifest.summary.confirmedOverwrites} confirmed overwrites; prepared inventory routes=${preparedRoutes.length}, apiCalls=${preparedApiCalls.length}, configRefs=${preparedConfigRefs.length}.`);
 }
 try { fs.rmSync(traceFile, { force: true }); } catch {}

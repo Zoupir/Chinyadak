@@ -20,7 +20,7 @@ const waitForHydration = async page => {
   const bootstrapCmsResponse = await fetch(base + '/api/cms/bundle');
   assert.equal(bootstrapCmsResponse.status, 200, `CMS bootstrap failed: ${bootstrapCmsResponse.status}`);
   const bootstrapCms = await bootstrapCmsResponse.json();
-  const homePage = (bootstrapCms.pages || []).find(page => page?.slug === 'home');
+  const homePage = (bootstrapCms.pages || []).find(item => item?.slug === 'home');
   assert.ok(homePage?.id, 'Live section E2E requires the home CMS page.');
 
   const browser = await chromium.launch({ args: ['--no-sandbox'] });
@@ -29,7 +29,15 @@ const waitForHydration = async page => {
   const pageErrors = [];
   page.on('pageerror', error => pageErrors.push(error));
 
-  const ensureAdminDashboard = async () => {
+  const loginWithRequest = async () => {
+    const login = await context.request.post(base + '/api/auth/admin/login', {
+      data: { username: adminUser, password: adminPassword },
+      headers: { origin: base, 'sec-fetch-site': 'same-origin' }
+    });
+    assert.equal(login.status(), 200, `Admin live-section E2E login failed: ${login.status()} ${await login.text()}`);
+  };
+
+  const openVisualBuilder = async () => {
     await page.goto(base + '/admin', { waitUntil: 'domcontentloaded' });
 
     const pagesMenu = page.getByRole('button', { name: /صفحه‌ساز دیداری|برگه‌ها و سکشن‌ها/ }).first();
@@ -42,7 +50,7 @@ const waitForHydration = async page => {
       ]);
     } catch (error) {
       console.error('Admin buttons after session restore:', await page.locator('button').allInnerTexts());
-      console.error('Admin body after session restore:', (await page.locator('body').innerText()).slice(0, 4000));
+      console.error('Admin body after session restore:', (await page.locator('body').innerText()).slice(0, 5000));
       throw error;
     }
 
@@ -54,103 +62,36 @@ const waitForHydration = async page => {
       await loginButton.click();
       await pagesMenu.waitFor({ state: 'visible', timeout: 15000 });
     }
-    return pagesMenu;
-  };
 
-  const selectHomePageBuilderTab = async () => {
-    const title = String(homePage.title || '').trim();
-    const comboboxes = page.getByRole('combobox');
-    const comboCount = await comboboxes.count();
-    for (let index = 0; index < comboCount; index += 1) {
-      const combo = comboboxes.nth(index);
-      if (!(await combo.isVisible().catch(() => false))) continue;
-      const options = await combo.locator('option').evaluateAll(nodes => nodes.map(node => ({ value: node.value, text: (node.textContent || '').trim() })));
-      const match = options.find(option => option.value === homePage.id || option.value === 'home' || option.text === title || option.text.includes(title));
-      if (match) {
-        await combo.selectOption(match.value);
-        await page.waitForTimeout(150);
-        return;
-      }
-    }
+    await pagesMenu.click();
 
-    const pagePickerTrigger = page.getByRole('button', { name: /^برگه$/ }).first();
-    if (await pagePickerTrigger.isVisible().catch(() => false)) {
-      await pagePickerTrigger.click();
-      await page.waitForTimeout(150);
-      const candidates = page.locator('[role="option"], [role="menuitem"], [role="menuitemradio"], [role="menuitemcheckbox"], button, [data-page-id]');
-      const candidateCount = await candidates.count();
-      for (let index = 0; index < candidateCount; index += 1) {
-        const candidate = candidates.nth(index);
-        if (!(await candidate.isVisible().catch(() => false))) continue;
-        const matches = await candidate.evaluate((element, expected) => {
-          const text = (element.textContent || '').trim();
-          const pageId = element.getAttribute('data-page-id') || element.getAttribute('data-value') || element.getAttribute('value') || '';
-          return pageId === expected.id || pageId === 'home' || text === expected.title || text.includes(expected.title);
-        }, { id: homePage.id, title }).catch(() => false);
-        if (!matches) continue;
-        await candidate.click();
-        await page.waitForTimeout(150);
-        return;
-      }
-    }
+    const builder = page.locator('.visual-page-builder');
+    await builder.waitFor({ state: 'visible', timeout: 10000 });
 
-    const direct = page.getByRole('button', { name: title, exact: false });
-    const directCount = await direct.count();
-    for (let index = 0; index < directCount; index += 1) {
-      const candidate = direct.nth(index);
-      if (!(await candidate.isVisible().catch(() => false))) continue;
-      await candidate.click();
-      await page.waitForTimeout(150);
-      return;
-    }
+    const pageSelect = builder.locator('select').first();
+    await pageSelect.waitFor({ state: 'visible', timeout: 5000 });
+    const options = await pageSelect.locator('option').evaluateAll(nodes => nodes.map(node => node.value));
+    assert.ok(options.includes(homePage.id), `Visual builder page selector is missing home page id ${homePage.id}`);
+    await pageSelect.selectOption(homePage.id);
 
-    console.error('Page-builder comboboxes:', await page.locator('select').evaluateAll(nodes => nodes.map(node => ({ value: node.value, html: node.outerHTML.slice(0, 1200) }))));
-    console.error('Page-builder buttons:', await page.locator('button').allInnerTexts());
-    console.error('Page-builder body:', (await page.locator('body').innerText()).slice(0, 6000));
-    throw new Error(`Could not select CMS home page ${homePage.id} (${title}) in the production page builder.`);
+    return builder;
   };
 
   const enterLiveHome = async () => {
-    const pagesMenu = await ensureAdminDashboard();
-    await pagesMenu.click();
-    await selectHomePageBuilderTab();
+    const builder = await openVisualBuilder();
 
-    const inactiveToggle = page.getByRole('button', { name: /فعال‌سازی ویرایش زنده در سایت|ویرایش زنده در سایت/ }).first();
-    const activeToggle = page.getByRole('button', { name: /حالت ویرایش زنده در سایت: فعال/ }).first();
-    if (!(await activeToggle.isVisible().catch(() => false))) {
-      await inactiveToggle.waitFor({ state: 'visible', timeout: 10000 });
-      await inactiveToggle.click();
-      await activeToggle.waitFor({ state: 'visible', timeout: 5000 }).catch(() => {});
-    }
-
-    // Use title attributes as stable functional hooks. The visible labels are
-    // responsive and can be hidden from the accessible name in the production
-    // admin shell even though the controls themselves remain clickable.
-    const viewSelectedPage = page.locator('button[title="مشاهده ظاهر زنده برگه در فروشگاه"]').first();
-    const viewStore = page.locator('button[title="مشاهده ظاهر فروشگاه"]').first();
-    try {
-      if (await viewSelectedPage.isVisible().catch(() => false)) {
-        await viewSelectedPage.click();
-      } else {
-        await viewStore.waitFor({ state: 'visible', timeout: 8000 });
-        await viewStore.click();
-      }
-    } catch (error) {
-      console.error('URL before storefront navigation:', page.url());
-      console.error('Visible titled controls:', await page.locator('button[title]').evaluateAll(nodes => nodes.filter(node => {
-        const style = getComputedStyle(node);
-        const rect = node.getBoundingClientRect();
-        return style.visibility !== 'hidden' && style.display !== 'none' && rect.width > 0 && rect.height > 0;
-      }).map(node => ({ title: node.getAttribute('title'), text: (node.textContent || '').trim() }))));
-      console.error('Admin body before storefront navigation:', (await page.locator('body').innerText()).slice(0, 5000));
-      throw error;
-    }
+    // In the production visual page builder this is not a toggle followed by a
+    // separate "view" action. The button itself enables live-edit state and
+    // navigates directly to the selected storefront page.
+    const liveButton = builder.getByRole('button', { name: /^ویرایش زنده در سایت$/ }).first();
+    await liveButton.waitFor({ state: 'visible', timeout: 5000 });
+    await liveButton.click();
 
     const liveRoot = page.locator('.marketplace-rtl-home.is-live-editing');
     try {
-      await liveRoot.waitFor({ state: 'visible', timeout: 10000 });
+      await liveRoot.waitFor({ state: 'visible', timeout: 12000 });
     } catch (error) {
-      console.error('URL after storefront navigation:', page.url());
+      console.error('URL after visual-builder live navigation:', page.url());
       console.error('Storefront root class:', await page.locator('.marketplace-rtl-home').getAttribute('class').catch(() => null));
       console.error('Storefront body:', (await page.locator('body').innerText()).slice(0, 5000));
       throw error;
@@ -171,12 +112,7 @@ const waitForHydration = async page => {
   };
 
   try {
-    const login = await context.request.post(base + '/api/auth/admin/login', {
-      data: { username: adminUser, password: adminPassword },
-      headers: { origin: base, 'sec-fetch-site': 'same-origin' }
-    });
-    assert.equal(login.status(), 200, `Admin live-section E2E login failed: ${login.status()} ${await login.text()}`);
-
+    await loginWithRequest();
     await enterLiveHome();
     let modal = await openFeaturedCategoriesEditor();
 
@@ -228,9 +164,11 @@ const waitForHydration = async page => {
     await page.keyboard.press('Escape');
     await modal.waitFor({ state: 'detached', timeout: 5000 });
 
-    if (pageErrors.length) throw new Error('Live section browser errors: ' + pageErrors.map(error => error.stack || error.message || String(error)).join('\n---\n'));
+    if (pageErrors.length) {
+      throw new Error('Live section browser errors: ' + pageErrors.map(error => error.stack || error.message || String(error)).join('\n---\n'));
+    }
 
-    console.log('Live section E2E passed: modal edit -> live renderer -> DB readback -> public reload -> admin reload preserved exact section configuration.');
+    console.log('Live section E2E passed: visual builder -> live modal -> renderer -> DB readback -> public reload -> editor reload preserved exact section configuration.');
   } finally {
     await context.close();
     await browser.close();

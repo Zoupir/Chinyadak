@@ -6,7 +6,7 @@
   "version": "1.0.0",
   "description": "ممیزی ناسازگاری بین سورس، API، تنظیمات، UI و رفتار واقعی سایت و استخراج گزارش قابل تحلیل.",
   "author": "Yadak Store",
-  "requiresCore": ">=30.10.9",
+  "requiresCore": ">=30.10.10",
   "permissions": ["diagnostics.read", "source.audit.read"],
   "hooks": ["admin.ready"],
   "styles": ["assets/auditor.css"],

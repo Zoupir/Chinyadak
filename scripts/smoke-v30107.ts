@@ -8,7 +8,11 @@ const base = String(process.env.TEST_BASE_URL || 'http://127.0.0.1:3000').replac
 const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
 
 assert.match(String(pkg.version || ''), /^30\.10\.(?:[7-9]|[1-9]\d+)$/);
-assert.match(String(pkg.scripts?.['prepare:source'] || ''), /^node scripts\/prepare-v3010[7-9]\.mjs$/);
+const prepareSource = String(pkg.scripts?.['prepare:source'] || '');
+assert.match(prepareSource, /^node scripts\/prepare-v3010[7-9]\.mjs(?: && node scripts\/prepare-extension-platform\.mjs)?$/);
+if (prepareSource.includes('prepare-extension-platform.mjs')) {
+  assert.ok(fs.existsSync('scripts/prepare-extension-platform.mjs'), 'Extension source preparation script is missing.');
+}
 assert.equal(pkg.devDependencies?.autoprefixer, undefined);
 assert.match(String(pkg.dependencies?.multer || ''), /2\.4/);
 assert.match(String(pkg.overrides?.protobufjs || ''), /7\.6\.5/);

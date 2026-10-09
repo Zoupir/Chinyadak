@@ -42,11 +42,12 @@ import fs from 'node:fs';
   const marker = 'LIVE-EDIT-NAVIGATION-PERSISTENCE-v301017';
 
   if (!source.includes(marker)) {
-    const from = '  const [isLiveEditActive, setIsLiveEditActive] = useState<boolean>(false);';
-    if (!source.includes(from)) throw new Error('v30.10.17 live-edit state declaration target missing');
+    const statePattern = /\s*const\s*\[\s*isLiveEditActive\s*,\s*setIsLiveEditActive\s*\]\s*=\s*useState(?:<boolean>)?\s*\(\s*false\s*\)\s*;/;
+    const match = source.match(statePattern);
+    if (!match) throw new Error('v30.10.17 live-edit state declaration target missing');
 
-    const to = `  // ${marker}\n  const LIVE_EDIT_SESSION_KEY = 'yadak-live-edit-active';\n  const [isLiveEditActive, setIsLiveEditActiveState] = useState<boolean>(false);\n\n  useEffect(() => {\n    if (typeof window === 'undefined') return;\n    try {\n      if (window.sessionStorage.getItem(LIVE_EDIT_SESSION_KEY) === '1') {\n        setIsLiveEditActiveState(true);\n      }\n    } catch {\n      // sessionStorage can be unavailable in hardened/private browser modes.\n    }\n  }, []);\n\n  const setIsLiveEditActive = (active: boolean) => {\n    setIsLiveEditActiveState(active);\n    if (typeof window === 'undefined') return;\n    try {\n      if (active) window.sessionStorage.setItem(LIVE_EDIT_SESSION_KEY, '1');\n      else window.sessionStorage.removeItem(LIVE_EDIT_SESSION_KEY);\n    } catch {\n      // React state remains authoritative when browser storage is unavailable.\n    }\n  };`;
-    source = source.replace(from, to);
+    const to = `\n  // ${marker}\n  const LIVE_EDIT_SESSION_KEY = 'yadak-live-edit-active';\n  const [isLiveEditActive, setIsLiveEditActiveState] = useState<boolean>(false);\n\n  useEffect(() => {\n    if (typeof window === 'undefined') return;\n    try {\n      if (window.sessionStorage.getItem(LIVE_EDIT_SESSION_KEY) === '1') {\n        setIsLiveEditActiveState(true);\n      }\n    } catch {\n      // sessionStorage can be unavailable in hardened/private browser modes.\n    }\n  }, []);\n\n  const setIsLiveEditActive = (active: boolean) => {\n    setIsLiveEditActiveState(active);\n    if (typeof window === 'undefined') return;\n    try {\n      if (active) window.sessionStorage.setItem(LIVE_EDIT_SESSION_KEY, '1');\n      else window.sessionStorage.removeItem(LIVE_EDIT_SESSION_KEY);\n    } catch {\n      // React state remains authoritative when browser storage is unavailable.\n    }\n  };`;
+    source = source.replace(statePattern, to);
 
     const logoutStart = source.indexOf('  const adminLogout = async () => {');
     if (logoutStart < 0) throw new Error('v30.10.17 admin logout target missing');

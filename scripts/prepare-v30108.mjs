@@ -38,8 +38,16 @@ const missing = checks.filter(([file, marker]) => !has(file, marker));
 if (missing.length) {
   throw new Error('v30.10.8 preparation incomplete: ' + missing.map(([file, marker]) => `${file} :: ${marker}`).join(' | '));
 }
-if (pkg.version !== '30.10.8') throw new Error(`Expected package version 30.10.8, got ${pkg.version}`);
+const versionParts = String(pkg.version || '').split('.').map(Number);
+const supportsV30108Preparation = versionParts.length === 3
+  && versionParts.every(Number.isFinite)
+  && (versionParts[0] > 30
+    || (versionParts[0] === 30 && versionParts[1] > 10)
+    || (versionParts[0] === 30 && versionParts[1] === 10 && versionParts[2] >= 8));
+if (!supportsV30108Preparation) {
+  throw new Error(`Expected package version 30.10.8 or later, got ${pkg.version}`);
+}
 for (const name of Object.keys(pkg.dependencies || {})) {
   if (name.startsWith('@tiptap/')) throw new Error(`Tiptap dependency remained after editor replacement: ${name}`);
 }
-console.log('Source preparation completed at v30.10.8 product-editor + stable WYSIWYG hotfix.');
+console.log(`Source preparation completed with v30.10.8 product-editor + stable WYSIWYG hotfix on core ${pkg.version}.`);

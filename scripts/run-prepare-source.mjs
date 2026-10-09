@@ -31,7 +31,8 @@ const nodeOptions = `${existingNodeOptions}${existingNodeOptions ? ' ' : ''}--im
 const topLevelScripts = [
   { script: 'scripts/prepare-v30108.mjs', kind: 'orchestrator' },
   { script: 'scripts/prepare-extension-platform.mjs', kind: 'stage' },
-  { script: 'scripts/apply-site-auditor-v210.mjs', kind: 'stage' }
+  { script: 'scripts/apply-site-auditor-v210.mjs', kind: 'stage' },
+  { script: 'scripts/apply-v301013-richtext-live-editor.mjs', kind: 'stage' }
 ];
 
 for (const item of topLevelScripts) {

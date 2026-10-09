@@ -55,11 +55,35 @@ const pluginZip = (version: string) => makeStoredZip({
     requiresCore: '>=30.10.8',
     styles: ['assets/demo.css'],
     clientEntry: 'client/index.js',
-    hooks: ['product.card.afterPrice']
+    hooks: ['product.card', 'product.page.beforeMain', 'checkout.beforeForm']
   }),
   'demo-plugin/assets/demo.css': '.smoke-demo{display:block}',
-  'demo-plugin/client/index.js': 'export function activate(api){ api.registerHook("product.card.afterPrice", () => "ok"); }'
+  'demo-plugin/client/index.js': 'export function activate(api){ api.registerHook("product.card", () => "ok"); api.registerSection({id:"smoke-grid",label:"Smoke Grid"}); }'
 });
+
+const assertIntegrationSource = async () => {
+  const adminView = await fs.readFile(path.resolve('src/components/admin/AdminView.tsx'), 'utf8');
+  assert.match(adminView, /افزونه‌ها و قالب‌های نصبی/);
+  assert.match(adminView, /<AdminExtensionManager \/>/);
+  assert.match(adminView, /extensionAdminMenus/);
+  assert.match(adminView, /AdminExtensionPageHost/);
+
+  const productCard = await fs.readFile(path.resolve('src/components/product/ProductCard.tsx'), 'utf8');
+  assert.match(productCard, /name="product\.card"/);
+
+  const productPage = await fs.readFile(path.resolve('src/components/product/ProductDetailView.tsx'), 'utf8');
+  assert.match(productPage, /name="product\.page\.beforeMain"/);
+
+  const checkout = await fs.readFile(path.resolve('src/components/cart/CheckoutView.tsx'), 'utf8');
+  assert.match(checkout, /name="checkout\.beforeForm"/);
+
+  const liveEditor = await fs.readFile(path.resolve('src/components/common/LiveSectionModal.tsx'), 'utf8');
+  assert.match(liveEditor, /name="liveEditor\.inspector"/);
+
+  const pageView = await fs.readFile(path.resolve('src/components/page/PageView.tsx'), 'utf8');
+  assert.match(pageView, /ExtensionSectionQuickAdd/);
+  assert.match(pageView, /section\.render\./);
+};
 
 const main = async () => {
   const root = path.resolve(process.cwd(), 'var', 'extensions');
@@ -94,6 +118,7 @@ const main = async () => {
     const traversal = makeStoredZip({ '../escape.txt': 'bad' });
     assert.throws(() => readZipEntries(traversal), /ZIP_PATH_TRAVERSAL|ZIP_PATH_INVALID/);
 
+    await assertIntegrationSource();
     console.log('Extension platform smoke test passed.');
   } finally {
     await fs.rm(root, { recursive: true, force: true });

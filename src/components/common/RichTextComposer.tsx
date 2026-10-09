@@ -1,19 +1,37 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  AlignCenter, AlignJustify, AlignLeft, AlignRight, Bold, Eraser, Highlighter,
-  ImagePlus, Italic, Link as LinkIcon, List, ListOrdered, Music2, Palette, Quote,
-  Redo2, Strikethrough, Table, Underline, Undo2, Unlink, Video
+  AlignCenter,
+  AlignJustify,
+  AlignLeft,
+  AlignRight,
+  Bold,
+  Eraser,
+  ImagePlus,
+  Italic,
+  Link as LinkIcon,
+  List,
+  ListOrdered,
+  Music2,
+  Palette,
+  Quote,
+  Redo2,
+  Strikethrough,
+  Table,
+  Underline,
+  Undo2,
+  Unlink,
+  Video
 } from 'lucide-react';
-import {
-  escapeRichText,
-  markdownToSafeHtml,
-  safeRichHref,
-  safeRichSrc,
-  sanitizeRichHtml
-} from '../../utils/richText';
+import { EditorContent, useEditor } from '@tiptap/react';
+import { Node, mergeAttributes } from '@tiptap/core';
+import StarterKit from '@tiptap/starter-kit';
+import Placeholder from '@tiptap/extension-placeholder';
+import { TableKit } from '@tiptap/extension-table';
+import TextAlign from '@tiptap/extension-text-align';
+import { Color, FontSize, TextStyle } from '@tiptap/extension-text-style';
+import { markdownToSafeHtml, safeRichHref, safeRichSrc, sanitizeRichHtml } from '../../utils/richText';
 import { MediaPickerModal } from './MediaPickerModal';
 import './RichTextEditor.css';
-import './RichTextEditorEnhancements.css';
 
 interface RichTextComposerProps {
   value: string;
@@ -32,14 +50,63 @@ interface ToolButtonProps {
 
 type UrlMediaType = 'audio' | 'video';
 
-const FONT_SIZES = ['12px', '14px', '16px', '18px', '20px', '24px', '28px', '32px', '40px'];
-const FONT_FAMILIES = [
-  { value: '', label: 'فونت سایت' },
-  { value: 'Vazirmatn', label: 'وزیرمتن' },
-  { value: 'Tahoma', label: 'Tahoma' },
-  { value: 'Arial', label: 'Arial' },
-  { value: 'sans-serif', label: 'Sans' }
-];
+const RichImage = Node.create({
+  name: 'richImage',
+  group: 'block',
+  atom: true,
+  draggable: true,
+  selectable: true,
+  addAttributes() {
+    return {
+      src: { default: '' },
+      alt: { default: '' },
+      title: { default: null }
+    };
+  },
+  parseHTML() {
+    return [{ tag: 'img[src]' }];
+  },
+  renderHTML({ HTMLAttributes }) {
+    return ['img', mergeAttributes(HTMLAttributes, { loading: 'lazy' })];
+  }
+});
+
+const RichAudio = Node.create({
+  name: 'richAudio',
+  group: 'block',
+  atom: true,
+  draggable: true,
+  selectable: true,
+  addAttributes() {
+    return { src: { default: '' } };
+  },
+  parseHTML() {
+    return [{ tag: 'audio[src]' }];
+  },
+  renderHTML({ HTMLAttributes }) {
+    return ['audio', mergeAttributes(HTMLAttributes, { controls: 'controls', preload: 'metadata' })];
+  }
+});
+
+const RichVideo = Node.create({
+  name: 'richVideo',
+  group: 'block',
+  atom: true,
+  draggable: true,
+  selectable: true,
+  addAttributes() {
+    return {
+      src: { default: '' },
+      poster: { default: null }
+    };
+  },
+  parseHTML() {
+    return [{ tag: 'video[src]' }];
+  },
+  renderHTML({ HTMLAttributes }) {
+    return ['video', mergeAttributes(HTMLAttributes, { controls: 'controls', preload: 'metadata', playsinline: 'playsinline' })];
+  }
+});
 
 const ToolButton: React.FC<ToolButtonProps> = ({ title, onClick, active, disabled, children }) => (
   <button
@@ -48,244 +115,118 @@ const ToolButton: React.FC<ToolButtonProps> = ({ title, onClick, active, disable
     aria-label={title}
     aria-pressed={active}
     disabled={disabled}
-    onPointerDown={event => {
-      event.preventDefault();
-      if (event.button === 0) onClick();
-    }}
     onMouseDown={event => event.preventDefault()}
-    onClick={event => {
-      if (event.detail === 0) onClick();
-    }}
+    onClick={onClick}
     className={'rich-text-tool' + (active ? ' is-active' : '')}
   >
     {children}
   </button>
 );
 
-const closestBlock = (node: Node | null, root: HTMLElement | null): HTMLElement | null => {
-  let current: Node | null = node;
-  while (current && current !== root) {
-    if (current instanceof HTMLElement && /^(P|H2|H3|H4|BLOCKQUOTE|LI|DIV|TD|TH)$/.test(current.tagName)) return current;
-    current = current.parentNode;
-  }
-  return root;
-};
-
-const normalizedEditorHtml = (root: HTMLElement): string => {
-  const clone = root.cloneNode(true) as HTMLElement;
-  clone.querySelectorAll('[data-editor-placeholder]').forEach(node => node.removeAttribute('data-editor-placeholder'));
-  return clone.innerHTML;
-};
-
-export const RichTextComposer: React.FC<RichTextComposerProps> = ({ value, onChange, placeholder, rows }) => {
-  const surfaceRef = useRef<HTMLDivElement>(null);
-  const savedRangeRef = useRef<Range | null>(null);
-  const lastNonCollapsedRangeRef = useRef<Range | null>(null);
+export const RichTextComposer: React.FC<RichTextComposerProps> = ({
+  value,
+  onChange,
+  placeholder,
+  rows
+}) => {
   const onChangeRef = useRef(onChange);
-  const lastEmittedRef = useRef(markdownToSafeHtml(value || ''));
-  const [selectionRevision, setSelectionRevision] = useState(0);
-  const [imagePickerOpen, setImagePickerOpen] = useState(false);
+  onChangeRef.current = onChange;
+  const initialHtml = useRef(markdownToSafeHtml(value || ''));
+  const lastEmittedHtml = useRef(initialHtml.current);
+  const [toolbarRevision, setToolbarRevision] = useState(0);
   const [linkDialogOpen, setLinkDialogOpen] = useState(false);
   const [linkUrl, setLinkUrl] = useState('');
   const [linkError, setLinkError] = useState('');
+  const [fontSize, setFontSize] = useState('');
+  const [textColor, setTextColor] = useState('#c2410c');
+  const [imagePickerOpen, setImagePickerOpen] = useState(false);
   const [urlMediaType, setUrlMediaType] = useState<UrlMediaType | null>(null);
   const [mediaUrl, setMediaUrl] = useState('');
   const [mediaError, setMediaError] = useState('');
-  const [textColor, setTextColor] = useState('#c2410c');
-  const [highlightColor, setHighlightColor] = useState('#fff3bf');
-  const [fontSize, setFontSize] = useState('');
-  const [fontFamily, setFontFamily] = useState('');
-  const [lineHeight, setLineHeight] = useState('');
+  const linkInputRef = useRef<HTMLInputElement>(null);
+  const mediaInputRef = useRef<HTMLInputElement>(null);
 
-  onChangeRef.current = onChange;
-
-  const emit = () => {
-    const root = surfaceRef.current;
-    if (!root) return;
-    const safe = sanitizeRichHtml(normalizedEditorHtml(root));
-    if (safe === lastEmittedRef.current) return;
-    lastEmittedRef.current = safe;
-    onChangeRef.current(safe);
-  };
-
-  const saveSelection = () => {
-    const root = surfaceRef.current;
-    const selection = window.getSelection();
-    if (!root || !selection?.rangeCount) return;
-    const range = selection.getRangeAt(0);
-    if (!root.contains(range.commonAncestorContainer)) return;
-    const snapshot = range.cloneRange();
-    savedRangeRef.current = snapshot;
-    if (!snapshot.collapsed) lastNonCollapsedRangeRef.current = snapshot.cloneRange();
-    setSelectionRevision(revision => revision + 1);
-  };
-
-  const restoreSelection = (preferNonCollapsed = false) => {
-    const root = surfaceRef.current;
-    if (!root) return false;
-    const saved = savedRangeRef.current;
-    const preferred = preferNonCollapsed && (!saved || saved.collapsed)
-      ? lastNonCollapsedRangeRef.current
-      : saved;
-    if (!preferred) return false;
-    root.focus({ preventScroll: true });
-    const selection = window.getSelection();
-    if (!selection) return false;
-    try {
-      selection.removeAllRanges();
-      selection.addRange(preferred.cloneRange());
-      return true;
-    } catch {
-      return false;
-    }
-  };
-
-  const applyCssStyles = (element: HTMLElement, styles: Partial<CSSStyleDeclaration>) => {
-    const propertyNames: Record<string, string> = {
-      fontWeight: 'font-weight',
-      fontStyle: 'font-style',
-      textDecoration: 'text-decoration',
-      color: 'color',
-      backgroundColor: 'background-color',
-      fontSize: 'font-size',
-      fontFamily: 'font-family'
-    };
-    for (const [key, rawValue] of Object.entries(styles)) {
-      const value = String(rawValue || '').trim();
-      if (!value) continue;
-      element.style.setProperty(propertyNames[key] || key.replace(/[A-Z]/g, letter => '-' + letter.toLowerCase()), value, 'important');
-    }
-  };
-
-  const applyInlineStyle = (styles: Partial<CSSStyleDeclaration>) => {
-    const root = surfaceRef.current;
-    if (!root || !restoreSelection(true)) return;
-    const selection = window.getSelection();
-    if (!selection?.rangeCount) return;
-    const range = selection.getRangeAt(0);
-    if (!root.contains(range.commonAncestorContainer)) return;
-
-    if (range.collapsed) {
-      const span = document.createElement('span');
-      applyCssStyles(span, styles);
-      span.appendChild(document.createTextNode('\u200b'));
-      range.insertNode(span);
-      const next = document.createRange();
-      next.setStart(span.firstChild || span, 1);
-      next.collapse(true);
-      selection.removeAllRanges();
-      selection.addRange(next);
-      savedRangeRef.current = next.cloneRange();
-      emit();
-      return;
-    }
-
-    const fragment = range.extractContents();
-    const nodes = Array.from(fragment.childNodes);
-    if (!nodes.length) return;
-    for (const node of nodes) {
-      if (node instanceof HTMLElement) {
-        applyCssStyles(node, styles);
-      } else if (node.nodeType === Node.TEXT_NODE && node.textContent) {
-        const span = document.createElement('span');
-        applyCssStyles(span, styles);
-        span.textContent = node.textContent;
-        fragment.replaceChild(span, node);
-        const index = nodes.indexOf(node);
-        nodes[index] = span;
+  const extensions = useMemo(() => [
+    StarterKit.configure({
+      heading: { levels: [2, 3, 4] },
+      link: {
+        openOnClick: false,
+        autolink: false,
+        HTMLAttributes: { rel: 'nofollow noopener noreferrer' }
       }
+    }),
+    TextStyle,
+    Color.configure({ types: ['textStyle'] }),
+    FontSize,
+    TextAlign.configure({
+      types: ['heading', 'paragraph'],
+      defaultAlignment: 'right'
+    }),
+    TableKit,
+    RichImage,
+    RichAudio,
+    RichVideo,
+    Placeholder.configure({
+      placeholder,
+      showOnlyWhenEditable: true
+    })
+  ], [placeholder]);
+
+  const editor = useEditor({
+    extensions,
+    content: initialHtml.current,
+    immediatelyRender: false,
+    editorProps: {
+      attributes: {
+        class: 'rich-text-editor__surface',
+        dir: 'rtl',
+        role: 'textbox',
+        'aria-multiline': 'true',
+        'aria-label': 'متن فارسی'
+      }
+    },
+    onUpdate: ({ editor: updatedEditor }) => {
+      const nextHtml = sanitizeRichHtml(updatedEditor.getHTML());
+      if (nextHtml !== lastEmittedHtml.current) {
+        lastEmittedHtml.current = nextHtml;
+        onChangeRef.current(nextHtml);
+      }
+    },
+    onSelectionUpdate: () => setToolbarRevision(revision => revision + 1),
+    onTransaction: () => setToolbarRevision(revision => revision + 1)
+  });
+
+  useEffect(() => {
+    if (!editor) return;
+    const incomingHtml = markdownToSafeHtml(value || '');
+    const currentHtml = sanitizeRichHtml(editor.getHTML());
+    if (incomingHtml !== currentHtml) {
+      editor.commands.setContent(incomingHtml, { emitUpdate: false });
+      lastEmittedHtml.current = incomingHtml;
     }
-
-    range.insertNode(fragment);
-    const first = nodes[0];
-    const last = nodes[nodes.length - 1];
-    const next = document.createRange();
-    next.setStartBefore(first);
-    next.setEndAfter(last);
-    selection.removeAllRanges();
-    selection.addRange(next);
-    savedRangeRef.current = next.cloneRange();
-    lastNonCollapsedRangeRef.current = next.cloneRange();
-    setSelectionRevision(revision => revision + 1);
-    emit();
-  };
-
-  const exec = (command: string, commandValue?: string) => {
-    restoreSelection();
-    document.execCommand('styleWithCSS', false, 'true');
-    document.execCommand(command, false, commandValue);
-    saveSelection();
-    emit();
-  };
-
-  const execFontSize = (size: string) => {
-    if (!size) return;
-    setFontSize(size);
-    applyInlineStyle({ fontSize: size });
-  };
-
-  const execFontFamily = (family: string) => {
-    if (!family) return;
-    setFontFamily(family);
-    applyInlineStyle({ fontFamily: family });
-  };
-
-  const applyBlockStyle = (property: 'lineHeight', nextValue: string) => {
-    if (!nextValue) return;
-    restoreSelection(true);
-    const selection = window.getSelection();
-    const root = surfaceRef.current;
-    const block = closestBlock(selection?.anchorNode || null, root);
-    if (block && block !== root) block.style[property] = nextValue;
-    setLineHeight(nextValue);
-    emit();
-  };
-
-  const insertHtml = (html: string) => {
-    restoreSelection();
-    document.execCommand('insertHTML', false, html);
-    saveSelection();
-    emit();
-  };
+  }, [editor, value]);
 
   useEffect(() => {
-    const root = surfaceRef.current;
-    if (!root) return;
-    const incoming = markdownToSafeHtml(value || '');
-    const current = sanitizeRichHtml(normalizedEditorHtml(root));
-    if (incoming === lastEmittedRef.current || incoming === current) return;
-    root.innerHTML = incoming;
-    lastEmittedRef.current = incoming;
-  }, [value]);
+    if (linkDialogOpen) linkInputRef.current?.focus();
+  }, [linkDialogOpen]);
 
   useEffect(() => {
-    const handler = () => saveSelection();
-    document.addEventListener('selectionchange', handler);
-    return () => document.removeEventListener('selectionchange', handler);
-  }, []);
+    if (urlMediaType) mediaInputRef.current?.focus();
+  }, [urlMediaType]);
 
-  useEffect(() => {
-    const root = surfaceRef.current;
-    if (!root || root.innerHTML) return;
-    const initial = markdownToSafeHtml(value || '');
-    root.innerHTML = initial;
-    lastEmittedRef.current = initial;
-  }, []);
+  if (!editor) {
+    return <div className="rich-text-editor__loading" role="status">در حال آماده‌سازی ادیتور…</div>;
+  }
 
-  void selectionRevision;
-  const commandActive = (command: string) => {
-    try { return Boolean(document.queryCommandState(command)); } catch { return false; }
-  };
-  const blockValue = (() => {
-    try { return String(document.queryCommandValue('formatBlock') || '').replace(/[<>]/g, '').toLowerCase(); }
-    catch { return ''; }
-  })();
+  void toolbarRevision;
+  const activeBlock = editor.isActive('heading', { level: 2 }) ? 'h2'
+    : editor.isActive('heading', { level: 3 }) ? 'h3'
+    : editor.isActive('heading', { level: 4 }) ? 'h4'
+    : editor.isActive('blockquote') ? 'quote'
+    : 'paragraph';
 
-  const openLink = () => {
-    saveSelection();
-    const selection = window.getSelection();
-    const node = selection?.anchorNode instanceof Element ? selection.anchorNode : selection?.anchorNode?.parentElement;
-    setLinkUrl(node?.closest('a')?.getAttribute('href') || '');
+  const openLinkDialog = () => {
+    setLinkUrl(String(editor.getAttributes('link').href || ''));
     setLinkError('');
     setLinkDialogOpen(true);
     setUrlMediaType(null);
@@ -295,19 +236,42 @@ export const RichTextComposer: React.FC<RichTextComposerProps> = ({ value, onCha
     event.preventDefault();
     const href = linkUrl.trim();
     if (!href || !safeRichHref(href)) {
-      setLinkError('نشانی معتبر با https://، http://، tel:، mailto:، / یا # وارد کنید.');
+      setLinkError('لطفاً یک نشانی معتبر با https://، http://، tel:، mailto:، / یا # وارد کنید.');
       return;
     }
-    exec('createLink', href);
+    editor.chain().focus().extendMarkRange('link').setLink({ href }).run();
     setLinkDialogOpen(false);
+    setLinkError('');
   };
+
+  const format = (block: string) => {
+    if (block === 'paragraph') editor.chain().focus().setParagraph().run();
+    else if (block === 'quote') editor.chain().focus().toggleBlockquote().run();
+    else editor.chain().focus().toggleHeading({ level: Number(block.slice(1)) as 2 | 3 | 4 }).run();
+  };
+
+  const active = (name: string, attributes?: Record<string, unknown>) =>
+    editor.isActive(name, attributes as never);
+  const activeAlign = (alignment: string) => editor.isActive({ textAlign: alignment });
 
   const insertImage = (url: string, item?: { seo?: { alt?: string; title?: string } }) => {
     if (!safeRichSrc(url)) return;
-    const alt = escapeRichText(item?.seo?.alt || '');
-    const title = item?.seo?.title ? ` title="${escapeRichText(item.seo.title)}"` : '';
-    insertHtml(`<img src="${escapeRichText(url)}" alt="${alt}"${title} loading="lazy">`);
+    editor.chain().focus().insertContent({
+      type: 'richImage',
+      attrs: {
+        src: url,
+        alt: item?.seo?.alt || '',
+        title: item?.seo?.title || null
+      }
+    }).run();
     setImagePickerOpen(false);
+  };
+
+  const openUrlMedia = (type: UrlMediaType) => {
+    setLinkDialogOpen(false);
+    setUrlMediaType(type);
+    setMediaUrl('');
+    setMediaError('');
   };
 
   const insertUrlMedia = (event: React.FormEvent) => {
@@ -317,166 +281,209 @@ export const RichTextComposer: React.FC<RichTextComposerProps> = ({ value, onCha
       setMediaError('آدرس فایل باید با https://، http:// یا / شروع شود.');
       return;
     }
-    if (urlMediaType === 'video') insertHtml(`<video src="${escapeRichText(src)}" controls preload="metadata" playsinline></video>`);
-    else insertHtml(`<audio src="${escapeRichText(src)}" controls preload="metadata"></audio>`);
+    editor.chain().focus().insertContent({
+      type: urlMediaType === 'video' ? 'richVideo' : 'richAudio',
+      attrs: { src }
+    }).run();
     setUrlMediaType(null);
     setMediaUrl('');
     setMediaError('');
   };
 
-  const insertTable = () => {
-    const rowsHtml = Array.from({ length: 3 }, (_, rowIndex) =>
-      '<tr>' + Array.from({ length: 3 }, (_, colIndex) =>
-        `<${rowIndex === 0 ? 'th' : 'td'}>${rowIndex === 0 ? `ستون ${colIndex + 1}` : '&nbsp;'}</${rowIndex === 0 ? 'th' : 'td'}>`
-      ).join('') + '</tr>'
-    ).join('');
-    const firstRowEnd = rowsHtml.indexOf('</tr>') + 5;
-    insertHtml(`<table><thead>${rowsHtml.slice(0, firstRowEnd)}</thead><tbody>${rowsHtml.slice(firstRowEnd)}</tbody></table><p><br></p>`);
-  };
-
-  const blockFormat = (nextValue: string) => {
-    restoreSelection(true);
-    document.execCommand('formatBlock', false, nextValue === 'paragraph' ? 'p' : nextValue);
-    saveSelection();
-    emit();
-  };
-
-  const onPaste = (event: React.ClipboardEvent<HTMLDivElement>) => {
-    event.preventDefault();
-    const html = event.clipboardData.getData('text/html');
-    if (html) insertHtml(sanitizeRichHtml(html));
-    else insertHtml(escapeRichText(event.clipboardData.getData('text/plain')).replace(/\r?\n/g, '<br>'));
-  };
-
   return (
-    <div className="rich-text-editor__frame stable-rich-editor" data-stable-rich-editor="30.10.8">
-      <div className="rich-text-toolbar" role="toolbar" aria-label="ابزارهای قالب‌بندی متن" onPointerDownCapture={saveSelection}>
+    <div className="rich-text-editor__frame" data-rich-media-editor="1">
+      <div className="rich-text-toolbar" role="toolbar" aria-label="ابزارهای قالب‌بندی متن">
         <div className="rich-text-toolbar__group">
-          <ToolButton title="واگرد" onClick={() => exec('undo')}><Undo2 aria-hidden="true" /></ToolButton>
-          <ToolButton title="ازنو" onClick={() => exec('redo')}><Redo2 aria-hidden="true" /></ToolButton>
+          <ToolButton title="واگرد" disabled={!editor.can().undo()} onClick={() => editor.chain().focus().undo().run()}>
+            <Undo2 aria-hidden="true" />
+          </ToolButton>
+          <ToolButton title="ازنو" disabled={!editor.can().redo()} onClick={() => editor.chain().focus().redo().run()}>
+            <Redo2 aria-hidden="true" />
+          </ToolButton>
         </div>
+
         <span className="rich-text-toolbar__separator" />
 
         <div className="rich-text-toolbar__group">
-          <select className="rich-text-block-select" aria-label="نوع پاراگراف" value={['h2','h3','h4','blockquote'].includes(blockValue) ? blockValue : 'paragraph'} onChange={event => blockFormat(event.currentTarget.value)}>
+          <label className="rich-text-select-label" aria-label="اندازه متن">
+            <span className="sr-only">اندازه متن</span>
+            <select
+              aria-label="اندازه متن"
+              value={fontSize}
+              onChange={event => {
+                const selected = event.currentTarget.value;
+                setFontSize(selected);
+                if (selected) editor.chain().focus().setFontSize(selected).run();
+              }}
+            >
+              <option value="">اندازه</option>
+              <option value="12px">۱۲</option>
+              <option value="14px">۱۴</option>
+              <option value="16px">۱۶</option>
+              <option value="18px">۱۸</option>
+              <option value="24px">۲۴</option>
+              <option value="32px">۳۲</option>
+            </select>
+          </label>
+          <select
+            className="rich-text-block-select"
+            aria-label="نوع پاراگراف"
+            value={activeBlock}
+            onChange={event => format(event.currentTarget.value)}
+          >
             <option value="paragraph">پاراگراف</option>
-            <option value="h2">تیتر ۲</option>
-            <option value="h3">تیتر ۳</option>
-            <option value="h4">تیتر ۴</option>
-            <option value="blockquote">نقل‌قول</option>
-          </select>
-          <select className="rich-text-block-select" aria-label="اندازه متن" value={fontSize} onChange={event => execFontSize(event.currentTarget.value)}>
-            <option value="">اندازه</option>
-            {FONT_SIZES.map(size => <option key={size} value={size}>{size.replace('px', '')}</option>)}
-          </select>
-          <select className="rich-text-block-select" aria-label="فونت" value={fontFamily} onChange={event => execFontFamily(event.currentTarget.value)}>
-            {FONT_FAMILIES.map(font => <option key={font.value || 'site'} value={font.value}>{font.label}</option>)}
-          </select>
-          <select className="rich-text-block-select" aria-label="فاصله خطوط" value={lineHeight} onChange={event => applyBlockStyle('lineHeight', event.currentTarget.value)}>
-            <option value="">فاصله خط</option>
-            <option value="1.4">۱٫۴</option><option value="1.7">۱٫۷</option><option value="1.9">۱٫۹</option><option value="2.2">۲٫۲</option><option value="2.5">۲٫۵</option>
+            <option value="h2">سرخط ۲</option>
+            <option value="h3">سرخط ۳</option>
+            <option value="h4">سرخط ۴</option>
+            <option value="quote">نقل‌قول</option>
           </select>
         </div>
+
         <span className="rich-text-toolbar__separator" />
 
         <div className="rich-text-toolbar__group">
-          <ToolButton title="پررنگ" active={commandActive('bold')} onClick={() => applyInlineStyle({ fontWeight: '700' })}><Bold aria-hidden="true" /></ToolButton>
-          <ToolButton title="کج" active={commandActive('italic')} onClick={() => applyInlineStyle({ fontStyle: 'italic' })}><Italic aria-hidden="true" /></ToolButton>
-          <ToolButton title="زیرخط" active={commandActive('underline')} onClick={() => applyInlineStyle({ textDecoration: 'underline' })}><Underline aria-hidden="true" /></ToolButton>
-          <ToolButton title="خط‌خورده" active={commandActive('strikeThrough')} onClick={() => applyInlineStyle({ textDecoration: 'line-through' })}><Strikethrough aria-hidden="true" /></ToolButton>
-          <label className="rich-text-color-picker" title="رنگ متن"><Palette aria-hidden="true" style={{ color: textColor }} /><input type="color" value={textColor} aria-label="رنگ متن" onChange={event => { setTextColor(event.currentTarget.value); applyInlineStyle({ color: event.currentTarget.value }); }} /></label>
-          <label className="rich-text-color-picker" title="رنگ پس‌زمینه متن"><Highlighter aria-hidden="true" style={{ color: highlightColor }} /><input type="color" value={highlightColor} aria-label="رنگ پس‌زمینه متن" onChange={event => { setHighlightColor(event.currentTarget.value); applyInlineStyle({ backgroundColor: event.currentTarget.value }); }} /></label>
-          <ToolButton title="پاک‌کردن قالب‌بندی" onClick={() => { exec('removeFormat'); blockFormat('paragraph'); }}><Eraser aria-hidden="true" /></ToolButton>
+          <ToolButton title="پررنگ" active={active('bold')} onClick={() => editor.chain().focus().toggleBold().run()}>
+            <Bold aria-hidden="true" />
+          </ToolButton>
+          <ToolButton title="کج" active={active('italic')} onClick={() => editor.chain().focus().toggleItalic().run()}>
+            <Italic aria-hidden="true" />
+          </ToolButton>
+          <ToolButton title="زیرخط" active={active('underline')} onClick={() => editor.chain().focus().toggleUnderline().run()}>
+            <Underline aria-hidden="true" />
+          </ToolButton>
+          <ToolButton title="خط‌خورده" active={active('strike')} onClick={() => editor.chain().focus().toggleStrike().run()}>
+            <Strikethrough aria-hidden="true" />
+          </ToolButton>
+          <label className="rich-text-color-picker" title="رنگ متن">
+            <Palette aria-hidden="true" style={{ color: textColor }} />
+            <input
+              type="color"
+              aria-label="رنگ متن"
+              value={textColor}
+              onChange={event => {
+                const color = event.currentTarget.value;
+                setTextColor(color);
+                editor.chain().focus().setColor(color).run();
+              }}
+            />
+          </label>
+          <ToolButton title="پاک‌کردن قالب‌بندی" onClick={() => editor.chain().focus().unsetAllMarks().clearNodes().run()}>
+            <Eraser aria-hidden="true" />
+          </ToolButton>
         </div>
+
         <span className="rich-text-toolbar__separator" />
 
         <div className="rich-text-toolbar__group">
-          <ToolButton title="فهرست نشانه‌دار" active={commandActive('insertUnorderedList')} onClick={() => exec('insertUnorderedList')}><List aria-hidden="true" /></ToolButton>
-          <ToolButton title="فهرست شماره‌دار" active={commandActive('insertOrderedList')} onClick={() => exec('insertOrderedList')}><ListOrdered aria-hidden="true" /></ToolButton>
-          <ToolButton title="نقل‌قول" onClick={() => blockFormat('blockquote')}><Quote aria-hidden="true" /></ToolButton>
+          <ToolButton title="فهرست نشانه‌دار" active={active('bulletList')} onClick={() => editor.chain().focus().toggleBulletList().run()}>
+            <List aria-hidden="true" />
+          </ToolButton>
+          <ToolButton title="فهرست شماره‌دار" active={active('orderedList')} onClick={() => editor.chain().focus().toggleOrderedList().run()}>
+            <ListOrdered aria-hidden="true" />
+          </ToolButton>
+          <ToolButton title="نقل‌قول" active={active('blockquote')} onClick={() => editor.chain().focus().toggleBlockquote().run()}>
+            <Quote aria-hidden="true" />
+          </ToolButton>
         </div>
+
         <span className="rich-text-toolbar__separator" />
 
         <div className="rich-text-toolbar__group">
-          <ToolButton title="راست‌چین" onClick={() => exec('justifyRight')}><AlignRight aria-hidden="true" /></ToolButton>
-          <ToolButton title="وسط‌چین" onClick={() => exec('justifyCenter')}><AlignCenter aria-hidden="true" /></ToolButton>
-          <ToolButton title="چپ‌چین" onClick={() => exec('justifyLeft')}><AlignLeft aria-hidden="true" /></ToolButton>
-          <ToolButton title="تراز دوطرفه" onClick={() => exec('justifyFull')}><AlignJustify aria-hidden="true" /></ToolButton>
+          <ToolButton title="راست‌چین" active={activeAlign('right')} onClick={() => editor.chain().focus().setTextAlign('right').run()}>
+            <AlignRight aria-hidden="true" />
+          </ToolButton>
+          <ToolButton title="وسط‌چین" active={activeAlign('center')} onClick={() => editor.chain().focus().setTextAlign('center').run()}>
+            <AlignCenter aria-hidden="true" />
+          </ToolButton>
+          <ToolButton title="چپ‌چین" active={activeAlign('left')} onClick={() => editor.chain().focus().setTextAlign('left').run()}>
+            <AlignLeft aria-hidden="true" />
+          </ToolButton>
+          <ToolButton title="تراز دوطرفه" active={activeAlign('justify')} onClick={() => editor.chain().focus().setTextAlign('justify').run()}>
+            <AlignJustify aria-hidden="true" />
+          </ToolButton>
         </div>
+
         <span className="rich-text-toolbar__separator" />
 
         <div className="rich-text-toolbar__group">
-          <ToolButton title="لینک" onClick={openLink}><LinkIcon aria-hidden="true" /></ToolButton>
-          <ToolButton title="حذف لینک" onClick={() => exec('unlink')}><Unlink aria-hidden="true" /></ToolButton>
-          <ToolButton title="تصویر" onClick={() => { saveSelection(); setImagePickerOpen(true); }}><ImagePlus aria-hidden="true" /></ToolButton>
-          <ToolButton title="صوت" onClick={() => { saveSelection(); setUrlMediaType('audio'); setMediaError(''); }}><Music2 aria-hidden="true" /></ToolButton>
-          <ToolButton title="ویدئو" onClick={() => { saveSelection(); setUrlMediaType('video'); setMediaError(''); }}><Video aria-hidden="true" /></ToolButton>
-          <ToolButton title="جدول ۳×۳" onClick={insertTable}><Table aria-hidden="true" /></ToolButton>
+          <ToolButton title="افزودن یا ویرایش پیوند" active={active('link')} onClick={openLinkDialog}>
+            <LinkIcon aria-hidden="true" />
+          </ToolButton>
+          <ToolButton title="حذف پیوند" disabled={!active('link')} onClick={() => editor.chain().focus().unsetLink().run()}>
+            <Unlink aria-hidden="true" />
+          </ToolButton>
+          <ToolButton title="افزودن تصویر" onClick={() => { setLinkDialogOpen(false); setUrlMediaType(null); setImagePickerOpen(true); }}>
+            <ImagePlus aria-hidden="true" />
+          </ToolButton>
+          <ToolButton title="افزودن فایل صوتی" onClick={() => openUrlMedia('audio')}>
+            <Music2 aria-hidden="true" />
+          </ToolButton>
+          <ToolButton title="افزودن ویدئو" onClick={() => openUrlMedia('video')}>
+            <Video aria-hidden="true" />
+          </ToolButton>
+          <ToolButton title="افزودن جدول دو ستونه" onClick={() => editor.chain().focus().insertTable({ rows: 2, cols: 2, withHeaderRow: true }).run()}>
+            <Table aria-hidden="true" />
+          </ToolButton>
         </div>
+
+        {linkDialogOpen && (
+          <form className="rich-text-link-form" onSubmit={applyLink}>
+            <label htmlFor="rich-text-link-url">نشانی پیوند</label>
+            <input
+              id="rich-text-link-url"
+              ref={linkInputRef}
+              type="text"
+              inputMode="url"
+              value={linkUrl}
+              placeholder="https://example.com"
+              onChange={event => setLinkUrl(event.currentTarget.value)}
+            />
+            {linkError && <span className="rich-text-link-form__error" role="alert">{linkError}</span>}
+            <button type="submit">ثبت پیوند</button>
+            <button type="button" onMouseDown={event => event.preventDefault()} onClick={() => setLinkDialogOpen(false)}>انصراف</button>
+          </form>
+        )}
+
+        {urlMediaType && (
+          <form className="rich-text-media-form" onSubmit={insertUrlMedia}>
+            <label htmlFor="rich-text-media-url">{urlMediaType === 'video' ? 'نشانی فایل ویدئویی' : 'نشانی فایل صوتی'}</label>
+            <input
+              id="rich-text-media-url"
+              ref={mediaInputRef}
+              type="text"
+              inputMode="url"
+              value={mediaUrl}
+              placeholder={urlMediaType === 'video' ? 'https://example.com/video.mp4' : 'https://example.com/audio.mp3'}
+              onChange={event => setMediaUrl(event.currentTarget.value)}
+            />
+            {mediaError && <span className="rich-text-media-form__error" role="alert">{mediaError}</span>}
+            <button type="submit">درج {urlMediaType === 'video' ? 'ویدئو' : 'صدا'}</button>
+            <button type="button" onMouseDown={event => event.preventDefault()} onClick={() => setUrlMediaType(null)}>انصراف</button>
+          </form>
+        )}
       </div>
 
-      {linkDialogOpen && (
-        <form className="rich-text-link-form" onSubmit={applyLink}>
-          <label>آدرس لینک</label>
-          <input autoFocus value={linkUrl} onChange={event => setLinkUrl(event.currentTarget.value)} placeholder="https://... یا /product/..." />
-          <button type="submit">اعمال لینک</button>
-          <button type="button" onClick={() => setLinkDialogOpen(false)}>لغو</button>
-          {linkError && <span className="rich-text-link-form__error">{linkError}</span>}
-        </form>
-      )}
+      <EditorContent
+        editor={editor}
+        className="rich-text-editor__content"
+        style={{ minHeight: Math.max(4, rows) * 1.8 + 'rem' }}
+      />
 
-      {urlMediaType && (
-        <form className="rich-text-media-form" onSubmit={insertUrlMedia}>
-          <label>آدرس فایل {urlMediaType === 'video' ? 'ویدئو' : 'صوتی'}</label>
-          <input autoFocus value={mediaUrl} onChange={event => setMediaUrl(event.currentTarget.value)} placeholder="https://..." />
-          <button type="submit">درج</button>
-          <button type="button" onClick={() => setUrlMediaType(null)}>لغو</button>
-          {mediaError && <span className="rich-text-media-form__error">{mediaError}</span>}
-        </form>
+      {active('table') && (
+        <div className="rich-text-table-actions" role="group" aria-label="ابزارهای جدول">
+          <button type="button" onMouseDown={event => event.preventDefault()} onClick={() => editor.chain().focus().addRowAfter().run()}>افزودن سطر</button>
+          <button type="button" onMouseDown={event => event.preventDefault()} onClick={() => editor.chain().focus().addColumnAfter().run()}>افزودن ستون</button>
+          <button type="button" onMouseDown={event => event.preventDefault()} onClick={() => editor.chain().focus().deleteTable().run()}>حذف جدول</button>
+        </div>
       )}
-
-      <div className="rich-text-editor__content" style={{ minHeight: Math.max(150, rows * 24) }}>
-        <div
-          ref={surfaceRef}
-          className="rich-text-editor__surface stable-rich-editor__surface"
-          dir="rtl"
-          role="textbox"
-          aria-multiline="true"
-          aria-label="ویرایش متن فارسی"
-          data-placeholder={placeholder}
-          contentEditable
-          suppressContentEditableWarning
-          spellCheck
-          onInput={emit}
-          onBlur={() => { saveSelection(); emit(); }}
-          onKeyDown={event => {
-            if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'a') {
-              const root = surfaceRef.current;
-              const selection = window.getSelection();
-              if (root && selection) {
-                event.preventDefault();
-                const range = document.createRange();
-                range.selectNodeContents(root);
-                selection.removeAllRanges();
-                selection.addRange(range);
-                savedRangeRef.current = range.cloneRange();
-                lastNonCollapsedRangeRef.current = range.cloneRange();
-                setSelectionRevision(revision => revision + 1);
-              }
-            }
-          }}
-          onKeyUp={saveSelection}
-          onMouseUp={saveSelection}
-          onPaste={onPaste}
-        />
-      </div>
 
       <MediaPickerModal
         isOpen={imagePickerOpen}
         onClose={() => setImagePickerOpen(false)}
-        onSelect={insertImage}
-        title="انتخاب تصویر برای متن"
-        category="editor-media"
+        onSelect={(url, item) => insertImage(url, item)}
+        category="articles"
+        title="درج تصویر در متن"
+        allowUrl
       />
     </div>
   );

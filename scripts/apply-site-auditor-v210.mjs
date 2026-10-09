@@ -2,7 +2,7 @@ import fs from 'node:fs';
 
 const file = 'src/server/audit/site-audit.ts';
 let source = fs.readFileSync(file, 'utf8');
-if (source.includes("const ENGINE_VERSION = '2.1.0';")) {
+if (source.includes("const ENGINE_VERSION = '2.1.0';") && source.includes('productionBundleVerified')) {
   console.log('Site Auditor v2.1.0 already applied.');
   process.exit(0);
 }
@@ -12,10 +12,11 @@ const replaceOnce = (before, after, label) => {
   source = source.replace(before, after);
 };
 
+replaceOnce("import fs from 'node:fs';\nimport path from 'node:path';", "import fs from 'node:fs';\nimport path from 'node:path';\nimport { createHash } from 'node:crypto';", 'crypto import');
 replaceOnce("const ENGINE_VERSION = '2.0.0';", "const ENGINE_VERSION = '2.1.0';", 'engine version');
 replaceOnce(
   "    pipelineScripts: number;\n    pipelineTargets: number;\n    configKeys: number;",
-  "    pipelineScripts: number;\n    pipelineTargets: number;\n    pipelineStages: number;\n    confirmedOverwrites: number;\n    preparedRouteInventory: number;\n    pipelineTraceAvailable: boolean;\n    configKeys: number;",
+  "    pipelineScripts: number;\n    pipelineTargets: number;\n    pipelineStages: number;\n    confirmedOverwrites: number;\n    preparedRouteInventory: number;\n    pipelineTraceAvailable: boolean;\n    productionBundleVerified: boolean;\n    configKeys: number;",
   'coverage fields'
 );
 replaceOnce(
@@ -50,12 +51,17 @@ replaceOnce(
   "  const pipelineTrace = readPipelineTrace();\n  const sourceRoutes = buildRouteInventory(files);\n  const preparedRoutes = Array.isArray(pipelineTrace?.prepared?.routes)\n    ? pipelineTrace.prepared.routes.filter((route: any) => route?.method && route?.route)\n    : [];\n  const routes = preparedRoutes.length ? preparedRoutes as RouteRef[] : sourceRoutes;\n  const apiCalls = extractApiCalls(files);",
   'prepared route inventory'
 );
+replaceOnce(
+  "  const findings: AuditFinding[] = [];\n\n  scanDuplicateServerRoutes(routes, findings);",
+  "  const findings: AuditFinding[] = [];\n  const productionBundleVerified = scanProductionBundleIntegrity(pipelineTrace, findings);\n\n  scanDuplicateServerRoutes(routes, findings);",
+  'production bundle integrity scan'
+);
 replaceOnce('  const pipeline = scanPipelineConflicts(files, findings);', '  const pipeline = scanPipelineConflicts(files, findings, pipelineTrace);', 'trace pipeline scanner');
 replaceOnce(
   "      pipelineScripts: pipeline.scripts,\n      pipelineTargets: pipeline.targets,\n      configKeys: new Set(configRefs.map(ref => ref.key)).size",
-  "      pipelineScripts: pipeline.scripts,\n      pipelineTargets: pipeline.targets,\n      pipelineStages: pipeline.stages,\n      confirmedOverwrites: pipeline.overwrites,\n      preparedRouteInventory: preparedRoutes.length,\n      pipelineTraceAvailable: pipeline.traced,\n      configKeys: new Set(configRefs.map(ref => ref.key)).size",
+  "      pipelineScripts: pipeline.scripts,\n      pipelineTargets: pipeline.targets,\n      pipelineStages: pipeline.stages,\n      confirmedOverwrites: pipeline.overwrites,\n      preparedRouteInventory: preparedRoutes.length,\n      pipelineTraceAvailable: pipeline.traced,\n      productionBundleVerified,\n      configKeys: new Set(configRefs.map(ref => ref.key)).size",
   'coverage values'
 );
 
 fs.writeFileSync(file, source, 'utf8');
-console.log('Applied Site Auditor v2.1.0: bounded API contracts, prepared-route inventory, trace-backed pipeline diffs, contextual schema drift.');
+console.log('Applied Site Auditor v2.1.0: bounded API contracts, prepared-route inventory, trace-backed pipeline diffs, contextual schema drift, production bundle verification.');

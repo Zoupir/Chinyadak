@@ -42,4 +42,64 @@ const auditor = read('src/server/audit/site-audit.ts');
 assert.ok(auditor.includes("const ENGINE_VERSION = '2.2.0';"), 'Site Auditor 2.2 engine missing');
 assert.ok(auditor.includes('scanRichTextAndLiveEditorContracts(files, findings);'), 'Rich/live audit scanner missing');
 
+// Exercise the real production API/DB round-trip when the smoke suite runs against the CI server.
+const base = String(process.env.TEST_BASE_URL || '').replace(/\/$/, '');
+const adminPassword = String(process.env.ADMIN_BOOTSTRAP_PASSWORD || '');
+if (base && adminPassword) {
+  const adminUser = String(process.env.ADMIN_BOOTSTRAP_USER || 'admin');
+  const login = await fetch(base + '/api/auth/admin/login', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', origin: base, 'sec-fetch-site': 'same-origin' },
+    body: JSON.stringify({ username: adminUser, password: adminPassword })
+  });
+  assert.equal(login.status, 200, `v30.10.13 admin login failed: ${login.status} ${await login.text()}`);
+  const setCookie = login.headers.get('set-cookie') || '';
+  const cookie = setCookie.split(';')[0];
+  assert.ok(cookie.includes('='), 'v30.10.13 admin session cookie missing');
+
+  const bundleBeforeResponse = await fetch(base + '/api/cms/bundle', { headers: { cookie } });
+  assert.equal(bundleBeforeResponse.status, 200, 'v30.10.13 CMS bundle preflight failed');
+  const bundleBefore = await bundleBeforeResponse.json() as any;
+  const page = (bundleBefore.pages || []).find((item: any) => item?.id && Array.isArray(item?.sections) && item.sections.length);
+  assert.ok(page, 'v30.10.13 requires one persisted page with a section');
+  const originalPage = JSON.parse(JSON.stringify(page));
+  const target = page.sections[0];
+  const probeHtml = '<p style="text-align:center"><strong><span style="color:#e63236;font-size:24px">AUDIT-RICH-TEXT-ROUNDTRIP</span></strong></p>';
+  const probeWidth = Number(target.widthPercent) === 73 ? 74 : 73;
+  const changedPage = {
+    ...page,
+    sections: page.sections.map((section: any) => section.id === target.id
+      ? { ...section, content: probeHtml, widthPercent: probeWidth }
+      : section)
+  };
+
+  try {
+    const save = await fetch(base + `/api/cms/pages/${encodeURIComponent(page.id)}`, {
+      method: 'PUT',
+      headers: { 'content-type': 'application/json', cookie, origin: base, 'sec-fetch-site': 'same-origin' },
+      body: JSON.stringify(changedPage)
+    });
+    assert.equal(save.status, 200, `v30.10.13 page save failed: ${save.status} ${await save.text()}`);
+    const savedPayload = await save.json() as any;
+    const savedSection = savedPayload.page?.sections?.find((section: any) => section.id === target.id);
+    assert.equal(savedSection?.content, probeHtml, 'Page PUT response did not read back persisted rich text');
+    assert.equal(Number(savedSection?.widthPercent), probeWidth, 'Page PUT response did not read back persisted layout width');
+
+    const verifyResponse = await fetch(base + '/api/cms/bundle', { headers: { cookie }, cache: 'no-store' });
+    assert.equal(verifyResponse.status, 200, 'v30.10.13 CMS bundle verification failed');
+    const verify = await verifyResponse.json() as any;
+    const verifiedPage = (verify.pages || []).find((item: any) => item.id === page.id);
+    const verifiedSection = verifiedPage?.sections?.find((section: any) => section.id === target.id);
+    assert.equal(verifiedSection?.content, probeHtml, 'Rich text did not survive DB reload');
+    assert.equal(Number(verifiedSection?.widthPercent), probeWidth, 'Live-editor layout width did not survive DB reload');
+  } finally {
+    const restore = await fetch(base + `/api/cms/pages/${encodeURIComponent(originalPage.id)}`, {
+      method: 'PUT',
+      headers: { 'content-type': 'application/json', cookie, origin: base, 'sec-fetch-site': 'same-origin' },
+      body: JSON.stringify(originalPage)
+    });
+    assert.equal(restore.status, 200, `v30.10.13 page restore failed: ${restore.status} ${await restore.text()}`);
+  }
+}
+
 console.log('v30.10.13 rich text + live editor persistence smoke passed.');

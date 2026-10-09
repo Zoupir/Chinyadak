@@ -39,6 +39,7 @@ if (!isPrepared()) {
   console.log('Source preparation already at v30.10.9; legacy editor transforms skipped.');
 }
 run('scripts/repair-v30109-live-session-lock.mjs');
+run('scripts/repair-v30109-marketplace-section-map.mjs');
 run('scripts/repair-v30109-e2e.mjs');
 run('scripts/repair-v30109-session-cookie.mjs');
 
@@ -56,6 +57,7 @@ const missing = checks.filter(([file, marker]) => !has(file, marker));
 if (missing.length) throw new Error('v30.10.9 preparation incomplete: ' + missing.map(([file, marker]) => `${file} :: ${marker}`).join(' | '));
 if (!has('scripts/test-e2e.cjs', 'data-v30109-live-save-e2e')) throw new Error('v30.10.9 theme-aware live-save E2E marker missing.');
 if (!has('src/server/ssr-store-context.tsx', 'data-v30109-live-edit-restore-lock')) throw new Error('v30.10.9 live-edit restore lock missing.');
+if (!has('src/components/home/MarketplaceRtlHome.tsx', 'data-v30109-marketplace-section-map')) throw new Error('v30.10.9 marketplace legacy-section map missing.');
 if (!has('src/server/auth.ts', "secure: config.nodeEnv === 'production' && /^https:/i.test(config.appUrl),")) throw new Error('v30.10.9 protocol-aware session cookie rule missing.');
 
 const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));

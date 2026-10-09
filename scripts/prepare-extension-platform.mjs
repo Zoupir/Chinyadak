@@ -73,8 +73,8 @@ if (await patchFile('src/components/admin/AdminView.tsx', source => {
 
   source = insertBefore(
     source,
-    "          {!['overview','analytics','sandbox','extensions'].includes(activeTab) && !activeTab.startsWith('extension:') && <AdminBulkActions section={activeTab} />}\n",
-    "          <ExtensionSlot name=\"admin.content.before\" payload={{ activeTab }} payloadKey={activeTab} className=\"contents\" />\n",
+    "          {/* TAB 1: OVERVIEW */}\n",
+    "          <ExtensionSlot name=\"admin.content.before\" payload={{ activeTab }} payloadKey={activeTab} className=\"contents\" />\n\n",
     'name="admin.content.before"',
     file
   );

@@ -20,9 +20,11 @@ import { vehiclesRouter } from './src/server/routes/vehicles';
 import { engagementRouter } from './src/server/routes/engagement';
 import { bulkRouter } from './src/server/routes/bulk';
 import { seoRouter } from './src/server/routes/seo';
+import { supportRouter } from './src/server/routes/support';
 import { uploadDirectory } from './src/server/media';
 import { checkDatabase } from './src/server/db';
 import { config } from './src/server/config';
+import { recordFailedApiResponse, recordSupportEvent } from './src/server/support-diagnostics';
 import { renderStorefrontDocument } from './src/server/storefront-html';
 import { isPrivateStorefrontPath, normalizePublicStorefrontDocument } from './src/server/storefront-normal';
 import {
@@ -123,6 +125,11 @@ const apiLimiter = rateLimit({
   legacyHeaders: false
 });
 app.use('/api', apiLimiter);
+app.use('/api', (req, res, next) => {
+  const startedAt = Date.now();
+  res.on('finish', () => recordFailedApiResponse(req, res.statusCode, startedAt));
+  next();
+});
 
 app.use('/api/auth', authRouter);
 app.use('/api/catalog', catalogRouter);
@@ -136,6 +143,7 @@ app.use('/api/vehicles', vehiclesRouter);
 app.use('/api/engagement', engagementRouter);
 app.use('/api/seo', seoRouter);
 app.use('/api/bulk', bulkRouter);
+app.use('/api/support', supportRouter);
 
 const aiLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
@@ -262,7 +270,14 @@ async function startServer() {
     app.use(vite.middlewares);
   }
 
-  app.use((error: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  app.use((error: unknown, req: express.Request, res: express.Response, _next: express.NextFunction) => {
+    recordSupportEvent({
+      kind: 'server_error',
+      method: req.method,
+      path: req.originalUrl || req.url,
+      status: 500,
+      message: error instanceof Error ? error.message : String(error)
+    });
     console.error('Unhandled server error:', error);
     res.status(500).json({ error: 'INTERNAL_SERVER_ERROR' });
   });

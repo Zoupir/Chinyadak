@@ -71,7 +71,8 @@ const topLevelScripts = [
   { script: 'scripts/apply-v301015-richtext-fidelity.mjs', kind: 'stage' },
   { script: 'scripts/apply-v301016-live-section-persistence.mjs', kind: 'stage' },
   { script: 'scripts/apply-v301017-section-render-contract.mjs', kind: 'stage' },
-  { script: 'scripts/apply-v301017-browser-contract.mjs', kind: 'stage' }
+  { script: 'scripts/apply-v301017-browser-contract.mjs', kind: 'stage' },
+  { script: 'scripts/repair-v301018-marketplace-home-types.mjs', kind: 'stage' }
 ];
 
 for (const item of topLevelScripts) {

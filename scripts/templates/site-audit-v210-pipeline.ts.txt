@@ -9,9 +9,13 @@ function pipelineFamily(rel: string) {
 }
 
 function readPipelineTrace(): any | null {
-  const traceFile = path.join(ROOT, 'AUDIT_PIPELINE_TRACE.json');
+  const candidates = [
+    path.join(ROOT, 'AUDIT_PIPELINE_TRACE.json'),
+    path.join(ROOT, 'dist/AUDIT_PIPELINE_TRACE.json')
+  ];
   try {
-    if (!fs.existsSync(traceFile)) return null;
+    const traceFile = candidates.find(candidate => fs.existsSync(candidate));
+    if (!traceFile) return null;
     const trace = JSON.parse(fs.readFileSync(traceFile, 'utf8'));
     if (trace?.schemaVersion !== 1) return null;
     const currentCommit = getCommit();

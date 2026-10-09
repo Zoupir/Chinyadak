@@ -31,6 +31,8 @@ const buildPreparedContracts = () => {
   const pageView = readPreparedText('src/components/page/PageView.tsx');
   const richCss = readPreparedText('src/components/common/RichTextEditor.css');
   const richContent = readPreparedText('src/components/common/RichTextContent.tsx');
+  const richUtil = readPreparedText('src/utils/richText.ts');
+  const richEditor = readPreparedText('src/components/common/RichTextEditor.tsx');
   const store = readPreparedText('src/context/StoreContext.tsx');
   const cms = readPreparedText('src/server/routes/cms.ts');
   const footer = readPreparedText('src/components/layout/Footer.tsx');
@@ -38,6 +40,8 @@ const buildPreparedContracts = () => {
     richTextPageRenderer: pageView.includes('<RichTextContent content={section.content}'),
     richTextCssParity: richCss.includes('STOREFRONT-RICH-TEXT-PARITY-v301013'),
     richTextRuntimeProbe: richContent.includes('data-rich-text-content="1"'),
+    richTextPrioritySanitizer: richUtil.includes('RICH-TEXT-STYLE-FIDELITY-v301015'),
+    richTextCanonicalHtml: richEditor.includes('RICH-TEXT-CANONICAL-HTML-v301015'),
     liveEditorSynchronousSnapshot: store.includes('pagesRef.current.find(item => item.slug === pageSlug)'),
     liveEditorPersistenceRoundtrip: store.includes('PAGE_PERSISTENCE_MISMATCH') && cms.includes('PAGE_PERSIST_READBACK_FAILED'),
     footerMobileColumnsContract: footer.includes('settings.mobileFooterColumns || settings.footerGridColumnsMobile || 2')
@@ -56,7 +60,8 @@ const topLevelScripts = [
   { script: 'scripts/prepare-v301013-cms-adapter.mjs', kind: 'stage' },
   { script: 'scripts/apply-v301013-richtext-live-editor-v3.mjs', kind: 'stage' },
   { script: 'scripts/repair-v301013-discard-preview.mjs', kind: 'stage' },
-  { script: 'scripts/apply-v301014-auditor-contracts.mjs', kind: 'stage' }
+  { script: 'scripts/apply-v301014-auditor-contracts.mjs', kind: 'stage' },
+  { script: 'scripts/apply-v301015-richtext-fidelity.mjs', kind: 'stage' }
 ];
 
 for (const item of topLevelScripts) {

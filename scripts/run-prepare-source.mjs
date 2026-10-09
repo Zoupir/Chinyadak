@@ -36,6 +36,7 @@ const buildPreparedContracts = () => {
   const store = readPreparedText('src/context/StoreContext.tsx');
   const cms = readPreparedText('src/server/routes/cms.ts');
   const footer = readPreparedText('src/components/layout/Footer.tsx');
+  const liveModal = readPreparedText('src/components/common/LiveSectionModal.tsx');
   return {
     richTextPageRenderer: pageView.includes('<RichTextContent content={section.content}'),
     richTextCssParity: richCss.includes('STOREFRONT-RICH-TEXT-PARITY-v301013'),
@@ -44,6 +45,8 @@ const buildPreparedContracts = () => {
     richTextCanonicalHtml: richEditor.includes('RICH-TEXT-CANONICAL-HTML-v301015'),
     liveEditorSynchronousSnapshot: store.includes('pagesRef.current.find(item => item.slug === pageSlug)'),
     liveEditorPersistenceRoundtrip: store.includes('PAGE_PERSISTENCE_MISMATCH') && cms.includes('PAGE_PERSIST_READBACK_FAILED'),
+    liveEditorAtomicSectionSave: store.includes('LIVE-SECTION-ATOMIC-SAVE-v301016') && cms.includes('LIVE-SECTION-ATOMIC-ENDPOINT-v301016'),
+    liveEditorImmediateFormSnapshot: liveModal.includes('LIVE-SECTION-FORM-SNAPSHOT-v301016'),
     footerMobileColumnsContract: footer.includes('settings.mobileFooterColumns || settings.footerGridColumnsMobile || 2')
   };
 };
@@ -61,7 +64,8 @@ const topLevelScripts = [
   { script: 'scripts/apply-v301013-richtext-live-editor-v3.mjs', kind: 'stage' },
   { script: 'scripts/repair-v301013-discard-preview.mjs', kind: 'stage' },
   { script: 'scripts/apply-v301014-auditor-contracts.mjs', kind: 'stage' },
-  { script: 'scripts/apply-v301015-richtext-fidelity.mjs', kind: 'stage' }
+  { script: 'scripts/apply-v301015-richtext-fidelity.mjs', kind: 'stage' },
+  { script: 'scripts/apply-v301016-live-section-persistence.mjs', kind: 'stage' }
 ];
 
 for (const item of topLevelScripts) {

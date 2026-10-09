@@ -2,6 +2,7 @@ import './index.css';
 import './home-layout-overrides.css';
 import './responsive-header-fixes.css';
 import './rich-text-storefront.css';
+import { loadRuntimeExtensions } from './extensions/runtime';
 
 declare global {
   interface Window {
@@ -147,6 +148,9 @@ const enhanceServerStorefront = (root: HTMLElement) => {
 };
 
 installAdminSupportDiagnostics();
+void loadRuntimeExtensions().catch(error => {
+  console.error('Extension runtime failed:', error);
+});
 clearLegacyAppCaches();
 
 const root = document.getElementById('root');

@@ -27,6 +27,9 @@ assert.equal(markdownToSafeHtml(canonical), canonical, 'canonical HTML must not 
 
 const editor = fs.readFileSync('src/components/common/RichTextEditor.tsx', 'utf8');
 const util = fs.readFileSync('src/utils/richText.ts', 'utf8');
+const marketplace = fs.readFileSync('src/components/home/MarketplaceRtlHome.tsx', 'utf8');
+const liveModal = fs.readFileSync('src/components/common/LiveSectionModal.tsx', 'utf8');
+
 assert.ok(editor.includes('RICH-TEXT-ROUNDTRIP-v301018'), 'editor roundtrip marker missing');
 assert.ok(editor.includes('markdownToSafeHtml(sourceDraft'), 'source save must persist canonical HTML');
 assert.ok(editor.includes('data-rich-editor-version="30.10.18"'), 'editor version marker missing');
@@ -34,4 +37,22 @@ assert.ok(util.includes('RICH-TEXT-ROUNDTRIP-v301018'), 'sanitizer roundtrip mar
 assert.equal((util.match(/const stripStylePriority =/g) || []).length, 1, 'duplicate stripStylePriority helper detected');
 assert.equal((util.match(/const styleValue =/g) || []).length, 1, 'duplicate styleValue helper detected');
 
-console.log('v30.10.18 smoke passed: Rich Text save/read/preview/storefront roundtrip remains canonical and styled.');
+// Prepared homepage code must be safe for optional catalog/category identifiers.
+assert.ok(!marketplace.includes('seen.has(product.id)'), 'prepared homepage still passes optional product.id to Set.has');
+assert.ok(!marketplace.includes('seen.add(product.id)'), 'prepared homepage still passes optional product.id to Set.add');
+assert.ok(!marketplace.includes('selectedFeaturedSlugs.includes(category.slug)'), 'prepared homepage still passes optional category.slug to string[].includes');
+assert.ok(marketplace.includes("selectedFeaturedSlugs.includes(String(category.slug || ''))"), 'prepared homepage slug normalization missing');
+
+// Browser E2E relies on deterministic inspector hooks; missing hooks previously
+// allowed prepare:source to report success while the real browser test timed out.
+for (const marker of [
+  'data-live-section-modal="1"',
+  'data-live-section-save="1"',
+  'data-section-field="contentSourceLimit"',
+  'data-section-field="desktopColumns"',
+  'data-section-field="widthPercent"'
+]) {
+  assert.ok(liveModal.includes(marker), `prepared live editor browser marker missing: ${marker}`);
+}
+
+console.log('v30.10.18 smoke passed: rich text roundtrip, homepage optional identifiers, and live-editor browser hooks are stable.');

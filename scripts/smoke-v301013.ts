@@ -47,9 +47,17 @@ const base = String(process.env.TEST_BASE_URL || '').replace(/\/$/, '');
 const adminPassword = String(process.env.ADMIN_BOOTSTRAP_PASSWORD || '');
 if (base && adminPassword) {
   const adminUser = String(process.env.ADMIN_BOOTSTRAP_USER || 'admin');
+  // The full smoke suite intentionally performs several auth checks first. Give this
+  // independent persistence probe its own trusted-proxy test IP so the shared login
+  // limiter remains enforced instead of being disabled/reset for tests.
   const login = await fetch(base + '/api/auth/admin/login', {
     method: 'POST',
-    headers: { 'content-type': 'application/json', origin: base, 'sec-fetch-site': 'same-origin' },
+    headers: {
+      'content-type': 'application/json',
+      origin: base,
+      'sec-fetch-site': 'same-origin',
+      'x-forwarded-for': '198.51.100.213'
+    },
     body: JSON.stringify({ username: adminUser, password: adminPassword })
   });
   assert.equal(login.status, 200, `v30.10.13 admin login failed: ${login.status} ${await login.text()}`);

@@ -39,6 +39,9 @@ assert.ok(!home.includes('featuredPool.length ? featuredPool : productStrip'), '
 assert.ok(modal.includes('LIVE-SECTION-INSPECTOR-CONTRACT-v301017'), 'v30.10.17 inspector contract marker missing');
 assert.ok(modal.includes('data-section-field={String(key)}'), 'numeric inspector fields need deterministic browser hooks');
 assert.ok(modal.includes('data-section-field="contentSourceLimit"'), 'content limit field browser hook missing');
+assert.ok(modal.includes('data-section-field="desktopColumns"'), 'desktop column selector browser hook missing');
+assert.ok(modal.includes('data-section-field="tabletColumns"'), 'tablet column selector browser hook missing');
+assert.ok(modal.includes('data-section-field="mobileColumns"'), 'mobile column selector browser hook missing');
 assert.ok(modal.includes('if (originalRef.current) previewSection(pageSlug, originalRef.current);'), 'Escape/cancel preview restoration missing');
 
 console.log('v30.10.17 smoke passed: authored section values survive bootstrap and renderer consumes editor configuration.');

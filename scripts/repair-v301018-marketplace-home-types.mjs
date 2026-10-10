@@ -44,10 +44,19 @@ if (home.includes('selectedFeaturedSlugs.includes(category.slug)')) {
 if (home !== homeBefore) fs.writeFileSync(homePath, home, 'utf8');
 
 // Finalize deterministic browser hooks after every historical modal migration.
-// Older stages used exact whitespace matches and could silently miss this field.
+// Older stages used exact whitespace matches and could silently miss these fields.
 const modalPath = 'src/components/common/LiveSectionModal.tsx';
 let modal = fs.readFileSync(modalPath, 'utf8');
 const modalBefore = modal;
+
+// numberField() is the canonical implementation for widthPercent and the other
+// numeric layout fields. One dynamic hook covers every key rendered by it.
+if (!modal.includes('data-section-field={String(key)}')) {
+  modal = modal.replace(
+    /(type="number"\s*)(min=\{min\})/m,
+    '$1data-section-field={String(key)}\n        $2'
+  );
+}
 
 if (!modal.includes('data-section-field="contentSourceLimit"')) {
   modal = modal.replace(
@@ -70,14 +79,20 @@ if (!modal.includes('data-live-section-save="1"')) {
   );
 }
 
-for (const marker of [
+const requiredLiteralMarkers = [
   'data-section-field="contentSourceLimit"',
   'data-section-field="desktopColumns"',
-  'data-section-field="widthPercent"',
   'data-live-section-modal="1"',
   'data-live-section-save="1"'
-]) {
+];
+for (const marker of requiredLiteralMarkers) {
   if (!modal.includes(marker)) throw new Error(`v30.10.18 LiveSectionModal browser contract missing: ${marker}`);
+}
+if (!modal.includes('data-section-field={String(key)}')) {
+  throw new Error('v30.10.18 LiveSectionModal generic numeric-field browser hook missing');
+}
+if (!modal.includes("numberField('عرض سکشن در دسکتاپ ٪','widthPercent'")) {
+  throw new Error('v30.10.18 LiveSectionModal widthPercent control missing');
 }
 
 if (modal !== modalBefore) fs.writeFileSync(modalPath, modal, 'utf8');

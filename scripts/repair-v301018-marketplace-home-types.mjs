@@ -18,11 +18,11 @@ const homeBefore = home;
 // Guard product navigation regardless of the surrounding JSX formatting.
 home = home.replace(
   /onNavigate\(\s*(['"])product\1\s*,\s*product\.id\s*\)/g,
-  "(product.id ? onNavigate('product', product.id) : undefined)"
+  "(product.id ? onNavigate('product', String(product.id)) : undefined)"
 );
 home = home.replace(
   /onNavigate\(\s*(['"])product\1\s*,\s*item\.id\s*\)/g,
-  "(item.id ? onNavigate('product', item.id) : undefined)"
+  "(item.id ? onNavigate('product', String(item.id)) : undefined)"
 );
 
 // Product IDs are optional in the shared catalog type. Local de-duplication

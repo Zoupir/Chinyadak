@@ -17,14 +17,16 @@ jobs:
           node-version: 22
       - run: npm install --include=dev
       - run: npm run prepare:source
-      - name: Inspect prepared live-section save contract
+      - name: Inspect prepared live-section runtime
         run: |
           echo '=== LiveSectionModal save ==='
-          grep -n -A90 -B12 "const save = async" src/components/common/LiveSectionModal.tsx || true
-          echo '=== Save button ==='
-          grep -n -A12 -B12 "data-live-section-save" src/components/common/LiveSectionModal.tsx || true
-          echo '=== StoreContext updateSection ==='
-          grep -n -A130 -B12 "const updateSection = async" src/context/StoreContext.tsx || true
-          echo '=== Markers ==='
-          grep -n "LIVE-SECTION-ATOMIC-SAVE-v301018\|liveSectionSave=1\|data-live-section-save\|onClick={save}\|setIsSaving" src/components/common/LiveSectionModal.tsx src/context/StoreContext.tsx || true
+          grep -n -A100 -B12 "const save = async" src/components/common/LiveSectionModal.tsx || true
+          echo '=== Normal StoreContext updateSection ==='
+          grep -n -A140 -B12 "const updateSection = async" src/context/StoreContext.tsx || true
+          echo '=== SSR StoreContext provider ==='
+          grep -n -A220 -B30 "const contextValue" src/server/ssr-store-context.tsx || true
+          echo '=== SSR live-editor symbols ==='
+          grep -n "updateSection\|previewSection\|updateSettings\|adminAuth\|isLiveEditActive\|setIsLiveEditActive\|pages:" src/server/ssr-store-context.tsx || true
+          echo '=== public build alias ==='
+          grep -n -A30 -B10 "PUBLIC_HYDRATE_ALIAS_PLUGIN" scripts/build-server.mjs || true
           ./node_modules/.bin/tsc --noEmit

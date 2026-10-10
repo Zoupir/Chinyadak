@@ -8,6 +8,10 @@ on:
     branches: [main, production-hardening, marketplace-rtl-phase1]
   pull_request:
 
+concurrency:
+  group: ci-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -26,8 +30,11 @@ jobs:
       - name: Production dependency audit
         run: npm run audit:prod
 
-      - name: Type check
-        run: npm run lint
+      - name: Prepare source exactly once
+        run: npm run prepare:source
+
+      - name: Type check prepared source
+        run: ./node_modules/.bin/tsc --noEmit
 
       - name: Validate one-step updater
         run: |
@@ -35,14 +42,16 @@ jobs:
           bash -n safe-update.sh
           bash -n rollback.sh
 
-      - name: Production build
+      - name: Production build from prepared source
         env:
           DB_HOST: localhost
           DB_NAME: ci
           DB_USER: ci
           DB_PASSWORD: ci
           JWT_SECRET: '01234567890123456789012345678901'
-        run: npm run build
+        run: |
+          ./node_modules/.bin/vite build
+          node scripts/build-server.mjs
 
       - name: Final release artifact audit
         run: node scripts/audit-release.mjs
@@ -123,8 +132,11 @@ jobs:
       - name: Wait for database
         run: npm run db:wait
 
-      - name: Type check
-        run: npm run lint
+      - name: Prepare source exactly once
+        run: npm run prepare:source
+
+      - name: Type check prepared source
+        run: ./node_modules/.bin/tsc --noEmit
 
       - name: Initialize database
         run: npm run db:init
@@ -147,8 +159,10 @@ jobs:
           ./node_modules/.bin/tsx scripts/seed-lucano-l8-reference.ts | tee /tmp/lucano-l8-reference-second-run.log
           grep -q "622 records read, 0 new records added" /tmp/lucano-l8-reference-second-run.log
 
-      - name: Production build
-        run: npm run build
+      - name: Production build from prepared source
+        run: |
+          ./node_modules/.bin/vite build
+          node scripts/build-server.mjs
 
       - name: Start production server
         run: |
@@ -223,6 +237,9 @@ jobs:
       - name: Wait for database
         run: npm run db:wait
 
+      - name: Prepare source exactly once
+        run: npm run prepare:source
+
       - name: Prepare E2E database
         run: |
           npm run db:init
@@ -231,8 +248,10 @@ jobs:
           ./node_modules/.bin/tsx scripts/seed-real-defaults.ts
           ./node_modules/.bin/tsx scripts/seed-lucano-l8-reference.ts
 
-      - name: Production build
-        run: npm run build
+      - name: Production build from prepared source
+        run: |
+          ./node_modules/.bin/vite build
+          node scripts/build-server.mjs
 
       - name: Install E2E browser
         run: |

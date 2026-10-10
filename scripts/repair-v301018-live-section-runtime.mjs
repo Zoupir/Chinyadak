@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import './repair-v301018-live-exit-modal.mjs';
 
 const fail = message => { throw new Error(`v30.10.18 final runtime repair failed: ${message}`); };
 

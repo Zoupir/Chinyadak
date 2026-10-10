@@ -88,13 +88,13 @@ import fs from 'node:fs';
 
     const liveLookup = `    const section = homeSections.find(item => item.sectionKey === sectionKey);`;
     if (!marketplace.includes(liveLookup)) throw new Error('v30.10.17 marketplace live section lookup target missing');
-    marketplace = marketplace.replace(liveLookup, `    const section = sectionConfig(sectionKey);`);
+    marketplace = marketplace.replace(liveLookup, `    const section = sectionConfig(sectionKey || '');`);
   }
 
   if (!marketplace.includes(marketplaceMarker) ||
       !marketplace.includes('const isLiveEditActive = contextLiveEditActive || navigationLiveEditRequested;') ||
       !marketplace.includes(legacyMarker) ||
-      !marketplace.includes('const section = sectionConfig(sectionKey);')) {
+      !marketplace.includes("const section = sectionConfig(sectionKey || '');")) {
     throw new Error('v30.10.17 marketplace live-edit compatibility bridge incomplete');
   }
   fs.writeFileSync(marketplaceFile, marketplace, 'utf8');

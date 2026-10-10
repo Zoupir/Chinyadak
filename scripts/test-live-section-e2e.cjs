@@ -32,12 +32,23 @@ const waitForHydration = async page => {
   const page = await context.newPage();
   const pageErrors = [];
   const browserDiagnostics = [];
+  const cmsRequests = [];
   const cmsResponses = [];
   page.on('pageerror', error => pageErrors.push(error));
   page.on('console', message => {
     if (message.type() === 'error' || message.type() === 'warning') {
       browserDiagnostics.push(`[${message.type()}] ${message.text()}`);
     }
+  });
+  page.on('request', request => {
+    const url = request.url();
+    if (!url.includes('/api/cms/')) return;
+    if (!url.includes('/sections/') && !url.includes('/bundle')) return;
+    cmsRequests.push({
+      method: request.method(),
+      url,
+      postData: String(request.postData() || '').slice(0, 5000)
+    });
   });
   page.on('response', async response => {
     const url = response.url();
@@ -157,7 +168,8 @@ const waitForHydration = async page => {
     await desktopColumns.selectOption('6');
     await widthPercent.fill('73');
 
-    await modal.locator('[data-live-section-save="1"]').click();
+    const saveButton = modal.locator('[data-live-section-save="1"]');
+    await saveButton.click();
     try {
       await modal.waitFor({ state: 'detached', timeout: 12000 });
     } catch (error) {
@@ -165,7 +177,13 @@ const waitForHydration = async page => {
       const failureCms = failureCmsResponse.ok() ? await failureCmsResponse.json() : null;
       const failureHome = failureCms?.pages?.find(item => item?.slug === 'home');
       const failureSection = findFeaturedCategoriesSection(failureHome?.sections);
+      console.error('LIVE_SECTION_SAVE_DIAGNOSTICS save button:', JSON.stringify({
+        disabled: await saveButton.isDisabled().catch(() => null),
+        text: await saveButton.innerText().catch(() => null)
+      }));
+      console.error('LIVE_SECTION_SAVE_DIAGNOSTICS requests:', JSON.stringify(cmsRequests, null, 2));
       console.error('LIVE_SECTION_SAVE_DIAGNOSTICS responses:', JSON.stringify(cmsResponses, null, 2));
+      console.error('LIVE_SECTION_SAVE_DIAGNOSTICS page errors:', pageErrors.map(item => item.stack || item.message || String(item)).join('\n---\n'));
       console.error('LIVE_SECTION_SAVE_DIAGNOSTICS browser console:', browserDiagnostics.join('\n'));
       console.error('LIVE_SECTION_SAVE_DIAGNOSTICS persisted section:', JSON.stringify(failureSection || null));
       console.error('LIVE_SECTION_SAVE_DIAGNOSTICS modal text:', (await modal.innerText().catch(() => '')).slice(0, 5000));

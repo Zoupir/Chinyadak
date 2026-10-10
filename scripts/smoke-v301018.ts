@@ -43,16 +43,18 @@ assert.ok(!marketplace.includes('seen.add(product.id)'), 'prepared homepage stil
 assert.ok(!marketplace.includes('selectedFeaturedSlugs.includes(category.slug)'), 'prepared homepage still passes optional category.slug to string[].includes');
 assert.ok(marketplace.includes("selectedFeaturedSlugs.includes(String(category.slug || ''))"), 'prepared homepage slug normalization missing');
 
-// Browser E2E relies on deterministic inspector hooks; missing hooks previously
-// allowed prepare:source to report success while the real browser test timed out.
+// Browser E2E relies on deterministic inspector hooks. widthPercent is rendered
+// through numberField(), whose dynamic data-section-field={String(key)} hook
+// becomes data-section-field="widthPercent" in the browser DOM.
 for (const marker of [
   'data-live-section-modal="1"',
   'data-live-section-save="1"',
   'data-section-field="contentSourceLimit"',
-  'data-section-field="desktopColumns"',
-  'data-section-field="widthPercent"'
+  'data-section-field="desktopColumns"'
 ]) {
   assert.ok(liveModal.includes(marker), `prepared live editor browser marker missing: ${marker}`);
 }
+assert.ok(liveModal.includes('data-section-field={String(key)}'), 'generic numeric inspector browser hook missing');
+assert.ok(liveModal.includes("numberField('عرض سکشن در دسکتاپ ٪','widthPercent'"), 'widthPercent numeric control missing');
 
 console.log('v30.10.18 smoke passed: rich text roundtrip, homepage optional identifiers, and live-editor browser hooks are stable.');

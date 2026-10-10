@@ -23,16 +23,26 @@ home = home.replace(
         seen.add(productKey);`
 );
 
-// Catch historical formatting variants independently as a final safety net.
 home = home.replace(/seen\.has\(\s*product\.id\s*\)/g, "seen.has(String(product.id || ''))");
 home = home.replace(/seen\.add\(\s*product\.id\s*\)/g, "seen.add(String(product.id || ''))");
 
-// v30.10.17 builds a string[] of configured slugs. category.slug is optional,
-// so normalize every category.slug value before it reaches string-only APIs.
+// v30.10.17 can infer (string | undefined)[] from optional slug fields even
+// after filter(Boolean). Normalize values BEFORE filtering so the prepared
+// source is statically string[] as well as correct at runtime.
 home = home.replace(
-  /categories\.slice\(0,\s*3\)\.map\(\s*category\s*=>\s*category\.slug\s*\)\.filter\(Boolean\)/g,
-  "categories.slice(0, 3).map(category => String(category.slug || '')).filter(Boolean)"
+  /const configuredFeaturedSlugs = \(featuredSection\?\.sourceCategorySlugs \|\| \[\]\)\.filter\(Boolean\);/g,
+  "const configuredFeaturedSlugs: string[] = (featuredSection?.sourceCategorySlugs || []).map(value => String(value || '')).filter(Boolean);"
 );
+home = home.replace(
+  /const defaultFeaturedSlugs = categories\.slice\(0,\s*3\)\.map\(\s*category\s*=>\s*(?:String\(category\.slug \|\| ''\)|category\.slug)\s*\)\.filter\(Boolean\);/g,
+  "const defaultFeaturedSlugs: string[] = categories.slice(0, 3).map(category => String(category.slug || '')).filter(Boolean);"
+);
+home = home.replace(
+  /const selectedFeaturedSlugs = configuredFeaturedSlugs\.length \? configuredFeaturedSlugs : defaultFeaturedSlugs;/g,
+  "const selectedFeaturedSlugs: string[] = configuredFeaturedSlugs.length ? configuredFeaturedSlugs : defaultFeaturedSlugs;"
+);
+
+// Normalize every optional category.slug at string-only call sites.
 home = home.replace(
   /selectedFeaturedSlugs\.includes\(\s*category\.slug\s*\)/g,
   "selectedFeaturedSlugs.includes(String(category.slug || ''))"
@@ -49,25 +59,30 @@ home = home.replace(
   /([A-Za-z0-9_]+)\.add\(\s*category\.slug\s*\)/g,
   "$1.add(String(category.slug || ''))"
 );
+home = home.replace(
+  /setFeaturedTab\(\s*category\.slug\s*\)/g,
+  "setFeaturedTab(String(category.slug || ''))"
+);
 
 if (/seen\.has\(\s*product\.id\s*\)/.test(home) || /seen\.add\(\s*product\.id\s*\)/.test(home)) {
   throw new Error('v30.10.18 MarketplaceRtlHome still contains unsafe optional product.id Set usage');
 }
-if (/\.includes\(\s*category\.slug\s*\)/.test(home) || /\.has\(\s*category\.slug\s*\)/.test(home) || /\.add\(\s*category\.slug\s*\)/.test(home)) {
-  throw new Error('v30.10.18 MarketplaceRtlHome still contains unsafe optional category.slug string/set usage');
+if (/\.includes\(\s*category\.slug\s*\)/.test(home) || /\.has\(\s*category\.slug\s*\)/.test(home) || /\.add\(\s*category\.slug\s*\)/.test(home) || /setFeaturedTab\(\s*category\.slug\s*\)/.test(home)) {
+  throw new Error('v30.10.18 MarketplaceRtlHome still contains unsafe optional category.slug string usage');
+}
+if (!home.includes('const configuredFeaturedSlugs: string[] =') || !home.includes('const defaultFeaturedSlugs: string[] =') || !home.includes('const selectedFeaturedSlugs: string[] =')) {
+  throw new Error('v30.10.18 MarketplaceRtlHome featured slug arrays are not statically normalized to string[]');
 }
 
 if (home !== homeBefore) fs.writeFileSync(homePath, home, 'utf8');
 
 // Finalize deterministic browser hooks after every historical modal migration.
-// Older stages used exact whitespace matches and could silently miss these fields.
 const modalPath = 'src/components/common/LiveSectionModal.tsx';
 let modal = fs.readFileSync(modalPath, 'utf8');
 const modalBefore = modal;
 
 // Legacy system pages may still store the old section IDs without sectionKey.
-// The inspector must infer the modern key so content-source controls do not
-// incorrectly fall back to manual mode and disappear from the browser test/UI.
+// The inspector must infer the modern key so content-source controls remain visible.
 if (!modal.includes('LEGACY-LIVE-SECTION-KEY-v301018')) {
   modal = modal.replace(
     /const contentPolicy = \(\(\) => \{\s*const key = form\.sectionKey \|\| '';/,
@@ -75,8 +90,6 @@ if (!modal.includes('LEGACY-LIVE-SECTION-KEY-v301018')) {
   );
 }
 
-// numberField() is the canonical implementation for widthPercent and the other
-// numeric layout fields. One dynamic hook covers every key rendered by it.
 if (!modal.includes('data-section-field={String(key)}')) {
   modal = modal.replace(
     /(type="number"\s*)(min=\{min\})/m,
@@ -126,4 +139,4 @@ if (!modal.includes('LEGACY-LIVE-SECTION-KEY-v301018') || !modal.includes("'sec-
 
 if (modal !== modalBefore) fs.writeFileSync(modalPath, modal, 'utf8');
 
-console.log('v30.10.18 final prepared-source repair: optional IDs/slugs, legacy section keys and live-editor browser hooks verified.');
+console.log('v30.10.18 final prepared-source repair: typed slug arrays, optional IDs, legacy section keys and browser hooks verified.');

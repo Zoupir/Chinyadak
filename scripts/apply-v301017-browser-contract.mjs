@@ -91,13 +91,29 @@ import fs from 'node:fs';
     marketplace = marketplace.replace(liveLookup, `    const section = sectionConfig(sectionKey || '');`);
   }
 
+  // LiveSectionModal is rendered through a React portal but remains a React
+  // descendant of MarketplaceRtlHome. The storefront's capture handler therefore
+  // receives modal clicks before the target button's onClick. Never treat clicks
+  // inside the inspector as storefront section-selection clicks.
+  const modalIsolationMarker = 'LIVE-SECTION-MODAL-EVENT-ISOLATION-v301018';
+  if (!marketplace.includes(modalIsolationMarker)) {
+    const captureAnchor = `    const target = event.target as HTMLElement;\n    const sectionElement = target.closest<HTMLElement>('[data-section-key]');`;
+    if (!marketplace.includes(captureAnchor)) throw new Error('v30.10.18 marketplace live capture anchor missing');
+    marketplace = marketplace.replace(
+      captureAnchor,
+      `    const target = event.target as HTMLElement;\n    // ${modalIsolationMarker}\n    if (target.closest('[data-live-section-modal="1"]')) return;\n    const sectionElement = target.closest<HTMLElement>('[data-section-key]');`
+    );
+  }
+
   if (!marketplace.includes(marketplaceMarker) ||
       !marketplace.includes('const isLiveEditActive = contextLiveEditActive || navigationLiveEditRequested;') ||
       !marketplace.includes(legacyMarker) ||
-      !marketplace.includes("const section = sectionConfig(sectionKey || '');")) {
+      !marketplace.includes("const section = sectionConfig(sectionKey || '');") ||
+      !marketplace.includes(modalIsolationMarker) ||
+      !marketplace.includes(`target.closest('[data-live-section-modal="1"]')`)) {
     throw new Error('v30.10.17 marketplace live-edit compatibility bridge incomplete');
   }
   fs.writeFileSync(marketplaceFile, marketplace, 'utf8');
 }
 
-console.log('v30.10.17 browser contract: responsive controls observable, live-edit handoff survives navigation, and legacy home sections remain editable.');
+console.log('v30.10.17 browser contract: responsive controls observable, live-edit handoff survives navigation, modal clicks are isolated, and legacy home sections remain editable.');

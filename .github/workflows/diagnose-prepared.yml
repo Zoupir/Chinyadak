@@ -1,0 +1,23 @@
+name: Diagnose prepared source
+
+on:
+  push:
+    branches: [marketplace-rtl-phase1]
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --include=dev
+      - run: npm run prepare:source
+      - name: Show prepared homepage failure window
+        run: |
+          nl -ba src/components/home/MarketplaceRtlHome.tsx | sed -n '606,624p'
+          ./node_modules/.bin/tsc --noEmit || true

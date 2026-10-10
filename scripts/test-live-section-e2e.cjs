@@ -31,7 +31,22 @@ const waitForHydration = async page => {
   const context = await browser.newContext({ viewport: { width: 1280, height: 900 }, locale: 'fa-IR' });
   const page = await context.newPage();
   const pageErrors = [];
+  const browserDiagnostics = [];
+  const cmsResponses = [];
   page.on('pageerror', error => pageErrors.push(error));
+  page.on('console', message => {
+    if (message.type() === 'error' || message.type() === 'warning') {
+      browserDiagnostics.push(`[${message.type()}] ${message.text()}`);
+    }
+  });
+  page.on('response', async response => {
+    const url = response.url();
+    if (!url.includes('/api/cms/')) return;
+    if (!url.includes('/sections/') && !url.includes('/bundle')) return;
+    let body = '';
+    try { body = (await response.text()).slice(0, 5000); } catch {}
+    cmsResponses.push({ method: response.request().method(), url, status: response.status(), body });
+  });
 
   const loginWithRequest = async () => {
     const login = await context.request.post(base + '/api/auth/admin/login', {
@@ -143,7 +158,20 @@ const waitForHydration = async page => {
     await widthPercent.fill('73');
 
     await modal.locator('[data-live-section-save="1"]').click();
-    await modal.waitFor({ state: 'detached', timeout: 12000 });
+    try {
+      await modal.waitFor({ state: 'detached', timeout: 12000 });
+    } catch (error) {
+      const failureCmsResponse = await context.request.get(base + '/api/cms/bundle');
+      const failureCms = failureCmsResponse.ok() ? await failureCmsResponse.json() : null;
+      const failureHome = failureCms?.pages?.find(item => item?.slug === 'home');
+      const failureSection = findFeaturedCategoriesSection(failureHome?.sections);
+      console.error('LIVE_SECTION_SAVE_DIAGNOSTICS responses:', JSON.stringify(cmsResponses, null, 2));
+      console.error('LIVE_SECTION_SAVE_DIAGNOSTICS browser console:', browserDiagnostics.join('\n'));
+      console.error('LIVE_SECTION_SAVE_DIAGNOSTICS persisted section:', JSON.stringify(failureSection || null));
+      console.error('LIVE_SECTION_SAVE_DIAGNOSTICS modal text:', (await modal.innerText().catch(() => '')).slice(0, 5000));
+      console.error('LIVE_SECTION_SAVE_DIAGNOSTICS body:', (await page.locator('body').innerText()).slice(-5000));
+      throw error;
+    }
 
     let renderedSection = page.locator('[data-section-key="featured-categories"]');
     await renderedSection.waitFor({ state: 'visible', timeout: 10000 });

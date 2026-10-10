@@ -17,7 +17,14 @@ jobs:
           node-version: 22
       - run: npm install --include=dev
       - run: npm run prepare:source
-      - name: Show prepared homepage failure window
+      - name: Inspect prepared live-section save contract
         run: |
-          nl -ba src/components/home/MarketplaceRtlHome.tsx | sed -n '606,624p'
-          ./node_modules/.bin/tsc --noEmit || true
+          echo '=== LiveSectionModal save ==='
+          grep -n -A90 -B12 "const save = async" src/components/common/LiveSectionModal.tsx || true
+          echo '=== Save button ==='
+          grep -n -A12 -B12 "data-live-section-save" src/components/common/LiveSectionModal.tsx || true
+          echo '=== StoreContext updateSection ==='
+          grep -n -A130 -B12 "const updateSection = async" src/context/StoreContext.tsx || true
+          echo '=== Markers ==='
+          grep -n "LIVE-SECTION-ATOMIC-SAVE-v301018\|liveSectionSave=1\|data-live-section-save\|onClick={save}\|setIsSaving" src/components/common/LiveSectionModal.tsx src/context/StoreContext.tsx || true
+          ./node_modules/.bin/tsc --noEmit

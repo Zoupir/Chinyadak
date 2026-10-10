@@ -148,11 +148,14 @@ if (!modal.includes('LEGACY-LIVE-SECTION-KEY-v301018')) {
   );
 }
 
+// Keep the v30.9.2 banner-placement contract while using the v30.10.18 atomic
+// section save and synchronous form snapshot. The final repair must not erase
+// the canonical banner sync inserted by the historical migration.
 {
   const start = modal.indexOf('  const save = async () => {');
   const end = start >= 0 ? modal.indexOf('\n\n  const deleteCurrent =', start) : -1;
   if (start < 0 || end < 0) fail('LiveSectionModal save() anchors missing');
-  const replacement = `  const save = async () => {\n    const sectionToSave = formRef.current || form;\n    if (!sectionToSave.title?.trim()) {\n      showToast('عنوان سکشن الزامی است.', 'error');\n      return;\n    }\n    const saved = await updateSection(pageSlug, sectionToSave);\n    if (!saved) return;\n    originalRef.current = JSON.parse(JSON.stringify(sectionToSave));\n    formRef.current = sectionToSave;\n    onClose();\n  };`;
+  const replacement = `  const save = async () => {\n    const sectionToSave = formRef.current || form;\n    if (!sectionToSave.title?.trim()) {\n      showToast('عنوان سکشن الزامی است.', 'error');\n      return;\n    }\n    if (isSaving) return;\n    setIsSaving(true);\n    try {\n      const saved = await updateSection(pageSlug, sectionToSave);\n      if (!saved) return;\n\n      // Homepage banner rendering reads settings.bannerPlacements before the\n      // legacy page section. Keep both stores synchronized after atomic save.\n      const bannerKey = BANNER_PLACEMENT_META.some(item => item.key === sectionToSave.sectionKey)\n        ? sectionToSave.sectionKey\n        : undefined;\n      if (bannerKey) {\n        const migrated = migrateLegacyBannerPlacements([sectionToSave], sliders).find(item => item.key === bannerKey);\n        if (migrated) {\n          const resolved = resolveBannerPlacements(settings.bannerPlacements, page?.sections || [], sliders);\n          const nextPlacements = resolved.map(item => item.key === bannerKey\n            ? { ...item, ...migrated, key: item.key, title: item.title || migrated.title }\n            : item);\n          const settingsSaved = await updateSettings({ bannerPlacements: nextPlacements });\n          if (!settingsSaved) {\n            showToast('خود سکشن ذخیره شد اما همگام‌سازی جایگاه بنر انجام نشد.', 'error');\n            return;\n          }\n        }\n      }\n\n      originalRef.current = JSON.parse(JSON.stringify(sectionToSave));\n      formRef.current = sectionToSave;\n      onClose();\n    } finally {\n      setIsSaving(false);\n    }\n  };`;
   modal = modal.slice(0, start) + replacement + modal.slice(end);
 }
 
@@ -180,6 +183,8 @@ const requiredModalMarkers = [
   'const formRef = useRef<PageSection | null>(null);',
   'formRef.current = next;',
   'const sectionToSave = formRef.current || form;',
+  'nextPlacements = resolved.map',
+  'await updateSettings({ bannerPlacements: nextPlacements })',
   "'sec-categories': 'featured-categories'"
 ];
 for (const marker of requiredModalMarkers) {
@@ -190,4 +195,4 @@ if (!modal.includes("numberField('عرض سکشن در دسکتاپ ٪','widthPe
 
 writeIfChanged(modalPath, modalBefore, modal);
 
-console.log('v30.10.18 final prepared-source repair: strict optional identifiers, fresh-revision atomic save, exact modal snapshot, legacy keys and browser hooks verified.');
+console.log('v30.10.18 final prepared-source repair: strict optional identifiers, fresh-revision atomic save, canonical banner sync, exact modal snapshot, legacy keys and browser hooks verified.');

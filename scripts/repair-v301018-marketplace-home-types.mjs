@@ -7,38 +7,54 @@ const homeBefore = home;
 // Product IDs are optional in the shared catalog type. Navigation and local
 // de-duplication must therefore never pass an undefined ID into string-only APIs.
 home = home.replace(
-  /onClick=\{\(\) => onNavigate\('product', product\.id\)\}/g,
+  /onClick=\{\(\) => onNavigate\(\s*'product'\s*,\s*product\.id\s*\)\}/g,
   "onClick={() => { if (product.id) onNavigate('product', product.id); }}"
 );
 
 home = home.replace(
-  /onClick=\{\(\) => onNavigate\('product', item\.id\)\}/g,
+  /onClick=\{\(\) => onNavigate\(\s*'product'\s*,\s*item\.id\s*\)\}/g,
   "onClick={() => { if (item.id) onNavigate('product', item.id); }}"
 );
 
 home = home.replace(
-  /if \(seen\.has\(product\.id\)\) return false;\s*seen\.add\(product\.id\);/g,
+  /if\s*\(\s*seen\.has\(\s*product\.id\s*\)\s*\)\s*return false;\s*seen\.add\(\s*product\.id\s*\);/g,
   `const productKey = String(product.id || product.sku || product.partNumber || product.oemNumber || '');
         if (!productKey || seen.has(productKey)) return false;
         seen.add(productKey);`
 );
 
+// Catch historical formatting variants independently as a final safety net.
+home = home.replace(/seen\.has\(\s*product\.id\s*\)/g, "seen.has(String(product.id || ''))");
+home = home.replace(/seen\.add\(\s*product\.id\s*\)/g, "seen.add(String(product.id || ''))");
+
 // v30.10.17 builds a string[] of configured slugs. category.slug is optional,
-// so normalize both the default list and includes() argument explicitly.
+// so normalize every category.slug value before it reaches string-only APIs.
 home = home.replace(
-  /categories\.slice\(0, 3\)\.map\(category => category\.slug\)\.filter\(Boolean\)/g,
+  /categories\.slice\(0,\s*3\)\.map\(\s*category\s*=>\s*category\.slug\s*\)\.filter\(Boolean\)/g,
   "categories.slice(0, 3).map(category => String(category.slug || '')).filter(Boolean)"
 );
 home = home.replace(
-  /selectedFeaturedSlugs\.includes\(category\.slug\)/g,
+  /selectedFeaturedSlugs\.includes\(\s*category\.slug\s*\)/g,
   "selectedFeaturedSlugs.includes(String(category.slug || ''))"
 );
+home = home.replace(
+  /([A-Za-z0-9_]+)\.includes\(\s*category\.slug\s*\)/g,
+  "$1.includes(String(category.slug || ''))"
+);
+home = home.replace(
+  /([A-Za-z0-9_]+)\.has\(\s*category\.slug\s*\)/g,
+  "$1.has(String(category.slug || ''))"
+);
+home = home.replace(
+  /([A-Za-z0-9_]+)\.add\(\s*category\.slug\s*\)/g,
+  "$1.add(String(category.slug || ''))"
+);
 
-if (home.includes('seen.has(product.id)') || home.includes('seen.add(product.id)')) {
+if (/seen\.has\(\s*product\.id\s*\)/.test(home) || /seen\.add\(\s*product\.id\s*\)/.test(home)) {
   throw new Error('v30.10.18 MarketplaceRtlHome still contains unsafe optional product.id Set usage');
 }
-if (home.includes('selectedFeaturedSlugs.includes(category.slug)')) {
-  throw new Error('v30.10.18 MarketplaceRtlHome still contains unsafe optional category.slug includes usage');
+if (/\.includes\(\s*category\.slug\s*\)/.test(home) || /\.has\(\s*category\.slug\s*\)/.test(home) || /\.add\(\s*category\.slug\s*\)/.test(home)) {
+  throw new Error('v30.10.18 MarketplaceRtlHome still contains unsafe optional category.slug string/set usage');
 }
 
 if (home !== homeBefore) fs.writeFileSync(homePath, home, 'utf8');
@@ -48,6 +64,16 @@ if (home !== homeBefore) fs.writeFileSync(homePath, home, 'utf8');
 const modalPath = 'src/components/common/LiveSectionModal.tsx';
 let modal = fs.readFileSync(modalPath, 'utf8');
 const modalBefore = modal;
+
+// Legacy system pages may still store the old section IDs without sectionKey.
+// The inspector must infer the modern key so content-source controls do not
+// incorrectly fall back to manual mode and disappear from the browser test/UI.
+if (!modal.includes('LEGACY-LIVE-SECTION-KEY-v301018')) {
+  modal = modal.replace(
+    /const contentPolicy = \(\(\) => \{\s*const key = form\.sectionKey \|\| '';/,
+    `// LEGACY-LIVE-SECTION-KEY-v301018\n  const legacyLiveSectionKeyById: Record<string, string> = {\n    'sec-hero': 'hero',\n    'sec-categories': 'featured-categories',\n    'sec-brands': 'manufacturers',\n    'sec-trust': 'testimonials',\n    'sec-articles': 'articles'\n  };\n\n  const contentPolicy = (() => {\n    const key = form.sectionKey || legacyLiveSectionKeyById[form.id] || '';`
+  );
+}
 
 // numberField() is the canonical implementation for widthPercent and the other
 // numeric layout fields. One dynamic hook covers every key rendered by it.
@@ -94,7 +120,10 @@ if (!modal.includes('data-section-field={String(key)}')) {
 if (!modal.includes("numberField('عرض سکشن در دسکتاپ ٪','widthPercent'")) {
   throw new Error('v30.10.18 LiveSectionModal widthPercent control missing');
 }
+if (!modal.includes('LEGACY-LIVE-SECTION-KEY-v301018') || !modal.includes("'sec-categories': 'featured-categories'")) {
+  throw new Error('v30.10.18 LiveSectionModal legacy section-key mapping missing');
+}
 
 if (modal !== modalBefore) fs.writeFileSync(modalPath, modal, 'utf8');
 
-console.log('v30.10.18 final prepared-source repair: marketplace optional IDs/slugs and live-editor browser hooks verified.');
+console.log('v30.10.18 final prepared-source repair: optional IDs/slugs, legacy section keys and live-editor browser hooks verified.');

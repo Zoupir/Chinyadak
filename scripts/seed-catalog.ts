@@ -188,15 +188,13 @@ const main = async () => {
     }));
 
     await connection.execute(
-      `INSERT INTO app_settings (setting_key, setting_value)
-       VALUES ('site_settings', ?)
-       ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value), updated_at = NOW()`,
+      `INSERT IGNORE INTO app_settings (setting_key, setting_value)
+       VALUES ('site_settings', ?)`,
       [JSON.stringify(INITIAL_SETTINGS)]
     );
     await connection.execute(
-      `INSERT INTO app_settings (setting_key, setting_value)
-       VALUES ('payment_gateways', ?)
-       ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value), updated_at = NOW()`,
+      `INSERT IGNORE INTO app_settings (setting_key, setting_value)
+       VALUES ('payment_gateways', ?)`,
       [JSON.stringify(safeGateways)]
     );
 

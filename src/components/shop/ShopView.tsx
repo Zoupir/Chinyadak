@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useStore } from '../../context/StoreContext';
 import { ProductCard } from '../product/ProductCard';
 import { Product, QualityGrade } from '../../types';
@@ -29,10 +29,15 @@ export const ShopView: React.FC<ShopViewProps> = ({
   onNavigate,
   onOpenVehicleModal
 }) => {
-  const { products, categories, brands, models, selectedVehicle, clearSelectedVehicle } = useStore();
+  const { products, categories, brands, models, selectedVehicle, clearSelectedVehicle, loadCatalogPage, catalogHasMore, catalogLoading } = useStore();
 
   // Filters state
   const [selectedCategory, setSelectedCategory] = useState<string>(initialCategory || 'all');
+
+  useEffect(() => {
+    if (selectedCategory === 'all') return;
+    void loadCatalogPage({ categorySlug: selectedCategory, append: false });
+  }, [selectedCategory]);
   const [selectedBrand, setSelectedBrand] = useState<string>('all');
   const [selectedManufacturer, setSelectedManufacturer] = useState<string>('all');
   const [selectedGrade, setSelectedGrade] = useState<QualityGrade | 'all'>('all');
@@ -40,6 +45,26 @@ export const ShopView: React.FC<ShopViewProps> = ({
   const [onlyFitActiveVehicle, setOnlyFitActiveVehicle] = useState<boolean>(Boolean(selectedVehicle));
   const [sortBy, setSortBy] = useState<'bestseller' | 'price_asc' | 'price_desc' | 'rating'>('bestseller');
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
+  const [openCategoryIds, setOpenCategoryIds] = useState<Set<string>>(new Set());
+
+  const categoryIndex = useMemo(() => {
+    const rows: Array<{ node: any; parent?: any; depth: number }> = [];
+    const walk = (nodes: any[] = [], parent: any = undefined, depth = 0) => {
+      nodes.forEach(node => {
+        rows.push({ node, parent, depth });
+        walk(node.subcategories || [], node, depth + 1);
+      });
+    };
+    categories.forEach(category => {
+      rows.push({ node: category, parent: undefined, depth: 0 });
+      walk(category.subcategories || [], category, 1);
+    });
+    return rows;
+  }, [categories]);
+
+  const activeCategoryEntry = categoryIndex.find(entry => entry.node.slug === selectedCategory);
+  const activeCategoryObj: any = activeCategoryEntry?.node;
+  const activeCategoryChildren: any[] = activeCategoryObj?.subcategories || [];
 
   // Available unique manufacturer brands
   const availableManufacturers = useMemo(() => {
@@ -54,7 +79,11 @@ export const ShopView: React.FC<ShopViewProps> = ({
   const filteredProducts = useMemo(() => {
     return products.filter(p => {
       // 1. Category Filter
-      if (selectedCategory !== 'all' && p.categorySlug !== selectedCategory) {
+      if (
+        selectedCategory !== 'all' &&
+        p.categorySlug !== selectedCategory &&
+        p.subcategorySlug !== selectedCategory
+      ) {
         return false;
       }
 
@@ -105,67 +134,77 @@ export const ShopView: React.FC<ShopViewProps> = ({
     });
   }, [products, selectedCategory, selectedBrand, selectedManufacturer, selectedGrade, onlyInStock, onlyFitActiveVehicle, selectedVehicle, sortBy]);
 
-  const activeCategoryObj = categories.find(c => c.slug === selectedCategory);
-
   const resetAllFilters = () => {
     setSelectedCategory('all');
     setSelectedBrand('all');
     setSelectedManufacturer('all');
     setSelectedGrade('all');
     setOnlyInStock(false);
+    setOnlyFitActiveVehicle(Boolean(selectedVehicle));
   };
 
   return (
     <div className="shop-view max-w-7xl mx-auto px-4 py-8 space-y-8">
-      {/* Catalog Header Banner */}
-      <div className="bg-white rounded-3xl p-6 border border-neutral-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-xl md:text-2xl font-black text-neutral-900">
-            {activeCategoryObj ? `قطعات ${activeCategoryObj.nameFa}` : 'فهرست کامل قطعات یدکی خودروهای چینی'}
+      {/* Category / Catalog Hero */}
+      <section
+        className={`shop-category-hero relative overflow-hidden border border-neutral-200 shadow-xs ${activeCategoryObj?.heroImageUrl ? 'has-image' : ''}`}
+        style={activeCategoryObj?.heroImageUrl ? {
+          backgroundImage: `linear-gradient(90deg, rgba(10,18,28,.82), rgba(10,18,28,.46)), url(${activeCategoryObj.heroImageUrl})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center'
+        } : undefined}
+      >
+        <div className="shop-category-hero-content">
+          <span className="shop-category-kicker">{activeCategoryObj ? 'دسته‌بندی قطعات' : 'فروشگاه تخصصی قطعات'}</span>
+          <h1 className="flex items-center gap-3">
+            {(activeCategoryObj?.iconUrl || activeCategoryObj?.imageUrl) && <img className="w-10 h-10 sm:w-14 sm:h-14 shrink-0 object-contain rounded-xl bg-white/90 p-1.5 shadow-sm" src={activeCategoryObj.iconUrl || activeCategoryObj.imageUrl} alt="" aria-hidden="true" />}
+            <span>{activeCategoryObj?.heroTitle || (activeCategoryObj ? `قطعات ${activeCategoryObj.nameFa}` : 'فهرست کامل قطعات یدکی خودروهای چینی')}</span>
           </h1>
-          <p className="text-xs text-neutral-500 mt-1">
-            نمایش {filteredProducts.length} قطعه با تضمین اصالت و گارانتی بازگشت وجه ۷ روزه
+          <p>
+            {activeCategoryObj?.heroSubtitle || activeCategoryObj?.description || `نمایش ${filteredProducts.length.toLocaleString('fa-IR')} قطعه با امکان فیلتر بر اساس خودرو، برند و گرید کیفی.`}
           </p>
+          {activeCategoryObj && (
+            <div className="shop-category-hero-meta">
+              <span>{filteredProducts.length.toLocaleString('fa-IR')} محصول</span>
+              {activeCategoryEntry?.parent && <span>زیرمجموعه {activeCategoryEntry.parent.nameFa}</span>}
+            </div>
+          )}
         </div>
 
-        {/* Selected Car Notice Banner */}
-        <div className="flex items-center gap-3 bg-neutral-50 p-2.5 rounded-2xl border border-neutral-200">
-          <div className="w-9 h-9 rounded-xl bg-neutral-900 text-white flex items-center justify-center shrink-0">
-            <Car className="w-5 h-5" />
-          </div>
-          <div className="text-right text-xs">
+        <div className="shop-category-vehicle-card">
+          <Car className="w-5 h-5" />
+          <div>
             {selectedVehicle ? (
               <>
-                <span className="text-neutral-500 block text-[10px]">فیلتر بر اساس خودروی انتخابی:</span>
-                <span className="font-bold text-neutral-900">{selectedVehicle.modelName} ({selectedVehicle.year})</span>
+                <small>خودروی فعال</small>
+                <strong>{selectedVehicle.modelName} ({selectedVehicle.year})</strong>
               </>
             ) : (
               <>
-                <span className="text-neutral-500 block text-[10px]">هیچ خودرویی انتخاب نشده است</span>
-                <span className="font-bold text-red-600 cursor-pointer" onClick={onOpenVehicleModal}>
-                  انتخاب خودرو جهت فیلتر هوشمند
-                </span>
+                <small>فیتمنت دقیق قطعات</small>
+                <strong>خودروی خود را انتخاب کنید</strong>
               </>
             )}
           </div>
-
-          {selectedVehicle ? (
-            <button
-              onClick={onOpenVehicleModal}
-              className="px-3 py-1.5 bg-neutral-900 hover:bg-neutral-800 text-white rounded-lg text-xs font-bold shrink-0 transition-colors"
-            >
-              تغییر
-            </button>
-          ) : (
-            <button
-              onClick={onOpenVehicleModal}
-              className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-bold shrink-0 transition-colors"
-            >
-              انتخاب
-            </button>
-          )}
+          <button type="button" onClick={onOpenVehicleModal}>{selectedVehicle ? 'تغییر' : 'انتخاب'}</button>
         </div>
-      </div>
+      </section>
+
+      {activeCategoryChildren.length > 0 && (
+        <div className="shop-category-children">
+          {activeCategoryChildren.map(child => (
+            <button
+              key={child.id}
+              type="button"
+              onClick={() => setSelectedCategory(child.slug)}
+              className={selectedCategory === child.slug ? 'active' : ''}
+            >
+              {child.iconUrl && <img src={child.iconUrl} alt="" />}
+              <span>{child.nameFa}</span>
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Main Grid: Sidebar Filters + Products */}
       <div className="shop-layout grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
@@ -215,22 +254,34 @@ export const ShopView: React.FC<ShopViewProps> = ({
                 <span>همه دسته‌ها</span>
                 <span className="text-[10px] opacity-75">{products.length}</span>
               </button>
-              {categories.map(c => (
-                <button
-                  key={c.id}
-                  onClick={() => setSelectedCategory(c.slug)}
-                  className={`w-full text-right p-2 rounded-lg text-xs transition-colors flex items-center justify-between ${
-                    selectedCategory === c.slug
-                      ? 'bg-red-600 text-white font-bold'
-                      : 'text-neutral-600 hover:bg-neutral-100'
-                  }`}
-                >
-                  <span>{c.nameFa}</span>
-                  <span className="text-[10px] opacity-75">
-                    {products.filter(p => p.categorySlug === c.slug).length}
-                  </span>
-                </button>
-              ))}
+              {categories.map(c => {
+                const children = c.subcategories || [];
+                const expanded = openCategoryIds.has(c.id);
+                return (
+                  <div key={c.id}>
+                    <div className="flex items-center gap-1">
+                      {children.length > 0 && <button type="button" aria-label={expanded ? 'بستن زیر دسته‌ها' : 'نمایش زیر دسته‌ها'}
+                        aria-expanded={expanded}
+                        onClick={() => setOpenCategoryIds(current => { const next = new Set(current); next.has(c.id) ? next.delete(c.id) : next.add(c.id); return next; })}
+                        className="p-1.5 rounded-md hover:bg-neutral-100 text-neutral-500">
+                        <ChevronDown className={`w-3.5 h-3.5 transition-transform ${expanded ? '' : '-rotate-90'}`} />
+                      </button>}
+                      <button onClick={() => setSelectedCategory(c.slug)}
+                        className={`flex-1 text-right p-2 rounded-lg text-xs transition-colors flex items-center justify-between ${selectedCategory === c.slug ? 'bg-red-600 text-white font-bold' : 'text-neutral-600 hover:bg-neutral-100'}`}>
+                        <span>{c.nameFa}</span>
+                        <span className="text-[10px] opacity-75">{products.filter(p => p.categorySlug === c.slug || p.subcategorySlug === c.slug).length}</span>
+                      </button>
+                    </div>
+                    {expanded && children.map(child => (
+                      <button key={child.id} onClick={() => setSelectedCategory(child.slug)}
+                        className={`w-full text-right p-2 pr-9 rounded-lg text-xs transition-colors flex items-center justify-between ${selectedCategory === child.slug ? 'bg-red-600 text-white font-bold' : 'text-neutral-600 hover:bg-neutral-100'}`}>
+                        <span>↳ {child.nameFa}</span>
+                        <span className="text-[10px] opacity-75">{products.filter(p => p.categorySlug === child.slug || p.subcategorySlug === child.slug).length}</span>
+                      </button>
+                    ))}
+                  </div>
+                );
+              })}
             </div>
           </div>
 
@@ -273,7 +324,7 @@ export const ShopView: React.FC<ShopViewProps> = ({
                 </button>
               )}
             </div>
-            <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto p-1">
+            <div className="flex flex-wrap gap-1.5 p-1">
               <button
                 onClick={() => setSelectedManufacturer('all')}
                 className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-colors cursor-pointer ${
@@ -340,11 +391,24 @@ export const ShopView: React.FC<ShopViewProps> = ({
         {/* Product Grid & Sorting Area */}
         <main className="lg:col-span-9 space-y-6">
           {/* Sorting Bar */}
-          <div className="bg-white p-3.5 rounded-2xl border border-neutral-200 flex flex-wrap items-center justify-between gap-3 text-xs">
-            <div className="flex items-center gap-2">
-              <ArrowUpDown className="w-4 h-4 text-neutral-500" />
-              <span className="text-neutral-500 font-semibold">مرتب‌سازی:</span>
-              <div className="flex flex-wrap gap-1">
+          <div className="shop-mobile-toolbar bg-white p-3.5 rounded-2xl border border-neutral-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+            <div className="flex items-center gap-2 min-w-0 w-full sm:w-auto">
+              <ArrowUpDown className="w-4 h-4 text-neutral-500 shrink-0" />
+              <span className="text-neutral-500 font-semibold shrink-0">مرتب‌سازی:</span>
+
+              <select
+                value={sortBy}
+                onChange={e => setSortBy(e.target.value as typeof sortBy)}
+                className="sm:hidden flex-1 min-w-0 p-2.5 rounded-xl border border-neutral-200 bg-neutral-50 font-bold text-neutral-800"
+                aria-label="مرتب‌سازی محصولات"
+              >
+                <option value="bestseller">پرفروش‌ترین</option>
+                <option value="price_asc">ارزان‌ترین</option>
+                <option value="price_desc">گران‌ترین</option>
+                <option value="rating">بالاترین امتیاز</option>
+              </select>
+
+              <div className="hidden sm:flex flex-wrap gap-1">
                 {[
                   { id: 'bestseller', label: 'پرفروش‌ترین' },
                   { id: 'price_asc', label: 'ارزان‌ترین' },
@@ -366,19 +430,85 @@ export const ShopView: React.FC<ShopViewProps> = ({
               </div>
             </div>
 
-            {/* Mobile Filter Toggle */}
             <button
               onClick={() => setIsMobileFilterOpen(!isMobileFilterOpen)}
-              className="lg:hidden px-3.5 py-1.5 bg-neutral-100 rounded-xl text-neutral-800 font-bold flex items-center gap-1.5"
+              className="lg:hidden w-full sm:w-auto px-3.5 py-2.5 bg-neutral-100 rounded-xl text-neutral-800 font-bold flex items-center justify-center gap-1.5"
+              aria-expanded={isMobileFilterOpen}
             >
               <Filter className="w-4 h-4 text-red-600" />
-              <span>فیلترها ({filteredProducts.length})</span>
+              <span>{isMobileFilterOpen ? 'بستن فیلترها' : 'فیلترها'} ({filteredProducts.length})</span>
             </button>
           </div>
 
+          {isMobileFilterOpen && (
+            <div className="lg:hidden mobile-filter-panel bg-white rounded-2xl border border-neutral-200 p-4 space-y-4 shadow-lg">
+              <div className="flex items-center justify-between">
+                <h3 className="font-black text-sm text-neutral-900 flex items-center gap-2">
+                  <SlidersHorizontal className="w-4 h-4 text-red-600" />
+                  فیلتر محصولات
+                </h3>
+                <button type="button" onClick={resetAllFilters} className="text-[11px] font-bold text-red-600">پاک‌سازی</button>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <label className="col-span-2 sm:col-span-1">
+                  <span className="block text-[11px] font-bold text-neutral-700 mb-1">دسته‌بندی</span>
+                  <select value={selectedCategory} onChange={e => setSelectedCategory(e.target.value)} className="w-full p-2.5 border border-neutral-200 rounded-xl bg-neutral-50 text-xs">
+                    <option value="all">همه دسته‌ها</option>
+                    {categoryIndex.map(({ node: category, depth }) => <option key={category.id} value={category.slug}>{'— '.repeat(depth)}{category.nameFa}</option>)}
+                  </select>
+                </label>
+
+                <label className="col-span-2 sm:col-span-1">
+                  <span className="block text-[11px] font-bold text-neutral-700 mb-1">برند خودرو</span>
+                  <select value={selectedBrand} onChange={e => setSelectedBrand(e.target.value)} className="w-full p-2.5 border border-neutral-200 rounded-xl bg-neutral-50 text-xs">
+                    <option value="all">همه برندها</option>
+                    {brands.map(brand => <option key={brand.id} value={brand.id}>{brand.nameFa}</option>)}
+                  </select>
+                </label>
+
+                <label className="col-span-2 sm:col-span-1">
+                  <span className="block text-[11px] font-bold text-neutral-700 mb-1">برند سازنده قطعه</span>
+                  <select value={selectedManufacturer} onChange={e => setSelectedManufacturer(e.target.value)} className="w-full p-2.5 border border-neutral-200 rounded-xl bg-neutral-50 text-xs">
+                    <option value="all">همه سازندگان</option>
+                    {availableManufacturers.map(name => <option key={name} value={name}>{name}</option>)}
+                  </select>
+                </label>
+
+                <label className="col-span-2 sm:col-span-1">
+                  <span className="block text-[11px] font-bold text-neutral-700 mb-1">گرید کیفیت</span>
+                  <select value={selectedGrade} onChange={e => setSelectedGrade(e.target.value as QualityGrade | 'all')} className="w-full p-2.5 border border-neutral-200 rounded-xl bg-neutral-50 text-xs">
+                    <option value="all">همه گریدها</option>
+                    <option value="genuine">اصلی / Genuine</option>
+                    <option value="oem">OEM</option>
+                    <option value="aftermarket">Aftermarket</option>
+                    <option value="economy">اقتصادی</option>
+                  </select>
+                </label>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <label className="flex items-center gap-2 p-3 bg-neutral-50 rounded-xl border border-neutral-200 font-bold text-[11px]">
+                  <input type="checkbox" checked={onlyInStock} onChange={e => setOnlyInStock(e.target.checked)} className="w-4 h-4" />
+                  فقط کالاهای موجود
+                </label>
+                {selectedVehicle && (
+                  <label className="flex items-center gap-2 p-3 bg-neutral-50 rounded-xl border border-neutral-200 font-bold text-[11px]">
+                    <input type="checkbox" checked={onlyFitActiveVehicle} onChange={e => setOnlyFitActiveVehicle(e.target.checked)} className="w-4 h-4" />
+                    فقط سازگار با خودروی من
+                  </label>
+                )}
+              </div>
+
+              <button type="button" onClick={() => setIsMobileFilterOpen(false)} className="w-full py-3 bg-neutral-900 text-white rounded-xl font-black text-xs">
+                نمایش {filteredProducts.length.toLocaleString('fa-IR')} محصول
+              </button>
+            </div>
+          )}
+
           {/* Products Grid */}
           {filteredProducts.length > 0 ? (
-            <div className="product-grid grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
+            <div className="product-grid grid grid-cols-2 xl:grid-cols-3 gap-2.5 sm:gap-5">
               {filteredProducts.map(product => (
                 <ProductCard 
                   key={product.id} 
@@ -412,8 +542,34 @@ export const ShopView: React.FC<ShopViewProps> = ({
               </div>
             </div>
           )}
+
+          {catalogHasMore && (
+            <div className="flex justify-center pt-6">
+              <button
+                type="button"
+                disabled={catalogLoading}
+                onClick={() => void loadCatalogPage({ categorySlug: selectedCategory === 'all' ? undefined : selectedCategory, append: true })}
+                className="rounded-xl border border-neutral-300 bg-white px-6 py-3 text-sm font-bold text-neutral-800 hover:bg-neutral-50 disabled:opacity-50"
+              >
+                {catalogLoading ? 'در حال دریافت...' : 'نمایش محصولات بیشتر'}
+              </button>
+            </div>
+          )}
         </main>
       </div>
+
+      {activeCategoryObj && (activeCategoryObj.bottomDescription || activeCategoryObj.description) && (
+        <section className="shop-category-seo-content">
+          <div className="shop-category-seo-heading">
+            <Layers className="w-5 h-5" />
+            <h2>راهنمای خرید و اطلاعات {activeCategoryObj.nameFa}</h2>
+          </div>
+          <div
+            className="shop-category-seo-body"
+            dangerouslySetInnerHTML={{ __html: activeCategoryObj.bottomDescription || activeCategoryObj.description }}
+          />
+        </section>
+      )}
     </div>
   );
 };

@@ -1,4 +1,5 @@
 import { config } from './config';
+import { getSiteDisplayName, replaceLegacySiteName } from '../utils/siteBrand';
 import { pool, type RowDataPacket } from './db';
 import {
   absoluteSiteUrl,
@@ -197,7 +198,8 @@ const entitySchemas = (
       description,
       url: canonical,
       sku: entity.data?.sku || undefined,
-      mpn: entity.data?.oemNumber || entity.data?.partNumber || undefined,
+      mpn: entity.data?.partNumber || undefined,
+      additionalProperty: entity.data?.oemNumber ? [{ '@type': 'PropertyValue', name: 'OEM', value: entity.data.oemNumber }] : undefined,
       image: image ? [image] : undefined,
       brand: entity.data?.brandManufacturer
         ? { '@type': 'Brand', name: entity.data.brandManufacturer }
@@ -378,6 +380,20 @@ export const renderSeoHtml = async (template: string, pathname: string): Promise
   const settings = await getSeoSettings();
   if (!settings.modules.meta) return template;
   const meta = await getSeoMeta(pathname);
+  const siteName = getSiteDisplayName(settings.global.siteTitle);
+  const clean = (value: unknown) => replaceLegacySiteName(value, siteName);
+  const cleanDeep = (value: any): any => {
+    if (typeof value === 'string') return clean(value);
+    if (Array.isArray(value)) return value.map(cleanDeep);
+    if (value && typeof value === 'object') {
+      return Object.fromEntries(Object.entries(value).map(([key, entry]) => [key, cleanDeep(entry)]));
+    }
+    return value;
+  };
+  for (const key of ['title', 'description', 'keywords', 'ogTitle', 'ogDescription', 'twitterTitle', 'twitterDescription'] as const) {
+    meta[key] = clean(meta[key]);
+  }
+  meta.schemas = cleanDeep(meta.schemas);
   let html = template;
 
   html = html.replace(/<title>[\s\S]*?<\/title>/i, '<title>' + escapeHtml(meta.title) + '</title>');
@@ -450,7 +466,7 @@ const sitemapDefinitions: Record<SitemapType, {
   products: { entityType: 'product', table: 'products', where: "p.status = 'active'", prefix: '/product/' },
   articles: { entityType: 'article', table: 'articles', where: 'p.is_active = 1', prefix: '/article/' },
   categories: { entityType: 'category', table: 'categories', where: 'p.is_active = 1', prefix: '/category/' },
-  pages: { entityType: 'page', table: 'site_pages', where: '1=1', prefix: '/page/' },
+  pages: { entityType: 'page', table: 'site_pages', where: "COALESCE(JSON_UNQUOTE(JSON_EXTRACT(data_json, '$.__trashed')), 'false') <> 'true' AND COALESCE(JSON_UNQUOTE(JSON_EXTRACT(data_json, '$.isVisible')), 'true') <> 'false'", prefix: '/page/' },
   brands: { entityType: 'brand', table: 'vehicle_brands', where: 'p.is_active = 1', prefix: '/brand/' },
   models: { entityType: 'model', table: 'vehicle_models', where: 'p.is_active = 1', prefix: '/car-model/' }
 };

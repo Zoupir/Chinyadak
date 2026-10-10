@@ -566,3 +566,40 @@ CREATE TABLE IF NOT EXISTS seo_runtime_log (
   INDEX idx_seo_runtime_event (event_name)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+
+-- Source-backed Lucano L8 part references. These are research records, not sellable inventory.
+CREATE TABLE IF NOT EXISTS vehicle_part_references (
+  reference_id VARCHAR(120) PRIMARY KEY,
+  vehicle_id VARCHAR(120) NOT NULL,
+  reference_kind VARCHAR(40) NOT NULL,
+  component_id VARCHAR(80) NULL,
+  system_code VARCHAR(40) NULL,
+  system_name VARCHAR(160) NULL,
+  assembly_name VARCHAR(200) NULL,
+  part_name_fa VARCHAR(255) NULL,
+  part_name_en VARCHAR(255) NULL,
+  primary_oem VARCHAR(180) NULL,
+  alternative_oem TEXT NULL,
+  variant_oems TEXT NULL,
+  aftermarket_brand VARCHAR(160) NULL,
+  aftermarket_code VARCHAR(180) NULL,
+  verification_status VARCHAR(100) NOT NULL,
+  oem_confidence VARCHAR(40) NULL,
+  cross_reference_confidence VARCHAR(40) NULL,
+  requires_vin TINYINT(1) NOT NULL DEFAULT 1,
+  source_url TEXT NULL,
+  data_json JSON NOT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_vehicle_part_refs_vehicle_status (vehicle_id, verification_status),
+  INDEX idx_vehicle_part_refs_oem (primary_oem),
+  INDEX idx_vehicle_part_refs_component (component_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS admin_trash (
+ entity_kind VARCHAR(50) NOT NULL,
+ entity_id VARCHAR(64) NOT NULL,
+ row_json JSON NOT NULL,
+ trashed_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ PRIMARY KEY (entity_kind, entity_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

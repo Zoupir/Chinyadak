@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { markdownToSafeHtml } from '../src/utils/richText';
 
 const base = String(process.env.TEST_BASE_URL || 'http://127.0.0.1:3000').replace(/\/$/, '');
 
@@ -40,6 +41,13 @@ const cookieFrom = (response: Response): string => {
 const cookieHeaders = (cookie: string) => ({ Cookie: cookie });
 
 const run = async () => {
+  const formattedHtml = markdownToSafeHtml('<p style="text-align: right;"><span style="color: #c2410c;">سلام</span> <a href="https://example.com">پیوند</a></p>');
+  assert.match(formattedHtml, /text-align:right/i, 'Rich text sanitizer dropped paragraph alignment.');
+  assert.match(formattedHtml, /color:#c2410c/i, 'Rich text sanitizer dropped inline text color.');
+  assert.match(formattedHtml, /href="https:\/\/example\.com"/i, 'Rich text sanitizer dropped a safe link.');
+  const unsafeHtml = markdownToSafeHtml('<p style="text-align: right; background-image: url(javascript:alert(1))"><span style="color: red; position: fixed">متن</span></p>');
+  assert.doesNotMatch(unsafeHtml, /background-image|javascript:|position:/i, 'Rich text sanitizer retained unsafe CSS.');
+  
   const health = await json<{ ok: boolean; database: string }>('/api/health');
   assert.equal(health.data.ok, true);
   assert.equal(health.data.database, 'connected');
@@ -97,6 +105,42 @@ const run = async () => {
   const adminCookie = cookieFrom(adminLogin.response);
   assert.equal(adminLogin.data.admin.role, 'super_admin');
 
+  // End-to-end regression: Persian multipart names must survive upload and load from a URL.
+  const persianFilename = 'تصویر قطعه فارسی ۱۴۰۵.png';
+  const pngBytes = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=', 'base64');
+  const uploadForm = new FormData();
+  uploadForm.append('image', new Blob([Uint8Array.from(pngBytes)], { type: 'image/png' }), persianFilename);
+  uploadForm.append('category', 'integration');
+  let uploadedPath = '';
+  try {
+    const uploadResponse = await request('/api/media/image', {
+      method: 'POST',
+      headers: cookieHeaders(adminCookie),
+      body: uploadForm
+    }, 201);
+    const uploaded = await uploadResponse.json() as { url: string; filename: string; originalName: string; relativePath: string };
+    uploadedPath = uploaded.relativePath;
+    assert.equal(uploaded.filename, persianFilename, 'Uploaded filename was corrupted.');
+    assert.equal(uploaded.originalName, persianFilename, 'Returned original filename was corrupted.');
+    assert(uploaded.url.endsWith(encodeURIComponent(persianFilename)), 'Uploaded URL did not encode the Persian filename.');
+    const servedImage = await request(uploaded.url);
+    assert.equal(servedImage.headers.get('content-type')?.split(';')[0], 'image/png');
+    assert.equal((await servedImage.arrayBuffer()).byteLength, pngBytes.byteLength, 'Uploaded image did not load intact.');
+    const mediaSearch = await json<{ items: Array<{ filename: string; relativePath: string }> }>(
+      '/api/media/library?q=' + encodeURIComponent('تصویر قطعه'),
+      { headers: cookieHeaders(adminCookie) }
+    );
+    assert(mediaSearch.data.items.some(item => item.filename === persianFilename && item.relativePath === uploadedPath), 'Media library did not preserve the Persian filename.');
+  } finally {
+    if (uploadedPath) {
+      await json('/api/media/library', {
+        method: 'DELETE',
+        headers: cookieHeaders(adminCookie),
+        body: JSON.stringify({ relativePath: uploadedPath })
+      }).catch(() => undefined);
+    }
+  }
+
   const seoSummary = await json<{ summary: any; settings: any }>('/api/seo/summary', {
     headers: cookieHeaders(adminCookie)
   });
@@ -110,10 +154,51 @@ const run = async () => {
   assert.equal(seoWorkspace.data.entity?.id, product.id);
   assert.equal(typeof seoWorkspace.data.analysis?.score, 'number');
 
+  const auditResult = await json<{ result: any }>('/api/seo/audit/run', { method: 'POST', headers: cookieHeaders(adminCookie), body: '{}' });
+  assert(auditResult.data.result.scanned > 0, 'Audit did not scan catalog entities.');
+  assert(auditResult.data.result.checksRun >= auditResult.data.result.scanned, 'Audit did not report its checks.');
+  assert(auditResult.data.result.liveChecked > 0, 'Audit did not inspect actual page HTML.');
+  assert.equal(auditResult.data.result.liveReports.length, auditResult.data.result.liveChecked);
+  assert(auditResult.data.result.liveReports.some((item: any) => item.status === 200), 'No live HTML was successfully inspected.');
+  const auditIssues = await json<{ issues: any[] }>('/api/seo/issues?status=open&limit=250', { headers: cookieHeaders(adminCookie) });
+  assert(auditIssues.data.issues.some(item => item.url && item.details && item.action), 'Audit findings have no actionable URL evidence.');
+
+  assert(auditResult.data.result.byType.product > 0, 'Audit did not separate products from other entities.');
+  assert.equal(typeof auditResult.data.result.openSuggestions, 'number');
+  const precise = auditIssues.data.issues.find(item => String(item.issueKey).startsWith('check:') && item.evidence?.status !== 'good');
+  if (precise) {
+    const verified = await json<{ resolved: boolean }>('/api/seo/issues/' + precise.id + '/verify', { method: 'POST', headers: cookieHeaders(adminCookie), body: '{}' });
+    assert.equal(verified.data.resolved, false, 'An unfixed SEO check was incorrectly resolved.');
+  }
+  await json('/api/bulk/products', {}, 401);
+  const selection = catalog.data.products.slice(0, 2).map(item => item.id);
+  const bulkRequest = (action: string) => json<{ changed: number }>('/api/bulk/products', { method: 'POST', headers: cookieHeaders(adminCookie), body: JSON.stringify({ ids: selection, action }) });
+  await bulkRequest('deactivate');
+  const hidden = await json<{ products: any[] }>('/api/catalog/products');
+  assert(!hidden.data.products.some(item => selection.includes(item.id)), 'Bulk deactivated products are still public.');
+  await bulkRequest('activate');
+  await bulkRequest('trash');
+  const trashItems = await json<{ items: any[] }>('/api/bulk/products?trash=1', { headers: cookieHeaders(adminCookie) });
+  assert(selection.every(id => trashItems.data.items.some(item => item.id === id)), 'Bulk trash did not retain restorable products.');
+  await bulkRequest('restore');
+  const restored = await json<{ products: any[] }>('/api/catalog/products');
+  assert(selection.every(id => restored.data.products.some(item => item.id === id)), 'Bulk restore did not restore products.');
+  const acceptedGraph = await json<{ accepted: boolean }>('/api/seo/graph/rebuild', { method: 'POST', headers: cookieHeaders(adminCookie), body: '{}' }, 202);
+  assert.equal(acceptedGraph.data.accepted, true);
+  let graphComplete = false;
+  for (let attempt = 0; attempt < 80; attempt++) {
+    const { data } = await json<{ progress: any }>('/api/seo/graph/progress', { headers: cookieHeaders(adminCookie) });
+    if (data.progress.status === 'completed') { assert(data.progress.graph.nodes > 0); graphComplete = true; break; }
+    assert(!['failed','interrupted'].includes(data.progress.status), JSON.stringify(data.progress));
+    await new Promise(resolve => setTimeout(resolve, 250));
+  }
+  assert(graphComplete, 'Background graph did not finish.');
+
   const admins = await json<{ admins: any[] }>('/api/admin-data/admins', {
     headers: cookieHeaders(adminCookie)
   });
   assert(admins.data.admins.length >= 1, 'Admin list is unavailable.');
+  await json('/api/bulk/admins', { method: 'POST', headers: cookieHeaders(adminCookie), body: JSON.stringify({ ids: [admins.data.admins[0].id], action: 'deactivate' }) }, 409);
 
   // RBAC: a content-only manager must not be able to read orders.
   const limitedUsername = `ci_content_${Date.now()}`;
@@ -146,6 +231,7 @@ const run = async () => {
   });
   const limitedCookie = cookieFrom(limitedLogin.response);
   await request('/api/orders', { headers: cookieHeaders(limitedCookie) }, 403);
+  await request('/api/bulk/products', { headers: cookieHeaders(limitedCookie) }, 403);
 
   // Encrypted integrations: plaintext secrets must never be returned.
   const secretValue = 'ci-secret-api-key-1234567890';
@@ -226,6 +312,26 @@ const run = async () => {
     })
   }, 201);
   const customerCookie = cookieFrom(customerRegister.response);
+  assert.equal(customerRegister.data.customer.loyaltyPoints, 50, 'Signup bonus was not persisted to the customer balance.');
+  const signupLoyalty = await json<{ transactions: any[] }>('/api/auth/customer/loyalty', {
+    headers: cookieHeaders(customerCookie)
+  });
+  assert(signupLoyalty.data.transactions.some(tx => tx.type === 'bonus' && tx.reason === 'signup_bonus' && tx.points === 50),
+    'Signup bonus transaction is missing from the customer ledger.');
+  const vehicleBonus = await json<{ rewarded: boolean; loyaltyPoints: number; transaction: any }>('/api/auth/customer/vehicle-registration', {
+    method: 'POST',
+    headers: cookieHeaders(customerCookie),
+    body: JSON.stringify({ brandId: vehicles.data.models[0].brandId, modelId: vehicles.data.models[0].id, vehicleName: 'KMC J7 1403' })
+  });
+  assert.equal(vehicleBonus.data.rewarded, true, 'The first garage vehicle did not receive its one-time bonus.');
+  assert.equal(vehicleBonus.data.loyaltyPoints, 70);
+  const duplicateVehicleBonus = await json<{ rewarded: boolean; loyaltyPoints: number }>('/api/auth/customer/vehicle-registration', {
+    method: 'POST',
+    headers: cookieHeaders(customerCookie),
+    body: JSON.stringify({ brandId: vehicles.data.models[0].brandId, modelId: vehicles.data.models[0].id, vehicleName: 'KMC J7 1403' })
+  });
+  assert.equal(duplicateVehicleBonus.data.rewarded, false, 'A repeated vehicle reward request was not idempotent.');
+  assert.equal(duplicateVehicleBonus.data.loyaltyPoints, 70);
 
   const mine = await json<{ requests: any[] }>('/api/engagement/part-requests/mine', {
     headers: cookieHeaders(customerCookie)
@@ -253,6 +359,43 @@ const run = async () => {
     })
   }, 201);
 
+  const cmsBefore = await json<{ settings: any; paymentGateways: any[] }>('/api/cms/bundle');
+  await json('/api/cms/payment-gateways', { method: 'PUT', headers: cookieHeaders(adminCookie), body: JSON.stringify({ gateways: [...cmsBefore.data.paymentGateways.filter(g => g.provider !== 'cod'), { id: 'cod-test', provider: 'cod', title: 'پرداخت در محل', isActive: true }] }) });
+  await json('/api/cms/settings', { method: 'PATCH', headers: cookieHeaders(adminCookie), body: JSON.stringify({ shippingMethods: [
+    { id: 'test-free', title: 'رایگان', paymentMode: 'free', cost: 999999, enabled: true, estimatedDelivery: 'تست' },
+    { id: 'test-collect', title: 'پس‌کرایه', paymentMode: 'collect', cost: 999999, enabled: true, estimatedDelivery: 'تست' },
+    { id: 'test-prepaid', title: 'پیش‌پرداخت', paymentMode: 'prepaid', cost: 12345, enabled: true, estimatedDelivery: 'تست' }
+  ] }) });
+  try {
+    const guestPhone = '09' + String(Date.now()).slice(-9);
+    const guestBody = { customer: { firstName: 'مهمان', lastName: 'تست', phone: guestPhone, address: 'نشانی تست' }, items: [{ productId: product.id, quantity: 1 }], shippingMethodId: 'test-collect', paymentMethodId: 'cod', registration: { password: 'Checkout-Test-123' } };
+    const guestOrder = await json<{ order: any; accountCreated: boolean }>('/api/orders', { method: 'POST', body: JSON.stringify(guestBody) }, 201);
+    assert.equal(guestOrder.data.accountCreated, true);
+    assert.equal(Number(guestOrder.data.order.shippingFee), 0, 'Collect shipping must not be charged at checkout.');
+    assert.equal(guestOrder.data.order.shippingMethod.paymentMode, 'collect');
+    const guestCookie = String(guestOrder.response.headers.get('set-cookie') || '').split(';')[0];
+    assert(guestCookie, 'Checkout did not issue an account session.');
+    const guestAccount = await json<{ customer: any }>('/api/auth/me', { headers: cookieHeaders(guestCookie) });
+    assert.equal(guestAccount.data.customer.phone, guestPhone);
+    await json('/api/orders', { method: 'POST', body: JSON.stringify(guestBody) }, 409);
+    for (const [method, expectedFee] of [['test-free', 0], ['test-prepaid', 12345]] as const) {
+      const additional = await json<{ order: any }>('/api/orders', { method: 'POST', headers: cookieHeaders(guestCookie), body: JSON.stringify({ ...guestBody, registration: undefined, shippingMethodId: method }) }, 201);
+      assert.equal(Number(additional.data.order.shippingFee), expectedFee);
+    }
+    const statusUrl = '/api/orders/' + guestOrder.data.order.id + '/status';
+    await json(statusUrl, { method: 'PATCH', headers: cookieHeaders(adminCookie), body: JSON.stringify({ status: 'delivered' }) });
+    const earned = await json<{ transactions: any[] }>('/api/auth/customer/loyalty', { headers: cookieHeaders(guestCookie) });
+    const purchase = earned.data.transactions.filter(tx => tx.orderId === guestOrder.data.order.id);
+    assert(purchase.some(tx => tx.type === 'earned' && tx.points > 0), 'Delivered COD did not award purchase points.');
+    assert(purchase.some(tx => tx.reason === 'first_paid_order'), 'First COD purchase bonus missing.');
+    await json(statusUrl, { method: 'PATCH', headers: cookieHeaders(adminCookie), body: JSON.stringify({ status: 'delivered' }) });
+    const repeat = await json<{ transactions: any[] }>('/api/auth/customer/loyalty', { headers: cookieHeaders(guestCookie) });
+    assert.equal(repeat.data.transactions.filter(tx => tx.orderId === guestOrder.data.order.id).length, purchase.length, 'Delivered COD duplicated rewards.');
+  } finally {
+    await json('/api/cms/settings', { method: 'PATCH', headers: cookieHeaders(adminCookie), body: JSON.stringify({ shippingMethods: cmsBefore.data.settings.shippingMethods || [{ id: 'post', title: 'پست', cost: Number(cmsBefore.data.settings.postShippingFee || 85000), enabled: true, estimatedDelivery: '۲۴ الی ۴۸ ساعت' }, { id: 'tipax', title: 'تیپاکس', cost: Number(cmsBefore.data.settings.tipaxShippingFee || 110000), enabled: true, estimatedDelivery: '۲۴ الی ۴۸ ساعت' }, { id: 'express', title: 'پیک', cost: Number(cmsBefore.data.settings.expressShippingFee || 120000), enabled: true, estimatedDelivery: '۲ ساعت' }] }) });
+    await json('/api/cms/payment-gateways', { method: 'PUT', headers: cookieHeaders(adminCookie), body: JSON.stringify({ gateways: cmsBefore.data.paymentGateways }) });
+  }
+
   assert(orderCreated.data.order.orderNumber, 'Order number was not created.');
   assert(Number(orderCreated.data.order.total) > 0, 'Server-calculated order total is invalid.');
 
@@ -264,6 +407,59 @@ const run = async () => {
     })
   });
   assert.equal(tracking.data.order.orderNumber, orderCreated.data.order.orderNumber);
+
+  // Loyalty earns only after an order is marked paid, and is stored in the same customer ledger.
+  await json(`/api/orders/${encodeURIComponent(orderCreated.data.order.id)}/status`, {
+    method: 'PATCH',
+    headers: cookieHeaders(adminCookie),
+    body: JSON.stringify({ status: 'paid' })
+  });
+  const paidLoyalty = await json<{ transactions: any[] }>('/api/auth/customer/loyalty', {
+    headers: cookieHeaders(customerCookie)
+  });
+  const paidOrderTransactions = paidLoyalty.data.transactions.filter(tx => tx.orderNumber === orderCreated.data.order.orderNumber);
+  assert(paidOrderTransactions.some(tx => tx.type === 'earned' && tx.points > 0),
+    'A paid order did not award purchase points.');
+  assert(paidOrderTransactions.some(tx => tx.type === 'bonus' && tx.reason === 'first_paid_order'),
+    'The first paid-order bonus was not recorded.');
+
+  // When the seeded product is large enough for the configured minimum, redeem and cancel it.
+  if (Number(orderCreated.data.order.subtotal) >= 100000) {
+    const beforeRedeem = await json<{ customer: any }>('/api/auth/me', {
+      headers: cookieHeaders(customerCookie)
+    });
+    const redeemOrder = await json<{ order: any }>('/api/orders', {
+      method: 'POST',
+      headers: cookieHeaders(customerCookie),
+      body: JSON.stringify({
+        customer: {
+          firstName: 'کاربر', lastName: 'تست', phone: customerPhone, province: 'تهران',
+          city: 'تهران', postalCode: '1234567890', address: 'نشانی تست CI', notes: ''
+        },
+        items: [{ productId: product.id, quantity: 1 }],
+        shippingMethodId: 'post',
+        paymentMethodId: 'saman',
+        loyaltyPointsToRedeem: 50
+      })
+    }, 201);
+    assert.equal(Number(redeemOrder.data.order.discountAmount), 50000,
+      'Checkout did not apply the configured points discount.');
+    await json(`/api/orders/${encodeURIComponent(redeemOrder.data.order.id)}/status`, {
+      method: 'PATCH',
+      headers: cookieHeaders(adminCookie),
+      body: JSON.stringify({ status: 'cancelled' })
+    });
+    const afterCancel = await json<{ transactions: any[] }>('/api/auth/customer/loyalty', {
+      headers: cookieHeaders(customerCookie)
+    });
+    assert(afterCancel.data.transactions.some(tx => tx.type === 'refund' && tx.reason === 'redemption_return' && tx.points === 50),
+      'Cancelling an unpaid order did not restore redeemed points.');
+    const afterCancelMe = await json<{ customer: any }>('/api/auth/me', {
+      headers: cookieHeaders(customerCookie)
+    });
+    assert.equal(afterCancelMe.data.customer.loyaltyPoints, beforeRedeem.data.customer.loyaltyPoints,
+      'Loyalty balance did not return to its pre-redemption value after cancellation.');
+  }
 
   // Admin reporting must contain data captured above.
   const engagementAdmin = await json<{ partRequests: any[]; stockAlerts: any[]; searchLogs: any[] }>(

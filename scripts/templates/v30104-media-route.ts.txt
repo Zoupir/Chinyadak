@@ -1,0 +1,278 @@
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import { Router } from 'express';
+import multer from 'multer';
+import { requireMediaAdmin } from '../media-auth';
+import { maxUploadBytes, uploadDirectory } from '../media';
+import { normalizeUploadedImageFilename, publicUploadUrl } from '../media-filenames';
+import { findMediaReferences } from '../media-references';
+import {
+  deleteMediaVariants,
+  getMediaLibraryItems,
+  invalidateMediaLibraryCache,
+  mediaKindFromFilename,
+  mediaMetaPath,
+  registerUploadedMedia,
+  safeMediaPath,
+  writeMediaMeta,
+  type MediaKind
+} from '../media-library';
+
+type SupportedImage = {
+  extension: 'jpg' | 'png' | 'webp' | 'gif';
+  mime: string;
+};
+
+const detectImageType = (buffer: Buffer): SupportedImage | null => {
+  if (buffer.length >= 3 && buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff) {
+    return { extension: 'jpg', mime: 'image/jpeg' };
+  }
+  if (buffer.length >= 8 && buffer.subarray(0, 8).equals(Buffer.from([0x89,0x50,0x4e,0x47,0x0d,0x0a,0x1a,0x0a]))) {
+    return { extension: 'png', mime: 'image/png' };
+  }
+  if (buffer.length >= 12 && buffer.subarray(0, 4).toString('ascii') === 'RIFF' && buffer.subarray(8, 12).toString('ascii') === 'WEBP') {
+    return { extension: 'webp', mime: 'image/webp' };
+  }
+  if (buffer.length >= 6 && ['GIF87a','GIF89a'].includes(buffer.subarray(0, 6).toString('ascii'))) {
+    return { extension: 'gif', mime: 'image/gif' };
+  }
+  return null;
+};
+
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: maxUploadBytes(), files: 1, fields: 12 }
+});
+
+const cleanCategory = (value: unknown): string =>
+  String(value || 'general').toLowerCase().replace(/[^a-z0-9_-]/g, '').slice(0, 40) || 'general';
+
+const allFolderData = (items: Awaited<ReturnType<typeof getMediaLibraryItems>>) => {
+  const folderMap = new Map<string, { category: string; year: string; month: string; count: number }>();
+  for (const item of items) {
+    const key = [item.category, item.year, item.month].join('/');
+    const current = folderMap.get(key);
+    if (current) current.count += 1;
+    else folderMap.set(key, { category: item.category, year: item.year, month: item.month, count: 1 });
+  }
+  return {
+    categories: Array.from(new Set(items.map(item => item.category))).filter(Boolean).sort(),
+    years: Array.from(new Set(items.map(item => item.year))).filter(Boolean).sort().reverse(),
+    months: Array.from(new Set(items.map(item => item.month))).filter(Boolean).sort(),
+    folders: Array.from(folderMap.values()).sort((a, b) =>
+      a.category.localeCompare(b.category) || b.year.localeCompare(a.year) || b.month.localeCompare(a.month)
+    ),
+    counts: {
+      image: items.filter(item => item.kind === 'image').length,
+      audio: items.filter(item => item.kind === 'audio').length,
+      video: items.filter(item => item.kind === 'video').length
+    }
+  };
+};
+
+export const mediaRouter = Router();
+
+mediaRouter.post('/image', requireMediaAdmin, upload.single('image'), async (req, res, next) => {
+  let targetPath = '';
+  try {
+    if (!req.file?.buffer?.length) {
+      res.status(400).json({ error: 'IMAGE_FILE_REQUIRED' });
+      return;
+    }
+    const detected = detectImageType(req.file.buffer);
+    if (!detected) {
+      res.status(415).json({ error: 'IMAGE_FORMAT_NOT_ALLOWED' });
+      return;
+    }
+
+    const category = cleanCategory(req.body?.category);
+    const now = new Date();
+    const year = String(now.getUTCFullYear());
+    const month = String(now.getUTCMonth() + 1).padStart(2, '0');
+    const relativeDir = path.posix.join(category, year, month);
+    const targetDir = path.join(uploadDirectory(), category, year, month);
+    await fs.mkdir(targetDir, { recursive: true });
+
+    const filename = normalizeUploadedImageFilename(req.file.originalname, detected.extension);
+    if (!filename) {
+      res.status(400).json({ error: 'MEDIA_FILENAME_INVALID_OR_EXTENSION_MISMATCH' });
+      return;
+    }
+
+    targetPath = path.join(targetDir, filename);
+    try {
+      await fs.writeFile(targetPath, req.file.buffer, { flag: 'wx' });
+    } catch (error: any) {
+      if (error?.code === 'EEXIST') {
+        res.status(409).json({ error: 'MEDIA_FILENAME_EXISTS', filename });
+        return;
+      }
+      throw error;
+    }
+
+    const relativePath = path.posix.join(relativeDir, filename);
+    const seo = await registerUploadedMedia({
+      targetPath,
+      relativePath,
+      filename,
+      kind: 'image',
+      mime: detected.mime
+    });
+    const variants = seo.variants || [];
+    res.status(201).json({
+      url: publicUploadUrl(relativePath),
+      thumbnailUrl: variants.slice().sort((a, b) => a.width - b.width)[0]?.url || publicUploadUrl(relativePath),
+      mime: detected.mime,
+      size: req.file.size,
+      originalName: filename,
+      filename,
+      relativePath,
+      kind: 'image',
+      category,
+      year,
+      month,
+      folderPath: relativeDir,
+      width: seo.width,
+      height: seo.height,
+      variants,
+      seo
+    });
+  } catch (error) {
+    if (targetPath) {
+      await fs.unlink(targetPath).catch(() => undefined);
+      await fs.unlink(mediaMetaPath(targetPath)).catch(() => undefined);
+      await deleteMediaVariants(targetPath, path.basename(targetPath));
+      invalidateMediaLibraryCache();
+    }
+    next(error);
+  }
+});
+
+mediaRouter.get('/library', requireMediaAdmin, async (req, res, next) => {
+  try {
+    const q = String(req.query.q || '').trim().toLowerCase();
+    const category = String(req.query.category || '').trim().toLowerCase();
+    const year = String(req.query.year || '').trim();
+    const month = String(req.query.month || '').trim();
+    const kindRaw = String(req.query.kind || '').trim().toLowerCase();
+    const kind: MediaKind | '' = ['image','audio','video'].includes(kindRaw) ? kindRaw as MediaKind : '';
+    const limit = Math.max(1, Math.min(250, Number(req.query.limit || 80)));
+    const offset = Math.max(0, Number(req.query.offset || 0));
+    const force = String(req.query.refresh || '') === '1';
+
+    const all = await getMediaLibraryItems(force);
+    const filtered = all.filter(item => {
+      if (kind && item.kind !== kind) return false;
+      if (category && category !== 'all' && item.category !== category) return false;
+      if (year && year !== 'all' && item.year !== year) return false;
+      if (month && month !== 'all' && item.month !== month) return false;
+      if (q && ![
+        item.filename,
+        item.relativePath,
+        item.category,
+        item.seo.alt,
+        item.seo.title,
+        item.seo.caption,
+        item.seo.description
+      ].some(value => String(value || '').toLowerCase().includes(q))) return false;
+      return true;
+    });
+
+    const page = filtered.slice(offset, offset + limit);
+    const nextOffset = offset + page.length;
+    res.json({
+      total: filtered.length,
+      items: page,
+      hasMore: nextOffset < filtered.length,
+      nextOffset: nextOffset < filtered.length ? nextOffset : null,
+      ...allFolderData(all)
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+mediaRouter.get('/library/references', requireMediaAdmin, async (req, res, next) => {
+  try {
+    const relativePath = String(req.query.relativePath || '');
+    const target = safeMediaPath(relativePath);
+    if (!target) {
+      res.status(400).json({ error: 'MEDIA_PATH_INVALID' });
+      return;
+    }
+    try {
+      await fs.access(target);
+    } catch {
+      res.status(404).json({ error: 'MEDIA_NOT_FOUND' });
+      return;
+    }
+    const references = await findMediaReferences(publicUploadUrl(relativePath), relativePath);
+    res.json({ inUse: references.length > 0, references });
+  } catch (error) {
+    next(error);
+  }
+});
+
+mediaRouter.put('/library/meta', requireMediaAdmin, async (req, res, next) => {
+  try {
+    const relativePath = String(req.body?.relativePath || '');
+    const target = safeMediaPath(relativePath);
+    if (!target) {
+      res.status(400).json({ error: 'MEDIA_PATH_INVALID' });
+      return;
+    }
+    try {
+      await fs.access(target);
+    } catch {
+      res.status(404).json({ error: 'MEDIA_NOT_FOUND' });
+      return;
+    }
+    const filename = path.basename(target);
+    const kind = mediaKindFromFilename(filename);
+    if (!kind) {
+      res.status(400).json({ error: 'MEDIA_KIND_INVALID' });
+      return;
+    }
+    const seo = await writeMediaMeta(target, {
+      alt: req.body?.alt,
+      title: req.body?.title,
+      caption: req.body?.caption,
+      description: req.body?.description
+    }, filename, kind);
+    res.json({ ok: true, seo });
+  } catch (error) {
+    next(error);
+  }
+});
+
+mediaRouter.delete('/library', requireMediaAdmin, async (req, res, next) => {
+  try {
+    const relativePath = String(req.body?.relativePath || '');
+    const target = safeMediaPath(relativePath);
+    if (!target) {
+      res.status(400).json({ error: 'MEDIA_PATH_INVALID' });
+      return;
+    }
+    try {
+      await fs.access(target);
+    } catch {
+      res.status(404).json({ error: 'MEDIA_NOT_FOUND' });
+      return;
+    }
+
+    const references = await findMediaReferences(publicUploadUrl(relativePath), relativePath);
+    if (references.length) {
+      res.status(409).json({ error: 'MEDIA_FILE_IN_USE', references });
+      return;
+    }
+
+    const filename = path.basename(target);
+    await fs.unlink(target);
+    await fs.unlink(mediaMetaPath(target)).catch(() => undefined);
+    await deleteMediaVariants(target, filename);
+    invalidateMediaLibraryCache();
+    res.json({ ok: true });
+  } catch (error) {
+    next(error);
+  }
+});

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Product } from '../../types';
 import { useStore } from '../../context/StoreContext';
 import { checkProductFitment, formatToman, getGradeInfo } from '../../utils/formatters';
@@ -24,9 +24,13 @@ import {
   Check,
   ChevronLeft,
   Wrench,
-  AlertCircle
+  AlertCircle,
+  Phone
 } from 'lucide-react';
 import { ShareButton } from '../common/ShareButton';
+import { RichTextContent } from '../common/RichTextContent';
+import { toPersianDigits, toTelHref } from '../../utils/phone';
+import { apiRequest } from '../../api/client';
 
 interface ProductDetailViewProps {
   productId: string;
@@ -50,10 +54,24 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
     addToCompare, 
     isInCompare,
     subscribeToStockAlert,
-    showToast
+    showToast,
+    settings
   } = useStore();
 
-  const product = products.find(p => p.id === productId || p.slug === productId);
+  const cachedProduct = products.find(p => p.id === productId || p.slug === productId);
+  const [fetchedProduct, setFetchedProduct] = useState<Product | null>(null);
+  const [isProductLoading, setIsProductLoading] = useState(!cachedProduct);
+  const product = cachedProduct || fetchedProduct;
+  useEffect(() => {
+    if (cachedProduct) { setFetchedProduct(null); setIsProductLoading(false); return; }
+    setIsProductLoading(true);
+    let cancelled = false;
+    apiRequest<{ product: Product }>(`/api/catalog/products/${encodeURIComponent(productId)}`)
+      .then(result => { if (!cancelled) setFetchedProduct(result.product); })
+      .catch(error => { if (!cancelled) console.error('Product detail load failed:', error); })
+      .finally(() => { if (!cancelled) setIsProductLoading(false); });
+    return () => { cancelled = true; };
+  }, [productId, Boolean(cachedProduct)]);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [activeTab, setActiveTab] = useState<'specs' | 'fitment' | 'symptoms' | 'install' | 'fake'>('specs');
@@ -66,8 +84,8 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
         <div className="w-16 h-16 rounded-full bg-neutral-100 flex items-center justify-center mx-auto mb-4 text-neutral-400">
           <AlertCircle className="w-8 h-8" />
         </div>
-        <h2 className="text-xl font-bold text-neutral-900 mb-2">قطعه موردنظر یافت نشد!</h2>
-        <p className="text-xs text-neutral-500 mb-6">احتمال دارد این کالا حذف شده باشد یا آدرس اشتباه وارد شده باشد.</p>
+        <h2 className="text-xl font-bold text-neutral-900 mb-2">{isProductLoading ? 'در حال بارگذاری اطلاعات قطعه...' : 'قطعه موردنظر یافت نشد!'}</h2>
+        <p className="text-xs text-neutral-500 mb-6">{isProductLoading ? 'اطلاعات این کالا دریافت می‌شود.' : 'احتمال دارد این کالا حذف شده باشد یا آدرس اشتباه وارد شده باشد.'}</p>
         <button
           onClick={() => onNavigate('shop')}
           className="px-6 py-2.5 bg-red-600 text-white rounded-xl text-xs font-bold"
@@ -87,10 +105,11 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
     ? products.filter(p => product.complementPartIds?.includes(p.id)) 
     : [];
 
+  const relatedProductsCount = Math.max(1, Math.min(50, Number(settings.relatedProductsCount || 4)));
   const relatedProducts = products.filter(p => 
     p.id !== product.id && 
     (p.categorySlug === product.categorySlug || p.fitments.some(f => product.fitments.some(pf => pf.modelId === f.modelId)))
-  ).slice(0, 4);
+  ).slice(0, relatedProductsCount);
 
   const handleStockSubscribe = (e: React.FormEvent) => {
     e.preventDefault();
@@ -106,8 +125,8 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
   return (
     <div className="max-w-7xl mx-auto px-4 py-8 space-y-12">
       {/* Breadcrumb Navigation & Direct Share */}
-      <div className="flex items-center justify-between gap-4 pb-2 border-b border-neutral-100">
-        <nav className="flex items-center gap-2 text-xs text-neutral-500 overflow-x-auto whitespace-nowrap">
+      <div className="product-breadcrumb-row flex items-center justify-between gap-4 pb-2 border-b border-neutral-100">
+        <nav className="site-breadcrumb flex items-center gap-2 text-xs text-neutral-500 overflow-x-auto whitespace-nowrap">
           <button onClick={() => onNavigate('home')} className="hover:text-red-600 transition-colors">
             خانه
           </button>
@@ -123,13 +142,26 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
           <span className="text-neutral-900 font-bold truncate max-w-xs">{product.nameFa}</span>
         </nav>
 
-        <ShareButton
-          view="product"
-          param={product.id}
-          variant="button"
-          label="اشتراک‌گذاری قطعه"
-          className="shrink-0 text-xs"
-        />
+        <div className="flex items-center gap-2 shrink-0">
+          <ShareButton
+            view="product"
+            param={product.id}
+            variant="button"
+            label="اشتراک‌گذاری قطعه"
+            className="text-xs"
+          />
+          {settings.productContactEnabled !== false && (settings.productContactPhone || settings.contactPhone) && (
+            <a
+              href={toTelHref(settings.productContactPhone || settings.contactPhone || '')}
+              className="inline-flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-bold text-white shadow-sm"
+              style={{ backgroundColor: settings.productContactButtonColor || settings.primaryColor || '#ea580c' }}
+              aria-label={'تماس با فروشنده ' + toPersianDigits(settings.productContactPhone || settings.contactPhone || '')}
+            >
+              <Phone className="h-4 w-4" />
+              <span>تماس</span>
+            </a>
+          )}
+        </div>
       </div>
 
       {/* Main Top Grid: Gallery & Product Info */}
@@ -140,7 +172,8 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
           <div className="aspect-square bg-white rounded-3xl border border-neutral-200 overflow-hidden p-4 relative flex items-center justify-center shadow-xs">
             <img 
               src={product.images[activeImageIndex] || product.images[0]} 
-              alt={product.nameFa} 
+              alt={product.seo?.images?.[product.images[activeImageIndex] || product.images[0]]?.alt || product.nameFa}
+              title={product.seo?.images?.[product.images[activeImageIndex] || product.images[0]]?.title || product.nameFa}
               className="max-h-full max-w-full object-contain"
             />
 
@@ -194,7 +227,7 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
                     activeImageIndex === idx ? 'border-red-600 ring-2 ring-red-600/20' : 'border-neutral-200 hover:border-neutral-300'
                   }`}
                 >
-                  <img src={img} alt={`تصویر ${idx + 1}`} className="w-full h-full object-cover rounded-lg" />
+                  <img src={img} alt={product.seo?.images?.[img]?.alt || `${product.nameFa} - تصویر ${idx + 1}`} title={product.seo?.images?.[img]?.title || product.nameFa} className="w-full h-full object-cover rounded-lg" />
                 </button>
               ))}
             </div>
@@ -220,11 +253,9 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
             <div className="flex flex-wrap items-center gap-2 mb-2 text-xs text-neutral-500">
               <span className="font-bold text-neutral-800">{product.brandManufacturer}</span>
               <span>·</span>
-              <span className="font-mono bg-neutral-100 px-2 py-0.5 rounded text-neutral-700">OEM: {product.oemNumber}</span>
-              <span>·</span>
-              <span className="font-mono bg-neutral-100 px-2 py-0.5 rounded text-neutral-700">Part No: {product.partNumber}</span>
-              <span>·</span>
-              <span className="font-mono text-neutral-400">SKU: {product.sku}</span>
+              <span className="font-mono bg-neutral-100 px-2 py-0.5 rounded text-neutral-700" dir="ltr">OEM: {product.oemNumber}</span>
+              {product.partNumber && <><span>·</span><span className="font-mono bg-neutral-100 px-2 py-0.5 rounded text-neutral-700" dir="ltr">Part No: {product.partNumber}</span></>}
+              {product.sku && <><span>·</span><span className="font-mono text-neutral-400" dir="ltr">SKU: {product.sku}</span></>}
             </div>
 
             <h1 className="text-xl sm:text-2xl md:text-3xl font-black text-neutral-900 leading-snug">
@@ -247,7 +278,7 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
             {product.shortDescription && (
               <div className="mt-3.5 p-3.5 bg-neutral-50 rounded-2xl border border-neutral-200 text-xs text-neutral-700 leading-relaxed font-medium">
                 <span className="font-bold text-neutral-900 block mb-1">خلاصه کاربردی و نکات کلیدی قطعه:</span>
-                {product.shortDescription}
+                <RichTextContent content={product.shortDescription} />
               </div>
             )}
           </div>
@@ -327,9 +358,9 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
                 <span className="text-xs text-neutral-400 block mb-1">قیمت نهایی مصرف‌کننده:</span>
                 <div className="flex items-baseline gap-3">
                   <span className="text-2xl sm:text-3xl font-black text-white">
-                    {formatToman(product.discountPrice || product.price)}
+                    {Number(product.discountPrice || product.price) > 0 ? formatToman(product.discountPrice || product.price) : 'استعلام قیمت'}
                   </span>
-                  {hasDiscount && (
+                  {hasDiscount && Number(product.price) > 0 && (
                     <span className="text-sm text-neutral-400 line-through">
                       {formatToman(product.price)}
                     </span>
@@ -355,7 +386,7 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
             {/* Actions */}
             <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 pt-2">
               {/* Quantity Adjuster */}
-              <div className="sm:col-span-4 flex items-center justify-between bg-neutral-800 border border-neutral-700 rounded-xl px-3 py-2">
+              <div className={`${Number(product.discountPrice || product.price) > 0 ? 'sm:col-span-4' : 'hidden'} flex items-center justify-between bg-neutral-800 border border-neutral-700 rounded-xl px-3 py-2`}>
                 <button
                   onClick={() => setQuantity(Math.max(1, quantity - 1))}
                   className="w-8 h-8 rounded-lg bg-neutral-700 hover:bg-neutral-600 flex items-center justify-center text-white"
@@ -372,16 +403,19 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
               </div>
 
               {/* Add to Cart button */}
-              <button
-                onClick={() => {
-                  addToCart(product, quantity, selectedVehicle);
-                  onOpenCartDrawer();
-                }}
-                className="sm:col-span-8 h-12 bg-red-600 hover:bg-red-700 text-white font-bold text-sm rounded-xl shadow-lg shadow-red-600/30 flex items-center justify-center gap-2 transition-all active:scale-98"
-              >
-                <ShoppingBag className="w-5 h-5" />
-                <span>افزودن به سبد خرید</span>
-              </button>
+              {!(Number(product.discountPrice || product.price) > 0) ? (
+                settings.contactWhenNoPrice !== false && settings.contactPhone ? (
+                  <a href={`tel:${settings.contactPhone.replace(/[^0-9+]/g, '')}`}
+                    className="sm:col-span-8 h-12 bg-orange-500 hover:bg-orange-600 text-white font-bold text-sm rounded-xl flex items-center justify-center gap-2">
+                    <Phone className="w-5 h-5" /><span>تماس برای استعلام قیمت {settings.contactPhone}</span>
+                  </a>
+                ) : <span className="sm:col-span-8 h-12 rounded-xl bg-neutral-800 text-neutral-300 flex items-center justify-center text-sm">قیمت ثبت نشده؛ {settings.contactPhone || 'شماره تماس در تنظیمات وارد نشده است'}</span>
+              ) : (
+                <button onClick={() => { addToCart(product, quantity, selectedVehicle); onOpenCartDrawer(); }}
+                  className="sm:col-span-8 h-12 bg-red-600 hover:bg-red-700 text-white font-bold text-sm rounded-xl shadow-lg shadow-red-600/30 flex items-center justify-center gap-2 transition-all active:scale-98">
+                  <ShoppingBag className="w-5 h-5" /><span>افزودن به سبد خرید</span>
+                </button>
+              )}
             </div>
 
             {/* Notify Me If Out of Stock */}
@@ -400,22 +434,22 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
           </div>
 
           {/* Quick Specifications Highlights */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-            <div className="p-3 bg-neutral-50 rounded-xl border border-neutral-200">
+          <div className="product-quick-specs grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+            <div className="product-quick-spec-card p-3 bg-neutral-50 rounded-xl border border-neutral-200">
               <span className="text-neutral-400 block text-[10px]">محل نصب:</span>
-              <span className="font-bold text-neutral-800 truncate block mt-0.5">{product.placement}</span>
+              <span className="font-bold text-neutral-800 block mt-1">{product.placement || '—'}</span>
             </div>
-            <div className="p-3 bg-neutral-50 rounded-xl border border-neutral-200">
+            <div className="product-quick-spec-card p-3 bg-neutral-50 rounded-xl border border-neutral-200">
               <span className="text-neutral-400 block text-[10px]">کشور سازنده:</span>
-              <span className="font-bold text-neutral-800 truncate block mt-0.5">{product.countryOfOrigin}</span>
+              <span className="font-bold text-neutral-800 block mt-1">{product.countryOfOrigin || '—'}</span>
             </div>
-            <div className="p-3 bg-neutral-50 rounded-xl border border-neutral-200">
+            <div className="product-quick-spec-card p-3 bg-neutral-50 rounded-xl border border-neutral-200">
               <span className="text-neutral-400 block text-[10px]">وزن و ابعاد:</span>
-              <span className="font-bold text-neutral-800 truncate block mt-0.5">{product.weightKg} کیلوگرم</span>
+              <span className="font-bold text-neutral-800 block mt-1">{product.weightKg ? `${product.weightKg} کیلوگرم` : '—'}{product.dimensionsCm ? ` — ${product.dimensionsCm}` : ''}</span>
             </div>
-            <div className="p-3 bg-neutral-50 rounded-xl border border-neutral-200">
+            <div className="product-quick-spec-card p-3 bg-neutral-50 rounded-xl border border-neutral-200">
               <span className="text-neutral-400 block text-[10px]">گرید کیفیتی:</span>
-              <span className="font-bold text-neutral-800 truncate block mt-0.5">{gradeInfo.shortLabel}</span>
+              <span className="font-bold text-neutral-800 block mt-1">{gradeInfo.shortLabel}</span>
             </div>
           </div>
 
@@ -435,7 +469,7 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
             <span className="text-xs text-neutral-500">برای تعویض استاندارد و عدم دوباره‌کاری پیشنهاد می‌شود:</span>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
             {complementProducts.map(comp => (
               <div 
                 key={comp.id} 
@@ -467,7 +501,7 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
       {/* Detailed Technical Tabs */}
       <section className="bg-white rounded-3xl border border-neutral-200 overflow-hidden shadow-xs">
         {/* Tab Headers */}
-        <div className="flex border-b border-neutral-200 bg-neutral-50 overflow-x-auto">
+        <div className="product-detail-tabs flex border-b border-neutral-200 bg-neutral-50 overflow-x-auto">
           <button
             onClick={() => setActiveTab('specs')}
             className={`py-4 px-6 text-xs sm:text-sm font-bold border-b-2 whitespace-nowrap transition-colors ${
@@ -534,7 +568,7 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
           {activeTab === 'specs' && (
             <div className="space-y-6">
               <div className="prose text-xs md:text-sm text-neutral-600 leading-relaxed max-w-none">
-                <p>{product.description}</p>
+                <RichTextContent content={product.description} />
               </div>
 
               <div className="border border-neutral-200 rounded-2xl overflow-hidden divide-y divide-neutral-200 text-xs">
@@ -562,7 +596,7 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
                 این قطعه بر روی مدل‌ها، سال‌های ساخت و پیشرانه‌های زیر مورد تست و تایید قرار گرفته است:
               </div>
 
-              <div className="overflow-x-auto border border-neutral-200 rounded-2xl">
+              <div className="product-fitment-table overflow-x-auto border border-neutral-200 rounded-2xl">
                 <table className="w-full text-xs text-right divide-y divide-neutral-200">
                   <thead className="bg-neutral-50 font-bold text-neutral-700">
                     <tr>
@@ -660,7 +694,7 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
             </button>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="related-products-grid grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             {relatedProducts.map(rel => (
               <ProductCard 
                 key={rel.id} 

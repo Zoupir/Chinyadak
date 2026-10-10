@@ -398,7 +398,7 @@ export const getSeoSettings = async (): Promise<SeoSettings> => {
   const legacy = await readAppSetting<any>('site_settings', {});
   const migrated = mergeSettings({
     global: {
-      siteTitle: String(legacy?.siteTitle || 'یدک استور').split('|')[0].trim(),
+      siteTitle: String(legacy?.siteTitle || 'فروشگاه قطعات خودرو').split('|')[0].trim(),
       siteSlogan: String(legacy?.siteSlogan || ''),
       metaTitle: String(legacy?.metaTitle || legacy?.siteTitle || ''),
       metaDescription: String(legacy?.metaDescription || ''),
@@ -410,7 +410,7 @@ export const getSeoSettings = async (): Promise<SeoSettings> => {
       indexRobots: legacy?.enableIndexRobots !== false
     },
     identity: {
-      organizationName: String(legacy?.siteTitle || 'یدک استور').split('|')[0].trim(),
+      organizationName: String(legacy?.siteTitle || 'فروشگاه قطعات خودرو').split('|')[0].trim(),
       logoUrl: String(legacy?.logoUrl || ''),
       phone: String(legacy?.contactPhone || legacy?.supportPhone || ''),
       email: String(legacy?.supportEmail || ''),
@@ -625,7 +625,7 @@ const entityFromRow = (
   } else if (type === 'category') {
     title = String(data.nameFa || row.name_fa || '');
     description = String(data.description || row.description || '');
-    content = description;
+    content = [description, String(data.bottomDescription || ''), String(data.heroTitle || ''), String(data.heroSubtitle || '')].filter(Boolean).join(' ');
     image = String(data.imageUrl || data.iconUrl || '');
   } else if (type === 'page') {
     title = String(data.title || row.title || '');
@@ -634,7 +634,7 @@ const entityFromRow = (
   } else if (type === 'brand') {
     title = String(data.nameFa || row.name_fa || '');
     description = String(data.description || '');
-    content = description;
+    content = [description, String(data.bottomDescription || '')].filter(Boolean).join(' ');
     image = String(data.heroImage || data.logo || '');
   } else {
     title = String(data.nameFa || row.name_fa || '');
@@ -658,6 +658,60 @@ const entityFromRow = (
   };
 };
 
+const nestedCategoryEntitiesFromRow = (row: any): SeoEntity[] => {
+  const rootData = parseJson<Record<string, any>>(row.data_json, {});
+  const updatedAt = new Date(row.updated_at || Date.now());
+  const result: SeoEntity[] = [];
+
+  const walk = (nodes: any[], ancestors: string[] = []) => {
+    for (const node of nodes || []) {
+      const id = String(node?.id || '').trim();
+      const slug = String(node?.slug || id).trim();
+      if (!id || !slug) continue;
+      const title = normalizeSeoText(String(node?.nameFa || node?.nameEn || slug));
+      const description = normalizeSeoText(String(node?.description || ''));
+      const bottom = String(node?.bottomDescription || '');
+      result.push({
+        type: 'category',
+        id: 'sub:' + id,
+        slug,
+        title,
+        url: entityUrl('category', slug),
+        description,
+        content: [description, bottom].filter(Boolean).join(' '),
+        image: String(node?.imageUrl || node?.iconUrl || '') || undefined,
+        taxonomy: [...ancestors, slug].filter(Boolean),
+        data: { ...node, parentRootId: String(row.id), parentRootSlug: String(row.slug || rootData.slug || '') },
+        updatedAt
+      });
+      if (Array.isArray(node?.subcategories) && node.subcategories.length) {
+        walk(node.subcategories, [...ancestors, slug]);
+      }
+    }
+  };
+
+  walk(Array.isArray(rootData?.subcategories) ? rootData.subcategories : [], [String(rootData?.slug || row.slug || '')].filter(Boolean));
+  return result;
+};
+
+const findNestedCategoryEntity = async (key: string): Promise<SeoEntity | null> => {
+  const lookup = key.startsWith('sub:') ? key : key;
+  const [rows] = await pool.query<Array<RowDataPacket & Record<string, any>>>(
+    'SELECT id, slug, name_fa, description, data_json, updated_at FROM categories WHERE is_active = 1'
+  );
+  for (const row of rows) {
+    const nested = nestedCategoryEntitiesFromRow(row);
+    const match = nested.find(entity =>
+      entity.id === lookup ||
+      entity.id === 'sub:' + lookup ||
+      entity.slug === lookup ||
+      entity.data?.id === lookup
+    );
+    if (match) return match;
+  }
+  return null;
+};
+
 export const loadEntity = async (type: SeoEntityType, idOrSlug: string): Promise<SeoEntity | null> => {
   const key = String(idOrSlug || '').trim();
   if (!key) return null;
@@ -670,7 +724,9 @@ export const loadEntity = async (type: SeoEntityType, idOrSlug: string): Promise
   else sql = 'SELECT id, slug, name_fa, data_json, updated_at FROM vehicle_models WHERE is_active = 1 AND (id = ? OR slug = ?) LIMIT 1';
 
   const [rows] = await pool.query<Array<RowDataPacket & Record<string, any>>>(sql, [key, key]);
-  return rows[0] ? entityFromRow(type, rows[0]) : null;
+  if (rows[0]) { const entity = entityFromRow(type, rows[0]); if (entity.data.__trashed || (type === 'page' && entity.data.isVisible === false)) return null; return entity; }
+  if (type === 'category') return findNestedCategoryEntity(key);
+  return null;
 };
 
 export const loadAllEntities = async (limitPerType = 5000): Promise<SeoEntity[]> => {
@@ -679,12 +735,15 @@ export const loadAllEntities = async (limitPerType = 5000): Promise<SeoEntity[]>
     ['product', "SELECT id, slug, name_fa, short_description, description, data_json, updated_at FROM products WHERE status = 'active' ORDER BY updated_at DESC LIMIT " + limit],
     ['article', 'SELECT id, slug, title, data_json, updated_at FROM articles WHERE is_active = 1 ORDER BY updated_at DESC LIMIT ' + limit],
     ['category', 'SELECT id, slug, name_fa, description, data_json, updated_at FROM categories WHERE is_active = 1 ORDER BY updated_at DESC LIMIT ' + limit],
-    ['page', 'SELECT id, slug, title, data_json, updated_at FROM site_pages ORDER BY updated_at DESC LIMIT ' + limit],
+    ['page', "SELECT id, slug, title, data_json, updated_at FROM site_pages WHERE COALESCE(JSON_UNQUOTE(JSON_EXTRACT(data_json, '$.__trashed')), 'false') <> 'true' ORDER BY updated_at DESC LIMIT " + limit],
     ['brand', 'SELECT id, slug, name_fa, data_json, updated_at FROM vehicle_brands WHERE is_active = 1 ORDER BY updated_at DESC LIMIT ' + limit],
     ['model', 'SELECT id, slug, name_fa, data_json, updated_at FROM vehicle_models WHERE is_active = 1 ORDER BY updated_at DESC LIMIT ' + limit]
   ];
   const results = await Promise.all(queries.map(async ([type, sql]) => {
     const [rows] = await pool.query<Array<RowDataPacket & Record<string, any>>>(sql);
+    if (type === 'category') {
+      return rows.flatMap(row => [entityFromRow(type, row), ...nestedCategoryEntitiesFromRow(row)]);
+    }
     return rows.map(row => entityFromRow(type, row));
   }));
   return results.flat();
@@ -1261,29 +1320,24 @@ export const rebuildSeoKnowledgeGraph = async (): Promise<any> => {
       );
     }
 
+    const edges: any[][] = [];
+    let compared = 0;
     for (const pair of pairKeys) {
+      if (++compared % 500 === 0) await new Promise<void>(resolve => setImmediate(resolve));
       const [aIndex, bIndex] = pair.split(':').map(Number);
-      const a = profiles[aIndex];
-      const b = profiles[bIndex];
+      const a = profiles[aIndex], b = profiles[bIndex];
       if (!a || !b) continue;
       const relation = edgeScore(a, b);
       if (relation.score < 50) continue;
-      for (const [source, target] of [[a, b], [b, a]] as const) {
-        await connection.execute(
-          'INSERT INTO seo_knowledge_edges (source_key, target_key, relation, score, confidence, reasons_json, signals_json, build_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-          [
-            nodeKey(source.entity),
-            nodeKey(target.entity),
-            source.entity.type === target.entity.type ? 'contextual' : 'cross_type',
-            relation.score,
-            relation.confidence,
-            JSON.stringify(relation.reasons),
-            JSON.stringify(relation.signals),
-            buildId
-          ]
-        );
-        edgeCount += 1;
-      }
+      for (const [source, target] of [[a, b], [b, a]] as const) edges.push([
+        nodeKey(source.entity), nodeKey(target.entity), source.entity.type === target.entity.type ? 'contextual' : 'cross_type',
+        relation.score, relation.confidence, JSON.stringify(relation.reasons), JSON.stringify(relation.signals), buildId
+      ]);
+    }
+    for (let offset = 0; offset < edges.length; offset += 100) {
+      const batch = edges.slice(offset, offset + 100);
+      await connection.query('INSERT INTO seo_knowledge_edges (source_key, target_key, relation, score, confidence, reasons_json, signals_json, build_id) VALUES ?', [batch]);
+      edgeCount += batch.length;
     }
   });
 
@@ -1619,17 +1673,57 @@ export const upsertSeoIssue = async (issue: {
   );
 };
 
-export const runFullSeoAudit = async (actorId?: string) => {
+export const runFullSeoAudit = async (actorId?: string, liveLimit = 0) => {
   const startedAt = new Date();
   const settings = await getSeoSettings();
   const entities = await loadAllEntities(12000);
   let issueCount = 0;
+  let checksRun = 0;
+  const byType: Record<string, number> = {};
+  let liveChecked = 0;
+  const liveReports: any[] = [];
   const focusOwners = new Map<string, SeoEntity[]>();
 
   for (const entity of entities) {
+    byType[entity.type] = (byType[entity.type] || 0) + 1;
     const stored = await getSeoMetaRecord(entity.type, entity.id);
     const meta = stored || deriveSeoMeta(entity);
     const analysis = await analyzeSeoEntity(entity, meta);
+    const taxonomy = ['category','brand','model'].includes(entity.type);
+    const applicableChecks = analysis.checks.filter(check => (Boolean(meta.focusKeyword) || !['focus_in_description','keyword_density'].includes(check.key)) && (!taxonomy || ['title_length','meta_description','indexability'].includes(check.key)));
+    checksRun += applicableChecks.length;
+    for (const check of applicableChecks.filter(check => check.status !== 'good')) {
+      await upsertSeoIssue({ issueKey: `check:${entity.type}:${entity.id}:${check.key}`, entityType: entity.type, entityId: entity.id, url: entity.url,
+        category: 'content', severity: check.key === 'indexability' ? 'high' : 'low', confidence: 'high', title: check.label + ': ' + entity.title,
+        details: check.detail, evidence: check, action: 'در ویرایشگر همین محتوا، بخش «' + check.label + '» را اصلاح و دوباره تحلیل کنید.' });
+      issueCount++;
+    }
+    for (const check of analysis.checks.filter(check => check.status === 'good' || !applicableChecks.includes(check))) {
+      await pool.execute("UPDATE seo_issues SET status = 'resolved', resolved_at = NOW() WHERE issue_key = ? AND status = 'open'", [`check:${entity.type}:${entity.id}:${check.key}`]);
+    }
+    if (liveChecked < Math.max(0, Math.min(20, liveLimit))) {
+      liveChecked++;
+      try {
+        const { inspectUrl } = await import('./integrations');
+        const report = await inspectUrl(entity.url);
+        liveReports.push(report);
+        const defects = [
+          [report.status !== 200, 'http_status', 'پاسخ HTTP نامناسب', 'وضعیت: ' + report.status],
+          [!report.title, 'html_title', 'عنوان در HTML اولیه موجود نیست', 'عنوان اختصاصی صفحه را در خروجی سرور قرار دهید.'],
+          [!report.canonical, 'html_canonical', 'canonical در HTML اولیه موجود نیست', 'canonical معتبر همین صفحه را تنظیم کنید.'],
+          [report.h1.length !== 1, 'html_h1', 'تعداد H1 در HTML اولیه نامناسب است', 'تعداد H1: ' + report.h1.length],
+          [report.visibleTextWords < 30, 'html_content', 'محتوای اولیه صفحه بسیار کم است', 'تعداد کلمات HTML: ' + report.visibleTextWords + '؛ خروجی SSR یا پیش‌رندر را بررسی کنید.']
+        ] as const;
+        for (const [failed, key, title, detail] of defects) {
+          const issueKey = `live:${entity.type}:${entity.id}:${key}`;
+          if (failed) { await upsertSeoIssue({ issueKey, entityType: entity.type, entityId: entity.id, url: entity.url, category: 'technical', severity: 'high', confidence: 'high', title, details: detail, evidence: report, action: detail }); issueCount++; }
+          else await pool.execute("UPDATE seo_issues SET status = 'resolved', resolved_at = NOW() WHERE issue_key = ? AND status = 'open'", [issueKey]);
+        }
+      } catch (error) {
+        liveReports.push({ requestedUrl: entity.url, error: String((error as Error).message) });
+        await upsertSeoIssue({ issueKey: `live:${entity.type}:${entity.id}:fetch`, entityType: entity.type, entityId: entity.id, url: entity.url, category: 'technical', severity: 'medium', confidence: 'review', title: 'بررسی HTML انجام نشد', details: String((error as Error).message), action: 'دسترسی سرور به آدرس صفحه را بررسی و دوباره ممیزی کنید.' }); issueCount++;
+      }
+    }
 
     if (stored) {
       await pool.execute(
@@ -1638,77 +1732,11 @@ export const runFullSeoAudit = async (actorId?: string) => {
       );
     }
 
-    if (analysis.score < 55) {
-      await upsertSeoIssue({
-        issueKey: 'score:' + entity.type + ':' + entity.id,
-        entityType: entity.type,
-        entityId: entity.id,
-        url: entity.url,
-        category: 'content',
-        severity: analysis.score < 30 ? 'high' : 'medium',
-        confidence: 'high',
-        title: 'امتیاز سئوی پایین: ' + entity.title,
-        details: 'امتیاز فعلی ' + analysis.score + ' از 100 است.',
-        evidence: analysis,
-        action: 'موارد قرمز تحلیل محتوا و متادیتا را اصلاح کنید.'
-      });
-      issueCount += 1;
-    }
-
-    if (!meta.focusKeyword) {
-      await upsertSeoIssue({
-        issueKey: 'focus_missing:' + entity.type + ':' + entity.id,
-        entityType: entity.type,
-        entityId: entity.id,
-        url: entity.url,
-        category: 'keyword',
-        severity: entity.type === 'product' || entity.type === 'article' ? 'medium' : 'low',
-        confidence: 'high',
-        title: 'کلمه کلیدی هدف تعیین نشده',
-        details: entity.title,
-        action: 'یک عبارت اصلی متناسب با قصد جستجوی این URL تعیین کنید.'
-      });
-      issueCount += 1;
-    } else {
+    if (meta.focusKeyword) {
       const key = meta.focusKeyword.toLocaleLowerCase('fa-IR').trim();
-      const owners = focusOwners.get(key) || [];
-      owners.push(entity);
-      focusOwners.set(key, owners);
+      focusOwners.set(key, [...(focusOwners.get(key) || []), entity]);
     }
-
-    if (analysis.imageCount === 0 && (entity.type === 'product' || entity.type === 'article')) {
-      await upsertSeoIssue({
-        issueKey: 'image_missing:' + entity.type + ':' + entity.id,
-        entityType: entity.type,
-        entityId: entity.id,
-        url: entity.url,
-        category: 'image',
-        severity: 'medium',
-        confidence: 'high',
-        title: 'تصویر اصلی یا محتوایی وجود ندارد',
-        details: entity.title,
-        action: 'حداقل یک تصویر مرتبط با ALT توصیفی اضافه کنید.'
-      });
-      issueCount += 1;
-    }
-
-    if (analysis.missingImageAlt > 0 && (entity.type === 'product' || entity.type === 'article')) {
-      await upsertSeoIssue({
-        issueKey: 'image_alt_missing:' + entity.type + ':' + entity.id,
-        entityType: entity.type,
-        entityId: entity.id,
-        url: entity.url,
-        category: 'image',
-        severity: 'medium',
-        confidence: 'high',
-        title: 'تصاویر HTML بدون ALT توصیفی',
-        details: analysis.missingImageAlt + ' تصویر داخل محتوا ALT مناسب ندارد.',
-        evidence: { missingAlt: analysis.missingImageAlt, imageCount: analysis.imageCount },
-        action: 'از ابزار Image SEO برای تکمیل فقط ALTهای خالی استفاده کنید؛ ALTهای موجود بازنویسی نمی‌شوند.'
-      });
-      issueCount += 1;
-    }
-
+    await pool.execute("UPDATE seo_issues SET status = 'resolved', resolved_at = NOW() WHERE entity_type = ? AND entity_id = ? AND (issue_key LIKE 'score:%' OR issue_key LIKE 'focus_missing:%' OR issue_key LIKE 'image_missing:%' OR issue_key LIKE 'image_alt_missing:%') AND status = 'open'", [entity.type, entity.id]);
     if (
       settings.modules.toc &&
       settings.toc.enabled &&
@@ -1789,19 +1817,29 @@ export const runFullSeoAudit = async (actorId?: string) => {
     issueCount += 1;
   }
 
-  const startedSql = startedAt.toISOString().slice(0, 19).replace('T', ' ');
-  await pool.execute(
-    "UPDATE seo_issues SET status = 'resolved', resolved_at = NOW() WHERE status = 'open' AND last_seen < ?",
-    [startedSql]
-  );
+  // Unchecked issues stay open; resolving a finding requires positive verification.
 
   const graphState = await getSeoGraphState();
   if (!graphState.ready || graphState.stale) {
     await enqueueSeoJob('graph_rebuild', { reason: 'audit' });
   }
 
+  const [severityRows] = await pool.query<Array<RowDataPacket & { severity: string; total: number }>>("SELECT severity, COUNT(*) total FROM seo_issues WHERE status = 'open' GROUP BY severity");
+  const severityTotals = Object.fromEntries(severityRows.map(row => [row.severity, Number(row.total)]));
+  const [affected] = await pool.query<RowDataPacket[]>("SELECT COUNT(DISTINCT url) total FROM seo_issues WHERE status = 'open' AND url IS NOT NULL");
   const summary = {
+    openErrors: (severityTotals.critical || 0) + (severityTotals.high || 0),
+    openWarnings: severityTotals.medium || 0,
+    openSuggestions: severityTotals.low || 0,
+    affectedUrls: Number(affected[0].total),
     scanned: entities.length,
+    checksRun,
+    byType,
+    scope: 'active_content_database_and_sampled_initial_html',
+    limitPerType: 12000,
+    liveChecked,
+    liveReports,
+    durationMs: Date.now() - startedAt.getTime(),
     issuesDetected: issueCount,
     finishedAt: new Date().toISOString()
   };
@@ -1880,6 +1918,15 @@ export const verifySeoIssue = async (id: number) => {
   if (!workspace) {
     await setSeoIssueState(id, 'resolved');
     return { resolved: true, message: 'موجودیت دیگر وجود ندارد.' };
+  }
+  if (String(issue.issue_key).startsWith('live:')) return { resolved: false, message: 'برای تأیید این مورد، بررسی HTML را دوباره اجرا کنید.' };
+  if (String(issue.issue_key).startsWith('check:')) {
+    const key = String(issue.issue_key).split(':').pop();
+    const check = workspace.analysis.checks.find(item => item.key === key);
+    const taxonomy = ['category','brand','model'].includes(issue.entity_type);
+    const applicable = !taxonomy || ['title_length','meta_description','indexability'].includes(key || '');
+    if (applicable && check && check.status !== 'good') return { resolved: false, message: check.detail };
+    await setSeoIssueState(id, 'resolved'); return { resolved: true, message: 'بررسی مجدد موفق بود.' };
   }
   const stillLow = String(issue.issue_key).startsWith('score:') && workspace.analysis.score < 55;
   const focusMissing = String(issue.issue_key).startsWith('focus_missing:') && !workspace.meta.focusKeyword;

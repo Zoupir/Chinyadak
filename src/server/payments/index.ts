@@ -1,11 +1,14 @@
 import { mellatAdapter } from './mellat';
 import { sepAdapter } from './sep';
+import { ensurePaymentRuntimeConfig } from './runtime-config';
 import type { PaymentAdapter, PaymentProvider } from './types';
 
 const adapters: Record<PaymentProvider, PaymentAdapter> = {
   saman: sepAdapter,
   mellat: mellatAdapter
 };
+
+export { ensurePaymentRuntimeConfig } from './runtime-config';
 
 export const getPaymentProviderStatus = () => ({
   saman: sepAdapter.isConfigured(),

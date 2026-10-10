@@ -32,13 +32,18 @@ export const BrandDetailView: React.FC<BrandDetailViewProps> = ({ brandSlug, onN
       {/* Brand Hero Banner */}
       <div className="relative bg-neutral-900 text-white overflow-hidden py-12 md:py-16 border-b border-neutral-800">
         <div className="absolute inset-0 opacity-20 pointer-events-none">
-          <img src={brand.heroImage} alt={brand.nameFa} className="w-full h-full object-cover" />
+          <img
+            src={brand.heroImage}
+            alt={brand.seo?.images?.[brand.heroImage]?.alt || brand.nameFa}
+            title={brand.seo?.images?.[brand.heroImage]?.title || brand.nameFa}
+            className="w-full h-full object-cover"
+          />
         </div>
         <div className="absolute inset-0 bg-gradient-to-t from-neutral-950 via-neutral-900/80 to-transparent"></div>
 
         <div className="max-w-7xl mx-auto px-4 relative z-10">
           {/* Breadcrumb */}
-          <div className="flex items-center gap-2 text-xs text-neutral-400 mb-6">
+          <div className="site-breadcrumb flex items-center gap-2 text-xs text-neutral-400 mb-6">
             <button onClick={() => onNavigate('home')} className="hover:text-white">خانه</button>
             <span>/</span>
             <button onClick={() => onNavigate('shop')} className="hover:text-white">برندهای خودرو</button>
@@ -48,8 +53,13 @@ export const BrandDetailView: React.FC<BrandDetailViewProps> = ({ brandSlug, onN
 
           <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
             <div className="flex items-center gap-5">
-              <div className="w-20 h-20 md:w-24 md:h-24 rounded-2xl bg-white p-2 border-2 border-neutral-700 shadow-xl overflow-hidden shrink-0 flex items-center justify-center">
-                <img src={brand.logo} alt={brand.nameFa} className="w-full h-full object-cover rounded-xl" />
+              <div className="brand-detail-logo w-20 h-20 md:w-24 md:h-24 rounded-2xl p-2 border-2 border-white/20 overflow-hidden shrink-0 flex items-center justify-center">
+                <img
+                  src={brand.logo}
+                  alt={brand.seo?.images?.[brand.logo]?.alt || brand.nameFa}
+                  title={brand.seo?.images?.[brand.logo]?.title || brand.nameFa}
+                  className="w-full h-full object-contain"
+                />
               </div>
 
               <div className="space-y-1">
@@ -182,6 +192,19 @@ export const BrandDetailView: React.FC<BrandDetailViewProps> = ({ brandSlug, onN
                 </div>
               ))}
             </div>
+          </section>
+        )}
+
+        {brand.bottomDescription && (
+          <section className="brand-seo-content bg-white rounded-3xl p-6 md:p-8 border border-neutral-200">
+            <div className="flex items-center gap-2 mb-4">
+              <Layers className="w-5 h-5 text-red-600" />
+              <h2 className="text-lg font-black text-neutral-900">راهنمای قطعات و خدمات {brand.nameFa}</h2>
+            </div>
+            <div
+              className="prose prose-sm max-w-none text-neutral-600 leading-8"
+              dangerouslySetInnerHTML={{ __html: brand.bottomDescription }}
+            />
           </section>
         )}
       </div>

@@ -1,4 +1,6 @@
+import { AdminBulkActions } from './AdminBulkActions';
 import React, { useEffect, useState } from 'react';
+import packageJson from '../../../package.json';
 import { useStore } from '../../context/StoreContext';
 import { Product, Category, CustomerUser, PaymentGatewayConfig, OrderStatus, AdminRole, VehicleFitment } from '../../types';
 import { formatToman, getGradeInfo } from '../../utils/formatters';
@@ -54,11 +56,15 @@ import {
   PanelsTopLeft
 } from 'lucide-react';
 import { AdminCarsTab } from './AdminCarsTab';
+import { PART_MANUFACTURERS } from '../../data/realCatalogDefaults';
 import { AdminArticlesTab } from './AdminArticlesTab';
 import { AdminSandboxGateway } from './AdminSandboxGateway';
 import { AdminMenusAndAttributes } from './AdminMenusAndAttributes';
 import { AdminFooterTab } from './AdminFooterTab';
 import { AdminSlidersTab } from './AdminSlidersTab';
+import { AdminSliderStudio } from './AdminSliderStudio';
+import { AdminBannerPlacements } from './AdminBannerPlacements';
+import { AdminHomeLayout } from './AdminHomeLayout';
 import { AdminUsersTab } from './AdminUsersTab';
 import { AdminPagesTab } from './AdminPagesTab';
 import { AdminThemeTab } from './AdminThemeTab';
@@ -67,15 +73,28 @@ import { InvoiceModal } from '../orders/InvoiceModal';
 import { RichTextEditor } from '../common/RichTextEditor';
 import { ImageUploadInput } from '../common/ImageUploadInput';
 import { MultiImageUploadInput } from '../common/MultiImageUploadInput';
+import { AdminEntitySeoPanel } from './AdminEntitySeoPanel';
+import { AdminMegaMenuStudio } from './AdminMegaMenuStudio';
+import { AdminMediaLibrary } from './AdminMediaLibrary';
+import { AdminIconLibrary } from './AdminIconLibrary';
+import { AdminVisualPageBuilder } from './AdminVisualPageBuilder';
+import { AdminCategoryStudio } from './AdminCategoryStudio';
+import { AdminPaymentGateways } from './AdminPaymentGateways';
+import { ProductClassificationFields } from './ProductClassificationFields';
+import { AdminDashboardPro } from './AdminDashboardPro';
 
 interface AdminViewProps {
+  initialTarget?: string;
   onExitToStore?: () => void;
   onNavigate?: (view: string, param?: string) => void;
 }
 
-export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate }) => {
+export const AdminView: React.FC<AdminViewProps> = ({ initialTarget, onExitToStore, onNavigate }) => {
   const { 
-    products, 
+    products,
+    catalogHasMore,
+    catalogLoading,
+    loadCatalogPage,
     addProduct,
     updateProduct, 
     deleteProduct,
@@ -116,8 +135,12 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
 
   // Navigation tab inside Admin
   const [activeTab, setActiveTab] = useState<
-    'overview' | 'cars' | 'products' | 'categories' | 'menus_attrs' | 'footer' | 'pages' | 'articles' | 'sliders' | 'orders' | 'customers' | 'admins' | 'gateways' | 'sandbox' | 'apis' | 'theme' | 'seo' | 'bulk' | 'analytics'
-  >('overview');
+    'overview' | 'cars' | 'products' | 'categories' | 'menus_attrs' | 'mega_menu' | 'media' | 'icons' | 'footer' | 'pages' | 'articles' | 'sliders' | 'banners' | 'home_layout' | 'orders' | 'customers' | 'admins' | 'gateways' | 'sandbox' | 'apis' | 'theme' | 'seo' | 'bulk' | 'analytics'
+  >(initialTarget?.startsWith('product:') ? 'products' : initialTarget?.startsWith('article:') ? 'articles' : initialTarget?.startsWith('category:') ? 'categories' : initialTarget?.startsWith('page:') ? 'pages' : initialTarget === 'blog' ? 'articles' : 'overview');
+
+  useEffect(() => {
+    if (activeTab === 'products') void loadCatalogPage({ offset: 0, append: false });
+  }, [activeTab]);
 
   // Sidebar Layout State
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -136,6 +159,15 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
 
   // Product Modals
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  useEffect(() => {
+    if (!initialTarget?.startsWith('product:')) return;
+    const targetId = initialTarget.slice('product:'.length);
+    const match = products.find(product => product.id === targetId || product.slug === targetId);
+    if (match) {
+      setActiveTab('products');
+      setEditingProduct(match);
+    }
+  }, [initialTarget, products]);
   const [isNewProductModalOpen, setIsNewProductModalOpen] = useState(false);
   const [newProductForm, setNewProductForm] = useState<Partial<Product>>({
     nameFa: '',
@@ -144,7 +176,12 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
     partNumber: '',
     sku: '',
     brandManufacturer: 'Chery Genuine',
+    partManufacturerCompany: 'Chery Genuine',
+    vehicleManufacturerCompany: '',
+    vehicleBrandIds: ['kmc'],
+    vehicleModelIds: ['kmc-j7'],
     categorySlug: 'engine',
+    subcategorySlug: undefined,
     grade: 'genuine',
     price: 1500000,
     stock: 10,
@@ -179,6 +216,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
   const [newCatIconUrl, setNewCatIconUrl] = useState('');
   const [newCatImage, setNewCatImage] = useState('');
   const [newCatDesc, setNewCatDesc] = useState('');
+  const [newCatSubcategories, setNewCatSubcategories] = useState<NonNullable<Category['subcategories']>>([]);
 
   // Customer Modal
   const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
@@ -196,6 +234,12 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
 
   // Bulk Edit Table State
   const [bulkUpdates, setBulkUpdates] = useState<Record<string, { price: number; stock: number }>>({});
+  const [selectedBulkIds, setSelectedBulkIds] = useState<Set<string>>(new Set());
+  const [bulkPriceMode, setBulkPriceMode] = useState<'percent' | 'fixed'>('percent');
+  const [bulkPriceDirection, setBulkPriceDirection] = useState<'increase' | 'decrease'>('increase');
+  const [bulkPriceValue, setBulkPriceValue] = useState(0);
+  const [bulkStockDirection, setBulkStockDirection] = useState<'increase' | 'decrease'>('increase');
+  const [bulkStockValue, setBulkStockValue] = useState(0);
 
   // Theme Settings Form Local State
   const [themeForm, setThemeForm] = useState(settings);
@@ -230,7 +274,13 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
         return permissions.canManageArticles || permissions.canManageSettings;
       case 'sliders':
         return permissions.canManageSliders;
+      case 'banners':
+      case 'home_layout':
+        return permissions.canManageSliders || permissions.canManageSettings;
       case 'menus_attrs':
+      case 'mega_menu':
+      case 'media':
+      case 'icons':
       case 'footer':
       case 'theme':
       case 'seo':
@@ -284,9 +334,54 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
       ...prev,
       [id]: {
         price: prev[id]?.price ?? (products.find(p => p.id === id)?.price || 0),
-        stock
+        stock: Math.max(0, stock)
       }
     }));
+  };
+
+  const applyBulkOperationToSelection = (scope: 'selected' | 'all') => {
+    const ids = scope === 'all'
+      ? products.map(product => product.id)
+      : Array.from(selectedBulkIds);
+
+    if (!ids.length) {
+      showToast('ابتدا حداقل یک محصول را انتخاب کنید.', 'error');
+      return;
+    }
+
+    setBulkUpdates(prev => {
+      const next = { ...prev };
+      for (const id of ids) {
+        const product = products.find(item => item.id === id);
+        if (!product) continue;
+
+        const currentPrice = next[id]?.price ?? product.price;
+        const currentStock = next[id]?.stock ?? product.stock;
+
+        let price = currentPrice;
+        if (bulkPriceValue > 0) {
+          const delta = bulkPriceMode === 'percent'
+            ? currentPrice * (bulkPriceValue / 100)
+            : bulkPriceValue;
+          price = bulkPriceDirection === 'increase' ? currentPrice + delta : currentPrice - delta;
+        }
+
+        let stock = currentStock;
+        if (bulkStockValue > 0) {
+          stock = bulkStockDirection === 'increase'
+            ? currentStock + bulkStockValue
+            : currentStock - bulkStockValue;
+        }
+
+        next[id] = {
+          price: Math.max(0, Math.round(price)),
+          stock: Math.max(0, Math.round(stock))
+        };
+      }
+      return next;
+    });
+
+    showToast(`تغییرات روی ${ids.length.toLocaleString('fa-IR')} محصول در پیش‌نمایش اعمال شد. برای ذخیره نهایی «اعمال تغییرات» را بزنید.`, 'info');
   };
 
   const handleApplyBulkUpdates = () => {
@@ -321,7 +416,12 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
       nameFa: newProductForm.nameFa || '',
       nameEn: newProductForm.nameEn || '',
       categorySlug: newProductForm.categorySlug || 'engine',
-      brandManufacturer: newProductForm.brandManufacturer || 'Chery Genuine',
+      subcategorySlug: newProductForm.subcategorySlug,
+      brandManufacturer: newProductForm.partManufacturerCompany || newProductForm.brandManufacturer || 'Chery Genuine',
+      partManufacturerCompany: newProductForm.partManufacturerCompany || newProductForm.brandManufacturer || 'Chery Genuine',
+      vehicleManufacturerCompany: newProductForm.vehicleManufacturerCompany || '',
+      vehicleBrandIds: newProductForm.vehicleBrandIds || [],
+      vehicleModelIds: newProductForm.vehicleModelIds || [],
       grade: newProductForm.grade || 'genuine',
       price: Number(newProductForm.price) || 0,
       stock: Number(newProductForm.stock) || 0,
@@ -342,9 +442,8 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
       replacementInterval: 'هر ۵۰ هزار کیلومتر',
       installationTips: ['نصب توسط مکانیک مجرب'],
       genuineVsFakeNotes: 'هولوگرام شرکتی و بارکد ردیابی',
-      fitments: newProductForm.fitments || [
-        { id: 'fit-gen', brandId: 'kmc', brandName: 'KMC', modelId: 'kmc-j7', modelName: 'KMC J7', yearFrom: 1401, yearTo: 1404, engine: '1.5 Turbo' }
-      ]
+      fitments: newProductForm.fitments || [],
+      seo: newProductForm.seo
     };
 
     addProduct(newProd);
@@ -369,7 +468,8 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
       icon: newCatIcon || 'Cpu',
       iconUrl: newCatIconUrl.trim() || undefined,
       imageUrl: newCatImage.trim() || undefined,
-      description: newCatDesc || 'دسته‌بندی تخصصی قطعات خودرو'
+      description: newCatDesc || 'دسته‌بندی تخصصی قطعات خودرو',
+      subcategories: newCatSubcategories
     };
     addCategory(newCategory);
     setNewCatFa('');
@@ -379,6 +479,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
     setNewCatIconUrl('');
     setNewCatImage('');
     setNewCatDesc('');
+    setNewCatSubcategories([]);
     setIsCategoryModalOpen(false);
   };
 
@@ -438,7 +539,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `chinpart_products_${new Date().toLocaleDateString('fa-IR')}.csv`);
+    link.setAttribute("download", `yadakstore_products_${new Date().toLocaleDateString('fa-IR')}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -470,7 +571,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
             </div>
             <h2 className="text-xl font-black text-white pt-2">پرتال اختصاصی مدیریت سیستم</h2>
             <p className="text-xs text-neutral-400">
-              ورود امن به سامانه جامع مدیریت فروشگاه چین‌پارت
+              ورود امن به سامانه جامع مدیریت {settings.siteTitle || 'فروشگاه'}
             </p>
           </div>
 
@@ -617,31 +718,36 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
         { id: 'products', label: 'محصولات و انبار', icon: Package, count: products.length },
         { id: 'cars', label: 'خودروها و برندها', icon: Car, count: models.length },
         { id: 'categories', label: 'دسته‌بندی قطعات', icon: Layers, count: categories.length },
-        { id: 'bulk', label: 'ویرایش گروهی (Bulk)', icon: Sliders }
+        { id: 'bulk', label: 'ویرایش گروهی', icon: Sliders }
       ]
     },
     {
       groupTitle: 'فروش و مشتریان',
       items: [
         { id: 'orders', label: 'سفارش‌ها و صدور فاکتور', icon: FileCheck2, count: orders.length },
-        { id: 'customers', label: 'مشتریان و همکاران (CRM)', icon: Users, count: customers.length },
+        { id: 'customers', label: 'مشتریان و همکاران', icon: Users, count: customers.length },
         { id: 'sandbox', label: 'درگاه آزمایشی شاپرک', icon: Receipt }
       ]
     },
     {
       groupTitle: 'محتوا و وب‌سایت',
       items: [
-        { id: 'pages', label: 'برگه‌ها و سکشن‌ها (Builder)', icon: LayoutTemplate, count: pages.length },
+        { id: 'pages', label: 'صفحه‌ساز دیداری', icon: LayoutTemplate, count: pages.length },
         { id: 'articles', label: 'مقالات و آموزش‌ها', icon: BookOpen, count: articles.length },
-        { id: 'sliders', label: 'اسلایدرها و بنرها', icon: Compass, count: sliders.length },
-        { id: 'menus_attrs', label: 'منوی بالای سایت (Header)', icon: Menu },
+        { id: 'sliders', label: 'اسلایدر اصلی', icon: Compass, count: sliders.length },
+        { id: 'banners', label: 'جایگاه‌های بنر', icon: ImageIcon },
+        { id: 'home_layout', label: 'چیدمان صفحهٔ اصلی', icon: LayoutTemplate },
+        { id: 'menus_attrs', label: 'فهرست اصلی', icon: Menu },
+        { id: 'mega_menu', label: 'استودیو مگامنو', icon: PanelsTopLeft },
+        { id: 'media', label: 'کتابخانه رسانه', icon: ImageIcon },
+        { id: 'icons', label: 'کتابخانه آیکن', icon: Sparkles },
         { id: 'footer', label: 'مدیریت فوتر و اینماد', icon: PanelsTopLeft }
       ]
     },
     {
       groupTitle: 'سئو و رشد',
       items: [
-        { id: 'seo', label: 'TakRank SEO', icon: Sparkles }
+        { id: 'seo', label: 'سئوی TakRank', icon: Sparkles }
       ]
     },
     {
@@ -686,10 +792,10 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
             </div>
             <div>
               <span className="font-black text-sm text-white tracking-tight">
-                کنترل پنل سازمانی چین‌پارت
+                کنترل پنل سازمانی {settings.siteTitle || 'فروشگاه'}
               </span>
-              <span className="hidden sm:inline-block text-[10px] bg-red-600/90 text-white font-bold px-2 py-0.2 rounded-full mr-2">
-                ADMIN ENTERPRISE
+              <span className="inline-block text-[9px] bg-red-600/90 text-white font-bold px-2 py-0.2 rounded-full mr-2">
+                نسخه سایت {packageJson.version}
               </span>
             </div>
           </div>
@@ -698,14 +804,16 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
         {/* Right Top Bar Quick Actions */}
         <div className="flex items-center gap-3">
           {/* Quick Preview Store Link */}
-          <button
-            onClick={onExitToStore || (() => window.location.href = '/')}
+          <a
+            href="/"
+            target="_blank"
+            rel="noopener noreferrer"
             className="px-3 py-1.5 bg-neutral-800 hover:bg-neutral-700 text-neutral-200 hover:text-white rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 border border-neutral-700"
-            title="مشاهده ظاهر فروشگاه"
+            title="مشاهده فروشگاه در پنجره جدید"
           >
             <ExternalLink className="w-3.5 h-3.5 text-red-500" />
             <span className="hidden sm:inline">مشاهده فروشگاه</span>
-          </button>
+          </a>
 
           {/* Active Admin Identity Badge */}
           <div className="flex items-center gap-2.5 bg-neutral-800/80 border border-neutral-700 px-3 py-1.5 rounded-xl text-xs">
@@ -820,7 +928,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
           {/* Sidebar Footer info */}
           {!isSidebarCollapsed && (
             <div className="p-3 border-t border-neutral-800 bg-neutral-950/50 text-[10px] text-neutral-500 text-center">
-              <span>چین‌پارت اختصاصی خودروهای چینی</span>
+              <span>{settings.siteTitle || 'فروشگاه قطعات خودرو'}</span>
             </div>
           )}
         </aside>
@@ -857,99 +965,10 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
             </div>
           </div>
 
-          {/* TAB 1: OVERVIEW */}
+          {!['overview','analytics','sandbox'].includes(activeTab) && <AdminBulkActions section={activeTab} />}
+          {/* TAB 1: PROFESSIONAL OVERVIEW */}
           {activeTab === 'overview' && (
-            <div className="space-y-6">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className="p-5 bg-white rounded-3xl border border-neutral-200 shadow-xs space-y-1">
-                  <span className="text-xs text-neutral-400 font-semibold">مجموع فروش و فاکتورها:</span>
-                  <div className="text-xl font-black text-neutral-900">
-                    {formatToman(orders.reduce((sum, o) => sum + o.total, 0))}
-                  </div>
-                  <span className="text-[11px] text-emerald-600 font-bold block pt-1">
-                    {orders.length} سفارش ثبت شده
-                  </span>
-                </div>
-
-                <div className="p-5 bg-white rounded-3xl border border-neutral-200 shadow-xs space-y-1">
-                  <span className="text-xs text-neutral-400 font-semibold">تعداد قطعات در انبار:</span>
-                  <div className="text-xl font-black text-neutral-900">
-                    {products.length} کالا
-                  </div>
-                  <span className="text-[11px] text-neutral-500 block pt-1">
-                    تطبیق با {models.length} مدل خودروی چینی
-                  </span>
-                </div>
-
-                <div className="p-5 bg-white rounded-3xl border border-neutral-200 shadow-xs space-y-1">
-                  <span className="text-xs text-neutral-400 font-semibold">مشتریان ثبت‌شده (CRM):</span>
-                  <div className="text-xl font-black text-neutral-900">
-                    {customers.length} کاربر
-                  </div>
-                  <span className="text-[11px] text-blue-600 font-bold block pt-1">
-                    شامل مکانیک‌ها و خریداران عمده
-                  </span>
-                </div>
-
-                <div className="p-5 bg-white rounded-3xl border border-neutral-200 shadow-xs space-y-1">
-                  <span className="text-xs text-neutral-400 font-semibold">استعلام قطعات نایاب:</span>
-                  <div className="text-xl font-black text-neutral-900">
-                    {partRequests.length} درخواست
-                  </div>
-                  <span className="text-[11px] text-amber-600 font-bold block pt-1">
-                    {partRequests.filter(r => r.status === 'در حال بررسی').length} در انتظار پاسخ
-                  </span>
-                </div>
-              </div>
-
-              {/* Quick Jump Shortcuts */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div 
-                  onClick={() => setActiveTab('orders')}
-                  className="p-5 bg-white rounded-3xl border border-neutral-200 shadow-xs hover:border-red-600 cursor-pointer transition-all space-y-2 group"
-                >
-                  <div className="flex items-center justify-between">
-                    <h3 className="font-bold text-sm text-neutral-900 group-hover:text-red-600 transition-colors">
-                      سفارشات اخیر و صدور فاکتور
-                    </h3>
-                    <FileCheck2 className="w-5 h-5 text-red-600" />
-                  </div>
-                  <p className="text-xs text-neutral-500">
-                    بررسی {orders.length} فاکتور ثبت شده و چاپ فرم رسمی مالیاتی با مهر دیجیتال
-                  </p>
-                </div>
-
-                <div 
-                  onClick={() => setActiveTab('sliders')}
-                  className="p-5 bg-white rounded-3xl border border-neutral-200 shadow-xs hover:border-red-600 cursor-pointer transition-all space-y-2 group"
-                >
-                  <div className="flex items-center justify-between">
-                    <h3 className="font-bold text-sm text-neutral-900 group-hover:text-red-600 transition-colors">
-                      مدیریت اسلایدرهای صفحه نخست
-                    </h3>
-                    <Compass className="w-5 h-5 text-red-600" />
-                  </div>
-                  <p className="text-xs text-neutral-500">
-                    طراحی {sliders.length} اسلاید تبلیغاتی با بنرهای باکیفیت و لینک‌های هدف
-                  </p>
-                </div>
-
-                <div 
-                  onClick={() => setActiveTab('admins')}
-                  className="p-5 bg-white rounded-3xl border border-neutral-200 shadow-xs hover:border-red-600 cursor-pointer transition-all space-y-2 group"
-                >
-                  <div className="flex items-center justify-between">
-                    <h3 className="font-bold text-sm text-neutral-900 group-hover:text-red-600 transition-colors">
-                      مدیران و سطوح دسترسی
-                    </h3>
-                    <ShieldCheck className="w-5 h-5 text-red-600" />
-                  </div>
-                  <p className="text-xs text-neutral-500">
-                    تعریف مدیران مختلف (محتوا، سفارشات، انبار) با مجوزهای تفکیک‌شده
-                  </p>
-                </div>
-              </div>
-            </div>
+            <AdminDashboardPro onNavigateTab={(tab) => setActiveTab(tab)} />
           )}
 
           {/* TAB 2: CARS & MODELS */}
@@ -1036,6 +1055,15 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
                         </td>
                         <td className="p-3 text-left">
                           <div className="flex items-center justify-end gap-1.5">
+                            <a
+                              href={`/product/${encodeURIComponent(p.slug || p.id)}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg"
+                              title="نمایش محصول در صفحه جدید"
+                            >
+                              <ExternalLink className="w-4 h-4" />
+                            </a>
                             <button
                               onClick={() => setEditingProduct(p)}
                               className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg"
@@ -1058,77 +1086,21 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
                   </tbody>
                 </table>
               </div>
+              {catalogHasMore && (
+                <div className="flex justify-center border-t border-neutral-100 p-4">
+                  <button type="button" disabled={catalogLoading}
+                    onClick={() => void loadCatalogPage({ append: true })}
+                    className="rounded-xl border border-neutral-300 bg-white px-5 py-2.5 text-xs font-bold disabled:opacity-50">
+                    {catalogLoading ? 'در حال دریافت...' : 'بارگذاری محصولات بیشتر'}
+                  </button>
+                </div>
+              )}
             </div>
           )}
 
-          {/* TAB 4: CATEGORIES */}
+          {/* TAB 4: CATEGORIES — RECURSIVE TREE + TAKRANK SEO */}
           {activeTab === 'categories' && (
-            <div className="bg-white rounded-3xl border border-neutral-200 p-6 sm:p-8 shadow-xs space-y-6">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-neutral-100 gap-4">
-                <div>
-                  <h2 className="text-lg font-black text-neutral-900 flex items-center gap-2">
-                    <Layers className="w-5 h-5 text-red-600" />
-                    <span>دسته‌بندی تخصصی قطعات ({categories.length} دسته‌بندی)</span>
-                  </h2>
-                  <p className="text-xs text-neutral-500 mt-0.5">
-                    تعریف زیردسته‌ها، آیکون‌ها و ساختار تاکسونومی فروشگاه
-                  </p>
-                </div>
-
-                <button
-                  onClick={() => setIsCategoryModalOpen(true)}
-                  className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 self-start shadow-md"
-                >
-                  <Plus className="w-4 h-4" />
-                  <span>افزودن دسته‌بندی جدید</span>
-                </button>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {categories.map(cat => (
-                  <div key={cat.id} className="p-5 rounded-2xl border border-neutral-200 bg-neutral-50/50 space-y-3 hover:border-neutral-300 transition-colors">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        {cat.imageUrl ? (
-                          <img 
-                            src={cat.imageUrl} 
-                            alt={cat.nameFa} 
-                            className="w-12 h-12 rounded-xl object-cover border border-neutral-200 bg-white shrink-0" 
-                          />
-                        ) : (
-                          <div className="w-12 h-12 rounded-xl bg-red-100 text-red-600 flex items-center justify-center font-bold shrink-0">
-                            <Layers className="w-6 h-6" />
-                          </div>
-                        )}
-                        <div>
-                          <h3 className="font-bold text-sm text-neutral-900">{cat.nameFa}</h3>
-                          <span className="text-[10px] text-neutral-400 font-mono">{cat.nameEn} ({cat.slug})</span>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-1">
-                        <button
-                          onClick={() => setEditingCategory(cat)}
-                          className="p-1.5 text-neutral-500 hover:text-blue-600 rounded-lg hover:bg-blue-50 transition-colors"
-                          title="ویرایش دسته‌بندی و عکس"
-                        >
-                          <Edit3 className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => deleteCategory(cat.id)}
-                          className="p-1.5 text-neutral-400 hover:text-red-600 rounded-lg hover:bg-red-50 transition-colors"
-                          title="حذف دسته‌بندی"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </div>
-
-                    <p className="text-xs text-neutral-500">{cat.description}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
+            <AdminCategoryStudio initialCategoryId={initialTarget?.startsWith('category:') ? initialTarget.slice('category:'.length) : undefined} />
           )}
 
           {/* TAB 5: MENUS AND ATTRIBUTES */}
@@ -1136,14 +1108,26 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
             <AdminMenusAndAttributes />
           )}
 
+          {activeTab === 'mega_menu' && (
+            <AdminMegaMenuStudio />
+          )}
+
+          {activeTab === 'media' && (
+            <AdminMediaLibrary />
+          )}
+
+          {activeTab === 'icons' && (
+            <AdminIconLibrary />
+          )}
+
           {/* TAB: FOOTER BUILDER & ENAMAD */}
           {activeTab === 'footer' && (
             <AdminFooterTab />
           )}
 
-          {/* TAB: PAGES & SECTION BUILDER */}
+          {/* TAB: VISUAL PAGE BUILDER */}
           {activeTab === 'pages' && (
-            <AdminPagesTab onNavigate={(view, param) => {
+            <AdminVisualPageBuilder initialPageId={initialTarget?.startsWith('page:') ? initialTarget.slice('page:'.length) : undefined} onNavigate={(view, param) => {
               if (onExitToStore) onExitToStore();
               if (onNavigate) onNavigate(view, param);
             }} />
@@ -1151,12 +1135,18 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
 
           {/* TAB 6: ARTICLES (BLOG) */}
           {activeTab === 'articles' && (
-            <AdminArticlesTab />
+            <AdminArticlesTab initialArticleId={initialTarget?.startsWith('article:') ? initialTarget.slice('article:'.length) : undefined} />
           )}
 
           {/* TAB 7: SLIDERS & BANNERS */}
           {activeTab === 'sliders' && (
-            <AdminSlidersTab />
+            <AdminSliderStudio />
+          )}
+          {activeTab === 'banners' && (
+            <AdminBannerPlacements />
+          )}
+          {activeTab === 'home_layout' && (
+            <AdminHomeLayout />
           )}
 
           {/* TAB 8: ORDERS & INVOICES */}
@@ -1346,43 +1336,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
 
           {/* TAB 11: GATEWAYS */}
           {activeTab === 'gateways' && (
-            <div className="bg-white rounded-3xl border border-neutral-200 p-6 sm:p-8 shadow-xs space-y-6">
-              <div className="border-b border-neutral-100 pb-4">
-                <h2 className="text-lg font-black text-neutral-900 flex items-center gap-2">
-                  <CreditCard className="w-5 h-5 text-red-600" />
-                  <span>تنظیمات درگاه‌های بانکی شبکه شاپرک</span>
-                </h2>
-                <p className="text-xs text-neutral-500 mt-1">
-                  فعال‌سازی، تغییر مرچنت کد، ترمینال و سوییچ درگاه‌های پرداخت متصل به شتاب
-                </p>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {paymentGateways.map(g => (
-                  <div key={g.id} className="p-5 bg-neutral-50 rounded-2xl border border-neutral-200 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <CreditCard className="w-5 h-5 text-neutral-700" />
-                        <h3 className="font-bold text-sm text-neutral-900">{g.name}</h3>
-                      </div>
-                      <button
-                        onClick={() => toggleGatewayActive(g.id)}
-                        className={`px-3 py-1 rounded-full text-xs font-bold ${
-                          g.isActive ? 'bg-emerald-100 text-emerald-800' : 'bg-neutral-200 text-neutral-600'
-                        }`}
-                      >
-                        {g.isActive ? 'فعال' : 'غیرفعال'}
-                      </button>
-                    </div>
-
-                    <p className="text-xs text-neutral-500">{g.description}</p>
-                    <div className="text-[11px] font-mono text-neutral-400">
-                      Merchant ID: {g.merchantId} {g.terminalId ? `| Terminal: ${g.terminalId}` : ''}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
+            <AdminPaymentGateways />
           )}
 
           {/* TAB 12: PAYMENT SANDBOX SIMULATOR */}
@@ -1464,67 +1418,135 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
 
           {/* TAB 15: BULK EDIT */}
           {activeTab === 'bulk' && (
-            <div className="bg-white rounded-3xl border border-neutral-200 p-6 sm:p-8 shadow-xs space-y-6">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-neutral-100 gap-4">
-                <div>
-                  <h2 className="text-lg font-black text-neutral-900 flex items-center gap-2">
-                    <Sliders className="w-5 h-5 text-red-600" />
-                    <span>ویرایش سریع و دسته‌ای قیمت‌ها و موجودی کالاها</span>
-                  </h2>
-                  <p className="text-xs text-neutral-500 mt-0.5">
-                    تغییر آنی قیمت فروش و تعداد موجودی در انبار بدون نیاز به باز کردن فرم تک تک قطعات
-                  </p>
+            <div className="space-y-5">
+              <section className="bg-white rounded-3xl border border-neutral-200 p-5 sm:p-6 shadow-xs space-y-5">
+                <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 pb-4 border-b border-neutral-100">
+                  <div>
+                    <h2 className="text-lg font-black text-neutral-900 flex items-center gap-2">
+                      <Sliders className="w-5 h-5 text-red-600" />
+                      ویرایش گروهی حرفه‌ای قیمت و موجودی
+                    </h2>
+                    <p className="text-xs text-neutral-500 mt-1">
+                      ابتدا محصولات را انتخاب کن؛ سپس قیمت را درصدی یا مبلغ ثابت افزایش/کاهش بده و موجودی را هم جمعی تغییر بده. هر ردیف همچنان جداگانه قابل ویرایش است.
+                    </p>
+                  </div>
+                  <button
+                    onClick={handleApplyBulkUpdates}
+                    className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black flex items-center gap-1.5 self-start shadow-md"
+                  >
+                    <Check className="w-4 h-4" />
+                    ذخیره نهایی ({Object.keys(bulkUpdates).length.toLocaleString('fa-IR')})
+                  </button>
                 </div>
 
-                <button
-                  onClick={handleApplyBulkUpdates}
-                  className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 self-start shadow-md"
-                >
-                  <Check className="w-4 h-4" />
-                  <span>اعمال تغییرات دسته‌ای ({Object.keys(bulkUpdates).length})</span>
-                </button>
-              </div>
+                <div className="grid grid-cols-1 lg:grid-cols-[1fr_1fr_auto] gap-3 items-end">
+                  <div className="p-4 rounded-2xl border border-blue-200 bg-blue-50/30 space-y-3">
+                    <strong className="text-xs text-blue-950">تغییر گروهی قیمت</strong>
+                    <div className="grid grid-cols-3 gap-2">
+                      <select value={bulkPriceDirection} onChange={e => setBulkPriceDirection(e.target.value as 'increase'|'decrease')} className="p-2.5 border rounded-xl bg-white text-xs">
+                        <option value="increase">افزایش</option>
+                        <option value="decrease">کاهش</option>
+                      </select>
+                      <select value={bulkPriceMode} onChange={e => setBulkPriceMode(e.target.value as 'percent'|'fixed')} className="p-2.5 border rounded-xl bg-white text-xs">
+                        <option value="percent">درصدی</option>
+                        <option value="fixed">مبلغ ثابت</option>
+                      </select>
+                      <input type="number" min={0} value={bulkPriceValue} onChange={e => setBulkPriceValue(Math.max(0,Number(e.target.value)))} className="p-2.5 border rounded-xl bg-white text-xs font-mono" placeholder={bulkPriceMode==='percent'?'مثلاً ۱۰٪':'مبلغ ریال'} />
+                    </div>
+                  </div>
 
-              <div className="overflow-x-auto">
-                <table className="w-full text-xs text-right divide-y divide-neutral-200">
-                  <thead className="bg-neutral-50 font-bold text-neutral-700">
-                    <tr>
-                      <th className="p-3">نام قطعه</th>
-                      <th className="p-3">شماره فنی OEM</th>
-                      <th className="p-3">قیمت فعلی</th>
-                      <th className="p-3 w-40">قیمت جدید (ریال)</th>
-                      <th className="p-3">موجودی فعلی</th>
-                      <th className="p-3 w-32">موجودی جدید</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-neutral-100">
-                    {products.map(p => (
-                      <tr key={p.id} className="hover:bg-neutral-50/50">
-                        <td className="p-3 font-bold text-neutral-900">{p.nameFa}</td>
-                        <td className="p-3 font-mono text-neutral-600">{p.oemNumber}</td>
-                        <td className="p-3 font-mono font-bold text-neutral-900">{formatToman(p.price)}</td>
-                        <td className="p-3">
+                  <div className="p-4 rounded-2xl border border-violet-200 bg-violet-50/30 space-y-3">
+                    <strong className="text-xs text-violet-950">تغییر گروهی موجودی</strong>
+                    <div className="grid grid-cols-2 gap-2">
+                      <select value={bulkStockDirection} onChange={e => setBulkStockDirection(e.target.value as 'increase'|'decrease')} className="p-2.5 border rounded-xl bg-white text-xs">
+                        <option value="increase">افزایش تعداد</option>
+                        <option value="decrease">کاهش تعداد</option>
+                      </select>
+                      <input type="number" min={0} value={bulkStockValue} onChange={e => setBulkStockValue(Math.max(0,Number(e.target.value)))} className="p-2.5 border rounded-xl bg-white text-xs font-mono" placeholder="تعداد" />
+                    </div>
+                  </div>
+
+                  <div className="flex lg:flex-col gap-2">
+                    <button type="button" onClick={() => applyBulkOperationToSelection('selected')} className="px-4 py-2.5 rounded-xl bg-neutral-900 text-white text-[10px] font-black">
+                      اعمال روی انتخاب‌شده‌ها ({selectedBulkIds.size.toLocaleString('fa-IR')})
+                    </button>
+                    <button type="button" onClick={() => applyBulkOperationToSelection('all')} className="px-4 py-2.5 rounded-xl bg-amber-500 text-neutral-950 text-[10px] font-black">
+                      اعمال روی همه {products.length.toLocaleString('fa-IR')} محصول
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  <button type="button" onClick={() => setSelectedBulkIds(new Set(products.map(p => p.id)))} className="px-3 py-2 rounded-xl border bg-white text-[10px] font-bold">انتخاب همه</button>
+                  <button type="button" onClick={() => setSelectedBulkIds(new Set())} className="px-3 py-2 rounded-xl border bg-white text-[10px] font-bold">لغو انتخاب</button>
+                  <button type="button" onClick={() => setBulkUpdates({})} className="px-3 py-2 rounded-xl border bg-white text-[10px] font-bold text-red-600">پاک کردن تغییرات پیش‌نمایش</button>
+                </div>
+              </section>
+
+              <section className="bg-white rounded-3xl border border-neutral-200 shadow-xs overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs text-right divide-y divide-neutral-200">
+                    <thead className="bg-neutral-50 font-bold text-neutral-700">
+                      <tr>
+                        <th className="p-3 w-10">
                           <input
-                            type="number"
-                            defaultValue={p.price}
-                            onChange={e => handleBulkPriceChange(p.id, Number(e.target.value))}
-                            className="w-full p-2 border border-neutral-300 rounded-lg font-mono text-xs"
+                            type="checkbox"
+                            checked={products.length > 0 && selectedBulkIds.size === products.length}
+                            onChange={e => setSelectedBulkIds(e.target.checked ? new Set(products.map(p => p.id)) : new Set())}
                           />
-                        </td>
-                        <td className="p-3 font-mono font-bold">{p.stock}</td>
-                        <td className="p-3">
-                          <input
-                            type="number"
-                            defaultValue={p.stock}
-                            onChange={e => handleBulkStockChange(p.id, Number(e.target.value))}
-                            className="w-full p-2 border border-neutral-300 rounded-lg font-mono text-xs"
-                          />
-                        </td>
+                        </th>
+                        <th className="p-3">نام قطعه</th>
+                        <th className="p-3">OEM</th>
+                        <th className="p-3">قیمت فعلی</th>
+                        <th className="p-3 w-44">قیمت جدید (ریال)</th>
+                        <th className="p-3">موجودی فعلی</th>
+                        <th className="p-3 w-32">موجودی جدید</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody className="divide-y divide-neutral-100">
+                      {products.map(p => {
+                        const edited = bulkUpdates[p.id];
+                        return (
+                          <tr key={p.id} className={`hover:bg-neutral-50/60 ${selectedBulkIds.has(p.id)?'bg-blue-50/30':''}`}>
+                            <td className="p-3">
+                              <input
+                                type="checkbox"
+                                checked={selectedBulkIds.has(p.id)}
+                                onChange={e => {
+                                  const next = new Set(selectedBulkIds);
+                                  e.target.checked ? next.add(p.id) : next.delete(p.id);
+                                  setSelectedBulkIds(next);
+                                }}
+                              />
+                            </td>
+                            <td className="p-3 font-bold text-neutral-900">{p.nameFa}</td>
+                            <td className="p-3 font-mono text-neutral-600">{p.oemNumber}</td>
+                            <td className="p-3 font-mono font-bold text-neutral-900">{formatToman(p.price)}</td>
+                            <td className="p-3">
+                              <input
+                                type="number"
+                                value={edited?.price ?? p.price}
+                                onChange={e => handleBulkPriceChange(p.id, Math.max(0,Number(e.target.value)))}
+                                className={`w-full p-2 border rounded-lg font-mono text-xs ${edited?'border-blue-400 bg-blue-50/30':'border-neutral-300'}`}
+                              />
+                            </td>
+                            <td className="p-3 font-mono font-bold">{p.stock}</td>
+                            <td className="p-3">
+                              <input
+                                type="number"
+                                min={0}
+                                value={edited?.stock ?? p.stock}
+                                onChange={e => handleBulkStockChange(p.id, Number(e.target.value))}
+                                className={`w-full p-2 border rounded-lg font-mono text-xs ${edited?'border-violet-400 bg-violet-50/30':'border-neutral-300'}`}
+                              />
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
             </div>
           )}
 
@@ -1587,165 +1609,11 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
       )}
 
       {/* =========================================================================
-          MODAL: ADD NEW PRODUCT (WITH SHORT AND FULL DESCRIPTION & RICH EDITOR)
-      ========================================================================= */}
-      {isNewProductModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
-          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto space-y-4 text-right shadow-2xl">
-            <div className="flex items-center justify-between pb-3 border-b border-neutral-100">
-              <h3 className="font-bold text-base text-neutral-900">تعریف قطعه جدید در انبار</h3>
-              <button onClick={() => setIsNewProductModalOpen(false)} className="text-neutral-400 hover:text-neutral-700">✕</button>
-            </div>
-
-            <form onSubmit={handleCreateProduct} className="space-y-4 text-xs">
-              <div>
-                <label className="block text-neutral-600 mb-1 font-semibold">نام فارسی قطعه *:</label>
-                <input
-                  type="text"
-                  value={newProductForm.nameFa}
-                  onChange={e => setNewProductForm({ ...newProductForm, nameFa: e.target.value })}
-                  placeholder="مثال: رادیاتور آب موتور KMC J7 شرکتی"
-                  className="w-full p-2.5 border border-neutral-300 rounded-xl"
-                  required
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-neutral-600 mb-1 font-semibold">شماره فنی بین‌المللی OEM *:</label>
-                  <input
-                    type="text"
-                    value={newProductForm.oemNumber}
-                    onChange={e => setNewProductForm({ ...newProductForm, oemNumber: e.target.value })}
-                    placeholder="1026040GH010"
-                    className="w-full p-2.5 border border-neutral-300 rounded-xl font-mono uppercase"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-neutral-600 mb-1 font-semibold">برند سازنده قطعه:</label>
-                  <input
-                    type="text"
-                    value={newProductForm.brandManufacturer}
-                    onChange={e => setNewProductForm({ ...newProductForm, brandManufacturer: e.target.value })}
-                    placeholder="Chery Genuine / Bosch / KMC"
-                    className="w-full p-2.5 border border-neutral-300 rounded-xl"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-neutral-600 mb-1 font-semibold">دسته‌بندی قطعه:</label>
-                  <select
-                    value={newProductForm.categorySlug}
-                    onChange={e => setNewProductForm({ ...newProductForm, categorySlug: e.target.value })}
-                    className="w-full p-2.5 border border-neutral-300 rounded-xl"
-                  >
-                    {categories.map(c => (
-                      <option key={c.id} value={c.slug}>{c.nameFa}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-neutral-600 mb-1 font-semibold">گرید کیفی:</label>
-                  <select
-                    value={newProductForm.grade}
-                    onChange={e => setNewProductForm({ ...newProductForm, grade: e.target.value as any })}
-                    className="w-full p-2.5 border border-neutral-300 rounded-xl"
-                  >
-                    <option value="genuine">اصلی شرکتی (Genuine)</option>
-                    <option value="oem">وارداتی درجه یک (OEM)</option>
-                    <option value="aftermarket">افترمارکت استاندارد</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-neutral-600 mb-1 font-semibold">قیمت فروش (ریال):</label>
-                  <input
-                    type="number"
-                    value={newProductForm.price}
-                    onChange={e => setNewProductForm({ ...newProductForm, price: Number(e.target.value) })}
-                    className="w-full p-2.5 border border-neutral-300 rounded-xl font-mono"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-neutral-600 mb-1 font-semibold">موجودی انبار:</label>
-                  <input
-                    type="number"
-                    value={newProductForm.stock}
-                    onChange={e => setNewProductForm({ ...newProductForm, stock: Number(e.target.value) })}
-                    className="w-full p-2.5 border border-neutral-300 rounded-xl font-mono"
-                    required
-                  />
-                </div>
-              </div>
-
-              {/* Product Gallery Images (Upload, Add, Remove) */}
-              <div className="pt-2 border-t border-neutral-100">
-                <MultiImageUploadInput
-                  label="تصاویر و گالری کالا (آپلود عکس، حذف، شاخص کردن و پیش‌نمایش):"
-                  images={newProductForm.images || []}
-                  onChange={imgs => setNewProductForm({ ...newProductForm, images: imgs })}
-                  helperText="می‌توانید چندین تصویر آپلود کنید، تصاویر را حذف نمایید یا هر تصویر دلخواه را به عنوان عکس اصلی کالا تعیین کنید."
-                />
-              </div>
-
-              {/* Short Description */}
-              <div>
-                <label className="block text-neutral-600 mb-1 font-semibold">
-                  توضیحات کوتاه محصول (خلاصه ویژگی‌ها برای نمایش سریع و متای گوگل):
-                </label>
-                <textarea
-                  rows={2}
-                  value={newProductForm.shortDescription || ''}
-                  onChange={e => setNewProductForm({ ...newProductForm, shortDescription: e.target.value })}
-                  placeholder="خلاصه ۱ الی ۲ خطی از مزایا، کشور سازنده و مشخصه اصلی..."
-                  className="w-full p-2.5 border border-neutral-300 rounded-xl"
-                />
-              </div>
-
-              {/* Rich Long Description */}
-              <div>
-                <RichTextEditor
-                  label="توضیحات کامل و نقد و بررسی تخصصی قطعه (ویرایشگر حرفه‌ای)"
-                  value={newProductForm.description || ''}
-                  onChange={val => setNewProductForm({ ...newProductForm, description: val })}
-                  rows={6}
-                  placeholder="توضیحات کامل فنی، جنس آلیاژ، دستورالعمل نصب و سازگاری..."
-                />
-              </div>
-
-              <div className="flex gap-2 pt-4">
-                <button
-                  type="button"
-                  onClick={() => setIsNewProductModalOpen(false)}
-                  className="flex-1 py-2.5 bg-neutral-100 text-neutral-700 rounded-xl font-bold"
-                >
-                  انصراف
-                </button>
-                <button
-                  type="submit"
-                  className="flex-1 py-2.5 bg-red-600 text-white rounded-xl font-bold shadow-md hover:bg-red-700"
-                >
-                  ثبت قطعه در انبار
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* =========================================================================
           MODAL: EDIT PRODUCT (WITH SHORT AND FULL DESCRIPTION & RICH EDITOR)
       ========================================================================= */}
       {editingProduct && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
-          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto space-y-4 text-right shadow-2xl">
+        <div className="fixed inset-0 z-[210] flex items-start justify-center px-3 sm:px-4 pt-4 sm:pt-8 pb-8 bg-black/60 backdrop-blur-xs overflow-y-auto">
+          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-5xl w-full max-h-[calc(100vh-3rem)] overflow-y-auto space-y-4 text-right shadow-2xl">
             <div className="flex items-center justify-between pb-3 border-b border-neutral-100">
               <h3 className="font-bold text-base text-neutral-900">ویرایش قطعه: {editingProduct.nameFa}</h3>
               <button onClick={() => setEditingProduct(null)} className="text-neutral-400 hover:text-neutral-700">✕</button>
@@ -1763,7 +1631,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
                   <label className="block text-neutral-600 mb-1 font-semibold">کد بین‌المللی OEM:</label>
                   <input
@@ -1772,6 +1640,16 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
                     onChange={e => setEditingProduct({ ...editingProduct, oemNumber: e.target.value })}
                     className="w-full p-2.5 border border-neutral-300 rounded-xl font-mono uppercase"
                     required
+                  />
+                </div>
+                <div>
+                  <label className="block text-neutral-600 mb-1 font-semibold">Part No / شماره فنی:</label>
+                  <input
+                    type="text"
+                    value={editingProduct.partNumber || ''}
+                    onChange={e => setEditingProduct({ ...editingProduct, partNumber: e.target.value })}
+                    className="w-full p-2.5 border border-neutral-300 rounded-xl font-mono uppercase"
+                    placeholder="شماره فنی سازنده"
                   />
                 </div>
                 <div>
@@ -1809,122 +1687,32 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
                 </div>
               </div>
 
-              {/* Category & Manufacturer Company */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-neutral-100">
-                <div>
-                  <label className="block text-neutral-600 mb-1 font-semibold">دسته‌بندی تخصصی قطعه *:</label>
-                  <select
-                    value={editingProduct.categorySlug}
-                    onChange={e => setEditingProduct({ ...editingProduct, categorySlug: e.target.value })}
-                    className="w-full p-2.5 border border-neutral-300 rounded-xl bg-white"
-                  >
-                    {categories.map(c => (
-                      <option key={c.id} value={c.slug}>{c.nameFa} ({c.nameEn})</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-neutral-600 mb-1 font-semibold">شرکت / برند سازنده قطعه (تولیدکننده) *:</label>
-                  <input
-                    type="text"
-                    value={editingProduct.brandManufacturer || ''}
-                    onChange={e => setEditingProduct({ ...editingProduct, brandManufacturer: e.target.value })}
-                    placeholder="مثال: چری شرکتی، مدیران خودرو، ایساکو، بوش..."
-                    className="w-full p-2.5 border border-neutral-300 rounded-xl"
-                    required
-                  />
-                  <div className="flex flex-wrap gap-1 mt-1.5">
-                    {['چری شرکتی', 'مدیران خودرو', 'کرمان موتور (KMC)', 'ایساکو', 'سایپا یدک', 'بوش (Bosch)', 'والئو (Valeo)', 'گتس (Gates)'].map(brandName => (
-                      <button
-                        type="button"
-                        key={brandName}
-                        onClick={() => setEditingProduct({ ...editingProduct, brandManufacturer: brandName })}
-                        className="text-[10px] px-2 py-0.5 rounded-lg bg-neutral-100 hover:bg-red-50 hover:text-red-700 text-neutral-600 transition-colors cursor-pointer"
-                      >
-                        {brandName}
-                      </button>
-                    ))}
-                  </div>
+              <div className="rounded-2xl border border-neutral-200 p-4 space-y-2">
+                <h4 className="font-bold text-neutral-800">قطعات مکمل (Cross‑Sell)</h4>
+                <p className="text-[11px] text-neutral-500">این قطعات به‌عنوان پیشنهاد مکمل در صفحهٔ همین محصول نمایش داده می‌شوند.</p>
+                <div className="max-h-56 overflow-y-auto grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {products.filter(item => item.id !== editingProduct.id).map(item => (
+                    <label key={item.id} className="flex items-center gap-2 p-2 rounded-lg bg-neutral-50 text-xs">
+                      <input type="checkbox" checked={(editingProduct.complementPartIds || []).includes(item.id)}
+                        onChange={e => {
+                          const current = editingProduct.complementPartIds || [];
+                          const next = e.target.checked ? [...current, item.id] : current.filter(id => id !== item.id);
+                          setEditingProduct({ ...editingProduct, complementPartIds: next });
+                        }} />
+                      <span className="truncate">{item.nameFa}</span>
+                    </label>
+                  ))}
                 </div>
               </div>
 
-              {/* Compatible Vehicle Models (Fitments) */}
-              <div className="pt-2 border-t border-neutral-100 space-y-2">
-                <div className="flex items-center justify-between">
-                  <label className="block text-neutral-700 font-bold">
-                    خودروهای سازگار با این قطعه (فیتمنت خودروها):
-                  </label>
-                  <span className="text-[11px] text-blue-700 font-bold bg-blue-50 px-2 py-0.5 rounded-lg border border-blue-200">
-                    {(editingProduct.fitments || []).length} خودرو انتخاب شده
-                  </span>
-                </div>
-                <p className="text-[11px] text-neutral-500">
-                  مشخص کنید این قطعه برای کدام خودرو یا خودروها کاربرد دارد (خریداران با فیلتر هوشمند خودرو این کالا را می‌بینند):
-                </p>
-                <div className="max-h-48 overflow-y-auto p-3 border border-neutral-200 rounded-2xl bg-neutral-50/50 space-y-3">
-                  {brands.map(brand => {
-                    const brandModels = models.filter(m => m.brandId === brand.id);
-                    if (brandModels.length === 0) return null;
-                    return (
-                      <div key={brand.id} className="space-y-1.5">
-                        <div className="font-bold text-[11px] text-neutral-800 flex items-center gap-1.5">
-                          <span className="w-1.5 h-1.5 rounded-full bg-red-600"></span>
-                          <span>{brand.nameFa} ({brand.nameEn}):</span>
-                        </div>
-                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
-                          {brandModels.map(m => {
-                            const isChecked = (editingProduct.fitments || []).some(f => f.modelId === m.id);
-                            return (
-                              <label
-                                key={m.id}
-                                className={`flex items-center gap-2 p-2 rounded-xl border text-[11px] cursor-pointer transition-colors ${
-                                  isChecked
-                                    ? 'bg-blue-50 border-blue-300 text-blue-900 font-bold'
-                                    : 'bg-white border-neutral-200 hover:border-neutral-300 text-neutral-700'
-                                }`}
-                              >
-                                <input
-                                  type="checkbox"
-                                  checked={isChecked}
-                                  onChange={e => {
-                                    const currentFitments = editingProduct.fitments || [];
-                                    if (e.target.checked) {
-                                      const newFitment = {
-                                        id: `fit-${m.id}-${Date.now()}`,
-                                        brandId: brand.id,
-                                        brandName: brand.nameFa,
-                                        modelId: m.id,
-                                        modelName: m.nameFa,
-                                        yearFrom: m.yearFrom,
-                                        yearTo: m.yearTo,
-                                        engine: m.engineSummary
-                                      };
-                                      setEditingProduct({
-                                        ...editingProduct,
-                                        fitments: [...currentFitments, newFitment],
-                                        vehicleModelIds: [...(editingProduct.vehicleModelIds || []), m.id]
-                                      });
-                                    } else {
-                                      setEditingProduct({
-                                        ...editingProduct,
-                                        fitments: currentFitments.filter(f => f.modelId !== m.id),
-                                        vehicleModelIds: (editingProduct.vehicleModelIds || []).filter(id => id !== m.id)
-                                      });
-                                    }
-                                  }}
-                                  className="rounded text-red-600 focus:ring-red-500"
-                                />
-                                <span>{m.nameFa}</span>
-                              </label>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
+              <ProductClassificationFields
+                value={editingProduct}
+                onChange={(next) => setEditingProduct({ ...editingProduct, ...next } as Product)}
+                categories={categories}
+                brands={brands}
+                models={models}
+                products={products}
+              />
 
               {/* Product Gallery Images (Upload, Add, Remove) */}
               <div className="pt-2 border-t border-neutral-100">
@@ -1961,6 +1749,17 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
                 />
               </div>
 
+              <AdminEntitySeoPanel
+                entityType="product"
+                entityId={editingProduct.id}
+                entityTitle={editingProduct.nameFa}
+                contentDraft={{ description: editingProduct.shortDescription, content: editingProduct.description, data: editingProduct }}
+                onAiContent={(pkg, seo) => setEditingProduct({ ...editingProduct, shortDescription: pkg.shortDescription, description: pkg.contentHtml, seo })}
+                value={editingProduct.seo}
+                images={editingProduct.images || []}
+                onChange={(seo) => setEditingProduct({ ...editingProduct, seo })}
+              />
+
               <div className="flex gap-2 pt-4">
                 <button
                   type="button"
@@ -1985,8 +1784,8 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
           MODAL: ADD NEW PRODUCT TO INVENTORY
       ========================================================================= */}
       {isNewProductModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
-          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto space-y-4 text-right shadow-2xl">
+        <div className="fixed inset-0 z-[210] flex items-start justify-center px-3 sm:px-4 pt-4 sm:pt-8 pb-8 bg-black/60 backdrop-blur-xs overflow-y-auto">
+          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-5xl w-full max-h-[calc(100vh-3rem)] overflow-y-auto space-y-4 text-right shadow-2xl">
             <div className="flex items-center justify-between pb-3 border-b border-neutral-100">
               <h3 className="font-bold text-base text-neutral-900 flex items-center gap-2">
                 <Package className="w-5 h-5 text-red-600" />
@@ -2008,7 +1807,22 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-neutral-600 mb-1 font-semibold">سازندهٔ قطعه:</label>
+                <input
+                  type="text"
+                  list="known-part-manufacturers"
+                  value={newProductForm.partManufacturerCompany || newProductForm.brandManufacturer || ''}
+                  onChange={e => setNewProductForm({ ...newProductForm, brandManufacturer: e.target.value, partManufacturerCompany: e.target.value })}
+                  placeholder="نام واقعی شرکت سازنده را انتخاب یا وارد کنید"
+                  className="w-full p-2.5 border border-neutral-300 rounded-xl"
+                />
+                <datalist id="known-part-manufacturers">
+                  {PART_MANUFACTURERS.map(manufacturer => <option key={manufacturer.id} value={manufacturer.nameEn}>{manufacturer.nameFa}</option>)}
+                </datalist>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
                   <label className="block text-neutral-600 mb-1 font-semibold">کد بین‌المللی OEM *:</label>
                   <input
@@ -2020,7 +1834,11 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
                     required
                   />
                 </div>
-                <div>
+ <div>
+                  <label className="block text-neutral-600 mb-1 font-semibold">Part No / شماره فنی:</label>
+                  <input type="text" value={newProductForm.partNumber || ''} onChange={e => setNewProductForm({ ...newProductForm, partNumber: e.target.value })} className="w-full p-2.5 border border-neutral-300 rounded-xl font-mono uppercase" placeholder="شماره فنی سازنده" />
+                </div>
+                               <div>
                   <label className="block text-neutral-600 mb-1 font-semibold">کد SKU انبار:</label>
                   <input
                     type="text"
@@ -2057,122 +1875,14 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
                 </div>
               </div>
 
-              {/* Category & Manufacturer Company */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-neutral-100">
-                <div>
-                  <label className="block text-neutral-600 mb-1 font-semibold">دسته‌بندی تخصصی قطعه *:</label>
-                  <select
-                    value={newProductForm.categorySlug || 'engine'}
-                    onChange={e => setNewProductForm({ ...newProductForm, categorySlug: e.target.value })}
-                    className="w-full p-2.5 border border-neutral-300 rounded-xl bg-white"
-                  >
-                    {categories.map(c => (
-                      <option key={c.id} value={c.slug}>{c.nameFa} ({c.nameEn})</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-neutral-600 mb-1 font-semibold">شرکت / برند سازنده قطعه (تولیدکننده) *:</label>
-                  <input
-                    type="text"
-                    value={newProductForm.brandManufacturer || ''}
-                    onChange={e => setNewProductForm({ ...newProductForm, brandManufacturer: e.target.value })}
-                    placeholder="مثال: چری شرکتی، مدیران خودرو، کرمان موتور، بوش..."
-                    className="w-full p-2.5 border border-neutral-300 rounded-xl"
-                    required
-                  />
-                  <div className="flex flex-wrap gap-1 mt-1.5">
-                    {['چری شرکتی', 'مدیران خودرو', 'کرمان موتور (KMC)', 'ایساکو', 'سایپا یدک', 'بوش (Bosch)', 'والئو (Valeo)', 'گتس (Gates)'].map(brandName => (
-                      <button
-                        type="button"
-                        key={brandName}
-                        onClick={() => setNewProductForm({ ...newProductForm, brandManufacturer: brandName })}
-                        className="text-[10px] px-2 py-0.5 rounded-lg bg-neutral-100 hover:bg-red-50 hover:text-red-700 text-neutral-600 transition-colors cursor-pointer"
-                      >
-                        {brandName}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              {/* Compatible Vehicle Models (Fitments) */}
-              <div className="pt-2 border-t border-neutral-100 space-y-2">
-                <div className="flex items-center justify-between">
-                  <label className="block text-neutral-700 font-bold">
-                    خودروهای سازگار با این قطعه (وابستگی به مدل و کارخانه):
-                  </label>
-                  <span className="text-[11px] text-blue-700 font-bold bg-blue-50 px-2 py-0.5 rounded-lg border border-blue-200">
-                    {(newProductForm.fitments || []).length} خودرو انتخاب شده
-                  </span>
-                </div>
-                <p className="text-[11px] text-neutral-500">
-                  انتخاب کنید این محصول برای کدام خودروها مناسب است تا در جستجو و فیلترهای خودرویی دقیقاً برای آن خودروها پیشنهاد شود:
-                </p>
-                <div className="max-h-48 overflow-y-auto p-3 border border-neutral-200 rounded-2xl bg-neutral-50/50 space-y-3">
-                  {brands.map(brand => {
-                    const brandModels = models.filter(m => m.brandId === brand.id);
-                    if (brandModels.length === 0) return null;
-                    return (
-                      <div key={brand.id} className="space-y-1.5">
-                        <div className="font-bold text-[11px] text-neutral-800 flex items-center gap-1.5">
-                          <span className="w-1.5 h-1.5 rounded-full bg-red-600"></span>
-                          <span>{brand.nameFa} ({brand.nameEn}):</span>
-                        </div>
-                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
-                          {brandModels.map(m => {
-                            const isChecked = (newProductForm.fitments || []).some(f => f.modelId === m.id);
-                            return (
-                              <label
-                                key={m.id}
-                                className={`flex items-center gap-2 p-2 rounded-xl border text-[11px] cursor-pointer transition-colors ${
-                                  isChecked
-                                    ? 'bg-blue-50 border-blue-300 text-blue-900 font-bold'
-                                    : 'bg-white border-neutral-200 hover:border-neutral-300 text-neutral-700'
-                                }`}
-                              >
-                                <input
-                                  type="checkbox"
-                                  checked={isChecked}
-                                  onChange={e => {
-                                    const currentFitments = newProductForm.fitments || [];
-                                    if (e.target.checked) {
-                                      const newFitment = {
-                                        id: `fit-${m.id}-${Date.now()}`,
-                                        brandId: brand.id,
-                                        brandName: brand.nameFa,
-                                        modelId: m.id,
-                                        modelName: m.nameFa,
-                                        yearFrom: m.yearFrom,
-                                        yearTo: m.yearTo,
-                                        engine: m.engineSummary
-                                      };
-                                      setNewProductForm({
-                                        ...newProductForm,
-                                        fitments: [...currentFitments, newFitment],
-                                        vehicleModelIds: [...(newProductForm.vehicleModelIds || []), m.id]
-                                      });
-                                    } else {
-                                      setNewProductForm({
-                                        ...newProductForm,
-                                        fitments: currentFitments.filter(f => f.modelId !== m.id),
-                                        vehicleModelIds: (newProductForm.vehicleModelIds || []).filter(id => id !== m.id)
-                                      });
-                                    }
-                                  }}
-                                  className="rounded text-red-600 focus:ring-red-500"
-                                />
-                                <span>{m.nameFa}</span>
-                              </label>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
+              <ProductClassificationFields
+                value={newProductForm}
+                onChange={(next) => setNewProductForm(next)}
+                categories={categories}
+                brands={brands}
+                models={models}
+                products={products}
+              />
 
               {/* Product Gallery Images (Upload, Add, Remove) */}
               <div className="pt-2 border-t border-neutral-100">
@@ -2233,7 +1943,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
           MODAL: ADD NEW CATEGORY
       ========================================================================= */}
       {isCategoryModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+        <div className="fixed inset-0 z-[210] flex items-start justify-center px-3 sm:px-4 pt-4 sm:pt-8 pb-8 bg-black/60 backdrop-blur-xs overflow-y-auto">
           <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full space-y-4 text-right shadow-2xl">
             <div className="flex items-center justify-between pb-3 border-b border-neutral-100">
               <h3 className="font-bold text-base text-neutral-900">افزودن دسته‌بندی قطعات جدید</h3>
@@ -2286,6 +1996,32 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
                   placeholder="کاتالیزور، منیفولد دود، سنسور اکسیژن..."
                   className="w-full p-2.5 border border-neutral-300 rounded-xl"
                 />
+              </div>
+
+              <div className="pt-3 border-t border-neutral-100 space-y-3">
+                <div className="flex items-center justify-between gap-2">
+                  <div>
+                    <label className="block text-neutral-700 font-bold">زیرمنوهای این دسته‌بندی</label>
+                    <p className="text-[10px] text-neutral-500 mt-0.5">هر موردی که اینجا ثبت شود در زیرمنوی «دسته‌بندی قطعات» نمایش داده می‌شود.</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setNewCatSubcategories(prev => [...prev, { id: `sub-${Date.now()}`, nameFa: '', nameEn: '', slug: '' }])}
+                    className="px-3 py-1.5 bg-neutral-900 text-white rounded-lg text-[10px] font-bold cursor-pointer"
+                  >
+                    + افزودن زیرمنو
+                  </button>
+                </div>
+                <div className="space-y-2">
+                  {newCatSubcategories.map((sub, index) => (
+                    <div key={sub.id} className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_1fr_auto] gap-2 items-center p-2 bg-neutral-50 rounded-xl border border-neutral-200">
+                      <input value={sub.nameFa} onChange={e => setNewCatSubcategories(prev => prev.map((x,i) => i === index ? { ...x, nameFa: e.target.value } : x))} placeholder="نام فارسی" className="p-2 border rounded-lg" />
+                      <input value={sub.nameEn} onChange={e => setNewCatSubcategories(prev => prev.map((x,i) => i === index ? { ...x, nameEn: e.target.value } : x))} placeholder="نام انگلیسی" className="p-2 border rounded-lg" />
+                      <input dir="ltr" value={sub.slug} onChange={e => setNewCatSubcategories(prev => prev.map((x,i) => i === index ? { ...x, slug: e.target.value } : x))} placeholder="slug" className="p-2 border rounded-lg text-left" />
+                      <button type="button" onClick={() => setNewCatSubcategories(prev => prev.filter((_,i) => i !== index))} className="p-2 text-red-600 hover:bg-red-50 rounded-lg cursor-pointer"><Trash2 className="w-4 h-4" /></button>
+                    </div>
+                  ))}
+                </div>
               </div>
 
               {/* Category Icon Picker & Custom Icon Upload */}
@@ -2363,8 +2099,8 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
           MODAL: EDIT CATEGORY (Image Upload, Remove, and Edit)
       ========================================================================= */}
       {editingCategory && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
-          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full space-y-4 text-right shadow-2xl">
+        <div className="fixed inset-0 z-[210] flex items-start justify-center px-3 sm:px-4 pt-4 sm:pt-8 pb-8 bg-black/60 backdrop-blur-xs overflow-y-auto">
+          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-3xl w-full max-h-[90vh] overflow-y-auto space-y-4 text-right shadow-2xl">
             <div className="flex items-center justify-between pb-3 border-b border-neutral-100">
               <h3 className="font-bold text-base text-neutral-900">ویرایش دسته‌بندی قطعات و عکس</h3>
               <button onClick={() => setEditingCategory(null)} className="text-neutral-400 hover:text-neutral-700">✕</button>
@@ -2412,6 +2148,35 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
                   onChange={e => setEditingCategory({ ...editingCategory, description: e.target.value })}
                   className="w-full p-2.5 border border-neutral-300 rounded-xl"
                 />
+              </div>
+
+              <div className="pt-3 border-t border-neutral-100 space-y-3">
+                <div className="flex items-center justify-between gap-2">
+                  <div>
+                    <label className="block text-neutral-700 font-bold">زیرمنوهای دسته‌بندی</label>
+                    <p className="text-[10px] text-neutral-500 mt-0.5">نام، آدرس و ترتیب زیرمنوها را مستقیم مدیریت کنید.</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setEditingCategory({
+                      ...editingCategory,
+                      subcategories: [...(editingCategory.subcategories || []), { id: `sub-${Date.now()}`, nameFa: '', nameEn: '', slug: '' }]
+                    })}
+                    className="px-3 py-1.5 bg-neutral-900 text-white rounded-lg text-[10px] font-bold cursor-pointer"
+                  >
+                    + افزودن زیرمنو
+                  </button>
+                </div>
+                <div className="space-y-2">
+                  {(editingCategory.subcategories || []).map((sub, index) => (
+                    <div key={sub.id} className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_1fr_auto] gap-2 items-center p-2 bg-neutral-50 rounded-xl border border-neutral-200">
+                      <input value={sub.nameFa} onChange={e => setEditingCategory({ ...editingCategory, subcategories: (editingCategory.subcategories || []).map((x,i) => i === index ? { ...x, nameFa: e.target.value } : x) })} placeholder="نام فارسی" className="p-2 border rounded-lg" />
+                      <input value={sub.nameEn} onChange={e => setEditingCategory({ ...editingCategory, subcategories: (editingCategory.subcategories || []).map((x,i) => i === index ? { ...x, nameEn: e.target.value } : x) })} placeholder="نام انگلیسی" className="p-2 border rounded-lg" />
+                      <input dir="ltr" value={sub.slug} onChange={e => setEditingCategory({ ...editingCategory, subcategories: (editingCategory.subcategories || []).map((x,i) => i === index ? { ...x, slug: e.target.value } : x) })} placeholder="slug" className="p-2 border rounded-lg text-left" />
+                      <button type="button" onClick={() => setEditingCategory({ ...editingCategory, subcategories: (editingCategory.subcategories || []).filter((_,i) => i !== index) })} className="p-2 text-red-600 hover:bg-red-50 rounded-lg cursor-pointer"><Trash2 className="w-4 h-4" /></button>
+                    </div>
+                  ))}
+                </div>
               </div>
 
               {/* Category Icon Picker & Custom Icon Upload */}
@@ -2486,7 +2251,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ onExitToStore, onNavigate 
           MODAL: ADD NEW CUSTOMER
       ========================================================================= */}
       {isCustomerModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+        <div className="fixed inset-0 z-[210] flex items-start justify-center px-3 sm:px-4 pt-4 sm:pt-8 pb-8 bg-black/60 backdrop-blur-xs overflow-y-auto">
           <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full space-y-4 text-right shadow-2xl">
             <div className="flex items-center justify-between pb-3 border-b border-neutral-100">
               <h3 className="font-bold text-base text-neutral-900">ثبت مشتری یا همکار جدید</h3>

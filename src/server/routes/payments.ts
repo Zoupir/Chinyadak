@@ -1,19 +1,20 @@
 import { Router } from 'express';
 import { rateLimit } from 'express-rate-limit';
 import { config } from '../config';
-import { pool, withTransaction, type ResultSetHeader, type RowDataPacket } from '../db';
+import { awardPaidOrderLoyalty, pool, refundOrderLoyalty, withTransaction, type ResultSetHeader, type RowDataPacket } from '../db';
 import {
   finalizePaidInventory,
   releaseExpiredReservations,
   releaseOrderReservation,
   reserveOrderInventory
 } from '../inventory';
-import { getPaymentAdapter, getPaymentProviderStatus } from '../payments';
+import { ensurePaymentRuntimeConfig, getPaymentAdapter, getPaymentProviderStatus } from '../payments';
 
 interface PaymentOrderRow extends RowDataPacket {
   id: string;
   order_number: string;
   payment_method: string | null;
+  status: string;
   payment_status: string;
   total: number | string;
   customer_snapshot: any;
@@ -68,7 +69,8 @@ const paymentLimiter = rateLimit({
 
 export const paymentsRouter = Router();
 
-paymentsRouter.get('/providers', (_req, res) => {
+paymentsRouter.get('/providers', async (_req, res) => {
+  await ensurePaymentRuntimeConfig();
   const status = getPaymentProviderStatus();
   res.json({
     providers: [
@@ -87,6 +89,7 @@ paymentsRouter.post('/start', paymentLimiter, async (req, res) => {
   }
 
   try {
+    await ensurePaymentRuntimeConfig();
     await releaseExpiredReservations();
   } catch (error) {
     console.error('Expired reservation cleanup failed:', error);
@@ -106,7 +109,7 @@ paymentsRouter.post('/start', paymentLimiter, async (req, res) => {
   try {
     prepared = await withTransaction(async connection => {
       const [rows] = await connection.query<PaymentOrderRow[]>(
-        `SELECT id, order_number, payment_method, payment_status, total,
+        `SELECT id, order_number, status, payment_method, payment_status, total,
                 customer_snapshot, reservation_expires_at
          FROM orders
          WHERE id = ?
@@ -117,6 +120,9 @@ paymentsRouter.post('/start', paymentLimiter, async (req, res) => {
       if (!order) throw new Error('ORDER_NOT_FOUND');
       if (order.payment_status === 'paid' || order.payment_status === 'paid_stock_review') {
         throw new Error('ORDER_ALREADY_PAID');
+      }
+      if (['cancelled', 'payment_failed'].includes(order.status) || ['cancelled', 'failed'].includes(order.payment_status)) {
+        throw new Error('ORDER_PAYMENT_CLOSED');
       }
 
       const provider =
@@ -170,9 +176,25 @@ paymentsRouter.post('/start', paymentLimiter, async (req, res) => {
     });
   } catch (error: any) {
     const code = String(error?.message || 'PAYMENT_PREPARE_FAILED').split(':')[0];
+    if (['PAYMENT_PROVIDER_NOT_CONFIGURED', 'PAYMENT_PROVIDER_UNSUPPORTED', 'PAYMENT_AMOUNT_INVALID', 'INSUFFICIENT_STOCK'].includes(code)) {
+      await withTransaction(async connection => {
+        const [orders] = await connection.query<Array<RowDataPacket & { payment_status: string }>>(
+          'SELECT payment_status FROM orders WHERE id = ? FOR UPDATE', [orderId]
+        );
+        if (orders[0] && !['paid', 'paid_stock_review', 'initiated'].includes(orders[0].payment_status)) {
+          await refundOrderLoyalty(connection, orderId, false);
+          await connection.execute(
+            `UPDATE orders SET status = 'payment_failed', payment_status = 'failed', updated_at = NOW()
+             WHERE id = ? AND payment_status NOT IN ('paid','paid_stock_review','initiated')`,
+            [orderId]
+          );
+        }
+      }).catch(refundError => console.error('Loyalty redemption rollback before payment failed:', refundError));
+    }
     const status =
       code === 'ORDER_NOT_FOUND' ? 404 :
       code === 'ORDER_ALREADY_PAID' ? 409 :
+      code === 'ORDER_PAYMENT_CLOSED' ? 409 :
       code === 'PAYMENT_ALREADY_IN_PROGRESS' ? 409 :
       code === 'INSUFFICIENT_STOCK' ? 409 :
       code === 'PAYMENT_PROVIDER_NOT_CONFIGURED' ? 503 :
@@ -195,7 +217,7 @@ paymentsRouter.post('/start', paymentLimiter, async (req, res) => {
       amountRial: prepared.amountRial,
       mobile: prepared.mobile,
       callbackUrl: callbackUrl(prepared.provider),
-      description: `ChinPart order ${prepared.orderNumber}`
+      description: `Store order ${prepared.orderNumber}`
     });
 
     await pool.execute(
@@ -230,6 +252,18 @@ paymentsRouter.post('/start', paymentLimiter, async (req, res) => {
       [String((error as Error)?.message || error), prepared.transactionId]
     ).catch(() => undefined);
     await releaseOrderReservation(prepared.orderId).catch(() => undefined);
+    await withTransaction(async connection => {
+      const [orders] = await connection.query<Array<RowDataPacket & { payment_status: string }>>(
+        'SELECT payment_status FROM orders WHERE id = ? FOR UPDATE', [prepared.orderId]
+      );
+      if (!orders[0] || ['paid', 'paid_stock_review'].includes(orders[0].payment_status)) return;
+      await refundOrderLoyalty(connection, prepared.orderId, false);
+      await connection.execute(
+        `UPDATE orders SET status = 'payment_failed', payment_status = 'failed', updated_at = NOW()
+         WHERE id = ? AND payment_status NOT IN ('paid','paid_stock_review')`,
+        [prepared.orderId]
+      );
+    }).catch(error => console.error('Loyalty redemption rollback after gateway start failure failed:', error));
 
     res.status(502).json({
       error: 'PAYMENT_GATEWAY_START_FAILED',
@@ -308,6 +342,7 @@ const handleCallback = async (req: any, res: any) => {
 
   let verifyResult;
   try {
+    await ensurePaymentRuntimeConfig();
     const adapter = getPaymentAdapter(provider);
     verifyResult = await adapter.verify({
       gatewayOrderId: Number(transaction.gateway_order_id),
@@ -352,14 +387,18 @@ const handleCallback = async (req: any, res: any) => {
     await releaseOrderReservation(transaction.order_id).catch(error =>
       console.error('Reservation release after payment failure failed:', error)
     );
-    await pool.execute(
-      `UPDATE orders
-       SET status = 'payment_failed',
-           payment_status = 'failed',
-           updated_at = NOW()
-       WHERE id = ? AND payment_status NOT IN ('paid', 'paid_stock_review')`,
-      [transaction.order_id]
-    );
+    await withTransaction(async connection => {
+      const [orders] = await connection.query<Array<RowDataPacket & { payment_status: string }>>(
+        'SELECT payment_status FROM orders WHERE id = ? FOR UPDATE', [transaction.order_id]
+      );
+      if (!orders[0] || ['paid', 'paid_stock_review'].includes(orders[0].payment_status)) return;
+      await refundOrderLoyalty(connection, transaction.order_id, false);
+      await connection.execute(
+        `UPDATE orders SET status = 'payment_failed', payment_status = 'failed', updated_at = NOW()
+         WHERE id = ? AND payment_status NOT IN ('paid', 'paid_stock_review')`,
+        [transaction.order_id]
+      );
+    });
 
     res.redirect(paymentResultUrl(transaction.order_number, 'failed'));
     return;
@@ -416,6 +455,7 @@ const handleCallback = async (req: any, res: any) => {
         locked.order_id
       ]
     );
+    await awardPaidOrderLoyalty(connection, locked.order_id);
 
     await connection.execute(
       `INSERT INTO audit_log

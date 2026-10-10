@@ -7,3 +7,6 @@ coverage/
 .env*
 !.env.example
 uploads/
+private-uploads/
+var/extensions/
+AUDIT_PIPELINE_TRACE.json

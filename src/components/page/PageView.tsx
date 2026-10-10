@@ -35,7 +35,8 @@ export const PageView: React.FC<PageViewProps> = ({ pageSlug, onNavigate }) => {
     isLiveEditActive, 
     setIsLiveEditActive, 
     adminAuth,
-    showToast 
+    showToast,
+    settings 
   } = useStore();
   const [editingSectionId, setEditingSectionId] = useState<string | null>(null);
 
@@ -80,11 +81,87 @@ export const PageView: React.FC<PageViewProps> = ({ pageSlug, onNavigate }) => {
 
   const handleActionClick = (link?: string) => {
     if (!link) return;
-    if (link.startsWith('http://') || link.startsWith('https://')) {
-      window.open(link, '_blank');
+    if (link.startsWith('http://') || link.startsWith('https://') || link.startsWith('tel:') || link.startsWith('mailto:')) {
+      if (link.startsWith('http')) window.open(link, '_blank', 'noopener,noreferrer');
+      else window.location.href = link;
+    } else if (link.includes(':')) {
+      const [view, ...rest] = link.split(':');
+      onNavigate(view, rest.join(':'));
     } else {
       onNavigate(link);
     }
+  };
+
+  const getSectionStyle = (section: PageSection): React.CSSProperties => {
+    const imageOpacity = Math.max(0, Math.min(100, Number(section.backgroundImageOpacity ?? 100))) / 100;
+    const overlayAlpha = Math.max(0, Math.min(1, 1 - imageOpacity));
+    return {
+      backgroundColor: section.backgroundColor || undefined,
+      color: section.textColor || undefined,
+      borderRadius: section.borderRadiusPx != null ? `${section.borderRadiusPx}px` : undefined,
+      paddingTop: section.paddingTopPx != null ? `${section.paddingTopPx}px` : undefined,
+      paddingBottom: section.paddingBottomPx != null ? `${section.paddingBottomPx}px` : undefined,
+      paddingInline: section.paddingInlinePx != null ? `${section.paddingInlinePx}px` : undefined,
+      minHeight: section.minHeightPx ? `${section.minHeightPx}px` : undefined,
+      textAlign: section.contentAlign || undefined,
+      width: section.fullWidth ? '100%' : `${Math.max(20, Math.min(100, Number(section.widthPercent ?? 100)))}%`,
+      maxWidth: section.fullWidth || section.maxWidthPx === 0 ? 'none' : `${Number(section.maxWidthPx || 1280)}px`,
+      marginInline: 'auto',
+      ['--builder-cols' as any]: String(section.desktopColumns || 3),
+      ['--builder-tablet-cols' as any]: String(section.tabletColumns || Math.min(section.desktopColumns || 3, 2)),
+      ['--builder-mobile-cols' as any]: String(section.mobileColumns || 1),
+      ['--builder-width' as any]: section.fullWidth ? '100%' : `${Math.max(20, Math.min(100, Number(section.widthPercent ?? 100)))}%`,
+      ['--builder-tablet-width' as any]: section.fullWidth ? '100%' : `${Math.max(20, Math.min(100, Number(section.tabletWidthPercent ?? section.widthPercent ?? 100)))}%`,
+      ['--builder-mobile-width' as any]: section.fullWidth ? '100%' : `${Math.max(20, Math.min(100, Number(section.mobileWidthPercent ?? section.widthPercent ?? 100)))}%`,
+      ['--builder-gap' as any]: `${section.gapPx ?? 16}px`,
+      ['--builder-item-radius' as any]: `${section.itemRadiusPx ?? 10}px`,
+      ['--builder-image-size' as any]: `${section.imageSizePx ?? 72}px`,
+      ...(section.imageUrl && !['full', 'side', 'contain'].includes(section.imageMode || '')
+        ? {
+            backgroundImage: `linear-gradient(rgba(0,0,0,${overlayAlpha}), rgba(0,0,0,${overlayAlpha})), url(${section.imageUrl})`,
+            backgroundSize: section.imageMode === 'stretch' ? '100% 100%' : section.imageMode === 'original' || (section.imageMode || '').startsWith('repeat') ? 'auto' : 'cover',
+            backgroundRepeat: section.imageMode === 'repeat' ? 'repeat' : section.imageMode === 'repeat-x' ? 'repeat-x' : section.imageMode === 'repeat-y' ? 'repeat-y' : 'no-repeat',
+            backgroundPosition: 'center'
+          }
+        : {})
+    };
+  };
+
+  const renderSectionItems = (section: PageSection) => {
+    const items = [...(section.items || [])]
+      .filter(item => item.isVisible !== false)
+      .sort((a, b) => a.order - b.order)
+      .slice(0, section.maxItems && section.maxItems > 0 ? section.maxItems : undefined);
+    if (!items.length) return null;
+    return (
+      <div className="builder-section-grid mt-5">
+        {items.map(item => (
+          <article
+            key={item.id}
+            className="p-4 border border-neutral-200 bg-white/90 shadow-xs"
+            style={{ borderRadius: `${section.itemRadiusPx ?? 10}px` }}
+          >
+            {item.imageUrl && (
+              <img
+                src={item.imageUrl}
+                alt={currentPage.seo?.images?.[item.imageUrl]?.alt || item.title || section.title}
+                title={currentPage.seo?.images?.[item.imageUrl]?.title || item.title || section.title}
+                className="object-contain mb-3"
+                style={{ width: 'var(--builder-image-size)', height: 'var(--builder-image-size)' }}
+              />
+            )}
+            {item.subtitle && <span className="text-[10px] text-neutral-500">{item.subtitle}</span>}
+            {item.title && <h3 className="font-black text-sm text-neutral-900 mt-1">{item.title}</h3>}
+            {item.content && <p className="text-xs text-neutral-600 leading-relaxed mt-2 whitespace-pre-line">{item.content}</p>}
+            {(item.buttonText || item.link) && (
+              <button type="button" onClick={() => handleActionClick(item.link)} className="mt-3 px-3 py-2 bg-neutral-900 text-white rounded-lg text-[10px] font-bold cursor-pointer">
+                {item.buttonText || 'مشاهده'}
+              </button>
+            )}
+          </article>
+        ))}
+      </div>
+    );
   };
 
   const handleAddNewSection = () => {
@@ -163,7 +240,7 @@ export const PageView: React.FC<PageViewProps> = ({ pageSlug, onNavigate }) => {
       <section className="bg-neutral-900 text-white py-12 px-4 border-b border-neutral-800">
         <div className="max-w-7xl mx-auto space-y-4">
           {/* Breadcrumb */}
-          <div className="flex items-center gap-2 text-xs text-neutral-400">
+          <div className="site-breadcrumb flex items-center gap-2 text-xs text-neutral-400">
             <button 
               onClick={() => onNavigate('home')}
               className="hover:text-white flex items-center gap-1 transition-colors"
@@ -178,7 +255,7 @@ export const PageView: React.FC<PageViewProps> = ({ pageSlug, onNavigate }) => {
           <div className="space-y-2 max-w-3xl">
             <div className="flex items-center gap-2.5">
               <span className="text-[11px] bg-red-600/30 text-red-400 border border-red-500/30 font-bold px-3 py-1 rounded-full">
-                مرکز اطلاعات چین‌پارت
+                مرکز اطلاعات {settings.siteTitle?.split('|')[0]?.trim() || 'فروشگاه'}
               </span>
               <span className="text-[11px] text-neutral-400">
                 آخرین به‌روزرسانی: {currentPage.updatedAt}
@@ -197,7 +274,7 @@ export const PageView: React.FC<PageViewProps> = ({ pageSlug, onNavigate }) => {
       </section>
 
       {/* Page Sections Container */}
-      <div className="max-w-7xl mx-auto px-4 py-10 space-y-12">
+      <div className="page-sections-container w-full px-4 py-10 space-y-12">
         {sectionsToRender.length === 0 ? (
           <div className="p-12 text-center bg-white rounded-3xl border border-neutral-200 space-y-3">
             <FileText className="w-10 h-10 text-neutral-400 mx-auto" />
@@ -215,13 +292,14 @@ export const PageView: React.FC<PageViewProps> = ({ pageSlug, onNavigate }) => {
                 return (
                   <div
                     key={section.id}
-                    className={`relative group rounded-3xl overflow-hidden shadow-xl border transition-all ${
+                    className={`builder-responsive-section relative group rounded-3xl overflow-hidden shadow-xl border transition-all ${
                       isLiveEditActive 
                         ? 'border-amber-400 ring-2 ring-amber-400/30' 
                         : 'border-neutral-800'
                     }`}
                     style={{
-                      backgroundImage: `url(${section.imageUrl})`,
+                      ...getSectionStyle(section),
+                      backgroundImage: `linear-gradient(rgba(0,0,0,.35), rgba(0,0,0,.35)), url(${section.imageUrl})`,
                       backgroundSize: 'cover',
                       backgroundPosition: 'center'
                     }}
@@ -284,6 +362,7 @@ export const PageView: React.FC<PageViewProps> = ({ pageSlug, onNavigate }) => {
                           </button>
                         </div>
                       )}
+                      {renderSectionItems(section)}
                     </div>
                   </div>
                 );
@@ -294,11 +373,12 @@ export const PageView: React.FC<PageViewProps> = ({ pageSlug, onNavigate }) => {
                 return (
                   <div 
                     key={section.id} 
-                    className={`relative group bg-white rounded-3xl overflow-hidden border transition-all ${
+                    className={`builder-responsive-section relative group bg-white rounded-3xl overflow-hidden border transition-all ${
                       isLiveEditActive 
                         ? 'border-amber-400/80 shadow-md ring-2 ring-amber-400/20' 
                         : 'border-neutral-200/80 shadow-xs hover:shadow-md'
                     }`}
+                    style={getSectionStyle(section)}
                   >
                     {/* Live Toolbar */}
                     {isLiveEditActive && (
@@ -329,8 +409,10 @@ export const PageView: React.FC<PageViewProps> = ({ pageSlug, onNavigate }) => {
                     <div className="w-full h-56 sm:h-72 md:h-88 overflow-hidden bg-neutral-100">
                       <img
                         src={section.imageUrl}
-                        alt={section.title}
+                        alt={currentPage.seo?.images?.[section.imageUrl || '']?.alt || section.title}
+                        title={currentPage.seo?.images?.[section.imageUrl || '']?.title || section.title}
                         className="w-full h-full object-cover"
+                        style={{ objectFit: section.imageMode === 'contain' ? 'contain' : section.imageMode === 'stretch' || section.imageMode === 'full' ? 'fill' : section.imageMode === 'original' ? 'none' : 'cover' }}
                         loading="lazy"
                       />
                     </div>
@@ -366,6 +448,7 @@ export const PageView: React.FC<PageViewProps> = ({ pageSlug, onNavigate }) => {
                           </button>
                         </div>
                       )}
+                      {renderSectionItems(section)}
                     </div>
                   </div>
                 );
@@ -375,11 +458,12 @@ export const PageView: React.FC<PageViewProps> = ({ pageSlug, onNavigate }) => {
               return (
                 <div 
                   key={section.id} 
-                  className={`relative group bg-white rounded-3xl border transition-all ${
+                  className={`builder-responsive-section relative group bg-white rounded-3xl border transition-all ${
                     isLiveEditActive 
                       ? 'border-amber-400/80 shadow-md ring-2 ring-amber-400/20' 
                       : 'border-neutral-200/80 shadow-xs hover:shadow-md'
                   }`}
+                  style={getSectionStyle(section)}
                 >
                   {/* Live Section Action Toolbar (Float overlay) */}
                   {isLiveEditActive && (
@@ -477,6 +561,7 @@ export const PageView: React.FC<PageViewProps> = ({ pageSlug, onNavigate }) => {
                             </button>
                           </div>
                         )}
+                        {renderSectionItems(section)}
                       </div>
 
                       {/* Image Column */}
@@ -485,8 +570,10 @@ export const PageView: React.FC<PageViewProps> = ({ pageSlug, onNavigate }) => {
                           <div className="relative rounded-2xl overflow-hidden border border-neutral-200/80 shadow-md group-hover:shadow-lg transition-shadow bg-neutral-50 flex items-center justify-center">
                             <img
                               src={section.imageUrl}
-                              alt={section.title}
+                              alt={currentPage.seo?.images?.[section.imageUrl || '']?.alt || section.title}
+                              title={currentPage.seo?.images?.[section.imageUrl || '']?.title || section.title}
                               className={`w-full ${mode === 'contain' ? 'max-h-80 object-contain p-4' : 'h-64 sm:h-80 object-cover hover:scale-102 transition-transform duration-300'}`}
+                              style={{ objectFit: mode === 'contain' ? 'contain' : mode === 'stretch' || mode === 'full' ? 'fill' : mode === 'original' ? 'none' : 'cover' }}
                               loading="lazy"
                             />
                           </div>
@@ -521,32 +608,6 @@ export const PageView: React.FC<PageViewProps> = ({ pageSlug, onNavigate }) => {
           </div>
         )}
 
-        {/* Bottom Trust & Contact Banner */}
-        <div className="p-8 rounded-3xl bg-neutral-900 text-white flex flex-col md:flex-row items-center justify-between gap-6 shadow-xl">
-          <div className="space-y-2 text-center md:text-right">
-            <h3 className="font-black text-base text-white flex items-center justify-center md:justify-start gap-2">
-              <ShieldCheck className="w-5 h-5 text-red-500" />
-              <span>نیاز به راهنمایی بیشتر یا استعلام قطعه خاصی دارید؟</span>
-            </h3>
-            <p className="text-xs text-neutral-400">
-              کارشناسان مهندسی فروش چین‌پارت آماده بررسی شماره شاسی و راهنمایی خرید قطعه متناسب با خودروی شما هستند.
-            </p>
-          </div>
-          <div className="flex items-center gap-3 shrink-0">
-            <button
-              onClick={() => onNavigate('part-request')}
-              className="px-5 py-3 bg-red-600 hover:bg-red-700 text-white font-bold text-xs rounded-xl transition-all shadow-md shadow-red-600/30"
-            >
-              ثبت استعلام شماره فنی
-            </button>
-            <button
-              onClick={() => onNavigate('shop')}
-              className="px-5 py-3 bg-neutral-800 hover:bg-neutral-700 text-neutral-200 font-bold text-xs rounded-xl transition-colors border border-neutral-700"
-            >
-              مشاهده فروشگاه
-            </button>
-          </div>
-        </div>
       </div>
 
       {/* Live Section Editor Modal */}

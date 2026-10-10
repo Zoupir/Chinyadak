@@ -2,7 +2,7 @@ import React from 'react';
 import { Product } from '../../types';
 import { useStore } from '../../context/StoreContext';
 import { checkProductFitment, formatToman, getGradeInfo } from '../../utils/formatters';
-import { ShoppingBag, Heart, ArrowRightLeft, Star, CheckCircle2, AlertTriangle, ShieldCheck } from 'lucide-react';
+import { ShoppingBag, Heart, ArrowRightLeft, Star, CheckCircle2, AlertTriangle, ShieldCheck, Phone } from 'lucide-react';
 
 interface ProductCardProps {
   product: Product;
@@ -16,7 +16,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onViewDetails
     toggleWishlist, 
     isInWishlist, 
     addToCompare, 
-    isInCompare 
+    isInCompare,
+    settings
   } = useStore();
 
   const fitment = checkProductFitment(product, selectedVehicle);
@@ -82,7 +83,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onViewDetails
         >
           <img 
             src={product.images[0]} 
-            alt={product.nameFa}
+            alt={product.seo?.images?.[product.images[0]]?.alt || product.nameFa}
+          title={product.seo?.images?.[product.images[0]]?.title || product.nameFa}
             className="w-full h-full object-cover"
             loading="lazy"
           />
@@ -159,18 +161,22 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onViewDetails
                 </span>
               )}
               <div className="text-sm font-black text-neutral-900">
-                {formatToman(product.discountPrice || product.price)}
+                {Number(product.discountPrice || product.price) > 0 ? formatToman(product.discountPrice || product.price) : 'استعلام قیمت'}
               </div>
             </div>
 
-            <button
-              onClick={() => addToCart(product, 1, selectedVehicle)}
-              className="h-9 px-3.5 bg-neutral-900 hover:bg-red-600 text-white rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 shadow-xs"
-              title="افزودن به سبد خرید"
-            >
-              <ShoppingBag className="w-3.5 h-3.5" />
-              <span>خرید</span>
-            </button>
+            {!(Number(product.discountPrice || product.price) > 0) ? (
+              settings.contactWhenNoPrice !== false && settings.contactPhone ? (
+                <a href={`tel:${settings.contactPhone.replace(/[^0-9+]/g, '')}`}
+                  className="h-9 px-3.5 bg-orange-500 hover:bg-orange-600 text-white rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 shadow-xs"
+                  title="تماس برای استعلام قیمت"><Phone className="w-3.5 h-3.5" /><span>تماس با ما</span></a>
+              ) : <span className="h-9 px-3.5 bg-neutral-100 text-neutral-600 rounded-xl text-xs font-bold flex items-center gap-1.5" title="قیمت ثبت نشده"><Phone className="w-3.5 h-3.5" /><span>استعلام قیمت: {settings.contactPhone || 'شماره تماس ثبت نشده'}</span></span>
+            ) : (
+              <button onClick={() => addToCart(product, 1, selectedVehicle)}
+                className="h-9 px-3.5 bg-neutral-900 hover:bg-red-600 text-white rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 shadow-xs" title="افزودن به سبد خرید">
+                <ShoppingBag className="w-3.5 h-3.5" /><span>خرید</span>
+              </button>
+            )}
           </div>
         </div>
       </div>

@@ -10,7 +10,7 @@ import {
   type AuthenticatedRequest,
   verifyPassword
 } from '../auth';
-import { pool, type ResultSetHeader, type RowDataPacket } from '../db';
+import { addLoyaltyTransaction, getLoyaltySettings, pool, withTransaction, type ResultSetHeader, type RowDataPacket } from '../db';
 
 interface CustomerRow extends RowDataPacket {
   id: string;
@@ -141,12 +141,21 @@ authRouter.post('/customer/register', loginLimiter, async (req, res) => {
 
   const id = randomUUID();
   const passwordHash = await hashPassword(password);
-  await pool.execute<ResultSetHeader>(
-    `INSERT INTO customers
-      (id, first_name, last_name, phone, password_hash, password_initialized, customer_type, vehicle)
-     VALUES (?, ?, ?, ?, ?, 1, ?, ?)`,
-    [id, firstName, lastName, phone, passwordHash, type, vehicle || null]
-  );
+  await withTransaction(async connection => {
+    await connection.execute(
+      `INSERT INTO customers
+        (id, first_name, last_name, phone, password_hash, password_initialized, customer_type, vehicle)
+       VALUES (?, ?, ?, ?, ?, 1, ?, ?)`,
+      [id, firstName, lastName, phone, passwordHash, type, vehicle || null]
+    );
+    const loyalty = await getLoyaltySettings(connection);
+    if (loyalty.enabled && loyalty.signupBonusPoints > 0) {
+      await addLoyaltyTransaction(connection, id, loyalty.signupBonusPoints, 'bonus', {
+        description: 'هدیه خوش‌آمدگویی عضویت در باشگاه مشتریان',
+        reason: 'signup_bonus'
+      });
+    }
+  });
 
   const [rows] = await pool.query<CustomerRow[]>(
     'SELECT * FROM customers WHERE id = ? LIMIT 1',
@@ -223,6 +232,78 @@ authRouter.get('/customer/loyalty', authenticate, async (req: AuthenticatedReque
   });
 
   res.json({ transactions });
+});
+
+authRouter.post('/customer/vehicle-registration', authenticate, async (req: AuthenticatedRequest, res) => {
+  if (req.auth?.role !== 'customer') {
+    res.status(403).json({ error: 'CUSTOMER_REQUIRED' });
+    return;
+  }
+  const brandId = String(req.body?.brandId || '').trim();
+  const modelId = String(req.body?.modelId || '').trim();
+  const vehicleName = String(req.body?.vehicleName || '').trim().slice(0, 255);
+  if (!brandId || !modelId || !vehicleName) {
+    res.status(400).json({ error: 'VEHICLE_DATA_INVALID' });
+    return;
+  }
+  const [validModels] = await pool.query<RowDataPacket[]>(
+    'SELECT id FROM vehicle_models WHERE id = ? AND brand_id = ? AND is_active = 1 LIMIT 1',
+    [modelId, brandId]
+  );
+  if (!validModels.length) {
+    res.status(400).json({ error: 'VEHICLE_MODEL_INVALID' });
+    return;
+  }
+
+  const result = await withTransaction(async connection => {
+    const [customers] = await connection.query<Array<RowDataPacket & { id: string; loyalty_points: number; vehicle: string | null }>>(
+      'SELECT id, loyalty_points, vehicle FROM customers WHERE id = ? FOR UPDATE',
+      [req.auth!.sub]
+    );
+    const customer = customers[0];
+    if (!customer) return null;
+    if (!customer.vehicle) {
+      await connection.execute('UPDATE customers SET vehicle = ?, updated_at = NOW() WHERE id = ?', [vehicleName, customer.id]);
+    }
+
+    const [existing] = await connection.query<RowDataPacket[]>(
+      "SELECT id FROM loyalty_transactions WHERE customer_id = ? AND transaction_type = 'bonus' AND JSON_UNQUOTE(JSON_EXTRACT(data_json, '$.reason')) = 'first_vehicle_bonus' LIMIT 1 FOR UPDATE",
+      [customer.id]
+    );
+    const loyalty = await getLoyaltySettings(connection);
+    let transaction = null;
+    if (!existing.length && loyalty.enabled) {
+      transaction = await addLoyaltyTransaction(connection, customer.id, 20, 'bonus', {
+        description: 'پاداش ثبت نخستین خودرو در گاراژ',
+        reason: 'first_vehicle_bonus',
+        vehicleName
+      });
+    }
+
+    const [updated] = await connection.query<Array<RowDataPacket & { loyalty_points: number }>>(
+      'SELECT loyalty_points FROM customers WHERE id = ? LIMIT 1',
+      [customer.id]
+    );
+    return {
+      rewarded: Boolean(transaction),
+      loyaltyPoints: Number(updated[0]?.loyalty_points || 0),
+      transaction: transaction ? {
+        ...transaction,
+        customerId: customer.id,
+        type: 'bonus',
+        description: 'پاداش ثبت نخستین خودرو در گاراژ',
+        orderNumber: undefined,
+        date: new Date().toISOString(),
+        reason: 'first_vehicle_bonus'
+      } : null
+    };
+  });
+
+  if (!result) {
+    res.status(404).json({ error: 'CUSTOMER_NOT_FOUND' });
+    return;
+  }
+  res.json(result);
 });
 
 authRouter.post('/admin/login', loginLimiter, async (req, res) => {

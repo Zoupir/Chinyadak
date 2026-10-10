@@ -3,14 +3,19 @@ import { Router } from 'express';
 import {
   authenticate,
   getOptionalSession,
+  hashPassword,
+  issueSession,
   requireAdminPermission,
   type AuthenticatedRequest
 } from '../auth';
 import {
   pool,
   withTransaction,
-  type ResultSetHeader,
-  type RowDataPacket
+  type RowDataPacket,
+  addLoyaltyTransaction,
+  awardPaidOrderLoyalty,
+  getLoyaltySettings,
+  refundOrderLoyalty
 } from '../db';
 
 interface ProductPriceRow extends RowDataPacket {
@@ -100,6 +105,7 @@ const shippingById = (id: string) => {
 const paymentTitle = (id: string) => {
   if (id === 'mellat') return 'به‌پرداخت بانک ملت';
   if (id === 'saman') return 'درگاه پرداخت الکترونیک سامان';
+  if (id === 'cod') return 'پرداخت در محل';
   return 'پرداخت آنلاین';
 };
 
@@ -185,8 +191,29 @@ ordersRouter.post('/', async (req: AuthenticatedRequest, res) => {
   const address = String(customerInput.address || '').trim();
   const notes = String(customerInput.notes || '').trim();
   const requestedItems = Array.isArray(req.body?.items) ? req.body.items : [];
-  const shipping = shippingById(String(req.body?.shippingMethodId || 'post'));
+  const requestedShippingId = String(req.body?.shippingMethodId || 'post');
   const paymentMethod = String(req.body?.paymentMethodId || 'saman');
+  const [checkoutSettingRows] = await pool.query<Array<RowDataPacket & { setting_key: string; setting_value: any }>>(
+    "SELECT setting_key, setting_value FROM app_settings WHERE setting_key IN ('site_settings','payment_gateways')"
+  );
+  const checkoutSettings = new Map(checkoutSettingRows.map(row => [row.setting_key, parseJson<any>(row.setting_value, {})]));
+  const siteSettings = checkoutSettings.get('site_settings') || {};
+  const configuredShipping = Array.isArray(siteSettings.shippingMethods)
+    ? siteSettings.shippingMethods
+    : [
+        { id: 'post', title: 'پست پیشتاز بیمه‌شده', cost: Number(siteSettings.postShippingFee || 85000), estimatedDelivery: '۲۴ الی ۴۸ ساعت', enabled: true },
+        { id: 'tipax', title: 'تیپاکس اکسپرس', cost: Number(siteSettings.tipaxShippingFee || 110000), estimatedDelivery: '۲۴ الی ۴۸ ساعت', enabled: true },
+        { id: 'express', title: 'پیک موتوری', cost: Number(siteSettings.expressShippingFee || 120000), estimatedDelivery: '۲ ساعت کاری', enabled: true }
+      ];
+  const configuredMethod = configuredShipping.find((method: any) => String(method.id) === requestedShippingId && method.enabled !== false);
+  const shipping = configuredMethod ? { ...configuredMethod, paymentMode: ['free','collect'].includes(configuredMethod.paymentMode) ? configuredMethod.paymentMode : 'prepaid', cost: ['free','collect'].includes(configuredMethod.paymentMode) ? 0 : Math.max(0, Number(configuredMethod.cost) || 0) } : null;
+  const publicGateways = checkoutSettings.get('payment_gateways');
+  const codEnabled = Array.isArray(publicGateways) && publicGateways.some((gateway: any) => gateway.provider === 'cod' && gateway.isActive === true);
+
+  if (!shipping || !['saman', 'mellat', 'cod'].includes(paymentMethod) || (paymentMethod === 'cod' && !codEnabled)) {
+    res.status(400).json({ error: paymentMethod === 'cod' && !codEnabled ? 'PAYMENT_METHOD_UNAVAILABLE' : 'SHIPPING_OR_PAYMENT_UNAVAILABLE' });
+    return;
+  }
 
   if (!firstName || !lastName || !/^09\d{9}$/.test(phone) || !address) {
     res.status(400).json({ error: 'ORDER_CUSTOMER_INVALID' });
@@ -265,16 +292,25 @@ ordersRouter.post('/', async (req: AuthenticatedRequest, res) => {
     });
   }
 
-  // Coupons and loyalty redemption will be validated server-side in their own modules.
-  // Until then, client-provided discounts are intentionally ignored.
-  const discountAmount = 0;
-  const total = Math.max(0, subtotal - discountAmount + shipping.cost);
+  const requestedLoyaltyPoints = Math.max(0, Math.floor(Number(req.body?.loyaltyPointsToRedeem || 0)));
+  const optionalSession = getOptionalSession(req);
+  let customerId = optionalSession?.role === 'customer' ? optionalSession.sub : null;
+  const checkoutPassword = String(req.body?.registration?.password || '');
+  if (!customerId && (checkoutPassword.length < 8 || checkoutPassword.length > 128)) {
+    res.status(400).json({ error: 'CHECKOUT_PASSWORD_REQUIRED' });
+    return;
+  }
+  const checkoutPasswordHash = customerId ? null : await hashPassword(checkoutPassword);
+  let accountCreated = false;
+  if (requestedLoyaltyPoints > 0 && !customerId) {
+    res.status(401).json({ error: 'CUSTOMER_LOGIN_REQUIRED_FOR_LOYALTY' });
+    return;
+  }
+
+  let discountAmount = 0;
+  let loyaltyPointsRedeemed = 0;
   const orderId = randomUUID();
   const orderNumber = createOrderNumber();
-
-  const optionalSession = getOptionalSession(req);
-  const customerId =
-    optionalSession?.role === 'customer' ? optionalSession.sub : null;
 
   const customerSnapshot = {
     firstName,
@@ -287,52 +323,91 @@ ordersRouter.post('/', async (req: AuthenticatedRequest, res) => {
     notes: notes || undefined
   };
 
-  await withTransaction(async connection => {
-    await connection.execute(
-      `INSERT INTO orders
-       (id, order_number, customer_id, status, customer_snapshot, shipping_snapshot,
-        payment_method, subtotal, discount_amount, shipping_fee, total, payment_status)
-       VALUES (?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?, 'unpaid')`,
-      [
-        orderId,
-        orderNumber,
-        customerId,
-        JSON.stringify(customerSnapshot),
-        JSON.stringify(shipping),
-        paymentMethod,
-        subtotal,
-        discountAmount,
-        shipping.cost,
-        total
-      ]
-    );
+  try {
+    await withTransaction(async connection => {
+      if (!customerId) {
+        const [existing] = await connection.query<RowDataPacket[]>('SELECT id FROM customers WHERE phone = ? LIMIT 1 FOR UPDATE', [phone]);
+        if (existing.length) throw new Error('CHECKOUT_LOGIN_REQUIRED');
+        customerId = randomUUID();
+        await connection.execute(
+          `INSERT INTO customers (id, first_name, last_name, phone, password_hash, password_initialized, customer_type, address)
+           VALUES (?, ?, ?, ?, ?, 1, 'retail', ?)`,
+          [customerId, firstName, lastName, phone, checkoutPasswordHash, address]
+        );
+        const loyalty = await getLoyaltySettings(connection);
+        if (loyalty.enabled && loyalty.signupBonusPoints > 0) await addLoyaltyTransaction(connection, customerId, loyalty.signupBonusPoints, 'bonus', {
+          description: 'هدیه عضویت هنگام ثبت سفارش', reason: 'signup_bonus'
+        });
+        accountCreated = true;
+      }
+      if (requestedLoyaltyPoints > 0 && customerId) {
+        const loyalty = await getLoyaltySettings(connection);
+        if (!loyalty.enabled) throw new Error('LOYALTY_DISABLED');
+        if (requestedLoyaltyPoints < loyalty.minimumRedeemPoints) throw new Error('LOYALTY_MINIMUM_NOT_MET');
+        const [customerRows] = await connection.query<Array<RowDataPacket & { loyalty_points: number }>>(
+          'SELECT loyalty_points FROM customers WHERE id = ? FOR UPDATE', [customerId]
+        );
+        if (!customerRows[0] || Number(customerRows[0].loyalty_points || 0) < requestedLoyaltyPoints) {
+          throw new Error('LOYALTY_POINTS_INSUFFICIENT');
+        }
+        const percentCap = Math.floor(subtotal * loyalty.maxRedeemPercent / 100);
+        const allowedPoints = Math.min(
+          requestedLoyaltyPoints,
+          Math.floor(percentCap / loyalty.tomanPerPoint)
+        );
+        if (allowedPoints < loyalty.minimumRedeemPoints) throw new Error('LOYALTY_REDEMPTION_UNAVAILABLE');
+        loyaltyPointsRedeemed = allowedPoints;
+        discountAmount = allowedPoints * loyalty.tomanPerPoint;
+      }
 
-    for (const item of normalizedItems) {
+      const total = Math.max(0, subtotal - discountAmount + shipping.cost);
       await connection.execute(
-        `INSERT INTO order_items
-         (order_id, product_id, sku, product_name, oem_number, unit_price, quantity, line_total, metadata_json)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO orders
+         (id, order_number, customer_id, status, customer_snapshot, shipping_snapshot,
+          payment_method, subtotal, discount_amount, shipping_fee, total, payment_status)
+         VALUES (?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?, 'unpaid')`,
         [
-          orderId,
-          item.productId,
-          item.sku,
-          item.productName,
-          item.oemNumber || null,
-          item.price,
-          item.quantity,
-          item.price * item.quantity,
-          JSON.stringify({
-            image: item.image,
-            grade: item.grade,
-            vehicleInfo: item.vehicleInfo
-          })
+          orderId, orderNumber, customerId, JSON.stringify(customerSnapshot), JSON.stringify(shipping),
+          paymentMethod, subtotal, discountAmount, shipping.cost, total
         ]
       );
-    }
-  });
 
+      if (loyaltyPointsRedeemed > 0 && customerId) {
+        const transaction = await addLoyaltyTransaction(connection, customerId, -loyaltyPointsRedeemed, 'redeemed', {
+          description: `تبدیل امتیاز به تخفیف سفارش ${orderNumber}`,
+          orderId,
+          orderNumber,
+          discountToman: discountAmount,
+          reason: 'checkout_redemption'
+        });
+        if (!transaction) throw new Error('LOYALTY_POINTS_INSUFFICIENT');
+      }
+
+      for (const item of normalizedItems) {
+        await connection.execute(
+          `INSERT INTO order_items
+           (order_id, product_id, sku, product_name, oem_number, unit_price, quantity, line_total, metadata_json)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            orderId, item.productId, item.sku, item.productName, item.oemNumber || null,
+            item.price, item.quantity, item.price * item.quantity,
+            JSON.stringify({ image: item.image, grade: item.grade, vehicleInfo: item.vehicleInfo })
+          ]
+        );
+      }
+    });
+  } catch (error: any) {
+    const code = String(error?.message || 'ORDER_CREATE_FAILED').split(':')[0];
+    const status = code === 'CHECKOUT_LOGIN_REQUIRED' || error?.code === 'ER_DUP_ENTRY' ? 409 : code === 'LOYALTY_POINTS_INSUFFICIENT' ? 409 :
+      code === 'CUSTOMER_LOGIN_REQUIRED_FOR_LOYALTY' ? 401 :
+      code === 'LOYALTY_DISABLED' || code === 'LOYALTY_MINIMUM_NOT_MET' || code === 'LOYALTY_REDEMPTION_UNAVAILABLE' ? 400 : 500;
+    res.status(status).json({ error: error?.code === 'ER_DUP_ENTRY' ? 'CHECKOUT_LOGIN_REQUIRED' : code });
+    return;
+  }
+
+  if (accountCreated && customerId) issueSession(res, { sub: customerId, role: 'customer', phone });
   const created = await fetchOrdersByWhere('WHERE id = ?', [orderId]);
-  res.status(201).json({ order: created[0] });
+  res.status(201).json({ order: created[0], accountCreated });
 });
 
 ordersRouter.post('/track', async (req, res) => {
@@ -387,13 +462,39 @@ ordersRouter.patch('/:id/status', requireAdminPermission('canManageOrders'), asy
   }
 
   const trackingCode = req.body?.trackingCode ? String(req.body.trackingCode).trim() : null;
-  const [result] = await pool.execute<ResultSetHeader>(
-    `UPDATE orders
-     SET status = ?, tracking_code = COALESCE(?, tracking_code), updated_at = NOW()
-     WHERE id = ? OR order_number = ?`,
-    [status, trackingCode, req.params.id, req.params.id]
-  );
-  if (!result.affectedRows) {
+  const outcome = await withTransaction(async connection => {
+    const [lockedRows] = await connection.query<Array<RowDataPacket & { id: string; payment_status: string; payment_method: string }>>(
+      'SELECT id, payment_status, payment_method FROM orders WHERE id = ? OR order_number = ? FOR UPDATE',
+      [req.params.id, req.params.id]
+    );
+    const order = lockedRows[0];
+    if (!order) return false;
+    if (status === 'paid' || (status === 'delivered' && order.payment_method === 'cod')) {
+      await connection.execute(
+        `UPDATE orders SET status = ?, payment_status = 'paid', paid_at = COALESCE(paid_at, NOW()),
+         tracking_code = COALESCE(?, tracking_code), updated_at = NOW() WHERE id = ?`,
+        [status, trackingCode, order.id]
+      );
+      await awardPaidOrderLoyalty(connection, order.id);
+    } else {
+      if (status === 'cancelled' || status === 'payment_failed') {
+        const paid = ['paid', 'paid_stock_review'].includes(order.payment_status);
+        if (paid || order.payment_status !== 'initiated') {
+          await refundOrderLoyalty(connection, order.id, paid);
+        }
+      }
+      await connection.execute(
+        `UPDATE orders SET status = ?, payment_status = CASE
+           WHEN ? = 'payment_failed' AND payment_status NOT IN ('paid','paid_stock_review') THEN 'failed'
+           WHEN ? = 'cancelled' AND payment_status NOT IN ('paid','paid_stock_review') THEN 'cancelled'
+           ELSE payment_status END,
+         tracking_code = COALESCE(?, tracking_code), updated_at = NOW() WHERE id = ?`,
+        [status, status, status, trackingCode, order.id]
+      );
+    }
+    return true;
+  });
+  if (!outcome) {
     res.status(404).json({ error: 'ORDER_NOT_FOUND' });
     return;
   }
@@ -402,12 +503,23 @@ ordersRouter.patch('/:id/status', requireAdminPermission('canManageOrders'), asy
 });
 
 ordersRouter.delete('/:id', requireAdminPermission('canManageOrders'), async (req, res) => {
-  const [result] = await pool.execute<ResultSetHeader>(
-    'DELETE FROM orders WHERE id = ? OR order_number = ?',
-    [req.params.id, req.params.id]
-  );
-  if (!result.affectedRows) {
+  const deleted = await withTransaction(async connection => {
+    const [rows] = await connection.query<Array<RowDataPacket & { id: string; payment_status: string; payment_method: string }>>(
+      'SELECT id, payment_status, payment_method FROM orders WHERE id = ? OR order_number = ? FOR UPDATE',
+      [req.params.id, req.params.id]
+    );
+    if (!rows[0]) return 'missing';
+    if (rows[0].payment_status === 'initiated') return 'payment_in_progress';
+    await refundOrderLoyalty(connection, rows[0].id, ['paid', 'paid_stock_review'].includes(rows[0].payment_status));
+    await connection.execute('DELETE FROM orders WHERE id = ?', [rows[0].id]);
+    return 'deleted';
+  });
+  if (deleted === 'missing') {
     res.status(404).json({ error: 'ORDER_NOT_FOUND' });
+    return;
+  }
+  if (deleted === 'payment_in_progress') {
+    res.status(409).json({ error: 'PAYMENT_IN_PROGRESS' });
     return;
   }
   res.json({ ok: true });

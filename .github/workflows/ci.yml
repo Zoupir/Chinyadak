@@ -1,9 +1,16 @@
 name: CI
 
+permissions:
+  contents: write
+
 on:
   push:
-    branches: [main, production-hardening]
+    branches: [main, production-hardening, marketplace-rtl-phase1]
   pull_request:
+
+concurrency:
+  group: ci-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build:
@@ -20,17 +27,51 @@ jobs:
       - name: Install dependencies
         run: npm install --include=dev
 
-      - name: Type check
-        run: npm run lint
+      - name: Production dependency audit
+        run: npm run audit:prod
 
-      - name: Production build
+      - name: Prepare source exactly once
+        run: npm run prepare:source
+
+      - name: Type check prepared source
+        run: ./node_modules/.bin/tsc --noEmit
+
+      - name: Validate one-step updater
+        run: |
+          bash -n update.sh
+          bash -n safe-update.sh
+          bash -n rollback.sh
+
+      - name: Production build from prepared source
         env:
           DB_HOST: localhost
           DB_NAME: ci
           DB_USER: ci
           DB_PASSWORD: ci
           JWT_SECRET: '01234567890123456789012345678901'
-        run: npm run build
+        run: |
+          ./node_modules/.bin/vite build
+          node scripts/build-server.mjs
+
+      - name: Final release artifact audit
+        run: node scripts/audit-release.mjs
+
+      - name: Package immutable production deployment bundle
+        if: github.event_name == 'push' && github.ref == 'refs/heads/marketplace-rtl-phase1'
+        run: |
+          BUNDLE="chinyadak-build-${GITHUB_SHA}.tar.gz"
+          printf '%s\n' "$GITHUB_SHA" > BUILD_COMMIT
+          tar -czf "$BUNDLE" dist server.js BUILD_COMMIT
+          test -s "$BUNDLE"
+
+      - name: Upload production deployment bundle
+        if: github.event_name == 'push' && github.ref == 'refs/heads/marketplace-rtl-phase1'
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-build
+          path: chinyadak-build-${{ github.sha }}.tar.gz
+          if-no-files-found: error
+          retention-days: 7
 
   integration:
     name: integration (${{ matrix.database }})
@@ -40,9 +81,9 @@ jobs:
       matrix:
         include:
           - database: mysql-8.4
-            image: mysql:8.4
+            image: public.ecr.aws/docker/library/mysql:8.4
           - database: mariadb-11.4
-            image: mariadb:11.4
+            image: public.ecr.aws/docker/library/mariadb:11.4
 
     services:
       database:
@@ -91,8 +132,11 @@ jobs:
       - name: Wait for database
         run: npm run db:wait
 
-      - name: Type check
-        run: npm run lint
+      - name: Prepare source exactly once
+        run: npm run prepare:source
+
+      - name: Type check prepared source
+        run: ./node_modules/.bin/tsc --noEmit
 
       - name: Initialize database
         run: npm run db:init
@@ -100,8 +144,25 @@ jobs:
       - name: Seed database
         run: npm run db:seed
 
-      - name: Production build
-        run: npm run build
+      - name: Migrate the 12-part category taxonomy
+        run: ./node_modules/.bin/tsx scripts/seed-categories.ts
+
+      - name: Verify category migration is idempotent
+        run: ./node_modules/.bin/tsx scripts/seed-categories.ts
+
+      - name: Import Lucano L8 source references
+        run: ./node_modules/.bin/tsx scripts/seed-lucano-l8-reference.ts
+
+      - name: Verify Lucano L8 reference import is idempotent
+        shell: bash
+        run: |
+          ./node_modules/.bin/tsx scripts/seed-lucano-l8-reference.ts | tee /tmp/lucano-l8-reference-second-run.log
+          grep -q "622 records read, 0 new records added" /tmp/lucano-l8-reference-second-run.log
+
+      - name: Production build from prepared source
+        run: |
+          ./node_modules/.bin/vite build
+          node scripts/build-server.mjs
 
       - name: Start production server
         run: |
@@ -125,3 +186,127 @@ jobs:
       - name: Show server log on failure
         if: failure()
         run: cat /tmp/chinpart-server.log || true
+
+  e2e:
+    name: final browser E2E
+    runs-on: ubuntu-latest
+    services:
+      database:
+        image: public.ecr.aws/docker/library/mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: ci
+          MYSQL_USER: ci
+          MYSQL_PASSWORD: ci
+        ports:
+          - 3306:3306
+
+    env:
+      NODE_ENV: production
+      PORT: 3000
+      APP_URL: http://127.0.0.1:3000
+      DB_HOST: 127.0.0.1
+      DB_PORT: 3306
+      DB_NAME: ci
+      DB_USER: ci
+      DB_PASSWORD: ci
+      DB_CONNECTION_LIMIT: 5
+      JWT_SECRET: '01234567890123456789012345678901'
+      SESSION_COOKIE_NAME: chinpart_e2e_session
+      ADMIN_BOOTSTRAP_USER: admin
+      ADMIN_BOOTSTRAP_PASSWORD: CI-Admin-Password-123!
+      ADMIN_BOOTSTRAP_NAME: CI Administrator
+      APP_ENCRYPTION_KEY: 01234567890123456789012345678901-e2e-encryption-key
+      UPLOAD_DIR: uploads-e2e
+      MAX_UPLOAD_MB: 2
+      TRUST_PROXY: 1
+      TEST_BASE_URL: http://127.0.0.1:3000
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm install --include=dev
+
+      - name: Wait for database
+        run: npm run db:wait
+
+      - name: Prepare source exactly once
+        run: npm run prepare:source
+
+      - name: Prepare E2E database
+        run: |
+          npm run db:init
+          npm run db:seed
+          ./node_modules/.bin/tsx scripts/seed-categories.ts
+          ./node_modules/.bin/tsx scripts/seed-real-defaults.ts
+          ./node_modules/.bin/tsx scripts/seed-lucano-l8-reference.ts
+
+      - name: Production build from prepared source
+        run: |
+          ./node_modules/.bin/vite build
+          node scripts/build-server.mjs
+
+      - name: Install E2E browser
+        run: |
+          npm install --no-save --package-lock=false playwright@1.62.1
+          npx playwright install --with-deps chromium --only-shell
+
+      - name: Responsive menu and media regression
+        run: node scripts/test-responsive.cjs
+
+      - name: Start production server
+        run: |
+          npm start > /tmp/chinpart-e2e-server.log 2>&1 &
+          echo $! > /tmp/chinpart-e2e-server.pid
+
+      - name: Wait for health
+        run: |
+          for i in {1..30}; do
+            if curl -fsS http://127.0.0.1:3000/api/health >/dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/chinpart-e2e-server.log
+          exit 1
+
+      - name: Real browser E2E
+        run: npm run test:e2e
+
+      - name: Show E2E server log on failure
+        if: failure()
+        run: cat /tmp/chinpart-e2e-server.log || true
+
+  publish:
+    name: publish immutable deployment bundle
+    needs: [build, integration, e2e]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/marketplace-rtl-phase1'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download tested production bundle
+        uses: actions/download-artifact@v4
+        with:
+          name: production-build
+
+      - name: Publish commit-specific deployment asset
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="marketplace-rtl-phase1-builds"
+          ASSET="chinyadak-build-${GITHUB_SHA}.tar.gz"
+          test -s "$ASSET"
+          if ! gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release create "$TAG" \
+              --repo "$GITHUB_REPOSITORY" \
+              --target "$GITHUB_SHA" \
+              --title "Marketplace RTL prebuilt deployments" \
+              --notes "Immutable tested production bundles for marketplace-rtl-phase1."
+          fi
+          gh release upload "$TAG" "$ASSET" --clobber --repo "$GITHUB_REPOSITORY"

@@ -60,14 +60,14 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({ order, settings, onC
 
   return (
     <div 
-      className="fixed inset-0 z-50 overflow-y-auto p-2 sm:p-6 bg-black/75 backdrop-blur-xs flex justify-center items-start text-right"
+      className="invoice-modal-print-overlay fixed inset-0 z-50 overflow-y-auto p-2 sm:p-6 bg-black/75 backdrop-blur-xs flex justify-center items-start text-right"
       onClick={(e) => {
         if (e.target === e.currentTarget) {
           onClose();
         }
       }}
     >
-      <div className="bg-white rounded-3xl max-w-4xl w-full my-4 sm:my-8 overflow-hidden shadow-2xl border border-neutral-200 text-right print:shadow-none print:border-none print:m-0 print:p-0 print:max-w-none print:w-full relative">
+      <div className="invoice-modal-print-shell bg-white rounded-3xl max-w-4xl w-full my-4 sm:my-8 overflow-hidden shadow-2xl border border-neutral-200 text-right print:shadow-none print:border-none print:m-0 print:p-0 print:max-w-none print:w-full relative">
         
         {/* Top Control Bar (Hidden in Print) - Sticky */}
         <div className="sticky top-0 z-30 bg-neutral-900 text-white p-4 px-6 flex flex-wrap items-center justify-between gap-3 border-b border-neutral-800 print:hidden shadow-md">
@@ -113,7 +113,7 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({ order, settings, onC
         {/* =========================================================================
             A4 OFFICIAL TAX INVOICE PRINTABLE CONTAINER
         ========================================================================= */}
-        <div id="invoice-printable" className="p-6 sm:p-10 space-y-6 text-neutral-900 text-xs bg-white">
+        <div id="invoice-printable" className="invoice-modal-print-content p-6 sm:p-10 space-y-6 text-neutral-900 text-xs bg-white">
           
           {/* 1. Official Header */}
           <div className="border-2 border-neutral-900 rounded-2xl p-5 flex flex-col sm:flex-row items-center justify-between gap-4 bg-neutral-50/50">

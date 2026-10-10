@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useStore } from '../../context/StoreContext';
 import { Article, ArticleCategory } from '../../types';
 import { RichTextEditor } from '../common/RichTextEditor';
 import { ImageUploadInput } from '../common/ImageUploadInput';
+import { AdminEntitySeoPanel } from './AdminEntitySeoPanel';
 import { 
   FileText, 
   Plus, 
@@ -26,7 +27,9 @@ import {
   AlertTriangle
 } from 'lucide-react';
 
-export const AdminArticlesTab: React.FC = () => {
+interface AdminArticlesTabProps { initialArticleId?: string; }
+
+export const AdminArticlesTab: React.FC<AdminArticlesTabProps> = ({ initialArticleId }) => {
   const { 
     articles, 
     articleCategories,
@@ -62,6 +65,17 @@ export const AdminArticlesTab: React.FC = () => {
     relatedProductIds: [],
     faq: []
   });
+
+  useEffect(() => {
+    if (!initialArticleId) return;
+    const article = articles.find(item => item.id === initialArticleId || item.slug === initialArticleId);
+    if (article) {
+      setActiveSubTab('articles');
+      setEditingArticle(article);
+      setArticleForm({ ...article });
+      setIsModalOpen(true);
+    }
+  }, [initialArticleId, articles]);
 
   // Category Modal State
   const [isCatModalOpen, setIsCatModalOpen] = useState(false);
@@ -145,7 +159,8 @@ export const AdminArticlesTab: React.FC = () => {
         imageUrl: articleForm.imageUrl || 'https://images.unsplash.com/photo-1486006920555-c77dce18193b?w=800&auto=format&fit=crop&q=80',
         relatedModelIds: articleForm.relatedModelIds || [],
         relatedProductIds: articleForm.relatedProductIds || [],
-        faq: articleForm.faq || []
+        faq: articleForm.faq || [],
+        seo: articleForm.seo
       };
       addArticle(newArticle);
     }
@@ -345,6 +360,15 @@ export const AdminArticlesTab: React.FC = () => {
                     </td>
                     <td className="p-3 text-left">
                       <div className="flex items-center justify-end gap-1.5">
+                        <a
+                          href={`/article/${encodeURIComponent(art.slug || art.id)}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
+                          title="نمایش مقاله در صفحه جدید"
+                        >
+                          <ExternalLink className="w-4 h-4" />
+                        </a>
                         <button
                           onClick={() => handleEdit(art)}
                           className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
@@ -425,6 +449,15 @@ export const AdminArticlesTab: React.FC = () => {
                     </div>
 
                     <div className="flex items-center gap-1">
+                      <a
+                        href={`/blog/${encodeURIComponent(cat.slug || cat.id)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
+                        title="نمایش مستقیم دسته مقالات در صفحه جدید"
+                      >
+                        <ExternalLink className="w-4 h-4" />
+                      </a>
                       <button
                         onClick={() => handleEditCategory(cat)}
                         className="p-1.5 text-neutral-500 hover:text-blue-600 rounded-lg hover:bg-blue-50 transition-colors cursor-pointer"
@@ -632,6 +665,17 @@ export const AdminArticlesTab: React.FC = () => {
                   placeholder="متن کامل مقاله همراه با زیرعنوان‌ها، نکات ایمنی و دستورالعمل‌های فنی..."
                 />
               </div>
+
+              <AdminEntitySeoPanel
+                entityType="article"
+                entityId={editingArticle?.id}
+                entityTitle={articleForm.title || ''}
+                contentDraft={{ description: articleForm.summary, content: articleForm.content, data: articleForm }}
+                onAiContent={(pkg, seo) => setArticleForm({ ...articleForm, summary: pkg.shortDescription, content: pkg.contentHtml, faq: pkg.faq, seo })}
+                value={articleForm.seo}
+                images={articleForm.imageUrl ? [articleForm.imageUrl] : []}
+                onChange={(seo) => setArticleForm({ ...articleForm, seo })}
+              />
 
               {/* Associated Cars and Products */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-neutral-100">

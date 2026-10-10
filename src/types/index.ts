@@ -8,12 +8,14 @@ export interface CarBrand {
   logo: string;
   heroImage: string;
   description: string;
+  bottomDescription?: string;
   country: string;
   foundedYear: number;
   modelsCount?: number;
   officialRepresentative?: string;
   popularCategorySlugs?: string[];
   faq: { q: string; a: string }[];
+  seo?: SeoEntityDraft;
 }
 
 export interface VehicleModel {
@@ -53,6 +55,21 @@ export interface VehicleTrim {
   displacement: string;
 }
 
+export interface CategoryChild {
+  id: string;
+  nameFa: string;
+  nameEn: string;
+  slug: string;
+  icon?: string;
+  iconUrl?: string;
+  imageUrl?: string;
+  heroImageUrl?: string;
+  description?: string;
+  bottomDescription?: string;
+  seo?: SeoEntityDraft;
+  subcategories?: CategoryChild[];
+}
+
 export interface Category {
   id: string;
   nameFa: string;
@@ -61,14 +78,14 @@ export interface Category {
   icon: string;
   iconUrl?: string;
   imageUrl?: string;
+  heroImageUrl?: string;
   description: string;
+  bottomDescription?: string;
+  heroTitle?: string;
+  heroSubtitle?: string;
   parentId?: string;
-  subcategories?: {
-    id: string;
-    nameFa: string;
-    nameEn: string;
-    slug: string;
-  }[];
+  subcategories?: CategoryChild[];
+  seo?: SeoEntityDraft;
 }
 
 export interface VehicleFitment {
@@ -85,6 +102,34 @@ export interface VehicleFitment {
   notes?: string;
 }
 
+export interface ImageSeoMeta {
+  alt: string;
+  title?: string;
+  caption?: string;
+  description?: string;
+}
+
+export interface SeoEntityDraft {
+  seoTitle?: string;
+  metaDescription?: string;
+  focusKeyword?: string;
+  secondaryKeywords?: string[];
+  canonicalUrl?: string;
+  robotsIndex?: boolean;
+  robotsFollow?: boolean;
+  ogTitle?: string;
+  ogDescription?: string;
+  ogImageUrl?: string;
+  twitterTitle?: string;
+  twitterDescription?: string;
+  twitterImageUrl?: string;
+  schemaType?: string;
+  cornerstone?: boolean;
+  breadcrumbTitle?: string;
+  hreflang?: Array<{ lang: string; url: string }>;
+  images?: Record<string, ImageSeoMeta>;
+}
+
 export interface Product {
   id: string;
   slug: string;
@@ -96,6 +141,14 @@ export interface Product {
   categorySlug: string;
   subcategorySlug?: string;
   brandManufacturer: string; // e.g. Chery Genuine, Valeo, Bosch, Gates, Febi, KMC Original
+  /** Brand of the vehicle(s) this part is intended for. */
+  vehicleBrandIds?: string[];
+  /** Model IDs explicitly linked to this product. */
+  vehicleModelIds?: string[];
+  /** Vehicle manufacturing / assembly company, e.g. Kerman Motor. */
+  vehicleManufacturerCompany?: string;
+  /** Part manufacturing company, e.g. Bosch / Valeo / OEM supplier. */
+  partManufacturerCompany?: string;
   grade: QualityGrade;
   price: number;
   discountPrice?: number;
@@ -123,10 +176,9 @@ export interface Product {
   genuineVsFakeNotes: string;   // تفاوت نمونه اصلی و فیک
   
   fitments: VehicleFitment[];
-  vehicleModelIds?: string[]; // IDs of cars this product fits (e.g. ['kmc-j7', 'chery-tiggo7-pro'])
-  vehicleBrandIds?: string[]; // IDs of brands this product fits
   complementPartIds?: string[]; // Cross-sell: مثلا واترپمپ -> ترموستات، ضدیخ
   relatedPartIds?: string[];
+  seo?: SeoEntityDraft;
 }
 
 export interface GarageCar {
@@ -188,6 +240,7 @@ export interface Order {
     notes?: string;
   };
   shippingMethod: {
+    paymentMode?: 'prepaid' | 'free' | 'collect';
     id: string;
     title: string;
     cost: number;
@@ -235,6 +288,7 @@ export interface Article {
   relatedModelIds: string[];
   relatedProductIds: string[];
   faq: { q: string; a: string }[];
+  seo?: SeoEntityDraft;
 }
 
 export interface PartRequest {
@@ -313,6 +367,15 @@ export interface PaymentGatewayConfig {
   isActive: boolean;
   merchantId: string;
   terminalId?: string;
+  username?: string;
+  password?: string;
+  apiKey?: string;
+  merchantKey?: string;
+  terminalKey?: string;
+  endpoint?: string;
+  paymentUrl?: string;
+  callbackUrl?: string;
+  additionalConfig?: Record<string, string>;
   isSandbox: boolean;
   description: string;
 }
@@ -337,9 +400,34 @@ export type HeaderMenuKind =
   | 'brands'
   | 'category'
   | 'brand'
+  | 'model'
   | 'page'
+  | 'product'
+  | 'article'
   | 'system'
   | 'custom';
+
+export type MenuSourceType =
+  | 'system'
+  | 'page'
+  | 'product'
+  | 'category'
+  | 'article'
+  | 'brand'
+  | 'model'
+  | 'custom';
+
+export interface MenuMegaConfig {
+  backgroundColor?: string;
+  backgroundImageUrl?: string;
+  backgroundMode?: 'cover' | 'pattern';
+  enabled: boolean;
+  columns?: number;
+  width?: 'boxed' | 'full';
+  bannerImageUrl?: string;
+  bannerTitle?: string;
+  bannerLink?: string;
+}
 
 export interface MenuItem {
   id: string;
@@ -349,6 +437,26 @@ export interface MenuItem {
   kind?: HeaderMenuKind;
   isVisible?: boolean;
   openInNewTab?: boolean;
+  parentId?: string;
+
+  /** WordPress-like menu builder source binding. */
+  sourceType?: MenuSourceType;
+  sourceId?: string;
+  originalTitle?: string;
+
+  /** Optional presentation overrides. */
+  cssClass?: string;
+  icon?: string;
+  megaMenu?: MenuMegaConfig;
+}
+
+export interface PopularPartsBrandItem {
+  id: string;
+  title: string;
+  imageUrl: string;
+  link: string;
+  subtitle?: string;
+  isVisible?: boolean;
 }
 
 export interface ProductAttributeDefinition {
@@ -356,6 +464,25 @@ export interface ProductAttributeDefinition {
   nameFa: string;
   category: string;
   defaultValue?: string;
+}
+
+export type SliderDevice = 'desktop' | 'tablet' | 'mobile';
+export type SliderElementKey = 'tag' | 'title' | 'subtitle' | 'button';
+
+export interface SliderElementPosition {
+  x: number; // percentage from left
+  y: number; // percentage from top
+  width?: number; // percentage of canvas width
+  height?: number; // optional percentage of canvas height
+  fontSizePx?: number;
+  wrap?: 'wrap' | 'nowrap';
+}
+
+export interface SliderDeviceLayout {
+  tag?: SliderElementPosition;
+  title?: SliderElementPosition;
+  subtitle?: SliderElementPosition;
+  button?: SliderElementPosition;
 }
 
 export interface SliderItem {
@@ -378,6 +505,21 @@ export interface SliderItem {
   buttonTextColor?: string;
   badgeBgColor?: string;
   badgeTextColor?: string;
+  responsiveLayout?: {
+    desktop?: SliderDeviceLayout;
+    tablet?: SliderDeviceLayout;
+    mobile?: SliderDeviceLayout;
+  };
+  inheritTabletFromDesktop?: boolean;
+  inheritMobileFromDesktop?: boolean;
+  backgroundColor?: string;
+  textColor?: string;
+  borderColor?: string;
+  borderRadiusPx?: number;
+  paddingPx?: number;
+  fontSizePx?: number;
+  imageRadiusPx?: number;
+  imageMode?: 'cover' | 'contain' | 'stretch' | 'repeat' | 'repeat-x' | 'repeat-y' | 'original';
 }
 
 export type AdminRole = 'super_admin' | 'content_manager' | 'order_manager' | 'inventory_manager';
@@ -444,10 +586,68 @@ export interface TrustBadgeItem {
   link?: string;
 }
 
+export type BannerPlacementKey = 'wide-banner-1' | 'promo-large' | 'promo-medium' | 'promo-small';
+export type BannerImageFit = 'cover' | 'contain';
+
+/** Banner data is stored independently from generic page-builder sections. */
+export interface BannerCreative {
+  id: string;
+  title: string;
+  subtitle?: string;
+  badge?: string;
+  desktopImageUrl: string;
+  mobileImageUrl?: string;
+  alt: string;
+  link: string;
+  buttonText?: string;
+  isVisible: boolean;
+  order: number;
+  imageFit: BannerImageFit;
+  overlayOpacity: number;
+  textAlignment: 'right' | 'center' | 'left';
+  titleColor: string;
+  subtitleColor: string;
+  titleFontSize?: number;
+  subtitleFontSize?: number;
+  contentPosition?: 'top' | 'center' | 'bottom';
+  contentOrder?: Array<'badge' | 'title' | 'subtitle' | 'button'>;
+}
+
+export interface BannerPlacementConfig {
+  key: BannerPlacementKey;
+  title: string;
+  isVisible: boolean;
+  widthMode: 'full' | 'container';
+  desktopAspectRatio: string;
+  mobileAspectRatio: string;
+  desktopColumns: number;
+  mobileColumns: number;
+  gapPx: number;
+  items: BannerCreative[];
+}
+
+export interface ShippingMethodSetting {
+  paymentMode?: 'prepaid' | 'free' | 'collect';
+  id: string;
+  title: string;
+  cost: number;
+  estimatedDelivery: string;
+  enabled: boolean;
+  description?: string;
+}
+
 export interface SiteSettings {
+  /** Saved visual order for homepage sections and independent banner placements. */
+  homeLayoutOrder?: string[];
   siteTitle: string;
   siteSlogan: string;
   contactPhone: string;
+  productContactPhone?: string;
+  productContactEnabled?: boolean;
+  productContactButtonColor?: string;
+  shippingMethods?: ShippingMethodSetting[];
+  /** Show a contact CTA instead of purchase when a product has no valid price. */
+  contactWhenNoPrice?: boolean;
   supportPhone: string;
   supportEmail: string;
   address: string;
@@ -456,7 +656,7 @@ export interface SiteSettings {
   primaryHover?: string;
   accentGlowColor?: string; // red highlight/glow under buttons and hover states
   themeMode?: 'dark' | 'light' | 'slate' | 'navy' | 'custom';
-  layoutPreset?: 'classic' | 'catalog-pro' | 'showroom';
+  layoutPreset?: 'classic' | 'catalog-pro' | 'showroom' | 'marketplace-rtl' | 'atelier-rtl';
   siteBgColor?: string;
   cardBgColor?: string;
   headerBgColor?: string;
@@ -464,6 +664,17 @@ export interface SiteSettings {
   textColor?: string;
   fontFamily: 'Vazirmatn' | 'Noto Sans Arabic' | 'Rubik' | 'Alexandria' | 'Cairo';
   fontSize: 'compact' | 'normal' | 'large' | 'xlarge';
+  /** Base font size applied across the storefront. Admin can tune this precisely. */
+  baseFontSizePx?: number;
+  /** Mobile catalog preferences. */
+  mobileProductColumns?: 1 | 2;
+  mobileFooterColumns?: 1 | 2;
+  relatedProductsCount?: number;
+  /** Desktop/default site header logo width in pixels. */
+  logoWidthPx?: number;
+  /** Mobile header logo placement and size. */
+  mobileLogoAlign?: 'left' | 'center' | 'right';
+  mobileLogoWidthPx?: number;
   borderRadius?: 'sharp' | 'normal' | 'rounded' | 'full';
   themeRadiusPx?: number;
   headerStyle?: 'light' | 'dark' | 'primary';
@@ -477,11 +688,40 @@ export interface SiteSettings {
   enableStockAlerts: boolean;
   navigationMenus?: MenuItem[];
   headerMenus?: MenuItem[];
+  popularPartsBrands?: PopularPartsBrandItem[];
   productAttributes?: ProductAttributeDefinition[];
   // Branding & Assets
   logoUrl?: string;
   faviconUrl?: string;
   sliders?: SliderItem[];
+  /** Independent home-page banner placements; migrated from legacy sections on first save. */
+  bannerPlacements?: BannerPlacementConfig[];
+  // Homepage hero-slider behavior.
+  heroSliderAutoplayMs?: number;
+  heroSliderNavigation?: 'dots' | 'arrows' | 'both' | 'none';
+  heroSliderAnimation?: 'fade' | 'slide' | 'zoom';
+  heroSliderPauseOnHover?: boolean;
+  heroSliderLoop?: boolean;
+
+  // Marketplace footer layout / typography.
+  footerGridColumnsDesktop?: number;
+  footerGridColumnsTablet?: number;
+  footerGridColumnsMobile?: number;
+  footerGridRowsDesktop?: number;
+  footerGridRowsTablet?: number;
+  footerGridRowsMobile?: number;
+  footerLogoUrl?: string;
+  footerLogoWidthPx?: number;
+  footerHeadingFontSizePx?: number;
+  footerTextFontSizePx?: number;
+  footerPaddingTopPx?: number;
+  footerPaddingBottomPx?: number;
+  footerTextColor?: string;
+  footerHeadingColor?: string;
+  footerContactTitle?: string;
+  footerContactSubtitle?: string;
+  footerNewsletterPlaceholder?: string;
+
   // Official Invoice and Tax Information
   sellerName?: string;
   sellerEconomicCode?: string;
@@ -498,6 +738,8 @@ export interface SiteSettings {
   footerColumns?: FooterColumn[];
   footerCopyright?: string;
   footerCopyrightText?: string;
+  footerBottomLinks?: FooterLink[];
+  footerBottomAlign?: 'right' | 'center' | 'left';
   footerShowBadges?: boolean;
   footerBadges?: FooterBadgeItem[];
   footerCustomHtml?: string;
@@ -525,18 +767,147 @@ export interface AdminAuthState {
 }
 
 // Page Builder & Editable Sections
+export interface PageSectionItem {
+  id: string;
+  title?: string;
+  subtitle?: string;
+  content?: string;
+  imageUrl?: string;
+  badge?: string;
+  link?: string;
+  buttonText?: string;
+  isVisible?: boolean;
+  order: number;
+  /** Optional free-position layout for visual banner composition. */
+  responsiveLayout?: {
+    desktop?: SliderDeviceLayout;
+    tablet?: SliderDeviceLayout;
+    mobile?: SliderDeviceLayout;
+  };
+  inheritTabletFromDesktop?: boolean;
+  inheritMobileFromDesktop?: boolean;
+
+  /** Per-item visual controls used by the live/visual builder. */
+  backgroundColor?: string;
+  textColor?: string;
+  borderColor?: string;
+  fontSizePx?: number;
+  borderRadiusPx?: number;
+  paddingPx?: number;
+  imageRadiusPx?: number;
+  imageWidthPx?: number;
+  imageHeightPx?: number;
+  imageFit?: 'cover' | 'contain';
+  titleFontSizePx?: number;
+  contentFontSizePx?: number;
+  minHeightPx?: number;
+  textAlign?: 'right' | 'center' | 'left';
+  imageMode?: 'cover' | 'contain' | 'stretch' | 'repeat' | 'repeat-x' | 'repeat-y' | 'original';
+  titleColor?: string;
+  subtitleColor?: string;
+  buttonBgColor?: string;
+  buttonTextColor?: string;
+  badgeBgColor?: string;
+  badgeTextColor?: string;
+  textAlignment?: 'right' | 'center' | 'left';
+  widthPercent?: number;
+  tabletWidthPercent?: number;
+  mobileWidthPercent?: number;
+  heightPx?: number;
+  tabletHeightPx?: number;
+  mobileHeightPx?: number;
+}
+
 export interface PageSection {
   id: string;
+  /** Stable key used by system pages such as the marketplace home page. */
+  sectionKey?: string;
   title: string;
   subtitle?: string;
   content?: string;
   badge?: string;
   imageUrl?: string;
-  imageMode?: 'full' | 'cover' | 'contain' | 'side' | 'banner';
+  imageMode?: 'full' | 'cover' | 'contain' | 'side' | 'banner' | 'stretch' | 'original' | 'repeat' | 'repeat-x' | 'repeat-y';
   buttonText?: string;
   buttonLink?: string;
   isVisible: boolean;
   order: number;
+
+  // Layout builder controls
+  layout?: 'boxed' | 'full' | 'grid' | 'split' | 'cards';
+  desktopColumns?: number;
+  tabletColumns?: number;
+  mobileColumns?: number;
+  fullWidth?: boolean;
+  backgroundColor?: string;
+  textColor?: string;
+  borderRadiusPx?: number;
+  itemRadiusPx?: number;
+  paddingTopPx?: number;
+  paddingBottomPx?: number;
+  paddingInlinePx?: number;
+  gapPx?: number;
+  minHeightPx?: number;
+  contentAlign?: 'right' | 'center' | 'left';
+  widthPercent?: number;
+  tabletWidthPercent?: number;
+  mobileWidthPercent?: number;
+  maxWidthPx?: number;
+  maxItems?: number;
+  imageSizePx?: number;
+  backgroundImageOpacity?: number;
+  itemAspectRatio?: 'square' | 'landscape' | 'portrait' | 'auto';
+  contentSource?: 'manual' | 'categories' | 'brands' | 'products' | 'articles' | 'sliders';
+  contentSourceLimit?: number;
+  itemBackgroundColor?: string;
+  itemTextColor?: string;
+  itemBorderColor?: string;
+  itemPaddingPx?: number;
+  itemFontSizePx?: number;
+  itemImageRadiusPx?: number;
+
+  // Professional responsive/visual controls shared by all page-builder sections.
+  marginTopPx?: number;
+  marginBottomPx?: number;
+  headingFontSizePx?: number;
+  subtitleFontSizePx?: number;
+  itemTitleFontSizePx?: number;
+  itemContentFontSizePx?: number;
+  itemImageWidthPx?: number;
+  itemImageHeightPx?: number;
+  itemImageFit?: 'cover' | 'contain';
+  itemMinHeightPx?: number;
+  itemTextAlign?: 'right' | 'center' | 'left';
+  mobileDisplayMode?: 'grid' | 'scroll';
+  mobileItemMinWidthPx?: number;
+  layoutVariant?: 'default' | 'uniform' | 'mosaic' | 'compact';
+
+  dealTimerAlign?: 'right' | 'center' | 'left';
+  dealTimerFontSizePx?: number;
+  dealTitleColor?: string;
+  dealSubtitleColor?: string;
+  dealTimerTextColor?: string;
+  dealTimerBoxBgColor?: string;
+  dealContentVerticalAlign?: 'start' | 'center' | 'end';
+
+  finderWidthPx?: number;
+  finderPaddingPx?: number;
+  finderRadiusPx?: number;
+  finderTitleFontSizePx?: number;
+  finderTextFontSizePx?: number;
+  finderLabelFontSizePx?: number;
+  finderValueFontSizePx?: number;
+  finderButtonFontSizePx?: number;
+  finderBackgroundColor?: string;
+  finderTextColor?: string;
+  finderFieldBackgroundColor?: string;
+  finderFieldTextColor?: string;
+  finderButtonBackgroundColor?: string;
+  finderButtonTextColor?: string;
+  finderSide?: 'left' | 'right';
+
+  /** Repeater content for testimonials, banners, feature cards and similar sections. */
+  items?: PageSectionItem[];
 }
 
 export interface SitePage {
@@ -547,4 +918,6 @@ export interface SitePage {
   sections: PageSection[];
   isSystem?: boolean;
   updatedAt: string;
+  seo?: SeoEntityDraft;
+  builderConfigVersion?: number;
 }

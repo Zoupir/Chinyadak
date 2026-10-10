@@ -1,4 +1,6 @@
 import { CarBrand, VehicleModel, Category, Product, Article, ArticleCategory, SliderItem, AdminUser, SitePage, PageSection } from '../types';
+import { REAL_MODEL_IMAGE_OVERRIDES, REAL_VEHICLE_BRANDS, REAL_VEHICLE_MODELS } from './realCatalogDefaults';
+import { PART_CATEGORIES } from './partCategories';
 
 export const BRANDS: CarBrand[] = [
   {
@@ -6,7 +8,7 @@ export const BRANDS: CarBrand[] = [
     nameFa: 'کی‌ام‌سی (KMC)',
     nameEn: 'KMC',
     slug: 'kmc',
-    logo: 'https://images.unsplash.com/photo-1617788138017-80ad40651399?w=120&auto=format&fit=crop&q=80',
+    logo: 'https://www.google.com/s2/favicons?domain=kermanmotor.com&sz=128',
     heroImage: 'https://images.unsplash.com/photo-1542282088-72c9c27ed0cd?w=1200&auto=format&fit=crop&q=80',
     description: 'برند KMC زیرمجموعه لوکس و مدرن کرمان موتور و شرکت JAC چین، عرضه‌کننده خودروهای مدرنی همچون J7، T8، K7 و X5 در ایران.',
     country: 'چین / مونتاژ کرمان موتور',
@@ -16,7 +18,7 @@ export const BRANDS: CarBrand[] = [
     popularCategorySlugs: ['cooling', 'engine', 'brakes', 'filters'],
     faq: [
       {
-        q: 'آیا قطعات KMC در انبار چین‌پارت موجودی دائم دارند؟',
+        q: 'آیا قطعات KMC در انبار فروشگاه موجودی دائم دارند؟',
         a: 'بله، تمامی قطعات پرمصرف و موتوری خودروهای KMC J7، KMC T8 و KMC K7 به صورت مستقیم و با تضمین اصالت عرضه می‌شوند.'
       },
       {
@@ -30,7 +32,7 @@ export const BRANDS: CarBrand[] = [
     nameFa: 'چری (Chery)',
     nameEn: 'Chery',
     slug: 'chery',
-    logo: 'https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=120&auto=format&fit=crop&q=80',
+    logo: 'https://www.google.com/s2/favicons?domain=cheryinternational.com&sz=128',
     heroImage: 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=1200&auto=format&fit=crop&q=80',
     description: 'بزرگترین صادرکننده خودروی چین و شریک تجاری مدیران خودرو، با خانواده پرفروش تیگو (Tiggo) و آریزو (Arrizo).',
     country: 'چین / مدیران خودرو',
@@ -50,7 +52,7 @@ export const BRANDS: CarBrand[] = [
     nameFa: 'ام‌وی‌ام (MVM)',
     nameEn: 'MVM',
     slug: 'mvm',
-    logo: 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?w=120&auto=format&fit=crop&q=80',
+    logo: 'https://www.google.com/s2/favicons?domain=mvmco.ir&sz=128',
     heroImage: 'https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?w=1200&auto=format&fit=crop&q=80',
     description: 'خط محصولات جوان‌پسند و کراس‌اوورهای شهری مدیران خودرو شامل X55 پرو، X22 پرو، X33 کراس و 315.',
     country: 'چین / مدیران خودرو',
@@ -70,7 +72,7 @@ export const BRANDS: CarBrand[] = [
     nameFa: 'فونیکس (Fownix)',
     nameEn: 'Fownix',
     slug: 'fownix',
-    logo: 'https://images.unsplash.com/photo-1583121274602-3e2820c69888?w=120&auto=format&fit=crop&q=80',
+    logo: 'https://www.google.com/s2/favicons?domain=fownix.com&sz=128',
     heroImage: 'https://images.unsplash.com/photo-1617814076367-b759c7d7e738?w=1200&auto=format&fit=crop&q=80',
     description: 'برند پریمیوم و لوکس مدیران خودرو شامل مدل‌های فونیکس FX، تیگو ۸ پرو مکس، تیگو ۷ پرو پریمیوم و آریزو ۶ جی‌تی.',
     country: 'چین / مدیران خودرو',
@@ -90,7 +92,7 @@ export const BRANDS: CarBrand[] = [
     nameFa: 'جک (JAC)',
     nameEn: 'JAC',
     slug: 'jac',
-    logo: 'https://images.unsplash.com/photo-1563720223185-11003d516935?w=120&auto=format&fit=crop&q=80',
+    logo: 'https://www.google.com/s2/favicons?domain=jac.com.cn&sz=128',
     heroImage: 'https://images.unsplash.com/photo-1502877338535-766e1452684a?w=1200&auto=format&fit=crop&q=80',
     description: 'یکی از قدیمی‌ترین و محبوب‌ترین برندهای چینی در ایران با مدل‌های جاودانه J5، S5 و S3.',
     country: 'چین / کرمان موتور',
@@ -110,7 +112,7 @@ export const BRANDS: CarBrand[] = [
     nameFa: 'لاماری (Lamari)',
     nameEn: 'Lamari',
     slug: 'lamari',
-    logo: 'https://images.unsplash.com/photo-1619642751034-765dfdf7c58e?w=120&auto=format&fit=crop&q=80',
+    logo: 'https://www.google.com/s2/favicons?domain=lamari.ir&sz=128',
     heroImage: 'https://images.unsplash.com/photo-1553440569-bcc63803a83d?w=1200&auto=format&fit=crop&q=80',
     description: 'برند خودرویی شرکت آرین پارس موتور با کراس‌اوور جذاب لاماری ایما (Forthing T5 EVO).',
     country: 'چین / آرین پارس موتور',
@@ -130,7 +132,7 @@ export const BRANDS: CarBrand[] = [
     nameFa: 'چانگان (Changan)',
     nameEn: 'Changan',
     slug: 'changan',
-    logo: 'https://images.unsplash.com/photo-1541899481282-d53bffe3c35d?w=120&auto=format&fit=crop&q=80',
+    logo: 'https://www.google.com/s2/favicons?domain=globalchangan.com&sz=128',
     heroImage: 'https://images.unsplash.com/photo-1511919884226-fd3cad34687c?w=1200&auto=format&fit=crop&q=80',
     description: 'یکی از چهار غول بزرگ خودروسازی چین با مدل‌های محبوب CS35، CS35 پلاس، CS55 پلاس و یونی‌تی (UNI-T).',
     country: 'چین / سایپا',
@@ -150,7 +152,7 @@ export const BRANDS: CarBrand[] = [
     nameFa: 'جتور / فیدلیتی (Jetour)',
     nameEn: 'Jetour',
     slug: 'jetour',
-    logo: 'https://images.unsplash.com/photo-1580273916550-e323be2ae537?w=120&auto=format&fit=crop&q=80',
+    logo: 'https://www.google.com/s2/favicons?domain=jetourglobal.com&sz=128',
     heroImage: 'https://images.unsplash.com/photo-1519641471654-76ce0107ad1b?w=1200&auto=format&fit=crop&q=80',
     description: 'زیربرند جوان و مدرن گروه چری، عرضه‌شده در ایران با نام فیدلیتی پرایم و پرستیژ توسط گروه بهمن.',
     country: 'چین / بهمن موتور',
@@ -430,7 +432,7 @@ export const VEHICLE_MODELS: VehicleModel[] = [
     faq: [
       {
         q: 'قطعات چانگان CS35 پلاس وارداتی به راحتی یافت می‌شوند؟',
-        a: 'بله، چین‌پارت پارت‌های مصرفی، جلوپنجره، لنت‌ها و سنسورهای مدل‌های وارداتی جدید ۲۰۲۳ و ۲۰۲۴ را به طور مستقیم تامین می‌کند.'
+        a: 'بله، فروشگاه پارت‌های مصرفی، جلوپنجره، لنت‌ها و سنسورهای مدل‌های وارداتی جدید ۲۰۲۳ و ۲۰۲۴ را به طور مستقیم تامین می‌کند.'
       }
     ]
   },
@@ -464,159 +466,7 @@ export const VEHICLE_MODELS: VehicleModel[] = [
   }
 ];
 
-export const CATEGORIES: Category[] = [
-  {
-    id: 'cat-cooling',
-    nameFa: 'سیستم خنک‌کننده',
-    nameEn: 'Cooling System',
-    slug: 'cooling',
-    icon: 'Thermometer',
-    imageUrl: 'https://images.unsplash.com/photo-1616422285623-13ff0162193c?w=800&auto=format&fit=crop&q=80',
-    description: 'واتر پمپ، رادیاتور، ترموستات، فن، منبع انبساط، شیلنگ‌های آب و اویل کولر موتورهای چینی',
-    subcategories: [
-      { id: 'sub-water-pump', nameFa: 'واتر پمپ (Water Pump)', nameEn: 'Water Pump', slug: 'water-pump' },
-      { id: 'sub-radiator', nameFa: 'رادیاتور آب موتور', nameEn: 'Engine Radiator', slug: 'engine-radiator' },
-      { id: 'sub-thermostat', nameFa: 'ترموستات و هوزینگ', nameEn: 'Thermostat & Housing', slug: 'thermostat' },
-      { id: 'sub-cooling-fan', nameFa: 'موتور فن و پروانه خنک‌کننده', nameEn: 'Cooling Fan', slug: 'cooling-fan' },
-      { id: 'sub-expansion-tank', nameFa: 'منبع انبساط و درب رادیاتور', nameEn: 'Expansion Tank', slug: 'expansion-tank' },
-      { id: 'sub-oil-cooler', nameFa: 'اویل کولر خنک‌کننده روغن', nameEn: 'Oil Cooler', slug: 'oil-cooler' }
-    ]
-  },
-  {
-    id: 'cat-engine',
-    nameFa: 'موتور و متعلقات',
-    nameEn: 'Engine & Components',
-    slug: 'engine',
-    icon: 'Cpu',
-    imageUrl: 'https://images.unsplash.com/photo-1486262715619-67b85e0b08d3?w=800&auto=format&fit=crop&q=80',
-    description: 'سرسیلندر، پیستون، رینگ، شاتون، میل‌لنگ، یاتاقان، واشر سرسیلندر، اویل پمپ و دسته موتور',
-    subcategories: [
-      { id: 'sub-cylinder-head', nameFa: 'سرسیلندر کامل و واشر سرسیلندر', nameEn: 'Cylinder Head', slug: 'cylinder-head' },
-      { id: 'sub-pistons', nameFa: 'پیستون و رینگ موتور', nameEn: 'Pistons & Rings', slug: 'pistons' },
-      { id: 'sub-oil-pump', nameFa: 'اویل پمپ (پمپ روغن موتور)', nameEn: 'Oil Pump', slug: 'oil-pump' },
-      { id: 'sub-engine-mount', nameFa: 'دسته موتور و گیربکس', nameEn: 'Engine Mount', slug: 'engine-mount' },
-      { id: 'sub-valves', nameFa: 'سوپاپ دود و هوا و میل سوپاپ', nameEn: 'Engine Valves', slug: 'valves' }
-    ]
-  },
-  {
-    id: 'cat-timing',
-    nameFa: 'سیستم تایم',
-    nameEn: 'Timing System',
-    slug: 'timing',
-    icon: 'Clock',
-    imageUrl: 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=800&auto=format&fit=crop&q=80',
-    description: 'کیت کامل زنجیر تایم، تسمه تایم، سفت‌کن، هرزگرد و چرخ‌دنده‌های تایمینگ VVT',
-    subcategories: [
-      { id: 'sub-timing-chain-kit', nameFa: 'کیت کامل زنجیر تایم', nameEn: 'Timing Chain Kit', slug: 'timing-chain-kit' },
-      { id: 'sub-timing-belt', nameFa: 'تسمه تایم و تسمه دینام', nameEn: 'Timing Belts', slug: 'timing-belt' },
-      { id: 'sub-timing-tensioner', nameFa: 'تسمه سفت‌کن و هرزگرد تایم', nameEn: 'Timing Tensioner', slug: 'timing-tensioner' },
-      { id: 'sub-vvt-gear', nameFa: 'چرخ‌دنده VVT میل‌سوپاپ', nameEn: 'VVT Sprocket', slug: 'vvt-sprocket' }
-    ]
-  },
-  {
-    id: 'cat-brakes',
-    nameFa: 'سیستم ترمز',
-    nameEn: 'Brake System',
-    slug: 'brakes',
-    icon: 'Disc',
-    imageUrl: 'https://images.unsplash.com/photo-1600793575654-910699b5e4d4?w=800&auto=format&fit=crop&q=80',
-    description: 'لنت ترمز سرامیکی، دیسک چرخ، کالیپر، پمپ ترمز، بوستر ترمز و سنسورهای سرعت چرخ ABS',
-    subcategories: [
-      { id: 'sub-front-brake-pads', nameFa: 'لنت ترمز چرخ جلو', nameEn: 'Front Brake Pads', slug: 'front-brake-pads' },
-      { id: 'sub-rear-brake-pads', nameFa: 'لنت ترمز چرخ عقب', nameEn: 'Rear Brake Pads', slug: 'rear-brake-pads' },
-      { id: 'sub-brake-rotors', nameFa: 'دیسک چرخ خنک‌شونده', nameEn: 'Brake Discs / Rotors', slug: 'brake-discs' },
-      { id: 'sub-abs-sensor', nameFa: 'سنسور ABS و بلوک کنترل ترمز', nameEn: 'ABS Sensors', slug: 'abs-sensors' }
-    ]
-  },
-  {
-    id: 'cat-suspension',
-    nameFa: 'جلوبندی و تعلیق',
-    nameEn: 'Suspension & Steering',
-    slug: 'suspension',
-    icon: 'Shield',
-    imageUrl: 'https://images.unsplash.com/photo-1486262715619-67b85e0b08d3?w=800&auto=format&fit=crop&q=80',
-    description: 'کمک فنر، فنر لول، طبق بالا و پایین، سیبک طبق، میل موج‌گیر، بوش‌ها و توپی سرکمک',
-    subcategories: [
-      { id: 'sub-shock-absorbers', nameFa: 'کمک فنر جلو و عقب', nameEn: 'Shock Absorbers', slug: 'shock-absorbers' },
-      { id: 'sub-control-arms', nameFa: 'طبق کامل و بوش‌های لاستیکی', nameEn: 'Control Arms', slug: 'control-arms' },
-      { id: 'sub-sway-bar-links', nameFa: 'میل موج‌گیر و لاستیک چاکدار', nameEn: 'Sway Bar Links', slug: 'sway-bar-links' },
-      { id: 'sub-wheel-hubs', nameFa: 'توپی چرخ و بلبرینگ چرخ', nameEn: 'Wheel Hubs', slug: 'wheel-hubs' }
-    ]
-  },
-  {
-    id: 'cat-transmission',
-    nameFa: 'گیربکس و انتقال قدرت',
-    nameEn: 'Transmission',
-    slug: 'transmission',
-    icon: 'Cog',
-    imageUrl: 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=800&auto=format&fit=crop&q=80',
-    description: 'ساعت گیربکس، شیرهای برقی، فیلتر روغن گیربکس CVT و DCT، کیت کلاچ و سنسورهای دور توربین',
-    subcategories: [
-      { id: 'sub-valve-body', nameFa: 'ساعت و شیر برقی گیربکس', nameEn: 'Valve Body & Solenoids', slug: 'valve-body' },
-      { id: 'sub-trans-filters', nameFa: 'فیلتر گیربکس CVT / DCT', nameEn: 'Transmission Filters', slug: 'transmission-filter' },
-      { id: 'sub-clutch-kit', nameFa: 'کیت کلاچ و دوکلاچه DCT', nameEn: 'Clutch Kits', slug: 'clutch-kits' },
-      { id: 'sub-drive-axles', nameFa: 'پلوس و سرپلوس', nameEn: 'Drive Shafts', slug: 'drive-shafts' }
-    ]
-  },
-  {
-    id: 'cat-turbo',
-    nameFa: 'توربو و مکش هوا',
-    nameEn: 'Turbocharger & Intake',
-    slug: 'turbo',
-    icon: 'Zap',
-    imageUrl: 'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=800&auto=format&fit=crop&q=80',
-    description: 'توربوشارژر کامل، کارتریج توربو، اینترکولر، دریچه گاز برقی، منیفولد هوا و لوله‌های بوست',
-    subcategories: [
-      { id: 'sub-turbochargers', nameFa: 'توربوشارژر کامل و کارتریج CHRA', nameEn: 'Turbochargers', slug: 'turbochargers' },
-      { id: 'sub-intercoolers', nameFa: 'اینترکولر و لوله‌های سیلیکونی', nameEn: 'Intercoolers', slug: 'intercoolers' },
-      { id: 'sub-throttle-bodies', nameFa: 'دریچه گاز برقی', nameEn: 'Throttle Bodies', slug: 'throttle-bodies' },
-      { id: 'sub-map-sensors', nameFa: 'سنسور مپ و سنسور بوست', nameEn: 'MAP & Boost Sensors', slug: 'map-sensors' }
-    ]
-  },
-  {
-    id: 'cat-fuel',
-    nameFa: 'سوخت‌رسانی و انژکتور',
-    nameEn: 'Fuel System',
-    slug: 'fuel',
-    icon: 'Flame',
-    imageUrl: 'https://images.unsplash.com/photo-1517524008697-84bbe3c3fd98?w=800&auto=format&fit=crop&q=80',
-    description: 'سوزن انژکتور پاشش مستقیم GDI، پمپ بنزین فشار قوی، ریل سوخت و رگلاتور',
-    subcategories: [
-      { id: 'sub-gdi-injectors', nameFa: 'سوزن انژکتور GDI', nameEn: 'Fuel Injectors', slug: 'injectors' },
-      { id: 'sub-fuel-pump', nameFa: 'پمپ بنزین داخل باک و مغزی', nameEn: 'Fuel Pump', slug: 'fuel-pump' },
-      { id: 'sub-hpfp', nameFa: 'پمپ بنزین فشار بالا (HPFP)', nameEn: 'High Pressure Fuel Pump', slug: 'hpfp' }
-    ]
-  },
-  {
-    id: 'cat-filters',
-    nameFa: 'فیلترها و سرویس دوره‌ای',
-    nameEn: 'Filters & Periodic Service',
-    slug: 'filters',
-    icon: 'Layers',
-    imageUrl: 'https://images.unsplash.com/photo-1615906655593-ad0386982a0f?w=800&auto=format&fit=crop&q=80',
-    description: 'فیلتر روغن اورجینال، فیلتر هوا، فیلتر کابین کربن اکتیو، شمع‌های ایریدیوم و ضدیخ استاندارد',
-    subcategories: [
-      { id: 'sub-oil-filter', nameFa: 'فیلتر روغن موتور', nameEn: 'Oil Filter', slug: 'oil-filter' },
-      { id: 'sub-air-filter', nameFa: 'فیلتر هوای موتور', nameEn: 'Air Filter', slug: 'air-filter' },
-      { id: 'sub-cabin-filter', nameFa: 'فیلتر هوای اتاق (کابین)', nameEn: 'Cabin Filter', slug: 'cabin-filter' },
-      { id: 'sub-spark-plugs', nameFa: 'شمع ایریدیوم سوزنی', nameEn: 'Spark Plugs', slug: 'spark-plugs' }
-    ]
-  },
-  {
-    id: 'cat-lighting',
-    nameFa: 'روشنایی و چراغ',
-    nameEn: 'Lighting & Headlights',
-    slug: 'lighting',
-    icon: 'Sun',
-    imageUrl: 'https://images.unsplash.com/photo-1541899481282-d53bffe3c35d?w=800&auto=format&fit=crop&q=80',
-    description: 'چراغ جلو Full LED، چراغ عقب پیوسته کریستالی، پروژکتور مه‌شکن و دیلایت',
-    subcategories: [
-      { id: 'sub-headlights', nameFa: 'چراغ جلو کریستالی LED', nameEn: 'Headlights', slug: 'headlights' },
-      { id: 'sub-taillights', nameFa: 'چراغ خطر عقب و نئون پیوسته', nameEn: 'Taillights', slug: 'taillights' },
-      { id: 'sub-fog-lights', nameFa: 'چراغ مه‌شکن و دیلایت سپر', nameEn: 'Fog Lights', slug: 'fog-lights' }
-    ]
-  }
-];
+export const CATEGORIES: Category[] = PART_CATEGORIES;
 
 export const PRODUCTS: Product[] = [
   {
@@ -777,7 +627,7 @@ export const PRODUCTS: Product[] = [
     stock: 45,
     stockStatus: 'in_stock',
     images: [
-      'https://images.unsplash.com/photo-1617788138017-80ad40651399?w=800&auto=format&fit=crop&q=80'
+      'https://images.unsplash.com/photo-1619642751034-765dfdf7c58e?w=1000&auto=format&fit=crop&q=85'
     ],
     rating: 5.0,
     reviewsCount: 39,
@@ -1171,7 +1021,7 @@ export const PRODUCTS: Product[] = [
     stock: 4,
     stockStatus: 'low_stock',
     images: [
-      'https://images.unsplash.com/photo-1617788138017-80ad40651399?w=800&auto=format&fit=crop&q=80'
+      'https://images.unsplash.com/photo-1619642751034-765dfdf7c58e?w=1000&auto=format&fit=crop&q=85'
     ],
     rating: 5.0,
     reviewsCount: 11,
@@ -1339,7 +1189,7 @@ export const ARTICLES: Article[] = [
     readTimeMinutes: 6,
     author: 'مهندس حسام رستگار (کارشناس ارشد فنی خودروهای چینی)',
     date: '۱۴۰۳/۰۶/۱۵',
-    imageUrl: 'https://images.unsplash.com/photo-1542282088-72c9c27ed0cd?w=800&auto=format&fit=crop&q=80',
+    imageUrl: 'https://images.unsplash.com/photo-1486262715619-67b85e0b08d3?w=1000&auto=format&fit=crop&q=85',
     relatedModelIds: ['kmc-j7', 'jac-s5'],
     relatedProductIds: ['prod-water-pump-kmc-j7', 'prod-thermostat-kmc-j7', 'prod-coolant-premium'],
     faq: [
@@ -1370,7 +1220,7 @@ export const ARTICLES: Article[] = [
     readTimeMinutes: 8,
     author: 'دکتر علیرضا معتمد (متخصص روانکارهای صنعتی)',
     date: '۱۴۰۳/۰۵/۲۲',
-    imageUrl: 'https://images.unsplash.com/photo-1617788138017-80ad40651399?w=800&auto=format&fit=crop&q=80',
+    imageUrl: 'https://images.unsplash.com/photo-1619642751034-765dfdf7c58e?w=1000&auto=format&fit=crop&q=85',
     relatedModelIds: ['kmc-j7', 'chery-tiggo8-pro', 'fownix-fx', 'lamari-eama'],
     relatedProductIds: ['prod-oil-filter-kmc-j7', 'prod-spark-plugs-turbo'],
     faq: [
@@ -1390,7 +1240,7 @@ export const ARTICLES: Article[] = [
     readTimeMinutes: 5,
     author: 'مهندس آرش شایگان',
     date: '۱۴۰۳/۰۴/۱۰',
-    imageUrl: 'https://images.unsplash.com/photo-1619642751034-765dfdf7c58e?w=800&auto=format&fit=crop&q=80',
+    imageUrl: 'https://images.unsplash.com/photo-1600705722908-bab1e61c0b4d?w=1000&auto=format&fit=crop&q=85',
     relatedModelIds: ['chery-tiggo7-pro', 'fownix-fx'],
     relatedProductIds: ['prod-brake-pads-j7-front'],
     faq: [
@@ -1676,7 +1526,7 @@ export const INITIAL_ARTICLE_CATEGORIES: ArticleCategory[] = [
     name: 'بررسی فنی و مقایسه',
     slug: 'technical-review',
     description: 'تحلیل سیستم‌های موتوری توربو TGDI، گیربکس‌های دوکلاچه تر (Wet DCT) و پلتفرم‌های مدرن فونیکس و KMC',
-    imageUrl: 'https://images.unsplash.com/photo-1617788138017-80ad40651399?w=800&auto=format&fit=crop&q=80',
+    imageUrl: 'https://images.unsplash.com/photo-1619642751034-765dfdf7c58e?w=1000&auto=format&fit=crop&q=85',
     icon: 'Car',
     articleCount: 2
   },
@@ -1692,33 +1542,37 @@ export const INITIAL_ARTICLE_CATEGORIES: ArticleCategory[] = [
 ];
 
 export const INITIAL_SETTINGS = {
-  siteTitle: 'چین پارت | بازار تخصصی قطعات یدکی خودروهای چینی',
-  siteSlogan: 'مرجع رسمی و تخصصی لوازم یدکی و قطعات فابریک با سیستم فیتمنت هوشمند',
-  contactPhone: '۰۲۱-۸۸۹۹۲۲۱۱',
-  supportPhone: '۰۹۱۲۳۴۵۶۷۸۹',
-  supportEmail: 'support@chinpart.ir',
-  address: 'تهران، خیابان امیرکبیر (چراغ برق)، کوچه سراج، پاساژ کاشانی، طبقه همکف، پلاک ۲۸',
-  announcementText: 'تضمین اصالت قطعات شرکتی با هولوگرام، ارسال فوری ۲ ساعته در تهران و ۲۴ ساعته با تیپاکس در سراسر کشور',
-  primaryColor: '#DC2626', // Red-600
-  primaryHover: '#b91c1c',
-  accentGlowColor: '#DC2626', // Configurable glow/red highlight under buttons, cards, hover
-  themeMode: 'dark' as const,
-  layoutPreset: 'classic' as const,
-  siteBgColor: '#0a0a0a',
-  cardBgColor: '#171717',
-  headerBgColor: '#0a0a0a',
-  footerBgColor: '#0a0a0a',
-  textColor: '#ffffff',
+  siteTitle: 'یدک استور',
+  siteSlogan: 'مرجع تخصصی خرید قطعات یدکی خودروهای چینی بر اساس برند و مدل خودرو',
+  contactPhone: '',
+  supportPhone: '',
+  supportEmail: '',
+  address: '',
+  announcementText: 'قطعه مناسب خودروی خود را بر اساس برند، مدل و شماره فنی پیدا کنید',
+  primaryColor: '#F59E0B',
+  primaryHover: '#D97706',
+  accentGlowColor: '#F59E0B',
+  themeMode: 'light' as const,
+  layoutPreset: 'marketplace-rtl' as const,
+  siteBgColor: '#f4f5f6',
+  cardBgColor: '#ffffff',
+  headerBgColor: '#ffffff',
+  footerBgColor: '#111827',
+  textColor: '#1f2937',
   fontFamily: 'Vazirmatn' as const,
   fontSize: 'normal' as const,
+  baseFontSizePx: 16,
+  mobileProductColumns: 2 as const,
+  mobileFooterColumns: 2 as const,
+  relatedProductsCount: 4,
   borderRadius: 'normal' as const,
   themeRadiusPx: 12,
-  metaTitle: 'چین‌پارت | فروشگاه تخصصی قطعات یدکی خودروهای چینی با سیستم فیتمنت',
-  metaDescription: 'مرجع تخصصی خرید لوازم یدکی و قطعات فابریک خودروهای کی‌ام‌سی KMC، چری، فونیکس، ام‌وی‌ام، لاماری و جک با تضمین اصالت و گارانتی بازگشت وجه.',
+  metaTitle: 'یدک استور | فروشگاه تخصصی قطعات خودروهای چینی',
+  metaDescription: 'خرید آنلاین قطعات یدکی خودروهای چینی؛ جستجو بر اساس برند، مدل خودرو و شماره فنی.',
   metaKeywords: 'لوازم یدکی کی ام سی, قطعات چری, قطعات فونیکس, قطعات KMC J7, لوازم جک S5, قطعات فابریک چینی',
-  ogTitle: 'چین‌پارت پرو - مرجع قطعات خودروهای چینی',
-  ogDescription: 'سیستم هوشمند فیتمنت و سازگاری ۱۰۰٪ قطعات با خودروهای مدرن چینی',
-  ogImageUrl: 'https://images.unsplash.com/photo-1617788138017-80ad40651399?w=1200&auto=format&fit=crop&q=80',
+  ogTitle: 'یدک استور | قطعات یدکی خودروهای چینی',
+  ogDescription: 'قطعات خودروهای چینی را متناسب با برند، مدل خودرو و شماره فنی پیدا کنید.',
+  ogImageUrl: '',
   freeShippingThreshold: 5000000,
   expressShippingFee: 120000,
   postShippingFee: 85000,
@@ -1738,7 +1592,25 @@ export const INITIAL_SETTINGS = {
     { id: 'header-brands', title: 'برندهای خودرو', link: 'shop', kind: 'brands' as const, isVisible: true },
     { id: 'header-maintenance', title: 'سرویس دوره‌ای', link: 'shop:maintenance', kind: 'system' as const, badge: 'سرویس', isVisible: true },
     { id: 'header-request', title: 'استعلام قطعه', link: 'part-request', kind: 'system' as const, badge: 'فوری', isVisible: true },
-    { id: 'header-blog', title: 'مقالات و آموزش', link: 'blog', kind: 'system' as const, isVisible: true }
+    { id: 'header-blog', title: 'مقالات و آموزش', link: 'blog', kind: 'system' as const, isVisible: true },
+    { id: 'header-cat-engine', title: 'قطعات موتور', link: 'category:engine', kind: 'category' as const, parentId: 'header-categories', isVisible: true },
+    { id: 'header-cat-brakes', title: 'سیستم ترمز', link: 'category:brakes', kind: 'category' as const, parentId: 'header-categories', isVisible: true },
+    { id: 'header-cat-filters', title: 'فیلترها و سرویس', link: 'category:filters', kind: 'category' as const, parentId: 'header-categories', isVisible: true },
+    { id: 'header-cat-suspension', title: 'جلوبندی و تعلیق', link: 'category:suspension', kind: 'category' as const, parentId: 'header-categories', isVisible: true }
+  ],
+  popularPartsBrands: [
+    { id: 'pb-bosch', title: 'BOSCH', subtitle: 'Bosch Mobility', imageUrl: 'https://www.google.com/s2/favicons?domain=bosch.com&sz=128', link: 'shop', isVisible: true },
+    { id: 'pb-mahle', title: 'MAHLE', subtitle: 'Engine Components', imageUrl: 'https://www.google.com/s2/favicons?domain=mahle.com&sz=128', link: 'shop', isVisible: true },
+    { id: 'pb-valeo', title: 'VALEO', subtitle: 'Clutch & Electrical', imageUrl: 'https://www.google.com/s2/favicons?domain=valeo.com&sz=128', link: 'shop', isVisible: true },
+    { id: 'pb-skf', title: 'SKF', subtitle: 'Bearings', imageUrl: 'https://www.google.com/s2/favicons?domain=skf.com&sz=128', link: 'shop', isVisible: true },
+    { id: 'pb-ngk', title: 'NGK', subtitle: 'Ignition', imageUrl: 'https://www.google.com/s2/favicons?domain=ngkntk.com&sz=128', link: 'shop', isVisible: true },
+    { id: 'pb-castrol', title: 'Castrol', subtitle: 'Lubricants', imageUrl: 'https://www.google.com/s2/favicons?domain=castrol.com&sz=128', link: 'shop', isVisible: true },
+    { id: 'pb-brembo', title: 'Brembo', subtitle: 'Brake Systems', imageUrl: 'https://www.google.com/s2/favicons?domain=brembo.com&sz=128', link: 'shop', isVisible: true },
+    { id: 'pb-mann', title: 'MANN-FILTER', subtitle: 'Filters', imageUrl: 'https://www.google.com/s2/favicons?domain=mann-filter.com&sz=128', link: 'shop', isVisible: true },
+    { id: 'pb-sachs', title: 'SACHS', subtitle: 'Drivetrain', imageUrl: 'https://www.google.com/s2/favicons?domain=zf.com&sz=128', link: 'shop', isVisible: true },
+    { id: 'pb-gates', title: 'Gates', subtitle: 'Belts & Cooling', imageUrl: 'https://www.google.com/s2/favicons?domain=gates.com&sz=128', link: 'shop', isVisible: true },
+    { id: 'pb-hella', title: 'HELLA', subtitle: 'Lighting & Electronics', imageUrl: 'https://www.google.com/s2/favicons?domain=hella.com&sz=128', link: 'shop', isVisible: true },
+    { id: 'pb-mobil', title: 'Mobil 1', subtitle: 'Engine Oil', imageUrl: 'https://www.google.com/s2/favicons?domain=mobil.com&sz=128', link: 'shop', isVisible: true }
   ],
   productAttributes: [
     { id: 'attr-1', nameFa: 'شماره فنی اصلی (OEM)', category: 'all', defaultValue: 'استاندارد کارخانه' },
@@ -1749,7 +1621,7 @@ export const INITIAL_SETTINGS = {
   ],
   logoUrl: '',
   faviconUrl: 'https://cdn-icons-png.flaticon.com/512/3202/3202926.png',
-  sellerName: 'بازرگانی قطعات خودروهای چینی چین‌پارت (با مسئولیت محدود)',
+  sellerName: 'بازرگانی قطعات خودروهای چینی فروشگاه (با مسئولیت محدود)',
   sellerEconomicCode: '411589324567',
   sellerNationalId: '14009854321',
   sellerRegistrationNo: '584920',
@@ -1758,8 +1630,8 @@ export const INITIAL_SETTINGS = {
   sellerAddress: 'تهران، خیابان امیرکبیر (چراغ برق)، کوچه سراج، پاساژ کاشانی، طبقه همکف، پلاک ۲۸',
   
   // Footer Customization Defaults (Editable, Deletable, Addable)
-  footerAboutTitle: 'فروشگاه اینترنتی لوازم یدکی چین‌پارت',
-  footerAboutText: 'فروشگاه اینترنتی چین‌پارت، به عنوان مرجع تخصصی تامین، واردات و توزیع قطعات یدکی خودروهای چینی در ایران، با بیش از یک دهه سابقه در بازار چراغ برق تهران فعالیت می‌کند. تمرکز ما حذف واسطه‌ها، تضمین اصالت و تامین قطعات خودروهای مدرن کی‌ام‌سی (KMC)، چری، ام‌وی‌ام، فونیکس، لاماری، جک و چانگان است.',
+  footerAboutTitle: 'فروشگاه اینترنتی لوازم یدکی فروشگاه',
+  footerAboutText: 'فروشگاه اینترنتی فروشگاه، به عنوان مرجع تخصصی تامین، واردات و توزیع قطعات یدکی خودروهای چینی در ایران، با بیش از یک دهه سابقه در بازار چراغ برق تهران فعالیت می‌کند. تمرکز ما حذف واسطه‌ها، تضمین اصالت و تامین قطعات خودروهای مدرن کی‌ام‌سی (KMC)، چری، ام‌وی‌ام، فونیکس، لاماری، جک و چانگان است.',
   footerShowFeatures: true,
   footerFeatures: [
     { id: 'feat-1', title: 'ضمانت ۱۰۰٪ اصالت قطعه', description: 'تضمین قطعات اصلی شرکتی با هولوگرام لیزری', icon: 'ShieldCheck' },
@@ -1772,7 +1644,7 @@ export const INITIAL_SETTINGS = {
       id: 'fcol-1',
       title: 'راهنمای خرید و قوانین',
       links: [
-        { id: 'flink-1', title: 'درباره چین‌پارت پرو', url: 'page:about' },
+        { id: 'flink-1', title: 'درباره فروشگاه پرو', url: 'page:about' },
         { id: 'flink-2', title: 'ضمانت اصالت و شرایط بازگشت کالا', url: 'page:guarantee' },
         { id: 'flink-3', title: 'پیگیری وضعیت سفارش و مرسوله', url: 'tracking' },
         { id: 'flink-4', title: 'استعلام قطعات کم‌یاب و وارداتی', url: 'part-request' }
@@ -1792,7 +1664,18 @@ export const INITIAL_SETTINGS = {
   footerShowBadges: false,
   footerBadges: [],
   footerCustomHtml: '',
-  footerCopyrightText: 'تمامی حقوق مادی و معنوی برای فروشگاه اینترنتی چین‌پارت محفوظ است. طراحی تخصصی مخصوص صنعت خودروهای چینی.',
+  footerCopyrightText: 'تمامی حقوق مادی و معنوی برای فروشگاه اینترنتی فروشگاه محفوظ است. طراحی تخصصی مخصوص صنعت خودروهای چینی.',
+  footerBottomAlign: 'center' as const,
+  footerBottomLinks: [
+    { id: 'footer-bottom-terms', title: 'قوانین', url: 'page:terms' },
+    { id: 'footer-bottom-privacy', title: 'حریم خصوصی', url: 'page:privacy' },
+    { id: 'footer-bottom-payment', title: 'پرداخت امن', url: 'page:payment' }
+  ],
+  footerLogoUrl: '',
+  footerLogoWidthPx: 160,
+  footerGridColumnsDesktop: 5,
+  footerGridColumnsTablet: 2,
+  footerGridColumnsMobile: 2,
   loyaltySettings: {
     enabled: true,
     pointsPerToman: 0.0001, // 1 point per 10,000 Tomans
@@ -2030,7 +1913,7 @@ export const INITIAL_PAGES: SitePage[] = [
       },
       {
         id: 'sec-trust',
-        title: 'چرا خرید از چین‌پارت پرو؟',
+        title: 'چرا خرید از فروشگاه پرو؟',
         subtitle: '۴ رکن اعتماد مشتریان و مکانیک‌های متخصص در سراسر ایران',
         content: 'تطبیق شماره شاسی VIN، اصالت ۱۰۰٪ فابریک، ضمانت بازگشت وجه ۷ روزه، ارسال سریع همان روز',
         badge: 'تضمین کیفیت',
@@ -2053,8 +1936,8 @@ export const INITIAL_PAGES: SitePage[] = [
   {
     id: 'page-about',
     slug: 'about',
-    title: 'درباره چین‌پارت پرو',
-    description: 'معرفی تاریخچه، انبار مرکزی و اهداف مجموعه چین‌پارت',
+    title: 'درباره فروشگاه پرو',
+    description: 'معرفی تاریخچه، انبار مرکزی و اهداف مجموعه فروشگاه',
     isSystem: true,
     updatedAt: '1403/01/10',
     sections: [
@@ -2062,7 +1945,7 @@ export const INITIAL_PAGES: SitePage[] = [
         id: 'sec-about-intro',
         title: 'مرجع تخصصی قطعات یدکی خودروهای چینی در ایران',
         subtitle: 'با بیش از یک دهه تجربه واردات و توزیع مستقیم لوازم یدکی شرکتی',
-        content: 'مجموعه چین‌پارت پرو فعالیت خود را با هدف رفع دغدغه مالکان و تعمیرکاران خودروهای چینی در زمینه تامین قطعات اصلی آغاز کرد. با واردات مستقیم از خطوط تولید مادر در چین و همکاری با نمایندگی‌های مجاز داخلی، بالاترین استانداردهای کیفی را به ارمغان آورده‌ایم.',
+        content: 'مجموعه فروشگاه پرو فعالیت خود را با هدف رفع دغدغه مالکان و تعمیرکاران خودروهای چینی در زمینه تامین قطعات اصلی آغاز کرد. با واردات مستقیم از خطوط تولید مادر در چین و همکاری با نمایندگی‌های مجاز داخلی، بالاترین استانداردهای کیفی را به ارمغان آورده‌ایم.',
         badge: 'درباره ما',
         imageUrl: 'https://images.unsplash.com/photo-1486006920555-c77dce18193b?auto=format&fit=crop&q=80&w=800',
         isVisible: true,
@@ -2100,3 +1983,12 @@ export const INITIAL_PAGES: SitePage[] = [
     ]
   }
 ];
+
+
+// Add verified default vehicles while leaving existing catalog entries intact.
+for (const model of VEHICLE_MODELS) {
+  const imageUrl = REAL_MODEL_IMAGE_OVERRIDES[model.id];
+  if (imageUrl) model.imageUrl = imageUrl;
+}
+BRANDS.push(...REAL_VEHICLE_BRANDS);
+VEHICLE_MODELS.push(...REAL_VEHICLE_MODELS);

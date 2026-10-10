@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { updateSeoSettings } from '../seo/platform';
 import { requireAdminPermission } from '../auth';
 import { pool, type ResultSetHeader, type RowDataPacket } from '../db';
 
@@ -56,10 +57,10 @@ cmsRouter.get('/bundle', async (_req, res) => {
   );
 
   res.json({
-    articles: articleRows.map(row => ({ ...parseJson<any>(row.data_json, {}), id: row.id })),
-    articleCategories: articleCategoryRows.map(row => ({ ...parseJson<any>(row.data_json, {}), id: row.id })),
+    articles: articleRows.filter(row => !parseJson<any>(row.data_json, {}).__trashed).map(row => ({ ...parseJson<any>(row.data_json, {}), id: row.id })),
+    articleCategories: articleCategoryRows.filter(row => !parseJson<any>(row.data_json, {}).__trashed && parseJson<any>(row.data_json, {}).isActive !== false).map(row => ({ ...parseJson<any>(row.data_json, {}), id: row.id })),
     sliders: sliderRows.map(row => ({ ...parseJson<any>(row.data_json, {}), id: row.id })),
-    pages: pageRows.map(row => ({ ...parseJson<any>(row.data_json, {}), id: row.id })),
+    pages: pageRows.filter(row => !parseJson<any>(row.data_json, {}).__trashed && parseJson<any>(row.data_json, {}).isVisible !== false).map(row => ({ ...parseJson<any>(row.data_json, {}), id: row.id })),
     settings: settings.get('site_settings') || null,
     paymentGateways: settings.get('payment_gateways') || []
   });
@@ -327,6 +328,33 @@ cmsRouter.patch('/settings', requireAdminPermission('canManageSettings'), async 
      ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value), updated_at = NOW()`,
     [asJson(settings)]
   );
+
+  // Keep the site's visible identity and native TakRank SEO identity synchronized.
+  // SEO-specific titles/descriptions remain independently editable in the SEO center.
+  const identityPatch: any = {};
+  if ('siteTitle' in req.body || 'siteSlogan' in req.body) {
+    identityPatch.global = {
+      ...(req.body.siteTitle !== undefined ? { siteTitle: String(settings.siteTitle || '').trim() } : {}),
+      ...(req.body.siteSlogan !== undefined ? { siteSlogan: String(settings.siteSlogan || '').trim() } : {})
+    };
+  }
+  if (
+    'siteTitle' in req.body || 'logoUrl' in req.body || 'contactPhone' in req.body ||
+    'supportPhone' in req.body || 'supportEmail' in req.body || 'address' in req.body
+  ) {
+    identityPatch.identity = {
+      ...(req.body.siteTitle !== undefined ? { organizationName: String(settings.siteTitle || '').split('|')[0].trim() } : {}),
+      ...(req.body.logoUrl !== undefined ? { logoUrl: String(settings.logoUrl || '') } : {}),
+      ...(('contactPhone' in req.body || 'supportPhone' in req.body)
+        ? { phone: String(settings.contactPhone || settings.supportPhone || '') } : {}),
+      ...(req.body.supportEmail !== undefined ? { email: String(settings.supportEmail || '') } : {}),
+      ...(req.body.address !== undefined ? { address: String(settings.address || '') } : {})
+    };
+  }
+  if (Object.keys(identityPatch).length) {
+    await updateSeoSettings(identityPatch);
+  }
+
   res.json({ settings });
 });
 

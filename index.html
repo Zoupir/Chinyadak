@@ -1,30 +1,37 @@
 <!doctype html>
-<html lang="fa" dir="rtl">
+<html lang="fa" dir="rtl" data-navigation-mode="document">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>چین پارت | بازار تخصصی قطعات یدکی خودروهای چینی</title>
-    <meta name="description" content="فروشگاه آنلاین و تخصصی قطعات یدکی و مصرفی خودروهای چینی (KMC, MVM, Chery, JAC, Fownix, Lamari, Changan) با سیستم انتخاب خودرو، فیتمنت دقیق قطعات و رهگیری هوشمند." />
-    <meta property="og:title" content="چین پارت | بازار تخصصی قطعات یدکی خودروهای چینی" />
-    <meta property="og:description" content="فروشگاه آنلاین و تخصصی قطعات یدکی و مصرفی خودروهای چینی با سیستم انتخاب خودرو و تضمین اصالت و سازگاری قطعات." />
+    <title>یدک استور | فروشگاه تخصصی قطعات خودروهای چینی</title>
+    <meta name="description" content="خرید آنلاین قطعات یدکی خودروهای چینی؛ جستجو بر اساس برند، مدل خودرو و شماره فنی." />
+    <meta property="og:title" content="فروشگاه قطعات خودرو | بازار تخصصی قطعات یدکی خودروهای چینی" />
+    <meta property="og:description" content="قطعات خودروهای چینی را متناسب با برند، مدل خودرو و شماره فنی پیدا کنید." />
     <meta property="og:type" content="website" />
     <meta name="twitter:card" content="summary_large_image" />
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Alexandria:wght@300;400;500;600;700;800;900&family=Cairo:wght@300;400;500;600;700;800;900&family=Noto+Sans+Arabic:wght@300;400;500;600;700;800;900&family=Rubik:ital,wght@0,300..900;1,300..900&family=Vazirmatn:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <script type="application/ld+json">
-    {
-      "@context": "https://schema.org",
-      "@type": "AutoPartsStore",
-      "name": "چین پارت",
-      "description": "فروشگاه تخصصی قطعات یدکی خودروهای چینی KMC, Chery, MVM, JAC, Fownix, Lamari",
-      "url": "https://chinpart.ir",
-      "potentialAction": {
-        "@type": "SearchAction",
-        "target": "https://chinpart.ir/search?q={search_term_string}",
-        "query-input": "required name=search_term_string"
-      }
-    }
+    <meta name="theme-color" content="#ffffff" />
+    <script>
+      (() => {
+        const nativePushState = window.history.pushState.bind(window.history);
+        window.__YADAK_WEBSITE_MODE__ = true;
+        window.history.pushState = function(state, title, url) {
+          if (url == null) return nativePushState(state, title, url);
+          try {
+            const target = new URL(String(url), window.location.href);
+            const currentPath = window.location.pathname;
+            const currentIsAdmin = currentPath === '/admin' || currentPath.startsWith('/admin/');
+            const targetIsAdmin = target.pathname === '/admin' || target.pathname.startsWith('/admin/');
+            const sameDocument = target.pathname === window.location.pathname && target.search === window.location.search && target.hash === window.location.hash;
+            if (target.origin === window.location.origin && !sameDocument && !(currentIsAdmin && targetIsAdmin)) {
+              window.location.assign(target.href);
+              return;
+            }
+          } catch (_) {
+            // Fall back to the native History API if the target is not a valid URL.
+          }
+          return nativePushState(state, title, url);
+        };
+      })();
     </script>
   </head>
   <body class="bg-neutral-50 text-neutral-900 font-sans antialiased selection:bg-red-600 selection:text-white">
@@ -32,4 +39,3 @@
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
-

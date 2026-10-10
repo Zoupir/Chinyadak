@@ -18,10 +18,19 @@ import { mediaRouter } from './src/server/routes/media';
 import { integrationsRouter } from './src/server/routes/integrations';
 import { vehiclesRouter } from './src/server/routes/vehicles';
 import { engagementRouter } from './src/server/routes/engagement';
+import { bulkRouter } from './src/server/routes/bulk';
 import { seoRouter } from './src/server/routes/seo';
+import { supportRouter } from './src/server/routes/support';
+import { extensionsRouter } from './src/server/routes/extensions';
+import { auditRouter } from './src/server/routes/audit';
 import { uploadDirectory } from './src/server/media';
 import { checkDatabase } from './src/server/db';
 import { config } from './src/server/config';
+import { getOptionalSession } from './src/server/auth';
+import { recordFailedApiResponse, recordSupportEvent } from './src/server/support-diagnostics';
+import { renderExtensionsAdminPage } from './src/server/extensions/admin-page';
+import { renderStorefrontDocument } from './src/server/storefront-html';
+import { isPrivateStorefrontPath, normalizePublicStorefrontDocument } from './src/server/storefront-normal';
 import {
   buildHtmlSitemap,
   buildSitemapChunkXml,
@@ -111,6 +120,16 @@ app.get(/^\/([a-f0-9]{16,64})\.txt$/i, async (req, res, next) => {
 
 app.use(seoRedirectMiddleware);
 
+app.get('/admin/extensions-manager', (req, res) => {
+  const session = getOptionalSession(req);
+  if (!session || session.role !== 'admin') {
+    res.redirect('/admin');
+    return;
+  }
+  res.setHeader('Cache-Control', 'private, no-store');
+  res.type('html').send(renderExtensionsAdminPage());
+});
+
 app.use('/api/health', healthRouter);
 
 const apiLimiter = rateLimit({
@@ -120,6 +139,11 @@ const apiLimiter = rateLimit({
   legacyHeaders: false
 });
 app.use('/api', apiLimiter);
+app.use('/api', (req, res, next) => {
+  const startedAt = Date.now();
+  res.on('finish', () => recordFailedApiResponse(req, res.statusCode, startedAt));
+  next();
+});
 
 app.use('/api/auth', authRouter);
 app.use('/api/catalog', catalogRouter);
@@ -132,6 +156,10 @@ app.use('/api/integrations', integrationsRouter);
 app.use('/api/vehicles', vehiclesRouter);
 app.use('/api/engagement', engagementRouter);
 app.use('/api/seo', seoRouter);
+app.use('/api/bulk', bulkRouter);
+app.use('/api/support', supportRouter);
+app.use('/api/extensions', extensionsRouter);
+app.use('/api/audit', auditRouter);
 
 const aiLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
@@ -229,7 +257,22 @@ async function startServer() {
           }
           res.status(404);
         }
-        const html = await renderSeoHtml(indexTemplate, req.path);
+
+        const privateRoute = isPrivateStorefrontPath(req.path);
+        const seoHtml = await renderSeoHtml(indexTemplate, req.path);
+        const storefrontHtml = await renderStorefrontDocument(seoHtml, req.path);
+        const html = normalizePublicStorefrontDocument(storefrontHtml, req.path);
+
+        if (privateRoute) {
+          res.setHeader('X-Yadak-Render-Mode', 'application');
+          res.setHeader('X-Yadak-Content-Rendering', 'client-private');
+          res.setHeader('Cache-Control', 'private, no-store');
+        } else {
+          res.setHeader('X-Yadak-Render-Mode', 'website');
+          res.setHeader('X-Yadak-Content-Rendering', 'server');
+          res.setHeader('X-Yadak-Navigation-Mode', 'document');
+          res.setHeader('Cache-Control', 'public, max-age=0, must-revalidate');
+        }
         res.type('html').send(html);
       } catch (error) {
         next(error);
@@ -243,13 +286,20 @@ async function startServer() {
     app.use(vite.middlewares);
   }
 
-  app.use((error: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  app.use((error: unknown, req: express.Request, res: express.Response, _next: express.NextFunction) => {
+    recordSupportEvent({
+      kind: 'server_error',
+      method: req.method,
+      path: req.originalUrl || req.url,
+      status: 500,
+      message: error instanceof Error ? error.message : String(error)
+    });
     console.error('Unhandled server error:', error);
     res.status(500).json({ error: 'INTERNAL_SERVER_ERROR' });
   });
 
   app.listen(config.port, '0.0.0.0', () => {
-    console.log(`ChinPart server running on port ${config.port} (${config.nodeEnv})`);
+    console.log(`Yadak Store server running on port ${config.port} (${config.nodeEnv})`);
   });
 }
 

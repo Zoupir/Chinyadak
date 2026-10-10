@@ -74,7 +74,7 @@ export const ShareButton: React.FC<ShareButtonProps> = ({
       {variant === 'button' && (
         <button
           onClick={handleClick}
-          className={`h-10 px-3.5 rounded-xl border border-neutral-200 hover:border-neutral-300 bg-white hover:bg-neutral-50 flex items-center gap-2 text-xs font-bold text-neutral-700 hover:text-neutral-900 transition-all shadow-2xs cursor-pointer ${className}`}
+          className={`h-10 px-3.5 rounded-xl border border-neutral-200 hover:border-neutral-300 bg-white hover:bg-neutral-50 flex items-center gap-2 text-xs font-bold !text-neutral-900 hover:!text-neutral-900 transition-all shadow-2xs cursor-pointer ${className}`}
           title="اشتراک‌گذاری لینک مستقیم این صفحه"
         >
           {copied ? (
@@ -82,7 +82,7 @@ export const ShareButton: React.FC<ShareButtonProps> = ({
           ) : (
             <Share2 className="w-4 h-4 text-neutral-500" />
           )}
-          <span>{copied ? 'کپی شد!' : label}</span>
+          <span className="!text-neutral-900">{copied ? 'کپی شد!' : label}</span>
         </button>
       )}
 

@@ -1,0 +1,84 @@
+function normalizeConfigKey(key: string) {
+  return key
+    .replace(/^(container|section|banner|image|desktop|mobile|layout|content)/i, '')
+    .replace(/(Value|Setting|Option)$/i, '')
+    .toLowerCase();
+}
+
+function configDomain(ref: ConfigRef) {
+  const value = `${ref.key} ${ref.file}`.toLowerCase();
+  const domains: Array<[string, RegExp]> = [
+    ['footer', /footer|copyright/],
+    ['header', /header|mega-?menu|navigation|navbar/],
+    ['slider', /slider|hero|banner/],
+    ['checkout', /checkout|cart|payment|shipping/],
+    ['request', /partrequest|part-request|requestpage|request-page/],
+    ['invoice', /invoice|order/],
+    ['extension', /extension|plugin/],
+    ['media', /media|upload|image/],
+    ['product', /product|partbrand|part-brand/],
+    ['theme', /theme|appearance/],
+    ['builder', /builder|livesection|pagebuilder|page-builder/]
+  ];
+  return domains.find(([, pattern]) => pattern.test(value))?.[0] || null;
+}
+
+function configTokens(key: string) {
+  return key
+    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+    .replace(/[_-]+/g, ' ')
+    .toLowerCase()
+    .split(/\s+/)
+    .filter(Boolean)
+    .filter(token => !['mobile', 'desktop', 'px', 'value', 'setting', 'option', 'show', 'enabled'].includes(token));
+}
+
+function scanConfigSchemaDrift(refs: ConfigRef[], findings: AuditFinding[]) {
+  const editor = new Map<string, ConfigRef[]>();
+  const renderer = new Map<string, ConfigRef[]>();
+  for (const ref of refs) {
+    const map = ref.layer === 'editor' ? editor : renderer;
+    const list = map.get(ref.key) || [];
+    list.push(ref);
+    map.set(ref.key, list);
+  }
+
+  const rendererKeys = [...renderer.keys()];
+  let emitted = 0;
+  for (const [editorKey, editorRefs] of editor) {
+    if (renderer.has(editorKey)) continue;
+    const normalized = normalizeConfigKey(editorKey);
+    if (normalized.length < 4) continue;
+    const editorDomains = new Set(editorRefs.map(configDomain).filter(Boolean));
+    const editorTokens = new Set(configTokens(editorKey));
+    const aliases = rendererKeys.filter(key => {
+      if (key === editorKey) return false;
+      const rendererRefs = renderer.get(key) || [];
+      const rendererDomains = new Set(rendererRefs.map(configDomain).filter(Boolean));
+      if (editorDomains.size && rendererDomains.size && ![...editorDomains].some(domain => rendererDomains.has(domain))) return false;
+      const other = normalizeConfigKey(key);
+      const otherTokens = configTokens(key);
+      const sharedTokens = otherTokens.filter(token => editorTokens.has(token));
+      const tokenScore = sharedTokens.length / Math.max(editorTokens.size, otherTokens.length, 1);
+      return other === normalized || (tokenScore >= 0.66 && sharedTokens.length >= 1);
+    });
+    if (!aliases.length || emitted >= 20) continue;
+    emitted += 1;
+    const aliasRefs = aliases.flatMap(key => renderer.get(key) || []).slice(0, 8);
+    add(findings, {
+      id: `schema-drift:${editorKey}:${aliases.join('|')}`,
+      title: `احتمال Schema Drift بین Editor و Renderer: ${editorKey}`,
+      category: 'config',
+      severity: 'warning',
+      status: 'unknown',
+      summary: `Editor کلید "${editorKey}" را استفاده می‌کند و در همان domain، Renderer کلید مشابه ${aliases.map(k => `"${k}"`).join(', ')} را می‌خواند.`,
+      evidence: [
+        ...editorRefs.slice(0, 5).map(ref => `Editor ${ref.file}:${ref.line}`),
+        ...aliasRefs.map(ref => `Renderer ${ref.file}:${ref.line}`)
+      ],
+      files: [...new Set([...editorRefs, ...aliasRefs].map(ref => ref.file))],
+      likelyCause: 'نام property ممکن است در یک domain واحد تغییر کرده باشد؛ این مورد هنوز نیازمند بررسی schema واقعی است.',
+      recommendation: 'schema ذخیره‌شده و property مصرف‌شده در همین domain مقایسه شوند؛ شباهت اسمی به‌تنهایی مبنای اصلاح نیست.'
+    });
+  }
+}

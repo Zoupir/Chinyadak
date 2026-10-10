@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { StoreProvider, useStore } from './context/StoreContext';
+import { toPersianDigits } from './utils/phone';
 import { Header } from './components/layout/Header';
 import { Footer } from './components/layout/Footer';
 import { MobileBottomNav } from './components/layout/MobileBottomNav';
@@ -24,6 +25,7 @@ import { CustomerAuthModal } from './components/auth/CustomerAuthModal';
 import { AiSearchAdvisorModal } from './components/search/AiSearchAdvisorModal';
 import { CheckCircle2, AlertCircle, Info, X } from 'lucide-react';
 import { buildRoutePath, parseRoutePath, parseLegacyHash } from './utils/navigation';
+import { getSiteDisplayName, replaceLegacySiteName } from './utils/siteBrand';
 
 interface RouteState {
   view: string;
@@ -31,22 +33,151 @@ interface RouteState {
 }
 
 const AppContent: React.FC = () => {
-  const { toast, products, categories, models, brands, articles } = useStore();
+  const { toast, products, categories, models, brands, articles, settings, isStoreReady } = useStore();
   const [route, setRoute] = useState<RouteState>(() => {
     if (typeof window === 'undefined') return { view: 'home' };
     const legacy = parseLegacyHash(window.location.hash);
     return legacy || parseRoutePath(window.location.pathname);
   });
+  // Increments on every explicit navigation, even when the target route is the
+  // current route. This intentionally re-initializes the page when Home/logo or
+  // the active menu item is clicked again.
+  const [routeRevision, setRouteRevision] = useState(0);
   const [isVehicleModalOpen, setIsVehicleModalOpen] = useState(false);
   const [isCartDrawerOpen, setIsCartDrawerOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authModalMode, setAuthModalMode] = useState<'login' | 'register'>('login');
   const [isAiSearchOpen, setIsAiSearchOpen] = useState(false);
 
+    // Keep old saved copy and hard-coded legacy labels aligned with the
+  // current admin-controlled site name, including content loaded after mount.
+  useEffect(() => {
+    if (!isStoreReady || typeof document === 'undefined') return;
+    const siteName = getSiteDisplayName(settings.siteTitle);
+    const normalizeText = (value: string) => replaceLegacySiteName(value, siteName);
+    const visibleAttributes = ['alt', 'title', 'aria-label', 'placeholder'];
+
+    const visit = (node: Node) => {
+      if (node.nodeType === Node.TEXT_NODE) {
+        const parent = node.parentElement;
+        if (parent?.closest('script,style,textarea')) return;
+        const current = node.nodeValue || '';
+        const next = normalizeText(current);
+        if (next !== current) node.nodeValue = next;
+        return;
+      }
+      if (node.nodeType !== Node.ELEMENT_NODE) return;
+      const element = node as HTMLElement;
+      if (element.matches('script,style,textarea')) return;
+      const attributes = [...visibleAttributes];
+      if (element.tagName === 'META') attributes.push('content');
+      for (const name of attributes) {
+        const current = element.getAttribute(name);
+        if (current == null) continue;
+        const next = normalizeText(current);
+        if (next !== current) element.setAttribute(name, next);
+      }
+      for (const child of Array.from(node.childNodes)) visit(child);
+    };
+
+    visit(document.head);
+    visit(document.body);
+    const observer = new MutationObserver(records => {
+      for (const record of records) {
+        if (record.type === 'characterData') visit(record.target);
+        for (const added of Array.from(record.addedNodes)) visit(added);
+        if (record.type === 'attributes') visit(record.target);
+      }
+    });
+    observer.observe(document.head, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: [...visibleAttributes, 'content'] });
+    observer.observe(document.body, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: visibleAttributes });
+    return () => observer.disconnect();
+  }, [isStoreReady, settings.siteTitle]);
+
+  // Render Persian digits in every user-facing telephone link while preserving
+  // its machine-readable tel: target for tap-to-call.
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    const formatTelephone = (node: Node) => {
+      if (node instanceof Element && node.matches('a[href^="tel:"]')) {
+        const walk = (child: Node) => {
+          if (child.nodeType === Node.TEXT_NODE && child.textContent) {
+            const formatted = toPersianDigits(child.textContent);
+            if (formatted !== child.textContent) child.textContent = formatted;
+          } else if (!(child instanceof Element && child.matches('svg, [aria-hidden="true"]'))) {
+            Array.from(child.childNodes).forEach(walk);
+          }
+        };
+        Array.from(node.childNodes).forEach(walk);
+        return;
+      }
+      if (node instanceof Element && node.closest('a[href^="tel:"]')) return;
+      Array.from(node.childNodes || []).forEach(formatTelephone);
+    };
+    formatTelephone(document.body);
+    const observer = new MutationObserver(records => {
+      records.forEach(record => {
+        if (record.type === 'characterData') {
+          const parent = record.target.parentElement?.closest('a[href^="tel:"]');
+          if (parent) formatTelephone(parent);
+        } else Array.from(record.addedNodes).forEach(formatTelephone);
+      });
+    });
+    observer.observe(document.body, { subtree: true, childList: true, characterData: true });
+    return () => observer.disconnect();
+  }, []);
+
+  // Apply admin-controlled identity/theme variables to the whole storefront.
+  useEffect(() => {
+    if (!isStoreReady) return;
+    const root = document.documentElement;
+    const baseFontSize = Math.max(12, Math.min(24, Number(settings.baseFontSizePx || 16)));
+
+    root.dataset.layout = settings.layoutPreset || 'classic';
+    root.dataset.mobileProductColumns = String(settings.mobileProductColumns || 2);
+    root.dataset.mobileFooterColumns = String(settings.mobileFooterColumns || 2);
+    root.style.setProperty('--site-base-font-size', `${baseFontSize}px`);
+    root.style.setProperty('--theme-radius', `${Math.max(0, Math.min(60, Number(settings.themeRadiusPx || 12)))}px`);
+    root.style.setProperty('--primary-color', settings.primaryColor || '#DC2626');
+    root.style.setProperty('--primary-hover', settings.primaryHover || settings.primaryColor || '#b91c1c');
+    root.style.setProperty('--site-bg', settings.siteBgColor || '#f8fafc');
+    root.style.setProperty('--card-bg', settings.cardBgColor || '#ffffff');
+    root.style.setProperty('--header-bg', settings.headerBgColor || '#ffffff');
+    root.style.setProperty('--footer-bg', settings.footerBgColor || '#111827');
+    root.style.setProperty('--text-color', settings.textColor || '#111827');
+    root.style.setProperty('--site-font', `"${settings.fontFamily || 'Vazirmatn'}", system-ui, sans-serif`);
+
+    if (settings.faviconUrl) {
+      let favicon = document.head.querySelector<HTMLLinkElement>('link[rel="icon"]');
+      if (!favicon) {
+        favicon = document.createElement('link');
+        favicon.rel = 'icon';
+        document.head.appendChild(favicon);
+      }
+      favicon.href = settings.faviconUrl;
+    }
+  }, [
+    settings.layoutPreset,
+    settings.mobileProductColumns,
+    settings.mobileFooterColumns,
+    settings.baseFontSizePx,
+    settings.themeRadiusPx,
+    settings.primaryColor,
+    settings.primaryHover,
+    settings.siteBgColor,
+    settings.cardBgColor,
+    settings.headerBgColor,
+    settings.footerBgColor,
+    settings.textColor,
+    settings.fontFamily,
+    settings.faviconUrl,
+    isStoreReady
+  ]);
+
   // Scroll to top on navigation
   useEffect(() => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  }, [route]);
+    window.scrollTo({ top: 0, behavior: 'auto' });
+  }, [route, routeRevision]);
 
   // TakRank SEO Native owns browser metadata during History API navigation.
   // Initial page-load metadata is injected server-side for crawlers; this keeps
@@ -81,16 +212,16 @@ const AppContent: React.FC = () => {
         const meta = payload?.meta;
         if (!meta) return;
 
-        document.title = String(meta.title || '');
-        setMeta('meta[name="description"]', 'name', 'description', String(meta.description || ''));
+        document.title = replaceLegacySiteName(meta.title || '', getSiteDisplayName(settings.siteTitle));
+        setMeta('meta[name="description"]', 'name', 'description', replaceLegacySiteName(meta.description || '', getSiteDisplayName(settings.siteTitle)));
         setMeta('meta[name="robots"]', 'name', 'robots', String(meta.robots || ''));
-        setMeta('meta[property="og:title"]', 'property', 'og:title', String(meta.ogTitle || meta.title || ''));
-        setMeta('meta[property="og:description"]', 'property', 'og:description', String(meta.ogDescription || meta.description || ''));
+        setMeta('meta[property="og:title"]', 'property', 'og:title', replaceLegacySiteName(meta.ogTitle || meta.title || '', getSiteDisplayName(settings.siteTitle)));
+        setMeta('meta[property="og:description"]', 'property', 'og:description', replaceLegacySiteName(meta.ogDescription || meta.description || '', getSiteDisplayName(settings.siteTitle)));
         setMeta('meta[property="og:type"]', 'property', 'og:type', String(meta.ogType || 'website'));
         setMeta('meta[property="og:url"]', 'property', 'og:url', String(meta.canonical || ''));
         setMeta('meta[name="twitter:card"]', 'name', 'twitter:card', 'summary_large_image');
-        setMeta('meta[name="twitter:title"]', 'name', 'twitter:title', String(meta.twitterTitle || meta.title || ''));
-        setMeta('meta[name="twitter:description"]', 'name', 'twitter:description', String(meta.twitterDescription || meta.description || ''));
+        setMeta('meta[name="twitter:title"]', 'name', 'twitter:title', replaceLegacySiteName(meta.twitterTitle || meta.title || '', getSiteDisplayName(settings.siteTitle)));
+        setMeta('meta[name="twitter:description"]', 'name', 'twitter:description', replaceLegacySiteName(meta.twitterDescription || meta.description || '', getSiteDisplayName(settings.siteTitle)));
 
         if (meta.image) setMeta('meta[property="og:image"]', 'property', 'og:image', String(meta.image));
         if (meta.twitterImage) setMeta('meta[name="twitter:image"]', 'name', 'twitter:image', String(meta.twitterImage));
@@ -119,7 +250,7 @@ const AppContent: React.FC = () => {
           const script = document.createElement('script');
           script.type = 'application/ld+json';
           script.dataset.takrankRuntimeSchema = '1';
-          script.textContent = JSON.stringify(schema);
+          script.textContent = replaceLegacySiteName(JSON.stringify(schema), getSiteDisplayName(settings.siteTitle));
           document.head.appendChild(script);
         }
       } catch (error) {
@@ -144,6 +275,7 @@ const AppContent: React.FC = () => {
 
     const handlePopState = () => {
       setRoute(parseRoutePath(window.location.pathname));
+      setRouteRevision(current => current + 1);
     };
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
@@ -170,12 +302,27 @@ const AppContent: React.FC = () => {
       window.history.pushState({}, '', targetPath);
     }
     setRoute({ view, param: canonicalParam });
+    setRouteRevision(current => current + 1);
   };
 
   const handleOpenAuthModal = (mode: 'login' | 'register' = 'login') => {
     setAuthModalMode(mode);
     setIsAuthModalOpen(true);
   };
+
+  if (!isStoreReady) {
+    return (
+      <div className="min-h-screen bg-[#f4f6f8] flex items-center justify-center" aria-label="در حال بارگذاری فروشگاه">
+        <div className="w-full max-w-5xl px-5 animate-pulse">
+          <div className="h-16 rounded-xl bg-neutral-200" />
+          <div className="mt-4 h-[420px] rounded-2xl bg-neutral-200" />
+          <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-3">
+            {Array.from({ length: 4 }).map((_, index) => <div key={index} className="h-32 rounded-xl bg-neutral-200" />)}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // Dedicated Full-Screen Enterprise Admin Layout
   if (route.view === 'admin') {
@@ -201,7 +348,8 @@ const AppContent: React.FC = () => {
             </div>
           </div>
         )}
-        <AdminView 
+        <AdminView
+          initialTarget={route.param}
           onExitToStore={() => {
             handleNavigate('home');
           }} 
@@ -247,7 +395,7 @@ const AppContent: React.FC = () => {
       />
 
       {/* Main View Container */}
-      <main className="flex-1">
+      <main key={`${route.view}:${route.param || ''}:${routeRevision}`} className="flex-1">
         {route.view === 'home' && (
           <HomeView
             onNavigate={handleNavigate}
@@ -297,6 +445,7 @@ const AppContent: React.FC = () => {
 
         {route.view === 'checkout' && (
           <CheckoutView
+            onLogin={() => handleOpenAuthModal('login')}
             onOrderCompleted={(orderNumber) => handleNavigate('tracking', orderNumber)}
             onNavigate={handleNavigate}
           />
@@ -316,9 +465,9 @@ const AppContent: React.FC = () => {
           />
         )}
 
-        {route.view === 'account' && (
+        {(route.view === 'account' || route.view === 'wishlist') && (
           <AccountView
-            initialTab={route.param}
+            initialTab={route.view === 'wishlist' ? 'wishlist' : route.param}
             onNavigate={handleNavigate}
             onOpenVehicleModal={() => setIsVehicleModalOpen(true)}
             onOpenAuthModal={handleOpenAuthModal}
@@ -340,6 +489,7 @@ const AppContent: React.FC = () => {
 
         {route.view === 'blog' && (
           <BlogView
+            initialCategory={route.param}
             onNavigate={handleNavigate}
           />
         )}

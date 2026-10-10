@@ -42,6 +42,7 @@ export const AccountView: React.FC<AccountViewProps> = ({
   onOpenAuthModal
 }) => {
   const { 
+    refreshCustomerAccount,
     garage, 
     selectedVehicle, 
     setSelectedVehicle, 
@@ -73,6 +74,13 @@ export const AccountView: React.FC<AccountViewProps> = ({
       setActiveTab(initialTab as any);
     }
   }, [initialTab]);
+
+  useEffect(() => {
+    const refresh = () => { if (document.visibilityState === 'visible') void refreshCustomerAccount().catch(() => {}); };
+    refresh();
+    window.addEventListener('focus', refresh);
+    return () => window.removeEventListener('focus', refresh);
+  }, [currentCustomer?.id, activeTab]);
 
   const handleTabChange = (tabId: string) => {
     setActiveTab(tabId as any);
@@ -156,7 +164,7 @@ export const AccountView: React.FC<AccountViewProps> = ({
             param={activeTab}
             variant="button"
             label="اشتراک‌گذاری لینک این بخش"
-            className="bg-neutral-800 text-white border-neutral-700 hover:bg-neutral-700"
+            className="bg-white text-neutral-900 border-neutral-200 hover:bg-neutral-50"
           />
 
           <button

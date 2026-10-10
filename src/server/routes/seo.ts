@@ -27,6 +27,7 @@ import {
   loadEntity,
   optimizeEntityImageAlt,
   rebuildSeoKnowledgeGraph,
+  readAppSetting,
   runFullSeoAudit,
   saveKeywordOwner,
   saveSeoMeta,
@@ -36,6 +37,7 @@ import {
   updateSeoRedirectState,
   updateSeoSettings,
   verifySeoIssue,
+  writeAppSetting,
   writeSeoHistory,
   type SeoEntityType
 } from '../seo/platform';
@@ -106,6 +108,19 @@ seoRouter.get('/settings', manageSeo, async (_req, res) => {
 seoRouter.put('/settings', manageSeo, async (req: AuthenticatedRequest, res) => {
   const before = await getSeoSettings();
   const settings = await updateSeoSettings(req.body || {});
+
+  // The SEO wizard and the general site identity editor share one visible identity.
+  const siteSettings = await readAppSetting<any>('site_settings', {});
+  await writeAppSetting('site_settings', {
+    ...siteSettings,
+    siteTitle: settings.global.siteTitle || siteSettings.siteTitle || '',
+    siteSlogan: settings.global.siteSlogan || siteSettings.siteSlogan || '',
+    logoUrl: settings.identity.logoUrl || siteSettings.logoUrl || '',
+    contactPhone: settings.identity.phone || siteSettings.contactPhone || '',
+    supportEmail: settings.identity.email || siteSettings.supportEmail || '',
+    address: settings.identity.address || siteSettings.address || ''
+  });
+
   await writeSeoHistory(actorId(req), 'settings_update', undefined, undefined, before, settings);
   res.json({ settings });
 });
@@ -209,7 +224,7 @@ seoRouter.post('/entities/:type/:id/toc', manageSeo, async (req: AuthenticatedRe
 });
 
 seoRouter.post('/audit/run', manageSeo, async (req: AuthenticatedRequest, res) => {
-  const result = await runFullSeoAudit(actorId(req));
+  const result = await runFullSeoAudit(actorId(req), 10);
   res.json({ result });
 });
 
@@ -246,11 +261,29 @@ seoRouter.get('/graph', manageSeo, async (_req, res) => {
   res.json({ graph: await getSeoGraphState() });
 });
 
+let graphBuildRunning = false;
 seoRouter.post('/graph/rebuild', manageSeo, async (req: AuthenticatedRequest, res) => {
-  const before = await getSeoGraphState();
-  const graph = await rebuildSeoKnowledgeGraph();
-  await writeSeoHistory(actorId(req), 'graph_rebuild', undefined, undefined, before, graph);
-  res.json({ graph });
+  if (graphBuildRunning) { res.status(202).json({ accepted: true, running: true }); return; }
+  graphBuildRunning = true;
+  const actor = actorId(req);
+  try {
+    await writeAppSetting('takrank_seo_graph_progress', { status: 'running', startedAt: new Date().toISOString() });
+  } catch (error) { graphBuildRunning = false; throw error; }
+  res.status(202).json({ accepted: true });
+  setImmediate(async () => {
+    try {
+      const graph = await rebuildSeoKnowledgeGraph();
+      await writeAppSetting('takrank_seo_graph_progress', { status: 'completed', graph, finishedAt: new Date().toISOString() });
+      await writeSeoHistory(actor, 'graph_rebuild', undefined, undefined, null, graph);
+    } catch (error) {
+      await writeAppSetting('takrank_seo_graph_progress', { status: 'failed', error: String((error as Error).message), finishedAt: new Date().toISOString() }).catch(() => {});
+    } finally { graphBuildRunning = false; }
+  });
+});
+seoRouter.get('/graph/progress', manageSeo, async (_req, res) => {
+  const progress = await readAppSetting<any>('takrank_seo_graph_progress', { status: 'idle' });
+  if (progress.status === 'running' && !graphBuildRunning) { progress.status = 'interrupted'; progress.error = 'برنامه هنگام بازسازی متوقف شده؛ دوباره اجرا کنید.'; }
+  res.json({ progress });
 });
 
 seoRouter.get('/links/:type/:id', manageSeo, async (req: AuthenticatedRequest, res) => {
@@ -357,6 +390,7 @@ seoRouter.post('/ai/run', manageSeo, aiLimiter, async (req: AuthenticatedRequest
       operation: ['optimize','generate','repair'].includes(String(req.body?.operation))
         ? req.body.operation
         : 'optimize',
+      draft: req.body?.draft && typeof req.body.draft === 'object' ? req.body.draft : undefined,
       instructions: String(req.body?.instructions || '').slice(0, 5000),
       actorId: actorId(req)
     });

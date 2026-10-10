@@ -22,7 +22,8 @@ import {
   PageSection,
   LoyaltyTier,
   LoyaltyTransaction,
-  LoyaltySettings
+  LoyaltySettings,
+  SeoEntityDraft
 } from '../types';
 import { 
   PRODUCTS as INITIAL_PRODUCTS, 
@@ -38,6 +39,8 @@ import {
   INITIAL_PAGES
 } from '../data/mockData';
 import { apiRequest, ApiError } from '../api/client';
+
+interface CatalogPageOptions { categorySlug?: string; query?: string; offset?: number; append?: boolean; }
 
 interface SearchQueryLog {
   query: string;
@@ -60,9 +63,377 @@ const EMPTY_API_INTEGRATIONS: ApiIntegrationsConfig = {
   webhookSecret: ''
 };
 
+const HOME_SECTION_DEFAULTS: PageSection[] = [
+  { id: 'home-hero', sectionKey: 'hero', title: 'قطعات مطمئن برای خودروی شما', subtitle: 'خرید تخصصی قطعات خودروهای چینی با تضمین اصالت، فیتمنت دقیق و ارسال سریع.', badge: 'پیشنهاد ویژه قطعات خودرو', buttonText: 'مشاهده محصولات', buttonLink: 'shop', isVisible: true, order: 1, layout: 'full', desktopColumns: 1, mobileColumns: 1, borderRadiusPx: 8, itemRadiusPx: 0, gapPx: 0, fullWidth: true, widthPercent: 100, tabletWidthPercent: 100, mobileWidthPercent: 100, maxWidthPx: 0, marginTopPx: 12, finderWidthPx: 300, finderPaddingPx: 18, finderRadiusPx: 8, finderTitleFontSizePx: 15, finderTextFontSizePx: 11, finderLabelFontSizePx: 10, finderValueFontSizePx: 11, finderButtonFontSizePx: 11, finderBackgroundColor: '#ffffff', finderTextColor: '#111827', finderFieldBackgroundColor: '#fafafa', finderFieldTextColor: '#222b35', finderButtonBackgroundColor: '#f5a000', finderButtonTextColor: '#111827', finderSide: 'left' },
+  { id: 'home-featured-categories', sectionKey: 'featured-categories', title: 'دسته‌بندی‌های ویژه', subtitle: '', isVisible: true, order: 2, layout: 'grid', desktopColumns: 9, mobileColumns: 3, borderRadiusPx: 8, itemRadiusPx: 999, gapPx: 14, maxItems: 9, imageSizePx: 68, widthPercent: 100, tabletWidthPercent: 100, mobileWidthPercent: 100, maxWidthPx: 1280, paddingTopPx: 22, paddingBottomPx: 24 },
+  { id: 'home-promo-small', sectionKey: 'promo-small', title: 'بنرهای کوچک صفحه اصلی', isVisible: true, order: 3, layout: 'grid', desktopColumns: 3, mobileColumns: 1, borderRadiusPx: 10, itemRadiusPx: 10, gapPx: 12, widthPercent: 100, tabletWidthPercent: 100, mobileWidthPercent: 100, maxWidthPx: 1280, itemMinHeightPx: 178, items: [
+    { id: 'promo-small-1', title: 'باتری و برق خودرو', subtitle: 'پیشنهاد روز', buttonText: 'مشاهده محصولات', link: 'shop', isVisible: true, order: 1, widthPercent: 34, tabletWidthPercent: 34, mobileWidthPercent: 100, heightPx: 178 },
+    { id: 'promo-small-2', title: 'رینگ، جلوبندی و تعلیق', subtitle: 'محصولات منتخب', buttonText: 'مشاهده محصولات', link: 'shop', isVisible: true, order: 2, widthPercent: 33, tabletWidthPercent: 33, mobileWidthPercent: 100, heightPx: 178 },
+    { id: 'promo-small-3', title: 'پیشنهادهای محدود فروشگاه', subtitle: 'فروش ویژه', buttonText: 'مشاهده محصولات', link: 'shop', isVisible: true, order: 3, widthPercent: 33, tabletWidthPercent: 33, mobileWidthPercent: 100, heightPx: 178 }
+  ]},
+  { id: 'home-featured-products', sectionKey: 'featured-products', title: 'محصولات ویژه', subtitle: 'محصولات منتخب، جدید و پرفروش فروشگاه', isVisible: true, order: 4, layout: 'grid', desktopColumns: 4, mobileColumns: 2, borderRadiusPx: 8, itemRadiusPx: 10, gapPx: 10, maxItems: 8, widthPercent: 100, tabletWidthPercent: 100, mobileWidthPercent: 100, maxWidthPx: 1280, paddingTopPx: 28, paddingBottomPx: 30 },
+  { id: 'home-wide-banner-1', sectionKey: 'wide-banner-1', title: 'بنر عریض میانی', isVisible: true, order: 5, layout: 'full', desktopColumns: 1, mobileColumns: 1, borderRadiusPx: 10, minHeightPx: 330, fullWidth: true, widthPercent: 100, tabletWidthPercent: 100, mobileWidthPercent: 100, maxWidthPx: 0, items: [
+    { id: 'wide-banner-1-item', title: 'برای توقف مطمئن، قطعه مطمئن انتخاب کنید', subtitle: 'سیستم ترمز و ایمنی', buttonText: 'مشاهده محصولات', link: 'shop', isVisible: true, order: 1, widthPercent: 100, tabletWidthPercent: 100, mobileWidthPercent: 100, heightPx: 330, titleColor: '#ffffff', subtitleColor: '#f5a000', buttonBgColor: '#ffffff', buttonTextColor: '#111827', textAlignment: 'right' }
+  ] },
+  { id: 'home-manufacturers', sectionKey: 'manufacturers', title: 'برندهای خودرو', isVisible: true, order: 6, layout: 'grid', desktopColumns: 10, mobileColumns: 3, borderRadiusPx: 8, itemRadiusPx: 999, gapPx: 10, maxItems: 20, imageSizePx: 58, widthPercent: 100, tabletWidthPercent: 100, mobileWidthPercent: 100, maxWidthPx: 1280, paddingTopPx: 24, paddingBottomPx: 24, items: [
+    { id: 'manufacturer-kmc', title: 'KMC', imageUrl: 'https://www.google.com/s2/favicons?domain=kermanmotor.com&sz=128', link: 'car-brand:kmc', isVisible: true, order: 1 },
+    { id: 'manufacturer-chery', title: 'Chery', imageUrl: 'https://www.google.com/s2/favicons?domain=cheryinternational.com&sz=128', link: 'car-brand:chery', isVisible: true, order: 2 },
+    { id: 'manufacturer-mvm', title: 'MVM', imageUrl: 'https://www.google.com/s2/favicons?domain=mvmco.ir&sz=128', link: 'car-brand:mvm', isVisible: true, order: 3 },
+    { id: 'manufacturer-fownix', title: 'Fownix', imageUrl: 'https://www.google.com/s2/favicons?domain=fownix.com&sz=128', link: 'car-brand:fownix', isVisible: true, order: 4 },
+    { id: 'manufacturer-jac', title: 'JAC', imageUrl: 'https://www.google.com/s2/favicons?domain=jac.com.cn&sz=128', link: 'car-brand:jac', isVisible: true, order: 5 },
+    { id: 'manufacturer-lamari', title: 'Lamari', imageUrl: 'https://www.google.com/s2/favicons?domain=lamari.ir&sz=128', link: 'car-brand:lamari', isVisible: true, order: 6 },
+    { id: 'manufacturer-changan', title: 'Changan', imageUrl: 'https://www.google.com/s2/favicons?domain=globalchangan.com&sz=128', link: 'car-brand:changan', isVisible: true, order: 7 },
+    { id: 'manufacturer-jetour', title: 'Jetour', imageUrl: 'https://www.google.com/s2/favicons?domain=jetourglobal.com&sz=128', link: 'car-brand:jetour', isVisible: true, order: 8 },
+    { id: 'manufacturer-byd', title: 'BYD', imageUrl: 'https://www.google.com/s2/favicons?domain=bydglobal.com&sz=128', link: 'shop', isVisible: true, order: 9 },
+    { id: 'manufacturer-geely', title: 'Geely', imageUrl: 'https://www.google.com/s2/favicons?domain=global.geely.com&sz=128', link: 'shop', isVisible: true, order: 10 },
+    { id: 'manufacturer-haval', title: 'Haval', imageUrl: 'https://www.google.com/s2/favicons?domain=haval-global.com&sz=128', link: 'shop', isVisible: true, order: 11 },
+    { id: 'manufacturer-gac', title: 'GAC', imageUrl: 'https://www.google.com/s2/favicons?domain=gac-motor.com&sz=128', link: 'shop', isVisible: true, order: 12 },
+    { id: 'manufacturer-dongfeng', title: 'Dongfeng', imageUrl: 'https://www.google.com/s2/favicons?domain=dongfeng-global.com&sz=128', link: 'shop', isVisible: true, order: 13 },
+    { id: 'manufacturer-faw', title: 'FAW', imageUrl: 'https://www.google.com/s2/favicons?domain=faw.com&sz=128', link: 'shop', isVisible: true, order: 14 },
+    { id: 'manufacturer-bestune', title: 'Bestune', imageUrl: 'https://www.google.com/s2/favicons?domain=bestune-global.com&sz=128', link: 'shop', isVisible: true, order: 15 },
+    { id: 'manufacturer-baic', title: 'BAIC', imageUrl: 'https://www.google.com/s2/favicons?domain=baicglobal.com&sz=128', link: 'shop', isVisible: true, order: 16 },
+    { id: 'manufacturer-haima', title: 'Haima', imageUrl: 'https://www.google.com/s2/favicons?domain=haima.com&sz=128', link: 'shop', isVisible: true, order: 17 },
+    { id: 'manufacturer-swm', title: 'SWM', imageUrl: 'https://www.google.com/s2/favicons?domain=swmmotors.com&sz=128', link: 'shop', isVisible: true, order: 18 },
+    { id: 'manufacturer-omoda', title: 'Omoda', imageUrl: 'https://www.google.com/s2/favicons?domain=omodajaecoo.com&sz=128', link: 'shop', isVisible: true, order: 19 },
+    { id: 'manufacturer-jaecoo', title: 'Jaecoo', imageUrl: 'https://www.google.com/s2/favicons?domain=omodajaecoo.com&sz=128', link: 'shop', isVisible: true, order: 20 }
+  ]},
+  { id: 'home-parts-brands', sectionKey: 'parts-brands', title: 'برندهای محبوب قطعات', isVisible: true, order: 7, layout: 'grid', desktopColumns: 8, mobileColumns: 2, borderRadiusPx: 8, itemRadiusPx: 4, gapPx: 7, maxItems: 16, imageSizePx: 48, widthPercent: 100, tabletWidthPercent: 100, mobileWidthPercent: 100, maxWidthPx: 1280, paddingTopPx: 24, paddingBottomPx: 24 },
+  { id: 'home-promo-medium', sectionKey: 'promo-medium', title: 'بنرهای متوسط', isVisible: true, order: 8, layout: 'grid', desktopColumns: 2, mobileColumns: 1, borderRadiusPx: 10, itemRadiusPx: 10, gapPx: 12, widthPercent: 100, tabletWidthPercent: 100, mobileWidthPercent: 100, maxWidthPx: 1280, itemMinHeightPx: 205, items: [
+    { id: 'promo-medium-1', title: 'جلوبندی، تایر و سیستم تعلیق', subtitle: 'آماده برای جاده', buttonText: 'خرید کنید', link: 'shop', isVisible: true, order: 1, widthPercent: 50, tabletWidthPercent: 50, mobileWidthPercent: 100, heightPx: 205 },
+    { id: 'promo-medium-2', title: 'قطعات موتور و سرویس تخصصی', subtitle: 'قطعات حیاتی موتور', buttonText: 'خرید کنید', link: 'shop', isVisible: true, order: 2, widthPercent: 50, tabletWidthPercent: 50, mobileWidthPercent: 100, heightPx: 205 }
+  ]},
+  { id: 'home-weekly-deals', sectionKey: 'weekly-deals', title: 'بهترین پیشنهادهای این هفته', subtitle: 'فرصت محدود برای خرید قطعات منتخب', isVisible: true, order: 9, layout: 'grid', desktopColumns: 4, mobileColumns: 2, borderRadiusPx: 10, itemRadiusPx: 14, gapPx: 10, maxItems: 8, fullWidth: true, widthPercent: 100, tabletWidthPercent: 100, mobileWidthPercent: 100, maxWidthPx: 0, paddingTopPx: 28, paddingBottomPx: 34, headingFontSizePx: 20, subtitleFontSizePx: 11, dealTimerAlign: 'left', dealTimerFontSizePx: 18, dealTitleColor: '#ffffff', dealSubtitleColor: '#fff7ed', dealTimerTextColor: '#b45309', dealTimerBoxBgColor: '#ffffff', dealContentVerticalAlign: 'center' },
+  { id: 'home-promo-large', sectionKey: 'promo-large', title: 'بنرهای اصلی', isVisible: true, order: 10, layout: 'grid', desktopColumns: 3, mobileColumns: 1, borderRadiusPx: 10, itemRadiusPx: 10, gapPx: 12, widthPercent: 100, tabletWidthPercent: 100, mobileWidthPercent: 100, maxWidthPx: 1280, itemMinHeightPx: 220, items: [
+    { id: 'promo-large-1', title: 'چراغ‌ها و قطعات بدنه با تنوع کامل', subtitle: 'روشنایی و بدنه', buttonText: 'مشاهده محصولات', link: 'shop', isVisible: true, order: 1, widthPercent: 67, tabletWidthPercent: 50, mobileWidthPercent: 100, heightPx: 220 },
+    { id: 'promo-large-2', title: 'سرویس دوره‌ای مطمئن', subtitle: 'فیلترها', link: 'shop:maintenance', isVisible: true, order: 2, widthPercent: 33, tabletWidthPercent: 50, mobileWidthPercent: 100, heightPx: 220 },
+    { id: 'promo-large-3', title: 'قطعات تخصصی انتقال قدرت', subtitle: 'گیربکس و روغن', link: 'shop', isVisible: true, order: 3, widthPercent: 33, tabletWidthPercent: 50, mobileWidthPercent: 100, heightPx: 220 },
+    { id: 'promo-large-4', title: 'محصولات نگهداری و لوازم جانبی', subtitle: 'مراقبت خودرو', buttonText: 'مشاهده محصولات', link: 'shop', isVisible: true, order: 4, widthPercent: 67, tabletWidthPercent: 50, mobileWidthPercent: 100, heightPx: 220 }
+  ]},
+  { id: 'home-maintenance-products', sectionKey: 'maintenance-products', title: 'قطعات مصرفی و سرویس دوره‌ای', subtitle: 'انتخاب‌های سریع برای نگهداری اصولی خودرو', isVisible: false, order: 11, layout: 'grid', desktopColumns: 4, mobileColumns: 2, borderRadiusPx: 8, itemRadiusPx: 10, gapPx: 10, maxItems: 8, widthPercent: 100, tabletWidthPercent: 100, mobileWidthPercent: 100, maxWidthPx: 1280 },
+  { id: 'home-testimonials', sectionKey: 'testimonials', title: 'نظر مشتریان ما', subtitle: 'تجربه خرید از فروشگاه تخصصی قطعات', isVisible: true, order: 12, layout: 'cards', desktopColumns: 4, mobileColumns: 2, borderRadiusPx: 10, itemRadiusPx: 10, gapPx: 10, fullWidth: true, widthPercent: 100, tabletWidthPercent: 100, mobileWidthPercent: 100, maxWidthPx: 0, paddingTopPx: 26, paddingBottomPx: 30, items: [
+    { id: 'testimonial-1', title: 'خریدار قطعات موتور', content: 'اصالت قطعه دقیق بود و خیلی سریع به دستم رسید.', isVisible: true, order: 1 },
+    { id: 'testimonial-2', title: 'مشتری فروشگاه', content: 'قبل از خرید شماره فنی را بررسی کردند و قطعه کاملاً مناسب بود.', isVisible: true, order: 2 },
+    { id: 'testimonial-3', title: 'خریدار عمده', content: 'بسته‌بندی و پیگیری سفارش حرفه‌ای بود.', isVisible: true, order: 3 },
+    { id: 'testimonial-4', title: 'تعمیرکار', content: 'برای قطعه کمیاب خیلی سریع استعلام انجام شد.', isVisible: true, order: 4 }
+  ]},
+  { id: 'home-shipping-banner', sectionKey: 'shipping-banner', title: 'ارسال سریع', subtitle: 'برای سفارش‌های واجد شرایط', isVisible: true, order: 13, layout: 'full', desktopColumns: 1, mobileColumns: 1, borderRadiusPx: 8, widthPercent: 100, tabletWidthPercent: 100, mobileWidthPercent: 96, maxWidthPx: 1040, minHeightPx: 112 },
+  { id: 'home-articles', sectionKey: 'articles', title: 'راهنما و مقالات', subtitle: 'آموزش، نگهداری و انتخاب صحیح قطعات خودرو', buttonText: 'مشاهده همه مقالات', buttonLink: 'blog', isVisible: true, order: 14, layout: 'grid', desktopColumns: 3, mobileColumns: 2, borderRadiusPx: 8, itemRadiusPx: 8, gapPx: 10, maxItems: 3, widthPercent: 100, tabletWidthPercent: 100, mobileWidthPercent: 100, maxWidthPx: 1280, paddingTopPx: 28, paddingBottomPx: 30 },
+  { id: 'home-service-strip', sectionKey: 'service-strip', title: 'مزایای فروشگاه', isVisible: true, order: 15, layout: 'grid', desktopColumns: 4, mobileColumns: 2, borderRadiusPx: 8, itemRadiusPx: 6, gapPx: 10, fullWidth: true, widthPercent: 100, tabletWidthPercent: 100, mobileWidthPercent: 100, maxWidthPx: 0, items: [
+    { id: 'service-1', title: 'تضمین اصالت', content: 'کنترل اصالت و کیفیت قطعه', isVisible: true, order: 1 },
+    { id: 'service-2', title: 'ارزش خرید', content: 'قیمت‌گذاری شفاف و رقابتی', isVisible: true, order: 2 },
+    { id: 'service-3', title: 'ارسال سریع', content: 'بسته‌بندی ایمن و رهگیری سفارش', isVisible: true, order: 3 },
+    { id: 'service-4', title: 'پشتیبانی تخصصی', content: 'مشاوره قبل و بعد از خرید', isVisible: true, order: 4 }
+  ]}
+];
+
+const PART_REQUEST_SECTION_DEFAULTS: PageSection[] = [
+  { id: 'request-hero', sectionKey: 'request-hero', title: 'استعلام و واردات قطعه کمیاب خودروهای چینی', subtitle: 'اگر قطعه مورد نظر شما در سایت موجود نیست، مشخصات خودرو و قطعه را ارسال کنید تا واحد تامین بررسی کند.', badge: 'سفارش اختصاصی و استعلام فوری', isVisible: true, order: 1, layout: 'boxed', desktopColumns: 1, mobileColumns: 1, borderRadiusPx: 16, paddingTopPx: 16, paddingBottomPx: 16 },
+  { id: 'request-form', sectionKey: 'request-form', title: 'فرم استعلام قطعه', subtitle: 'اطلاعات خودرو، قطعه و راه ارتباطی را وارد کنید.', isVisible: true, order: 2, layout: 'boxed', desktopColumns: 1, mobileColumns: 1, borderRadiusPx: 20 },
+  { id: 'request-info', sectionKey: 'request-info', title: 'زمان‌بندی پاسخگویی به استعلام', subtitle: 'استعلام‌های داخلی معمولاً سریع‌تر و استعلام وارداتی پس از بررسی تامین‌کننده اعلام می‌شود.', isVisible: true, order: 3, layout: 'cards', desktopColumns: 1, mobileColumns: 1, borderRadiusPx: 20, items: [
+    { id: 'request-info-1', title: 'تطبیق با شماره شاسی', content: 'بررسی قطعه براساس VIN و مشخصات خودرو', isVisible: true, order: 1 },
+    { id: 'request-info-2', title: 'اعلام قیمت و زمان تحویل', content: 'نتیجه استعلام پس از بررسی موجودی و تامین اعلام می‌شود.', isVisible: true, order: 2 },
+    { id: 'request-info-3', title: 'ارسال مطمئن', content: 'امکان ارسال به تعمیرگاه یا آدرس خریدار', isVisible: true, order: 3 }
+  ]},
+  { id: 'request-contact', sectionKey: 'request-contact', title: 'نیاز به استعلام تلفنی فوری دارید؟', subtitle: 'شماره تماس این بخش را از Page Builder تغییر دهید.', buttonText: 'تماس با واحد تامین', buttonLink: 'tel:02100000000', isVisible: true, order: 4, layout: 'boxed', desktopColumns: 1, mobileColumns: 1, borderRadiusPx: 20 }
+];
+
+const upgradeLegacyHomeSection = (section: PageSection): PageSection => {
+  const key = section.sectionKey;
+
+  if (!section.contentSource) {
+    const liveSource =
+      key === 'featured-categories' ? 'categories' :
+      key === 'manufacturers' ? 'brands' :
+      ['featured-products','weekly-deals','maintenance-products'].includes(key || '') ? 'products' :
+      key === 'articles' ? 'articles' :
+      'manual';
+    section = {
+      ...section,
+      contentSource: liveSource as PageSection['contentSource'],
+      contentSourceLimit: section.contentSourceLimit || section.maxItems
+    };
+  }
+  if (key === 'hero') {
+    return {
+      ...section,
+      fullWidth: true,
+      widthPercent: section.widthPercent ?? 100,
+      tabletWidthPercent: section.tabletWidthPercent ?? 100,
+      mobileWidthPercent: section.mobileWidthPercent ?? 100,
+      maxWidthPx: 0,
+      borderRadiusPx: section.borderRadiusPx ?? 8,
+      paddingInlinePx: section.paddingInlinePx ?? 0,
+      marginTopPx: section.marginTopPx ?? 12,
+      finderWidthPx: section.finderWidthPx ?? 300,
+      finderPaddingPx: section.finderPaddingPx ?? 18,
+      finderRadiusPx: section.finderRadiusPx ?? 8,
+      finderTitleFontSizePx: section.finderTitleFontSizePx ?? 15,
+      finderTextFontSizePx: section.finderTextFontSizePx ?? 11,
+      finderLabelFontSizePx: section.finderLabelFontSizePx ?? 10,
+      finderValueFontSizePx: section.finderValueFontSizePx ?? 11,
+      finderButtonFontSizePx: section.finderButtonFontSizePx ?? 11,
+      finderBackgroundColor: section.finderBackgroundColor ?? '#ffffff',
+      finderTextColor: section.finderTextColor ?? '#111827',
+      finderFieldBackgroundColor: section.finderFieldBackgroundColor ?? '#fafafa',
+      finderFieldTextColor: section.finderFieldTextColor ?? '#222b35',
+      finderButtonBackgroundColor: section.finderButtonBackgroundColor ?? '#f5a000',
+      finderButtonTextColor: section.finderButtonTextColor ?? '#111827',
+      finderSide: section.finderSide ?? 'left'
+    };
+  }
+  if (
+    key === 'maintenance-products' &&
+    section.id === 'home-maintenance-products' &&
+    section.title === 'قطعات مصرفی و سرویس دوره‌ای' &&
+    section.order === 11 &&
+    section.imageUrl == null
+  ) {
+    return { ...section, isVisible: false };
+  }
+  if (key === 'manufacturers') {
+    const manufacturerDefaults = HOME_SECTION_DEFAULTS.find(item => item.sectionKey === 'manufacturers');
+    const shouldUpgradeGrid = section.desktopColumns == null || section.desktopColumns === 6 || section.desktopColumns === 12;
+    return {
+      ...section,
+      desktopColumns: shouldUpgradeGrid ? 10 : section.desktopColumns,
+      mobileColumns: section.mobileColumns || 3,
+      maxItems: section.maxItems === 12 || section.maxItems === 24 || section.maxItems == null ? 20 : section.maxItems,
+      imageSizePx: section.imageSizePx || 58,
+      gapPx: section.gapPx ?? 10,
+      items: section.items?.length ? section.items : manufacturerDefaults?.items
+    };
+  }
+  if (key === 'parts-brands' && (section.desktopColumns == null || section.desktopColumns === 4)) {
+    return {
+      ...section,
+      desktopColumns: 8,
+      mobileColumns: section.mobileColumns || 2,
+      maxItems: section.maxItems || 16,
+      imageSizePx: section.imageSizePx || 48,
+      gapPx: section.gapPx ?? 7
+    };
+  }
+  if (key === 'featured-categories' && (section.desktopColumns == null || section.desktopColumns === 6)) {
+    return {
+      ...section,
+      desktopColumns: 9,
+      mobileColumns: section.mobileColumns || 3,
+      maxItems: section.maxItems || 9,
+      imageSizePx: section.imageSizePx || 68,
+      gapPx: section.gapPx ?? 14
+    };
+  }
+  if (key === 'promo-large') {
+    const widths = [67,33,33,67];
+    return {
+      ...section,
+      desktopColumns: section.desktopColumns == null || section.desktopColumns === 2 ? 3 : section.desktopColumns,
+      mobileColumns: section.mobileColumns || 1,
+      itemRadiusPx: section.itemRadiusPx === 3 ? 10 : (section.itemRadiusPx ?? 10),
+      itemMinHeightPx: section.itemMinHeightPx ?? 220,
+      items: (section.items || []).map((item,index)=>({
+        ...item,
+        widthPercent: item.widthPercent ?? widths[index % widths.length],
+        tabletWidthPercent: item.tabletWidthPercent ?? 50,
+        mobileWidthPercent: item.mobileWidthPercent ?? 100,
+        heightPx: item.heightPx ?? 220
+      }))
+    };
+  }
+  if (key === 'wide-banner-1') {
+    const item = section.items?.[0] || {
+      id: 'wide-banner-1-item',
+      title: section.title || '',
+      subtitle: section.subtitle || '',
+      buttonText: section.buttonText || '',
+      link: section.buttonLink || '',
+      imageUrl: section.imageUrl || '',
+      isVisible: true,
+      order: 1,
+      widthPercent: 100,
+      tabletWidthPercent: 100,
+      mobileWidthPercent: 100,
+      heightPx: section.minHeightPx || 330,
+      titleColor: '#ffffff',
+      subtitleColor: '#f5a000',
+      buttonBgColor: '#ffffff',
+      buttonTextColor: '#111827',
+      textAlignment: 'right'
+    };
+    return {
+      ...section,
+      title: section.items?.length ? section.title : 'بنر عریض میانی',
+      fullWidth: true,
+      widthPercent: section.widthPercent ?? 100,
+      tabletWidthPercent: section.tabletWidthPercent ?? 100,
+      mobileWidthPercent: section.mobileWidthPercent ?? 100,
+      maxWidthPx: 0,
+      borderRadiusPx: section.borderRadiusPx ?? 10,
+      minHeightPx: section.minHeightPx || 330,
+      items: [item, ...(section.items?.slice(1) || [])]
+    };
+  }
+  if (key === 'weekly-deals') {
+    return {
+      ...section,
+      fullWidth: true,
+      widthPercent: section.widthPercent ?? 100,
+      tabletWidthPercent: section.tabletWidthPercent ?? 100,
+      mobileWidthPercent: section.mobileWidthPercent ?? 100,
+      maxWidthPx: 0,
+      borderRadiusPx: section.borderRadiusPx ?? 10,
+      paddingTopPx: section.paddingTopPx ?? 28,
+      paddingBottomPx: section.paddingBottomPx ?? 34,
+      itemRadiusPx: section.itemRadiusPx === 3 ? 14 : (section.itemRadiusPx ?? 14),
+      headingFontSizePx: section.headingFontSizePx ?? 20,
+      subtitleFontSizePx: section.subtitleFontSizePx ?? 11,
+      dealTimerAlign: section.dealTimerAlign ?? 'left',
+      dealTimerFontSizePx: section.dealTimerFontSizePx ?? 18,
+      dealTitleColor: section.dealTitleColor ?? '#ffffff',
+      dealSubtitleColor: section.dealSubtitleColor ?? '#fff7ed',
+      dealTimerTextColor: section.dealTimerTextColor ?? '#b45309',
+      dealTimerBoxBgColor: section.dealTimerBoxBgColor ?? '#ffffff',
+      dealContentVerticalAlign: section.dealContentVerticalAlign ?? 'center'
+    };
+  }
+  if ((key === 'testimonials' || key === 'service-strip')) {
+    return {
+      ...section,
+      fullWidth: true,
+      widthPercent: section.widthPercent ?? 100,
+      tabletWidthPercent: section.tabletWidthPercent ?? 100,
+      mobileWidthPercent: section.mobileWidthPercent ?? 100,
+      maxWidthPx: 0,
+      borderRadiusPx: section.borderRadiusPx ?? 10
+    };
+  }
+  if (key === 'shipping-banner') {
+    return {
+      ...section,
+      widthPercent: section.widthPercent ?? 100,
+      tabletWidthPercent: section.tabletWidthPercent ?? 100,
+      mobileWidthPercent: section.mobileWidthPercent ?? 100,
+      maxWidthPx: section.maxWidthPx == null || section.maxWidthPx === 1280 ? 1040 : section.maxWidthPx,
+      minHeightPx: section.minHeightPx || 112,
+      borderRadiusPx: section.borderRadiusPx === 3 ? 8 : (section.borderRadiusPx ?? 8)
+    };
+  }
+  if (key === 'promo-small' || key === 'promo-medium') {
+    const count=Math.max(1,section.items?.length || (key === 'promo-small' ? 3 : 2));
+    return {
+      ...section,
+      borderRadiusPx: section.borderRadiusPx ?? 10,
+      itemRadiusPx: section.itemRadiusPx ?? 10,
+      itemMinHeightPx: section.itemMinHeightPx ?? (key === 'promo-small' ? 178 : 205),
+      items: (section.items || []).map((item,index)=>({
+        ...item,
+        widthPercent: item.widthPercent ?? (key === 'promo-small' ? (index === 0 ? 34 : 33) : Math.floor(100/count)),
+        tabletWidthPercent: item.tabletWidthPercent ?? (key === 'promo-small' ? (index === 0 ? 34 : 33) : Math.floor(100/count)),
+        mobileWidthPercent: item.mobileWidthPercent ?? 100,
+        heightPx: item.heightPx ?? (key === 'promo-small' ? 178 : 205)
+      }))
+    };
+  }
+  if (key === 'articles') {
+    return {
+      ...section,
+      mobileColumns: section.mobileColumns === 1 ? 2 : section.mobileColumns,
+      maxItems: section.maxItems || 3,
+      buttonText: section.buttonText ?? 'مشاهده همه مقالات',
+      buttonLink: section.buttonLink ?? 'blog'
+    };
+  }
+  return section;
+};
+
+const mergeSystemSections = (page: SitePage, defaults: PageSection[], inferredKeys: Record<string, string> = {}): SitePage => {
+  const migrateWidthDefaults = page.slug === 'home' && Number(page.builderConfigVersion || 0) < 30101;
+  const existing = (page.sections || []).map(section => {
+    const normalized = upgradeLegacyHomeSection({
+      ...section,
+      sectionKey: section.sectionKey || inferredKeys[section.id]
+    });
+    if (!migrateWidthDefaults) return normalized;
+
+    const legacyDefaultWidth =
+      (Number(normalized.widthPercent) === 95 && Number(normalized.tabletWidthPercent) === 96) ||
+      (Number(normalized.widthPercent) === 92 && Number(normalized.tabletWidthPercent) === 95);
+    return legacyDefaultWidth
+      ? { ...normalized, widthPercent: 100, tabletWidthPercent: 100 }
+      : normalized;
+  });
+  const existingKeys = new Set(existing.map(section => section.sectionKey).filter(Boolean));
+  const missing = defaults
+    .filter(section => !section.sectionKey || !existingKeys.has(section.sectionKey))
+    .map(section => ({ ...section }));
+  return {
+    ...page,
+    ...(page.slug === 'home' ? { builderConfigVersion: 30101 } : {}),
+    sections: [...existing, ...missing].sort((a, b) => a.order - b.order)
+  };
+};
+
+const normalizeBuilderPages = (inputPages: SitePage[]): SitePage[] => {
+  const inferredKeys: Record<string, string> = {
+    'sec-hero': 'hero',
+    'sec-brands': 'manufacturers',
+    'sec-categories': 'featured-categories'
+  };
+
+  const mapped = inputPages.map(page => {
+    if (page.slug === 'home') return mergeSystemSections(page, HOME_SECTION_DEFAULTS, inferredKeys);
+    if (page.slug === 'part-request') return mergeSystemSections(page, PART_REQUEST_SECTION_DEFAULTS);
+    return page;
+  });
+
+  if (!mapped.some(page => page.slug === 'part-request')) {
+    mapped.push({
+      id: 'page-part-request',
+      slug: 'part-request',
+      title: 'استعلام قطعه',
+      description: 'فرم استعلام و تامین قطعات کمیاب',
+      isSystem: true,
+      updatedAt: new Date().toLocaleDateString('fa-IR'),
+      sections: PART_REQUEST_SECTION_DEFAULTS.map(section => ({ ...section }))
+    });
+  }
+
+  return mapped;
+};
+
+const syncSeoDraft = async (
+  type: 'product' | 'article' | 'page' | 'category' | 'brand' | 'model',
+  id: string,
+  seo?: SeoEntityDraft
+): Promise<void> => {
+  if (!seo || !id) return;
+  const { images: _images, ...meta } = seo;
+  await apiRequest(`/api/seo/entities/${type}/${encodeURIComponent(id)}/meta`, {
+    method: 'PUT',
+    body: JSON.stringify(meta)
+  });
+};
+
+const syncCategorySeoTree = async (category: Category): Promise<void> => {
+  const jobs: Array<Promise<void>> = [];
+  if (category.seo) jobs.push(syncSeoDraft('category', category.id, category.seo));
+
+  const walk = (nodes: any[] = []) => {
+    for (const node of nodes) {
+      if (node?.seo && node?.id) jobs.push(syncSeoDraft('category', `sub:${node.id}`, node.seo));
+      if (Array.isArray(node?.subcategories)) walk(node.subcategories);
+    }
+  };
+  walk(category.subcategories || []);
+  if (jobs.length) await Promise.allSettled(jobs);
+};
+
 interface StoreContextType {
   // Catalog
   products: Product[];
+  catalogHasMore: boolean;
+  catalogLoading: boolean;
+  loadCatalogPage: (options?: CatalogPageOptions) => Promise<void>;
   brands: CarBrand[];
   models: VehicleModel[];
   categories: Category[];
@@ -128,7 +499,7 @@ interface StoreContextType {
   
   // Orders & Checkout
   orders: Order[];
-  createOrder: (orderData: Omit<Order, 'id' | 'orderNumber' | 'date'> & { loyaltyPointsToRedeem?: number }) => Promise<Order>;
+  createOrder: (orderData: Omit<Order, 'id' | 'orderNumber' | 'date'> & { loyaltyPointsToRedeem?: number; registration?: { password: string } }) => Promise<Order>;
   updateOrderStatus: (orderId: string, status: OrderStatus, trackingCode?: string) => void;
   deleteOrder: (orderId: string) => void;
   getOrderById: (orderId: string) => Order | undefined;
@@ -142,7 +513,8 @@ interface StoreContextType {
 
   // Store Settings (Theme, Font, Color, Contact, Shipping)
   settings: SiteSettings;
-  updateSettings: (newSettings: Partial<SiteSettings>) => void;
+  isStoreReady: boolean;
+  updateSettings: (newSettings: Partial<SiteSettings>) => Promise<boolean>;
 
   // Payment Gateways
   paymentGateways: PaymentGatewayConfig[];
@@ -198,7 +570,8 @@ interface StoreContextType {
   pages: SitePage[];
   updatePage: (page: SitePage) => void;
   deletePage: (pageId: string) => void;
-  updateSection: (pageSlug: string, section: PageSection) => void;
+  updateSection: (pageSlug: string, section: PageSection) => Promise<boolean>;
+  previewSection: (pageSlug: string, section: PageSection) => void;
   addSection: (pageSlug: string, section: PageSection) => void;
   deleteSection: (pageSlug: string, sectionId: string) => void;
 
@@ -217,6 +590,7 @@ interface StoreContextType {
 
   // Loyalty Points & Rewards Club
   loyaltyTransactions: LoyaltyTransaction[];
+  refreshCustomerAccount: () => Promise<void>;
   getCustomerPoints: (customerId?: string) => number;
   getCustomerTransactions: (customerId?: string) => LoyaltyTransaction[];
   addLoyaltyPoints: (
@@ -253,9 +627,38 @@ const StoreContext = createContext<StoreContextType | undefined>(undefined);
 export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   // Products
   const [products, setProducts] = useState<Product[]>([]);
+  const [catalogHasMore, setCatalogHasMore] = useState(false);
+  const [catalogLoading, setCatalogLoading] = useState(false);
+  const [catalogOffset, setCatalogOffset] = useState(0);
+  const [catalogQueryKey, setCatalogQueryKey] = useState('all');
 
   const [brands, setBrands] = useState<CarBrand[]>([]);
   const [models, setModels] = useState<VehicleModel[]>([]);
+
+  const loadCatalogPage = async (options: CatalogPageOptions = {}) => {
+    const categorySlug = options.categorySlug || '';
+    const query = options.query || '';
+    const key = categorySlug || query || 'all';
+    const append = options.append === true;
+    const offset = options.offset ?? (append && key === catalogQueryKey ? catalogOffset : 0);
+    setCatalogLoading(true);
+    try {
+      const params = new URLSearchParams({ limit: '48', offset: String(offset) });
+      if (categorySlug) params.set('category', categorySlug);
+      if (query) params.set('q', query);
+      const page = await apiRequest<{ products: Product[]; hasMore?: boolean; nextOffset?: number }>(`/api/catalog/products?${params.toString()}`);
+      setProducts(current => append && key === catalogQueryKey
+        ? Array.from(new Map<string, Product>([...current, ...page.products].map(product => [product.id, product] as const)).values())
+        : page.products);
+      setCatalogOffset(page.nextOffset ?? offset + page.products.length);
+      setCatalogHasMore(Boolean(page.hasMore));
+      setCatalogQueryKey(key);
+    } catch (error) {
+      console.error('Catalog page load failed:', error);
+    } finally {
+      setCatalogLoading(false);
+    }
+  };
 
   const [categories, setCategories] = useState<Category[]>([]);
 
@@ -273,6 +676,8 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   // Settings
   const [settings, setSettings] = useState<SiteSettings>(INITIAL_SETTINGS);
+  // Prevent rendering a wrong/default template before the persisted CMS settings arrive.
+  const [isStoreReady, setIsStoreReady] = useState(false);
 
   // Payment Gateways
   const [paymentGateways, setPaymentGateways] = useState<PaymentGatewayConfig[]>([]);
@@ -390,7 +795,10 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       requests.push(
         apiRequest<{ integrations: ApiIntegrationsConfig }>('/api/integrations')
           .then(result => { if (!cancelled) setApiIntegrations(result.integrations); })
-          .catch(error => console.error('Integration settings load failed:', error))
+          .catch(error => console.error('Integration settings load failed:', error)),
+        apiRequest<{ gateways: PaymentGatewayConfig[] }>('/api/integrations/payment-gateways')
+          .then(result => { if (!cancelled) setPaymentGateways(result.gateways); })
+          .catch(error => console.error('Secure payment gateway settings load failed:', error))
       );
     }
 
@@ -412,7 +820,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     let cancelled = false;
 
     Promise.all([
-      apiRequest<{ products: Product[] }>('/api/catalog/products'),
+      apiRequest<{ products: Product[]; hasMore?: boolean; nextOffset?: number }>('/api/catalog/products?limit=48&offset=0'),
       apiRequest<{ categories: Category[] }>('/api/catalog/categories'),
       apiRequest<{ brands: CarBrand[]; models: VehicleModel[] }>('/api/vehicles'),
       apiRequest<{
@@ -427,15 +835,19 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       .then(([productData, categoryData, vehicleData, cmsData]) => {
         if (cancelled) return;
         setProducts(productData.products);
+        setCatalogOffset(productData.nextOffset ?? productData.products.length);
+        setCatalogHasMore(Boolean(productData.hasMore));
+        setCatalogQueryKey('all');
         setCategories(categoryData.categories);
         setBrands(vehicleData.brands);
         setModels(vehicleData.models);
         setArticles(cmsData.articles);
         setArticleCategories(cmsData.articleCategories);
         setSliders(cmsData.sliders);
-        setPages(cmsData.pages);
-        if (cmsData.settings) setSettings(cmsData.settings);
+        setPages(normalizeBuilderPages(cmsData.pages));
+        if (cmsData.settings) setSettings({ ...INITIAL_SETTINGS, ...cmsData.settings });
         setPaymentGateways(cmsData.paymentGateways);
+        setIsStoreReady(true);
       })
       .catch(error => {
         console.error('Public store data load failed:', error);
@@ -447,10 +859,11 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           setArticles(INITIAL_ARTICLES);
           setArticleCategories(INITIAL_ARTICLE_CATEGORIES);
           setSliders(INITIAL_SLIDERS);
-          setPages(INITIAL_PAGES);
+          setPages(normalizeBuilderPages(INITIAL_PAGES));
           setSettings(INITIAL_SETTINGS);
           setPaymentGateways(INITIAL_PAYMENT_GATEWAYS);
         }
+        if (!cancelled) setIsStoreReady(true);
       });
 
     return () => {
@@ -624,7 +1037,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     root.style.setProperty('--theme-radius', radiusVal);
 
     // Global SEO Synchronization
-    const effectiveTitle = settings.metaTitle || settings.siteTitle || 'چین‌پارت | قطعات یدکی خودروهای چینی';
+    const effectiveTitle = settings.metaTitle || settings.siteTitle || 'فروشگاه قطعات خودرو';
     document.title = effectiveTitle;
 
     const updateOrCreateMeta = (nameAttr: string, nameValue: string, content: string) => {
@@ -841,21 +1254,29 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   // Pages & Section Builder Methods
   // Pages & Section Builder Methods
 
-  const persistPage = (page: SitePage, successMessage: string) => {
+  const persistPage = async (page: SitePage, successMessage: string): Promise<boolean> => {
     const normalized = { ...page, updatedAt: new Date().toLocaleDateString('fa-IR') };
-    void apiRequest<{ page: SitePage }>(`/api/cms/pages/${encodeURIComponent(normalized.id)}`, {
-      method: 'PUT',
-      body: JSON.stringify(normalized)
-    }).then(({ page: saved }) => {
+    try {
+      const { page: saved } = await apiRequest<{ page: SitePage }>(`/api/cms/pages/${encodeURIComponent(normalized.id)}`, {
+        method: 'PUT',
+        body: JSON.stringify(normalized)
+      });
       setPages(prev => {
         const exists = prev.some(item => item.id === saved.id);
         return exists ? prev.map(item => item.id === saved.id ? saved : item) : [...prev, saved];
       });
+      try {
+        await syncSeoDraft('page', saved.id, saved.seo);
+      } catch (seoError) {
+        console.error('Page SEO sync failed:', seoError);
+      }
       showToast(successMessage);
-    }).catch(error => {
+      return true;
+    } catch (error) {
       console.error(error);
-      showToast('ذخیره برگه در سرور انجام نشد.', 'error');
-    });
+      showToast('ذخیره برگه در سرور انجام نشد؛ اتصال و دسترسی مدیر را بررسی کنید.', 'error');
+      return false;
+    }
   };
 
   const updatePage = (updatedPage: SitePage) => {
@@ -881,13 +1302,29 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     });
   };
 
-  const updateSection = (pageSlug: string, updatedSection: PageSection) => {
+  const updateSection = async (pageSlug: string, updatedSection: PageSection): Promise<boolean> => {
     const page = pages.find(item => item.slug === pageSlug);
-    if (!page) return;
-    persistPage({
+    if (!page) {
+      showToast('برگه برای ذخیره پیدا نشد.', 'error');
+      return false;
+    }
+    return persistPage({
       ...page,
       sections: page.sections.map(section => section.id === updatedSection.id ? updatedSection : section)
     }, `بخش "${updatedSection.title}" با موفقیت به‌روزرسانی شد.`);
+  };
+
+  const previewSection = (pageSlug: string, sectionPreview: PageSection) => {
+    setPages(prev => prev.map(page => {
+      if (page.slug !== pageSlug) return page;
+      const exists = page.sections.some(section => section.id === sectionPreview.id);
+      return {
+        ...page,
+        sections: exists
+          ? page.sections.map(section => section.id === sectionPreview.id ? { ...sectionPreview } : section)
+          : [...page.sections, { ...sectionPreview }]
+      };
+    }));
   };
 
   const addSection = (pageSlug: string, newSection: PageSection) => {
@@ -975,29 +1412,36 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   // Settings
-  const updateSettings = (newSettings: Partial<SiteSettings>) => {
-    void apiRequest<{ settings: SiteSettings }>('/api/cms/settings', {
-      method: 'PATCH',
-      body: JSON.stringify(newSettings)
-    }).then(({ settings: saved }) => {
+  const updateSettings = async (newSettings: Partial<SiteSettings>): Promise<boolean> => {
+    try {
+      const { settings: saved } = await apiRequest<{ settings: SiteSettings }>('/api/cms/settings', {
+        method: 'PATCH',
+        body: JSON.stringify(newSettings)
+      });
       setSettings(saved);
-      showToast('تنظیمات فروشگاه (قالب، رنگ و سیاست‌ها) با موفقیت ذخیره شد.');
-    }).catch(error => {
+      showToast('تنظیمات فروشگاه با موفقیت ذخیره شد.');
+      return true;
+    } catch (error) {
       console.error(error);
       showToast('ذخیره تنظیمات فروشگاه انجام نشد.', 'error');
-    });
+      return false;
+    }
   };
 
   const persistPaymentGateways = (gateways: PaymentGatewayConfig[], message: string) => {
-    void apiRequest<{ paymentGateways: PaymentGatewayConfig[] }>('/api/cms/payment-gateways', {
+    void apiRequest<{ gateways: PaymentGatewayConfig[] }>('/api/integrations/payment-gateways', {
       method: 'PUT',
       body: JSON.stringify({ gateways })
-    }).then(({ paymentGateways: saved }) => {
+    }).then(({ gateways: saved }) => {
       setPaymentGateways(saved);
       showToast(message);
     }).catch(error => {
       console.error(error);
-      showToast('ذخیره تنظیمات نمایشی درگاه‌ها انجام نشد.', 'error');
+      const gatewayMessage =
+        error instanceof ApiError && error.code === 'ENCRYPTION_KEY_NOT_CONFIGURED'
+          ? 'APP_ENCRYPTION_KEY روی سرور تنظیم نشده و ذخیره امن اطلاعات درگاه ممکن نیست.'
+          : 'ذخیره امن تنظیمات درگاه‌ها انجام نشد.';
+      showToast(gatewayMessage, 'error');
     });
   };
 
@@ -1083,8 +1527,13 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     void apiRequest<{ category: Category }>('/api/catalog/categories', {
       method: 'POST',
       body: JSON.stringify(cat)
-    }).then(({ category }) => {
+    }).then(async ({ category }) => {
       setCategories(prev => [...prev, category]);
+      try {
+        await syncCategorySeoTree(category);
+      } catch (seoError) {
+        console.error('Category SEO sync failed:', seoError);
+      }
       showToast(`دسته‌بندی ${category.nameFa} افزوده شد.`);
     }).catch(error => {
       console.error(error);
@@ -1096,8 +1545,13 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     void apiRequest<{ category: Category }>(`/api/catalog/categories/${encodeURIComponent(cat.id)}`, {
       method: 'PUT',
       body: JSON.stringify(cat)
-    }).then(({ category }) => {
+    }).then(async ({ category }) => {
       setCategories(prev => prev.map(item => item.id === category.id ? category : item));
+      try {
+        await syncCategorySeoTree(category);
+      } catch (seoError) {
+        console.error('Category SEO sync failed:', seoError);
+      }
       showToast(`دسته‌بندی ${category.nameFa} به‌روزرسانی شد.`);
     }).catch(error => {
       console.error(error);
@@ -1122,8 +1576,13 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     void apiRequest<{ brand: CarBrand }>('/api/vehicles/brands', {
       method: 'POST',
       body: JSON.stringify(brand)
-    }).then(({ brand: saved }) => {
+    }).then(async ({ brand: saved }) => {
       setBrands(prev => [...prev, saved]);
+      try {
+        await syncSeoDraft('brand', saved.id, saved.seo);
+      } catch (seoError) {
+        console.error('Brand SEO sync failed:', seoError);
+      }
       showToast(`برند ${saved.nameFa} اضافه شد.`);
     }).catch(error => {
       console.error(error);
@@ -1135,8 +1594,13 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     void apiRequest<{ brand: CarBrand }>(`/api/vehicles/brands/${encodeURIComponent(brand.id)}`, {
       method: 'PUT',
       body: JSON.stringify(brand)
-    }).then(({ brand: saved }) => {
+    }).then(async ({ brand: saved }) => {
       setBrands(prev => prev.map(item => item.id === saved.id ? saved : item));
+      try {
+        await syncSeoDraft('brand', saved.id, saved.seo);
+      } catch (seoError) {
+        console.error('Brand SEO sync failed:', seoError);
+      }
       showToast(`برند ${saved.nameFa} به‌روزرسانی شد.`);
     }).catch(error => {
       console.error(error);
@@ -1200,8 +1664,13 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     void apiRequest<{ article: Article }>('/api/cms/articles', {
       method: 'POST',
       body: JSON.stringify(art)
-    }).then(({ article }) => {
+    }).then(async ({ article }) => {
       setArticles(prev => [article, ...prev]);
+      try {
+        await syncSeoDraft('article', article.id, article.seo);
+      } catch (seoError) {
+        console.error('Article SEO sync failed:', seoError);
+      }
       showToast(`مقاله "${article.title}" با موفقیت منتشر گردید.`);
     }).catch(error => {
       console.error(error);
@@ -1213,8 +1682,13 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     void apiRequest<{ article: Article }>(`/api/cms/articles/${encodeURIComponent(art.id)}`, {
       method: 'PUT',
       body: JSON.stringify(art)
-    }).then(({ article }) => {
+    }).then(async ({ article }) => {
       setArticles(prev => prev.map(item => item.id === article.id ? article : item));
+      try {
+        await syncSeoDraft('article', article.id, article.seo);
+      } catch (seoError) {
+        console.error('Article SEO sync failed:', seoError);
+      }
       showToast(`مقاله "${article.title}" به‌روزرسانی شد.`);
     }).catch(error => {
       console.error(error);
@@ -1360,8 +1834,13 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     void apiRequest<{ product: Product }>('/api/catalog/products', {
       method: 'POST',
       body: JSON.stringify(product)
-    }).then(result => {
+    }).then(async result => {
       setProducts(prev => [result.product, ...prev]);
+      try {
+        await syncSeoDraft('product', result.product.id, result.product.seo);
+      } catch (seoError) {
+        console.error('Product SEO sync failed:', seoError);
+      }
       showToast(`قطعه ${result.product.nameFa} با موفقیت ثبت شد.`);
     }).catch(error => {
       console.error(error);
@@ -1373,8 +1852,13 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     void apiRequest<{ product: Product }>(`/api/catalog/products/${encodeURIComponent(updated.id)}`, {
       method: 'PUT',
       body: JSON.stringify(updated)
-    }).then(result => {
+    }).then(async result => {
       setProducts(prev => prev.map(p => p.id === result.product.id ? result.product : p));
+      try {
+        await syncSeoDraft('product', result.product.id, result.product.seo);
+      } catch (seoError) {
+        console.error('Product SEO sync failed:', seoError);
+      }
       showToast(`محصول ${result.product.nameFa} با موفقیت ویرایش شد.`);
     }).catch(error => {
       console.error(error);
@@ -1462,6 +1946,34 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setGarage(updated);
     setSelectedVehicleState(newCar);
     showToast(`${newCar.modelName} به گاراژ شما اضافه و به عنوان خودروی پیش‌فرض انتخاب شد.`);
+    if (currentCustomer) {
+      void apiRequest<{
+        rewarded: boolean;
+        loyaltyPoints: number;
+        transaction: LoyaltyTransaction | null;
+      }>('/api/auth/customer/vehicle-registration', {
+        method: 'POST',
+        body: JSON.stringify({
+          brandId: newCar.brandId,
+          modelId: newCar.modelId,
+          vehicleName: [newCar.brandName, newCar.modelName, newCar.year].filter(Boolean).join(' ')
+        })
+      }).then(result => {
+        if (result.transaction) {
+          setLoyaltyTransactions(prev => [result.transaction!, ...prev]);
+          setCurrentCustomer(prev => prev ? { ...prev, loyaltyPoints: result.loyaltyPoints } : null);
+          setCustomers(prev => prev.map(customer => customer.id === currentCustomer.id
+            ? { ...customer, loyaltyPoints: result.loyaltyPoints }
+            : customer));
+        }
+        if (result.rewarded) {
+          showToast('۲۰ امتیاز پاداش ثبت نخستین خودرو به حساب باشگاه شما افزوده شد.', 'success');
+        }
+      }).catch(error => {
+        console.error('Vehicle loyalty reward could not be saved:', error);
+        showToast('خودرو در گاراژ ثبت شد، اما پاداش باشگاه ذخیره نشد. اتصال را بررسی و دوباره تلاش کنید.', 'error');
+      });
+    }
   };
 
   const removeFromGarage = (id: string) => {
@@ -1631,6 +2143,15 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     };
   };
 
+  const refreshCustomerAccount = async () => {
+    const session = await apiRequest<{ customer?: CustomerUser }>('/api/auth/me');
+    if (session.customer) {
+      setCurrentCustomer(session.customer);
+      setCustomers(prev => [...prev.filter(item => item.id !== session.customer!.id), session.customer!]);
+      await loadCustomerPrivateData();
+    }
+  };
+
   const getCustomerPoints = (customerId?: string): number => {
     const targetId = customerId || currentCustomer?.id;
     if (!targetId) return 0;
@@ -1741,23 +2262,44 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   // Orders
   // Orders
   const createOrder = async (
-    orderData: Omit<Order, 'id' | 'orderNumber' | 'date'> & { loyaltyPointsToRedeem?: number }
+    orderData: Omit<Order, 'id' | 'orderNumber' | 'date'> & { loyaltyPointsToRedeem?: number; registration?: { password: string } }
   ): Promise<Order> => {
     const response = await apiRequest<{ order: Order }>('/api/orders', {
       method: 'POST',
       body: JSON.stringify({
         customer: orderData.customer,
+        registration: orderData.registration,
         items: orderData.items.map(item => ({
           productId: item.productId,
           quantity: item.quantity,
           vehicleInfo: item.vehicleInfo
         })),
         shippingMethodId: orderData.shippingMethod.id,
-        paymentMethodId: orderData.paymentMethod.id
+        paymentMethodId: orderData.paymentMethod.id,
+        loyaltyPointsToRedeem: orderData.loyaltyPointsToRedeem || 0
       })
     });
 
+    if (!currentCustomer) {
+      const session = await apiRequest<{ customer?: CustomerUser }>('/api/auth/me').catch(() => ({} as { customer?: CustomerUser }));
+      if (session.customer) { setCurrentCustomer(session.customer); setCustomers(prev => [...prev.filter(item => item.id !== session.customer!.id), session.customer!]); void loadCustomerPrivateData(false); }
+    }
     setOrders(prev => [response.order, ...prev.filter(item => item.id !== response.order.id)]);
+    if (currentCustomer && Number(orderData.loyaltyPointsToRedeem || 0) > 0) {
+      const pointsUsed = Math.floor(
+        response.order.discountAmount / Math.max(1, settings.loyaltySettings?.tomanPerPoint ?? 1000)
+      );
+      setCurrentCustomer(prev => prev ? {
+        ...prev,
+        loyaltyPoints: Math.max(0, Number(prev.loyaltyPoints || 0) - pointsUsed)
+      } : null);
+      setCustomers(prev => prev.map(customer => customer.id === currentCustomer.id
+        ? { ...customer, loyaltyPoints: Math.max(0, Number(customer.loyaltyPoints || 0) - pointsUsed) }
+        : customer));
+      void apiRequest<{ transactions: LoyaltyTransaction[] }>('/api/auth/customer/loyalty')
+        .then(result => setLoyaltyTransactions(result.transactions))
+        .catch(error => console.error('Loyalty history refresh failed:', error));
+    }
     showToast(`سفارش ${response.order.orderNumber} در سرور ثبت شد.`);
     return response.order;
   };
@@ -1908,6 +2450,9 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   return (
     <StoreContext.Provider value={{
       products,
+      catalogHasMore,
+      catalogLoading,
+      loadCatalogPage,
       brands,
       models,
       categories,
@@ -1982,12 +2527,14 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       updatePage,
       deletePage,
       updateSection,
+      previewSection,
       addSection,
       deleteSection,
       setFontSize,
       isLiveEditActive,
       setIsLiveEditActive,
       settings,
+      isStoreReady,
       updateSettings,
       paymentGateways,
       updatePaymentGateway,
@@ -2008,6 +2555,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       adminLogout,
       loyaltyTransactions,
       getCustomerPoints,
+      refreshCustomerAccount,
       getCustomerTransactions,
       addLoyaltyPoints,
       redeemLoyaltyPoints,

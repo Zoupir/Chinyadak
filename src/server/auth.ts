@@ -23,6 +23,15 @@ export const hashPassword = (password: string): Promise<string> =>
 export const verifyPassword = (password: string, hash: string): Promise<boolean> =>
   bcrypt.compare(password, hash);
 
+const sessionCookieSecure = (() => {
+  if (config.nodeEnv !== 'production') return false;
+  try {
+    return new URL(config.appUrl).protocol === 'https:';
+  } catch {
+    return true;
+  }
+})();
+
 export const issueSession = (
   res: Response,
   payload: Omit<SessionPayload, 'iat' | 'exp'>
@@ -35,7 +44,7 @@ export const issueSession = (
 
   res.cookie(config.sessionCookieName, token, {
     httpOnly: true,
-    secure: config.nodeEnv === 'production',
+    secure: sessionCookieSecure,
     sameSite: 'lax',
     path: '/',
     maxAge: 7 * 24 * 60 * 60 * 1000
@@ -45,7 +54,7 @@ export const issueSession = (
 export const clearSession = (res: Response): void => {
   res.clearCookie(config.sessionCookieName, {
     httpOnly: true,
-    secure: config.nodeEnv === 'production',
+    secure: sessionCookieSecure,
     sameSite: 'lax',
     path: '/'
   });

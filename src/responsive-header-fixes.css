@@ -1,0 +1,189 @@
+/**
+ * Responsive storefront corrections introduced in 30.1.19.
+ * Loaded after the base storefront styles so these rules can neutralize older
+ * mobile overrides without changing desktop behaviour.
+ */
+
+/* Keep the desktop mega-menu's three-column visual structure on phones/tablets:
+   one root-category column + two content columns. minmax(0,*) prevents any
+   column from escaping the mobile drawer horizontally. */
+@media (max-width: 1023px) {
+  :is(html[data-layout="marketplace-rtl"], html[data-layout="atelier-rtl"]) .category-browser {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    grid-template-columns: minmax(112px, 34%) minmax(0, 1fr) !important;
+    gap: 6px !important;
+    overflow: hidden !important;
+  }
+
+  :is(html[data-layout="marketplace-rtl"], html[data-layout="atelier-rtl"]) .category-browser-tabs,
+  :is(html[data-layout="marketplace-rtl"], html[data-layout="atelier-rtl"]) .category-browser-content {
+    min-width: 0 !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  :is(html[data-layout="marketplace-rtl"], html[data-layout="atelier-rtl"]) .category-browser-content {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 8px 10px !important;
+    align-content: start !important;
+  }
+
+  :is(html[data-layout="marketplace-rtl"], html[data-layout="atelier-rtl"]) .category-browser-content > *,
+  :is(html[data-layout="marketplace-rtl"], html[data-layout="atelier-rtl"]) .marketplace-ref-category-branch,
+  :is(html[data-layout="marketplace-rtl"], html[data-layout="atelier-rtl"]) .marketplace-ref-category-nested {
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
+
+  :is(html[data-layout="marketplace-rtl"], html[data-layout="atelier-rtl"]) .marketplace-ref-category-nested {
+    width: 100% !important;
+    overflow: visible !important;
+  }
+
+  :is(html[data-layout="marketplace-rtl"], html[data-layout="atelier-rtl"])
+    :is(.category-browser-content .marketplace-ref-category-sub, .category-browser-content .marketplace-ref-category-deep) {
+    min-width: 0 !important;
+    max-width: 100% !important;
+    white-space: normal !important;
+    overflow-wrap: anywhere !important;
+  }
+}
+
+@media (max-width: 480px) {
+  :is(html[data-layout="marketplace-rtl"], html[data-layout="atelier-rtl"]) .category-browser {
+    grid-template-columns: minmax(108px, 35%) minmax(0, 1fr) !important;
+    gap: 4px !important;
+  }
+
+  :is(html[data-layout="marketplace-rtl"], html[data-layout="atelier-rtl"]) .category-browser-tabs,
+  :is(html[data-layout="marketplace-rtl"], html[data-layout="atelier-rtl"]) .category-browser-content {
+    padding: 4px !important;
+  }
+
+  :is(html[data-layout="marketplace-rtl"], html[data-layout="atelier-rtl"]) .category-browser-content {
+    gap: 6px !important;
+  }
+
+  :is(html[data-layout="marketplace-rtl"], html[data-layout="atelier-rtl"]) .category-browser-tabs button {
+    padding: 9px 7px !important;
+    font-size: 11px !important;
+    line-height: 1.55 !important;
+  }
+}
+
+/* The previous center-logo rule used absolute positioning. Its static position
+   was derived from a two-row grid and could land on top of the search row.
+   Spanning grid row 1 centers the logo against the complete header width while
+   keeping search exclusively in row 2. */
+@media (max-width: 767px) {
+  :is(html[data-layout="marketplace-rtl"], html[data-layout="atelier-rtl"])
+    .marketplace-ref-mainbar-inner[data-mobile-logo-align="center"] {
+    position: relative !important;
+  }
+
+  :is(html[data-layout="marketplace-rtl"], html[data-layout="atelier-rtl"])
+    .marketplace-ref-mainbar-inner[data-mobile-logo-align="center"] .marketplace-ref-hamburger {
+    grid-column: 1 !important;
+    grid-row: 1 !important;
+    z-index: 3 !important;
+  }
+
+  :is(html[data-layout="marketplace-rtl"], html[data-layout="atelier-rtl"])
+    .marketplace-ref-mainbar-inner[data-mobile-logo-align="center"] .marketplace-ref-logo {
+    position: static !important;
+    inset: auto !important;
+    left: auto !important;
+    top: auto !important;
+    transform: none !important;
+    grid-column: 1 / -1 !important;
+    grid-row: 1 !important;
+    justify-self: center !important;
+    align-self: center !important;
+    justify-content: center !important;
+    width: var(--mobile-logo-width, 118px) !important;
+    min-width: 0 !important;
+    max-width: min(var(--mobile-logo-width, 118px), calc(100% - 150px)) !important;
+    margin: 0 !important;
+    z-index: 1 !important;
+  }
+
+  :is(html[data-layout="marketplace-rtl"], html[data-layout="atelier-rtl"])
+    .marketplace-ref-mainbar-inner[data-mobile-logo-align="center"] .marketplace-ref-logo img {
+    display: block !important;
+    width: auto !important;
+    max-width: 100% !important;
+    max-height: 36px !important;
+    object-fit: contain !important;
+  }
+
+  :is(html[data-layout="marketplace-rtl"], html[data-layout="atelier-rtl"])
+    .marketplace-ref-mainbar-inner[data-mobile-logo-align="center"] .marketplace-ref-actions {
+    grid-column: 3 !important;
+    grid-row: 1 !important;
+    justify-self: end !important;
+    z-index: 3 !important;
+  }
+
+  :is(html[data-layout="marketplace-rtl"], html[data-layout="atelier-rtl"])
+    .marketplace-ref-mainbar-inner[data-mobile-logo-align="center"] .marketplace-ref-search-wrap {
+    grid-column: 1 / -1 !important;
+    grid-row: 2 !important;
+    position: relative !important;
+    z-index: 2 !important;
+  }
+}
+
+/* 30.1.20: desktop category mega-menu must never hide root categories behind
+   the footer action. The base stylesheet capped the browser itself at 440px and
+   hid overflow, which clipped the final root rows. On desktop we instead let
+   the root list define the browser height, compact those twelve root rows, and
+   keep only the descendant pane independently scrollable when viewport height
+   is unusually short. */
+@media (min-width: 1024px) {
+  :is(html[data-layout="marketplace-rtl"], html[data-layout="atelier-rtl"]) .marketplace-ref-category-mega {
+    max-height: calc(100dvh - 48px) !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain !important;
+  }
+
+  :is(html[data-layout="marketplace-rtl"], html[data-layout="atelier-rtl"]) .marketplace-ref-category-grid {
+    align-items: start !important;
+    grid-auto-rows: auto !important;
+  }
+
+  :is(html[data-layout="marketplace-rtl"], html[data-layout="atelier-rtl"]) .category-browser {
+    max-height: none !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    align-items: start !important;
+  }
+
+  :is(html[data-layout="marketplace-rtl"], html[data-layout="atelier-rtl"]) .category-browser-tabs {
+    max-height: none !important;
+    overflow: visible !important;
+    padding: 6px !important;
+  }
+
+  :is(html[data-layout="marketplace-rtl"], html[data-layout="atelier-rtl"]) .category-browser-tabs button {
+    min-height: 30px !important;
+    padding: 6px 10px !important;
+    font-size: 12px !important;
+    line-height: 1.3 !important;
+  }
+
+  :is(html[data-layout="marketplace-rtl"], html[data-layout="atelier-rtl"]) .category-browser-content {
+    max-height: min(520px, calc(100dvh - 120px)) !important;
+    overflow-y: auto !important;
+    align-self: start !important;
+  }
+
+  :is(html[data-layout="marketplace-rtl"], html[data-layout="atelier-rtl"]) .marketplace-ref-category-all {
+    position: static !important;
+    inset: auto !important;
+    grid-column: 1 / -1 !important;
+    margin-top: 8px !important;
+    z-index: auto !important;
+  }
+}

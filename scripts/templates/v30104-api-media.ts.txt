@@ -1,0 +1,176 @@
+export class MediaUploadError extends Error {
+  code: string;
+  status: number;
+  details: any;
+
+  constructor(code: string, status = 0, details: any = null) {
+    super(code);
+    this.code = code;
+    this.status = status;
+    this.details = details;
+  }
+}
+
+export type MediaKind = 'image' | 'audio' | 'video';
+
+export interface MediaVariant {
+  width: number;
+  height?: number;
+  format: 'webp';
+  size: number;
+  relativePath: string;
+  url: string;
+}
+
+export interface MediaSeoMeta {
+  alt: string;
+  title: string;
+  caption: string;
+  description: string;
+  originalName?: string;
+  mime?: string;
+  kind?: MediaKind;
+  width?: number;
+  height?: number;
+  variants?: MediaVariant[];
+}
+
+export interface MediaLibraryItem {
+  url: string;
+  thumbnailUrl: string;
+  relativePath: string;
+  filename: string;
+  extension: string;
+  kind: MediaKind;
+  category: string;
+  year: string;
+  month: string;
+  folderPath: string;
+  size: number;
+  createdAt: string;
+  modifiedAt: string;
+  width?: number;
+  height?: number;
+  variants: MediaVariant[];
+  seo: MediaSeoMeta;
+}
+
+export interface MediaFolderSummary {
+  category: string;
+  year: string;
+  month: string;
+  count: number;
+}
+
+export interface MediaReference {
+  source: string;
+  id: string;
+  label?: string;
+}
+
+export interface MediaLibraryResponse {
+  total: number;
+  items: MediaLibraryItem[];
+  hasMore: boolean;
+  nextOffset: number | null;
+  categories: string[];
+  years: string[];
+  months: string[];
+  folders: MediaFolderSummary[];
+  counts: Record<MediaKind, number>;
+}
+
+const jsonOrEmpty = async (response: Response) => response.json().catch(() => ({}));
+
+const throwMediaError = (data: any, fallback: string, status: number): never => {
+  throw new MediaUploadError(data?.error || fallback, status, data);
+};
+
+export const uploadImage = async (
+  file: File,
+  category = 'general'
+): Promise<MediaLibraryItem & { mime: string; originalName: string }> => {
+  const form = new FormData();
+  form.append('image', file);
+  form.append('category', category);
+  const response = await fetch('/api/media/image', { method: 'POST', credentials: 'include', body: form });
+  const data = await jsonOrEmpty(response);
+  if (!response.ok) throwMediaError(data, 'MEDIA_UPLOAD_FAILED', response.status);
+  return data;
+};
+
+export const uploadRichMedia = async (
+  file: File,
+  kind: Exclude<MediaKind, 'image'>,
+  category = 'editor-media'
+): Promise<MediaLibraryItem & { mime: string; originalName: string; bufferedInMemory: boolean }> => {
+  const form = new FormData();
+  form.append('file', file);
+  form.append('kind', kind);
+  form.append('category', category);
+  const response = await fetch('/api/rich-media/upload', { method: 'POST', credentials: 'include', body: form });
+  const data = await jsonOrEmpty(response);
+  if (!response.ok) throwMediaError(data, 'RICH_MEDIA_UPLOAD_FAILED', response.status);
+  return data;
+};
+
+export const listMediaLibrary = async (
+  options: {
+    q?: string;
+    category?: string;
+    year?: string;
+    month?: string;
+    kind?: MediaKind;
+    limit?: number;
+    offset?: number;
+    refresh?: boolean;
+  } = {}
+): Promise<MediaLibraryResponse> => {
+  const params = new URLSearchParams();
+  if (options.q) params.set('q', options.q);
+  if (options.category) params.set('category', options.category);
+  if (options.year) params.set('year', options.year);
+  if (options.month) params.set('month', options.month);
+  if (options.kind) params.set('kind', options.kind);
+  if (options.limit) params.set('limit', String(options.limit));
+  if (options.offset) params.set('offset', String(options.offset));
+  if (options.refresh) params.set('refresh', '1');
+  const response = await fetch('/api/media/library?' + params.toString(), { credentials: 'include' });
+  const data = await jsonOrEmpty(response);
+  if (!response.ok) throwMediaError(data, 'MEDIA_LIBRARY_FAILED', response.status);
+  return data as MediaLibraryResponse;
+};
+
+export const getMediaReferences = async (relativePath: string): Promise<{ inUse: boolean; references: MediaReference[] }> => {
+  const params = new URLSearchParams({ relativePath });
+  const response = await fetch('/api/media/library/references?' + params.toString(), { credentials: 'include' });
+  const data = await jsonOrEmpty(response);
+  if (!response.ok) throwMediaError(data, 'MEDIA_REFERENCES_FAILED', response.status);
+  return data;
+};
+
+export const updateMediaSeo = async (
+  relativePath: string,
+  seo: Partial<MediaSeoMeta>
+): Promise<MediaSeoMeta> => {
+  const response = await fetch('/api/media/library/meta', {
+    method: 'PUT',
+    credentials: 'include',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ relativePath, ...seo })
+  });
+  const data = await jsonOrEmpty(response);
+  if (!response.ok) throwMediaError(data, 'MEDIA_SEO_SAVE_FAILED', response.status);
+  return data.seo;
+};
+
+export const deleteMediaItem = async (relativePath: string): Promise<void> => {
+  const response = await fetch('/api/media/library', {
+    method: 'DELETE',
+    credentials: 'include',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ relativePath })
+  });
+  const data = await jsonOrEmpty(response);
+  if (!response.ok) throwMediaError(data, 'MEDIA_DELETE_FAILED', response.status);
+};

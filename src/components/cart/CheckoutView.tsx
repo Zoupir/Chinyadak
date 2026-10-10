@@ -24,9 +24,10 @@ import {
 interface CheckoutViewProps {
   onOrderCompleted: (orderId: string) => void;
   onNavigate: (view: string) => void;
+  onLogin: () => void;
 }
 
-export const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderCompleted, onNavigate }) => {
+export const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderCompleted, onNavigate, onLogin }) => {
   const { 
     cart, 
     cartTotal, 
@@ -38,7 +39,8 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderCompleted, on
     calculatePointsEarned,
     calculatePointsValue,
     getTierInfo,
-    settings 
+    settings,
+    paymentGateways
   } = useStore();
 
   const customerPoints = getCustomerPoints(currentCustomer?.id);
@@ -56,17 +58,30 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderCompleted, on
   const [postalCode, setPostalCode] = useState('');
   const [address, setAddress] = useState(currentCustomer?.address || '');
   const [notes, setNotes] = useState('');
+  const [checkoutPassword, setCheckoutPassword] = useState('');
 
   // Shipping Method
-  const [selectedShipping, setSelectedShipping] = useState<'express' | 'tipax' | 'post'>('post');
+  const [selectedShipping, setSelectedShipping] = useState<string>('post');
+  const shippingMethods = (Array.isArray(settings.shippingMethods) ? settings.shippingMethods : [
+    { id: 'post', title: 'پست پیشتاز بیمه‌شده (سراسر ایران)', description: 'تحویل ۲ الی ۳ روز کاری', cost: Number(settings.postShippingFee || 85000), estimatedDelivery: '۲۴ الی ۴۸ ساعت', enabled: true },
+    { id: 'tipax', title: 'تیپاکس اکسپرس', description: 'تحویل با تیپاکس', cost: Number(settings.tipaxShippingFee || 110000), estimatedDelivery: '۲۴ الی ۴۸ ساعت', enabled: true },
+    { id: 'express', title: 'پیک فوری', description: 'ارسال فوری در شهرهای تحت پوشش', cost: Number(settings.expressShippingFee || 120000), estimatedDelivery: '۲ ساعت کاری', enabled: true }
+  ]).filter(method => method.enabled);
+  const selectedShippingMethod = shippingMethods.find(method => method.id === selectedShipping) || shippingMethods[0];
+
+  useEffect(() => {
+    if (shippingMethods.length && !shippingMethods.some(method => method.id === selectedShipping)) {
+      setSelectedShipping(shippingMethods[0].id);
+    }
+  }, [settings.shippingMethods, selectedShipping]);
   
   // Payment Gateway
-  const [selectedGateway, setSelectedGateway] = useState<'saman' | 'mellat'>('saman');
-  const [gatewayAvailability, setGatewayAvailability] = useState<Record<'saman' | 'mellat', boolean>>({
-    saman: false,
-    mellat: false
+  const [selectedGateway, setSelectedGateway] = useState<'saman' | 'mellat' | 'cod'>('saman');
+  const [gatewayAvailability, setGatewayAvailability] = useState<Record<'saman' | 'mellat' | 'cod', boolean>>({
+    saman: false, mellat: false, cod: false
   });
   const [gatewayStatusLoaded, setGatewayStatusLoaded] = useState(false);
+  const hasAvailableGateway = gatewayAvailability.saman || gatewayAvailability.mellat || gatewayAvailability.cod;
 
   // Coupon state
   const [couponCode, setCouponCode] = useState('');
@@ -83,11 +98,15 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderCompleted, on
 
   // Gateway availability is read from server-side configuration; credentials never reach the browser.
   useEffect(() => {
+    setGatewayAvailability(current => ({
+      ...current,
+      cod: paymentGateways.some(gateway => gateway.provider === 'cod' && gateway.isActive)
+    }));
     let cancelled = false;
     apiRequest<{ providers: Array<{ id: 'saman' | 'mellat'; configured: boolean }> }>('/api/payments/providers')
       .then(result => {
         if (cancelled) return;
-        const next = { saman: false, mellat: false };
+        const next = { saman: false, mellat: false, cod: paymentGateways.some(gateway => gateway.provider === 'cod' && gateway.isActive) };
         result.providers.forEach(provider => {
           if (provider.id === 'saman' || provider.id === 'mellat') {
             next[provider.id] = Boolean(provider.configured);
@@ -97,6 +116,7 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderCompleted, on
         if (!next[selectedGateway]) {
           if (next.saman) setSelectedGateway('saman');
           else if (next.mellat) setSelectedGateway('mellat');
+          else if (next.cod) setSelectedGateway('cod');
         }
       })
       .catch(error => {
@@ -109,25 +129,31 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderCompleted, on
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [paymentGateways]);
 
-  // Loyalty calculations
-  const remainingSubtotal = Math.max(0, cartTotal);
-  const maxDiscountAllowed = 0;
-  const maxPointsAllowed = 0;
+  // Loyalty previews are convenience only; the server revalidates the balance, limits and settings.
+  const loyaltyEnabled = settings.loyaltySettings?.enabled === true;
+  const remainingSubtotal = Math.max(0, cartTotal - appliedDiscount);
+  const maxDiscountAllowed = loyaltyEnabled
+    ? Math.min(remainingSubtotal * maxRedeemPercent / 100, calculatePointsValue(customerPoints))
+    : 0;
+  const maxPointsAllowed = pointValue > 0
+    ? Math.min(customerPoints, Math.floor(maxDiscountAllowed / pointValue))
+    : 0;
+  const effectiveRedeemedPoints = useLoyaltyPoints
+    ? Math.min(maxPointsAllowed, redeemedPoints || maxPointsAllowed)
+    : 0;
+  const loyaltyDiscount = calculatePointsValue(effectiveRedeemedPoints);
 
-  const effectiveRedeemedPoints = 0;
-  const loyaltyDiscount = 0;
-
-  const shippingCost = selectedShipping === 'express' ? 120000 : selectedShipping === 'tipax' ? 110000 : 85000;
+  const shippingCost = (['free', 'collect'].includes(selectedShippingMethod?.paymentMode || '') ? 0 : Number(selectedShippingMethod?.cost || 0));
   const finalTotal = Math.max(0, cartTotal - appliedDiscount - loyaltyDiscount + shippingCost);
+  const pointsEarnedFromThisOrder = loyaltyEnabled && currentCustomer
+    ? calculatePointsEarned(Math.max(0, cartTotal - appliedDiscount - loyaltyDiscount), currentCustomer.id)
+    : 0;
 
-  const pointsEarnedFromThisOrder = 0;
-
-  const handleToggleLoyalty = (_checked: boolean) => {
-    setUseLoyaltyPoints(false);
-    setRedeemedPoints(0);
-    showToast('استفاده از امتیاز بعد از انتقال کامل باشگاه وفاداری به سرور فعال می‌شود.', 'info');
+  const handleToggleLoyalty = (checked: boolean) => {
+    setUseLoyaltyPoints(checked && loyaltyEnabled && maxPointsAllowed >= minRedeemPoints);
+    setRedeemedPoints(checked ? maxPointsAllowed : 0);
   };
 
   const handleApplyCoupon = (e: React.FormEvent) => {
@@ -169,7 +195,7 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderCompleted, on
       return;
     }
 
-    if (!gatewayStatusLoaded || !gatewayAvailability[selectedGateway]) {
+    if (!gatewayStatusLoaded || !gatewayAvailability[selectedGateway] || !selectedShippingMethod) {
       showToast('درگاه انتخاب‌شده روی سرور فعال و پیکربندی نشده است.', 'error');
       return;
     }
@@ -180,6 +206,7 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderCompleted, on
       return;
     }
 
+    if (!currentCustomer && checkoutPassword.length < 8) { showToast('برای ایجاد حساب، رمز عبور حداقل ۸ کاراکتری وارد کنید.', 'error'); return; }
     setIsProcessing(true);
     setPaymentFailed(false);
 
@@ -198,6 +225,7 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderCompleted, on
       let orderId = pendingOrderId;
       if (!orderId) {
         const newOrder = await createOrder({
+        registration: currentCustomer ? undefined : { password: checkoutPassword },
         status: 'pending',
         statusTitle: 'در انتظار پرداخت',
         items: orderItems,
@@ -212,20 +240,15 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderCompleted, on
           notes
         },
         shippingMethod: {
-          id: selectedShipping,
-          title: selectedShipping === 'express'
-            ? 'پیک موتوری ۲ ساعته'
-            : selectedShipping === 'tipax'
-              ? 'تیپاکس اکسپرس'
-              : 'پست پیشتاز بیمه‌شده',
+          id: selectedShippingMethod.id,
+          title: selectedShippingMethod.title,
           cost: shippingCost,
-          estimatedDelivery: selectedShipping === 'express' ? '۲ ساعت کاری' : '۲۴ الی ۴۸ ساعت'
+          paymentMode: selectedShippingMethod.paymentMode,
+          estimatedDelivery: selectedShippingMethod.estimatedDelivery || ''
         },
         paymentMethod: {
           id: selectedGateway,
-          title: selectedGateway === 'saman'
-            ? 'درگاه پرداخت الکترونیک سامان'
-            : 'به‌پرداخت بانک ملت'
+          title: selectedGateway === 'saman' ? 'درگاه پرداخت الکترونیک سامان' : selectedGateway === 'mellat' ? 'به‌پرداخت بانک ملت' : 'پرداخت در محل'
         },
         subtotal: cartTotal,
         discountAmount: appliedDiscount,
@@ -235,6 +258,14 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderCompleted, on
         });
         orderId = newOrder.id;
         setPendingOrderId(newOrder.id);
+      }
+
+      if (selectedGateway === 'cod') {
+        setPendingOrderId(null);
+        clearCart();
+        showToast('سفارش شما ثبت شد؛ پرداخت هنگام تحویل انجام می‌شود.', 'success');
+        onOrderCompleted(orderId);
+        return;
       }
 
       const payment = await apiRequest<{
@@ -258,7 +289,9 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderCompleted, on
 
       let message = 'شروع پرداخت بانکی انجام نشد. دوباره تلاش کنید.';
       if (error instanceof ApiError) {
-        if (error.code === 'INSUFFICIENT_STOCK') {
+        if (error.code === 'CHECKOUT_LOGIN_REQUIRED') {
+          message = 'این شماره حساب دارد؛ برای ثبت سفارش وارد حساب خود شوید.';
+        } else if (error.code === 'INSUFFICIENT_STOCK') {
           message = 'موجودی یکی از کالاها برای این سفارش کافی نیست.';
         } else if (error.code === 'PAYMENT_ALREADY_IN_PROGRESS') {
           message = 'یک پرداخت فعال برای این سفارش وجود دارد.';
@@ -453,26 +486,12 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderCompleted, on
             </h3>
 
             <div className="space-y-3">
-              {[
-                {
-                  id: 'post',
-                  title: 'پست پیشتاز بیمه‌شده (سراسر ایران)',
-                  desc: 'تحویل ۲ الی ۳ روز کاری با بیمه کامل شکستگی قطعات',
-                  cost: 85000
-                },
-                {
-                  id: 'tipax',
-                  title: 'تیپاکس اکسپرس هوایی',
-                  desc: 'تحویل ۲۴ ساعته درب منزل در کلیه شهرستان‌ها',
-                  cost: 110000
-                },
-                {
-                  id: 'express',
-                  title: 'پیک فوری ویژه شهر تهران (۲ ساعته)',
-                  desc: 'ارسال فوری از انبار چراغ برق با پیک اختصاصی',
-                  cost: 120000
-                }
-              ].map(opt => (
+              {!currentCustomer && <div className="p-4 rounded-xl border border-blue-200 bg-blue-50 space-y-2">
+                <p className="text-xs text-blue-900">با ثبت سفارش، حساب شما با همین شماره ساخته می‌شود. اگر قبلاً عضو شده‌اید، ابتدا وارد شوید.</p>
+                <input type="password" autoComplete="new-password" minLength={8} maxLength={128} value={checkoutPassword} onChange={e => setCheckoutPassword(e.target.value)} placeholder="رمز عبور حساب (حداقل ۸ کاراکتر)" className="w-full p-3 bg-white border rounded-xl text-sm" />
+                <button type="button" onClick={onLogin} className="text-sm text-blue-800 underline">ورود به حساب موجود</button>
+              </div>}
+              {shippingMethods.map(opt => (
                 <label
                   key={opt.id}
                   className={`p-4 rounded-2xl border flex items-center justify-between cursor-pointer transition-all ${
@@ -491,14 +510,17 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderCompleted, on
                     />
                     <div>
                       <h4 className="font-bold text-xs sm:text-sm text-neutral-900">{opt.title}</h4>
-                      <p className="text-[11px] text-neutral-500">{opt.desc}</p>
+                      <p className="text-[11px] text-neutral-500">{opt.description || opt.estimatedDelivery}</p>
                     </div>
                   </div>
                   <span className="text-xs font-bold text-neutral-900 font-mono">
-                    {formatToman(opt.cost)}
+                    {opt.paymentMode === 'collect' ? 'پس‌کرایه؛ پرداخت به شرکت حمل' : opt.paymentMode === 'free' || opt.cost === 0 ? 'رایگان' : formatToman(opt.cost)}
                   </span>
                 </label>
               ))}
+              {shippingMethods.length === 0 && (
+                <p className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">در حال حاضر روش ارسال فعالی تعریف نشده است. برای تکمیل سفارش، مدیر باید دست‌کم یک روش ارسال را فعال کند.</p>
+              )}
             </div>
           </div>
 
@@ -551,6 +573,10 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderCompleted, on
                   <p className="text-[10px] text-neutral-500">{gatewayAvailability.mellat ? 'تسویه و تایید آنی با شاپرک' : 'هنوز روی سرور پیکربندی نشده'}</p>
                 </div>
               </label>
+              <label className={`p-4 rounded-2xl border flex items-center gap-3 cursor-pointer transition-all ${selectedGateway === 'cod' ? 'border-red-600 bg-red-50/40 ring-2 ring-red-600/20' : 'border-neutral-200 hover:border-neutral-300'} ${gatewayAvailability.cod ? '' : 'opacity-50'}`}>
+                <input type="radio" name="gateway" checked={selectedGateway === 'cod'} disabled={!gatewayAvailability.cod} onChange={() => setSelectedGateway('cod')} className="text-red-600 focus:ring-red-500 w-4 h-4" />
+                <div><h4 className="font-bold text-xs text-neutral-900">پرداخت در محل</h4><p className="text-[10px] text-neutral-500">{gatewayAvailability.cod ? 'پرداخت هنگام تحویل سفارش' : 'در تنظیمات درگاه‌ها فعال نشده'}</p></div>
+              </label>
             </div>
           </div>
 
@@ -594,7 +620,7 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderCompleted, on
                 type="text"
                 value={couponCode}
                 onChange={e => setCouponCode(e.target.value)}
-                placeholder="کد تخفیف (مثال: CHINPART)"
+                placeholder="کد تخفیف را وارد کنید"
                 className="flex-1 text-xs p-2.5 border border-neutral-300 rounded-xl focus:border-red-600 focus:outline-hidden font-mono uppercase"
               />
               <button
@@ -620,7 +646,7 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderCompleted, on
                       </div>
                       <div>
                         <div className="flex items-center gap-1.5">
-                          <h4 className="font-bold text-xs text-neutral-900">باشگاه وفاداری چین‌پارت</h4>
+                          <h4 className="font-bold text-xs text-neutral-900">باشگاه مشتریان یدک استور</h4>
                           <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${tierInfo.badgeClass}`}>
                             {tierInfo.title}
                           </span>
@@ -645,11 +671,15 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderCompleted, on
                     )}
                   </div>
 
-                  {customerPoints < minRedeemPoints ? (
+                  {!loyaltyEnabled ? (
+                    <div className="mt-3 text-[11px] text-neutral-500">باشگاه مشتریان در تنظیمات سایت غیرفعال است.</div>
+                  ) : customerPoints < minRedeemPoints ? (
                     <div className="mt-2 text-[11px] text-neutral-500 bg-white/80 p-2 rounded-xl border border-neutral-200 flex items-center gap-1.5">
                       <Info className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
-                      <span>حداقل موجودی مجاز برای تسویه ۵۰ امتیاز است (موجودی فعلی شما: {customerPoints} امتیاز).</span>
+                      <span>حداقل موجودی مجاز برای تسویه {minRedeemPoints.toLocaleString('fa-IR')} امتیاز است (موجودی فعلی شما: {customerPoints.toLocaleString('fa-IR')} امتیاز).</span>
                     </div>
+                  ) : maxPointsAllowed < minRedeemPoints ? (
+                    <div className="mt-3 text-[11px] text-neutral-500">مبلغ این سفارش برای استفاده از حداقل امتیاز قابل تبدیل کافی نیست.</div>
                   ) : useLoyaltyPoints ? (
                     <div className="mt-3 pt-3 border-t border-amber-200/60 space-y-2.5">
                       <div className="flex items-center justify-between text-xs">
@@ -749,7 +779,7 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderCompleted, on
 
               <div className="flex justify-between">
                 <span>هزینه بسته‌بندی و ارسال:</span>
-                <span className="font-bold text-neutral-900">{formatToman(shippingCost)}</span>
+                <span className="font-bold text-neutral-900">{selectedShippingMethod?.paymentMode === 'collect' ? 'پس‌کرایه (جدا از مبلغ سفارش)' : shippingCost === 0 ? 'رایگان' : formatToman(shippingCost)}</span>
               </div>
 
               <div className="pt-3 border-t border-neutral-200 flex justify-between text-base font-black text-neutral-900">
@@ -771,13 +801,19 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderCompleted, on
 
             {/* Submit & Payment Actions */}
             <div className="space-y-2 pt-2">
+              {!gatewayStatusLoaded && <p className="text-[10px] text-neutral-500">در حال بررسی وضعیت درگاه‌ها…</p>}
+              {gatewayStatusLoaded && !hasAvailableGateway && (
+                <p className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-[10px] text-amber-800 leading-5">
+                  درگاه فعالی برای پرداخت آنلاین در دسترس نیست. مدیر سایت باید SEP یا ملت را در پنل مدیریت پیکربندی و فعال کند.
+                </p>
+              )}
               <button
                 onClick={() => handleProcessPayment(false)}
-                disabled={isProcessing}
+                disabled={isProcessing || !gatewayStatusLoaded || !gatewayAvailability[selectedGateway] || !selectedShippingMethod}
                 className="w-full h-12 bg-red-600 hover:bg-red-700 text-white font-bold text-sm rounded-xl shadow-lg shadow-red-600/30 flex items-center justify-center gap-2 transition-all active:scale-98 disabled:opacity-50"
               >
                 {isProcessing ? (
-                  <span>در حال انتقال به درگاه بانکی...</span>
+                  <span>{selectedGateway === 'cod' ? 'در حال ثبت سفارش...' : 'در حال انتقال به درگاه بانکی...'}</span>
                 ) : (
                   <>
                     <CreditCard className="w-4 h-4" />
